@@ -7,7 +7,7 @@
 - Root governance authority exists at `AGENTS.md`.
 - Governance validator exists at `scripts/validate_governance.py`.
 - Governance PR #1 was merged before the Harness Infrastructure Build began.
-- The harness branch adds a codebase map, workflow specs, artifact registry, completeness validator, hooks, scoped skill, CI workflow, Lua design constraints, and this operator report.
+- The harness branch adds a codebase map, workflow specs, artifact registry, completeness validator, staged-snapshot pre-commit validation, pushed-commit/range pre-push validation, scoped skill, CI workflow, Lua design constraints, and this operator report.
 
 ## Broken
 

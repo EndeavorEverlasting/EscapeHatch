@@ -36,6 +36,8 @@ Enable the optional local hooks with:
 git config core.hooksPath .githooks
 ```
 
+The pre-commit hook materializes the Git index into an isolated snapshot and runs the governance and harness validators against exactly what will be committed; unstaged working-tree replacements cannot hide or fabricate staged validity. The pre-push hook materializes each non-deletion commit named by Git's pre-push input, runs the validators against that committed tree, and checks whitespace across the pushed range (falling back to the remote `main` merge base for a new branch).
+
 ## Failure Recovery
 
 1. Stop the completion claim.

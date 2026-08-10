@@ -1,299 +1,135 @@
 #!/usr/bin/env python3
-"""Validate EscapeHatch operational harness completeness and ownership."""
-
-from __future__ import annotations
-
-import json
-import re
-import subprocess
-import sys
+"""Fail-closed completeness checks for the EscapeHatch harness."""
+import json, re, subprocess, sys
 from pathlib import Path
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-MANIFEST = REPO_ROOT / "harness" / "manifest.v1.json"
-EXPECTED_SCHEMA = "escapehatch-harness/v1"
-REQUIRED_COMPONENT_KEYS = (
-    "codebase_map",
-    "workflow_specs",
-    "artifact_registry",
-    "harness_validator",
-    "governance_validator",
-    "pre_commit_hook",
-    "pre_push_hook",
-    "scoped_skill",
-    "operator_report",
-    "lua_design_constraints",
-    "ci_workflow",
-)
-REQUIRED_MAP_MARKERS = (
-    "## Repository floor",
-    "## Structure",
-    "## Product entry points",
-    "## Validation commands",
-    "## Build, test, and deploy commands",
-    "## Fresh-agent path",
-)
-REQUIRED_WORKFLOW_MARKERS = (
-    "## Task Pickup",
-    "## Pre-commit validation",
-    "## Failure Recovery",
-    "## Artifact discipline",
-    "## Handoff",
-    "## Product-runtime introduction gate",
-)
-REQUIRED_ARTIFACT_MARKERS = (
-    "## Naming rules",
-    "## Registered artifacts",
-    "## Validation output",
-    "## Product artifact gate",
-)
-REQUIRED_LUA_MARKERS = (
-    "## Host owns the application",
-    "## State isolation",
-    "## Error boundary",
-    "## Sandboxing",
-    "## Execution model",
-    "## Type discipline",
-    "## Conceptual integrity",
-    "## Validation expectations for the first Lua product sprint",
-)
-
-PRE_COMMIT_ACTIVE_LINES = (
-    'repo=$(git rev-parse --show-toplevel)',
-    'git -C "$repo" checkout-index --all --prefix="$snapshot/"',
-    'python scripts/validate_governance.py',
-    'python scripts/validate_harness.py',
-    'git -C "$repo" diff --cached --check',
-)
-PRE_PUSH_ACTIVE_LINES = (
-    'while read -r local_ref local_sha remote_ref remote_sha',
-    'git archive --format=tar --output="$archive" "$local_sha"',
-    'python scripts/validate_governance.py',
-    'python scripts/validate_harness.py',
-    'git diff --check "$base" "$local_sha" --',
-)
-
-
-class HarnessError(ValueError):
-    """Raised when a harness contract is missing or malformed."""
-
-
-def fail(message: str) -> int:
-    print(f"HARNESS_VALIDATION: FAIL: {message}", file=sys.stderr)
-    return 1
-
-
-def read_text(relative: str) -> str:
-    path = REPO_ROOT / relative
-    if not path.is_file():
-        raise HarnessError(f"missing component: {relative}")
-    return path.read_text(encoding="utf-8")
-
-
-def require_markers(relative: str, markers: tuple[str, ...]) -> None:
-    text = read_text(relative)
-    missing = [marker for marker in markers if marker not in text]
-    if missing:
-        raise HarnessError(f"{relative} missing markers: " + ", ".join(missing))
-
-
-def validate_manifest() -> dict:
-    if not MANIFEST.is_file():
-        raise HarnessError("missing harness/manifest.v1.json")
-    try:
-        data = json.loads(MANIFEST.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        raise HarnessError(f"invalid harness manifest JSON: {exc}") from exc
-
-    if data.get("schema") != EXPECTED_SCHEMA:
-        raise HarnessError(f"unexpected manifest schema: {data.get('schema')!r}")
-    if data.get("canonical_governance") != "AGENTS.md":
-        raise HarnessError("manifest must point canonical_governance to AGENTS.md")
-
-    components = data.get("components")
-    if not isinstance(components, dict):
-        raise HarnessError("manifest components must be an object")
-    missing = [key for key in REQUIRED_COMPONENT_KEYS if key not in components]
-    if missing:
-        raise HarnessError("manifest missing component keys: " + ", ".join(missing))
-
-    values = [components[key] for key in REQUIRED_COMPONENT_KEYS]
-    if len(values) != len(set(values)):
-        raise HarnessError("manifest component paths must be unique")
-
-    for key in REQUIRED_COMPONENT_KEYS:
-        relative = components[key]
-        if (
-            not isinstance(relative, str)
-            or not relative
-            or relative.startswith("/")
-            or ".." in Path(relative).parts
-        ):
-            raise HarnessError(f"invalid component path for {key}: {relative!r}")
-        if not (REPO_ROOT / relative).is_file():
-            raise HarnessError(f"manifest component missing on disk: {key} -> {relative}")
-
-    expected_order = [
-        "python scripts/validate_governance.py",
-        "python scripts/validate_harness.py",
-        "git diff --check",
-    ]
-    if data.get("validation_order") != expected_order:
-        raise HarnessError("manifest validation_order is not canonical")
-    if data.get("artifact_registry") != components["artifact_registry"]:
-        raise HarnessError("artifact_registry alias must match registered component path")
-    return data
-
-
-def active_shell_lines(text: str) -> tuple[str, ...]:
-    """Return executable-looking shell source lines, excluding blanks/comments."""
-    return tuple(
-        line.strip()
-        for line in text.splitlines()
-        if line.strip() and not line.lstrip().startswith("#")
-    )
-
-
-def validate_hook_text(relative: str, text: str, required_lines: tuple[str, ...]) -> None:
-    if not text.startswith("#!/bin/sh\nset -eu\n"):
-        raise HarnessError(f"{relative} must fail closed with sh + set -eu")
-    active = active_shell_lines(text)
-    missing = [line for line in required_lines if line not in active]
-    if missing:
-        raise HarnessError(
-            f"{relative} missing active shell commands: " + ", ".join(missing)
-        )
-
-
-def validate_hooks(components: dict[str, str]) -> int:
-    pre_commit_path = components["pre_commit_hook"]
-    pre_push_path = components["pre_push_hook"]
-    pre_commit = read_text(pre_commit_path)
-    pre_push = read_text(pre_push_path)
-
-    validate_hook_text(pre_commit_path, pre_commit, PRE_COMMIT_ACTIVE_LINES)
-    validate_hook_text(pre_push_path, pre_push, PRE_PUSH_ACTIVE_LINES)
-
-    # Negative fixtures ensure required commands cannot be satisfied by comments/text.
-    self_tests = 0
-    for relative, source, required_lines in (
-        (pre_commit_path, pre_commit, PRE_COMMIT_ACTIVE_LINES),
-        (pre_push_path, pre_push, PRE_PUSH_ACTIVE_LINES),
-    ):
-        command = "python scripts/validate_harness.py"
-        commented = source.replace(command, f"# {command}", 1)
-        try:
-            validate_hook_text(relative, commented, required_lines)
-        except HarnessError:
-            self_tests += 1
-        else:
-            raise HarnessError(f"hook negative fixture unexpectedly passed: {relative}: comment")
-
-        quoted = source.replace(command, f"echo '{command}'", 1)
-        try:
-            validate_hook_text(relative, quoted, required_lines)
-        except HarnessError:
-            self_tests += 1
-        else:
-            raise HarnessError(f"hook negative fixture unexpectedly passed: {relative}: echo")
-
-    return self_tests
-
-
-def validate_ci(relative: str) -> None:
-    text = read_text(relative)
-    required = (
-        "name: Harness Validation",
-        "pull_request:",
-        "push:",
-        "python scripts/validate_governance.py",
-        "python scripts/validate_harness.py",
-        "git diff --check",
-    )
-    missing = [item for item in required if item not in text]
-    if missing:
-        raise HarnessError(f"{relative} missing CI controls: " + ", ".join(missing))
-
-
-def validate_skill(relative: str) -> None:
-    text = read_text(relative)
-    for marker in (
-        "## Trigger",
-        "## Required inputs",
-        "## Procedure",
-        "## Failure behavior",
-        "## Expected outputs",
-    ):
-        if marker not in text:
-            raise HarnessError(f"{relative} missing skill section: {marker}")
-
-
-def validate_report(relative: str) -> None:
-    text = read_text(relative)
-    for marker in (
-        "## Working",
-        "## Broken",
-        "## Missing / intentionally not yet established",
-        "## Principal risks",
-    ):
-        if marker not in text:
-            raise HarnessError(f"{relative} missing operator section: {marker}")
-
-
-def validate_no_placeholders(paths: list[str]) -> None:
-    for relative in paths:
-        if re.search(r"\b(?:TODO|TBD|FIXME)\b", read_text(relative)):
-            raise HarnessError(f"placeholder marker found in harness component: {relative}")
-
-
-def validate_governance() -> None:
-    process = subprocess.run(
-        [sys.executable, str(REPO_ROOT / "scripts" / "validate_governance.py")],
-        cwd=REPO_ROOT,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    if process.returncode:
-        raise HarnessError(
-            "governance validator failed: " + (process.stdout + process.stderr).strip()
-        )
-
-
-def main() -> int:
-    try:
-        data = validate_manifest()
-        components = data["components"]
-        require_markers(components["codebase_map"], REQUIRED_MAP_MARKERS)
-        require_markers(components["workflow_specs"], REQUIRED_WORKFLOW_MARKERS)
-        require_markers(components["artifact_registry"], REQUIRED_ARTIFACT_MARKERS)
-        require_markers(components["lua_design_constraints"], REQUIRED_LUA_MARKERS)
-        hook_self_tests = validate_hooks(components)
-        validate_ci(components["ci_workflow"])
-        validate_skill(components["scoped_skill"])
-        validate_report(components["operator_report"])
-        validate_no_placeholders(
-            [
-                components["codebase_map"],
-                components["workflow_specs"],
-                components["artifact_registry"],
-                components["lua_design_constraints"],
-                components["scoped_skill"],
-                components["operator_report"],
-            ]
-        )
-        validate_governance()
-    except HarnessError as exc:
-        return fail(str(exc))
-
-    print("HARNESS_VALIDATION: PASS")
-    print(f"manifest={MANIFEST.relative_to(REPO_ROOT)}")
-    print(f"components={len(REQUIRED_COMPONENT_KEYS)}")
-    print(f"schema={EXPECTED_SCHEMA}")
-    print(f"hook_self_tests={hook_self_tests}")
-    print("governance_validator=PASS")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+R=Path(__file__).resolve().parents[1]; M=R/'harness/manifest.v1.json'; S='escapehatch-harness/v1'
+C={'codebase_map':'harness/CODEBASE_MAP.md','workflow_specs':'harness/WORKFLOWS.md','artifact_registry':'ARTIFACT_REGISTRY.md','harness_validator':'scripts/validate_harness.py','governance_validator':'scripts/validate_governance.py','pre_commit_hook':'.githooks/pre-commit','pre_push_hook':'.githooks/pre-push','scoped_skill':'skills/harness-operations/SKILL.md','operator_report':'harness/reports/CURRENT_STATE.md','lua_design_constraints':'harness/constraints/LUA_EMBEDDING.md','ci_workflow':'.github/workflows/harness.yml'}
+OWN={'Agent governance doctrine':'AGENTS.md','Harness manifest':'harness/manifest.v1.json','Codebase map':'harness/CODEBASE_MAP.md','Workflow specs':'harness/WORKFLOWS.md','Lua embedding constraints':'harness/constraints/LUA_EMBEDDING.md','Current-state report':'harness/reports/CURRENT_STATE.md'}
+MARK={C['codebase_map']:('## Repository floor','## Structure','## Product entry points','## Validation commands','## Build, test, and deploy commands','## Fresh-agent path'),C['workflow_specs']:('## Task Pickup','## Pre-commit validation','## Failure Recovery','## Artifact discipline','## Handoff','## Product-runtime introduction gate'),C['artifact_registry']:('## Naming rules','## Registered artifacts','## Validation output','## Product artifact gate'),C['lua_design_constraints']:('## Host owns the application','## State isolation','## Error boundary','## Sandboxing','## Execution model','## Type discipline','## Conceptual integrity','## Validation expectations for the first Lua product sprint'),C['scoped_skill']:('## Trigger','## Required inputs','## Procedure','## Failure behavior','## Expected outputs'),C['operator_report']:('## Working','## Broken','## Missing / intentionally not yet established','## Principal risks')}
+PC=('repo=$(git rev-parse --show-toplevel)','git -C "$repo" checkout-index --all --prefix="$snapshot/"','python scripts/validate_governance.py','python scripts/validate_harness.py','git -C "$repo" diff --cached --check')
+PP=('while read -r local_ref local_sha remote_ref remote_sha','git archive --format=tar --output="$archive" "$local_sha"','python scripts/validate_governance.py','python scripts/validate_harness.py','git diff --check "$base" "$local_sha" --')
+class E(ValueError): pass
+def rd(p):
+ q=R/p
+ if not q.is_file(): raise E(f'missing component: {p}')
+ return q.read_text(encoding='utf-8')
+def need(p,ms):
+ t=rd(p); x=[m for m in ms if m not in t]
+ if x: raise E(f'{p} missing markers: '+', '.join(x))
+def manifest():
+ try:d=json.loads(M.read_text(encoding='utf-8'))
+ except (OSError,json.JSONDecodeError) as e: raise E(f'invalid harness manifest: {e}') from e
+ if d.get('schema')!=S or d.get('canonical_governance')!='AGENTS.md' or d.get('components')!=C: raise E('manifest schema/governance/component map is not canonical')
+ if len(set(C.values()))!=len(C): raise E('manifest component paths must be unique')
+ for p in C.values():
+  if Path(p).is_absolute() or '..' in Path(p).parts or not (R/p).is_file(): raise E(f'invalid or missing manifest component: {p}')
+ if d.get('validation_order')!=['python scripts/validate_governance.py','python scripts/validate_harness.py','git diff --check']: raise E('manifest validation_order is not canonical')
+ if d.get('artifact_registry')!=C['artifact_registry']: raise E('artifact_registry alias mismatch')
+ return d
+def active(t): return {x.strip() for x in t.splitlines() if x.strip() and not x.lstrip().startswith('#')}
+def hookbody(p,t,req):
+ if not t.startswith('#!/bin/sh\nset -eu\n'): raise E(f'{p} must start with #!/bin/sh and set -eu')
+ a=active(t); x=[v for v in req if v not in a]
+ if x: raise E(f'{p} missing active commands: '+', '.join(x))
+def hooks():
+ n=0
+ for p,req in ((C['pre_commit_hook'],PC),(C['pre_push_hook'],PP)):
+  t=rd(p); hookbody(p,t,req); target='python scripts/validate_harness.py'
+  for rep in ('# '+target,"echo '"+target+"'"):
+   try:hookbody(p,t.replace(target,rep,1),req)
+   except E:n+=1
+   else:raise E(f'hook negative fixture unexpectedly passed: {p}')
+ return n
+def ylines(t):
+ z=[]
+ for raw in t.splitlines():
+  if not raw.strip() or raw.lstrip().startswith('#'):continue
+  pre=raw[:len(raw)-len(raw.lstrip(' '))]
+  if '\t' in pre: raise E('CI workflow indentation must use spaces')
+  z.append((len(pre),raw.strip()))
+ return z
+def sub(z,key,ind):
+ tok=key+':'
+ for i,(n,s) in enumerate(z):
+  if n==ind and s==tok:
+   j=next((j for j in range(i+1,len(z)) if z[j][0]<=ind),len(z)); return z[i+1:j]
+ raise E(f'CI workflow missing active mapping: {tok}')
+def ciruns(t):
+ z=ylines(t)
+ if (0,'name: Harness Validation') not in z: raise E('CI missing active top-level name')
+ on=sub(z,'on',0); ev={s[:-1] for n,s in on if n==2 and s.endswith(':')}
+ if not {'push','pull_request'}<=ev: raise E('CI must actively enable push and pull_request')
+ st=sub(sub(sub(z,'jobs',0),'validate',2),'steps',4); runs={}; i=0
+ while i<len(st):
+  n,s=st[i]
+  if n!=6 or not s.startswith('- name: '): i+=1; continue
+  name=s[8:].strip(); j=i+1
+  while j<len(st) and not (st[j][0]==6 and st[j][1].startswith('- ')): j+=1
+  part=st[i+1:j]; val=None
+  for k,(a,b) in enumerate(part):
+   if a==8 and b.startswith('run:'):
+    tail=b[4:].strip()
+    if tail and tail!='|': val=tail
+    elif tail=='|': val='\n'.join(x for q,x in part[k+1:] if q>8)
+    break
+  if val is not None:runs[name]=val
+  i=j
+ return runs
+def cibody(t):
+ r=ciruns(t)
+ if r.get('Validate governance')!='python scripts/validate_governance.py': raise E('CI governance validator must be an active run step')
+ if r.get('Validate harness')!='python scripts/validate_harness.py': raise E('CI harness validator must be an active run step')
+ if not r.get('Check whitespace') or not any(x.strip().startswith('git diff --check') for x in r['Check whitespace'].splitlines()): raise E('CI whitespace step must actively execute git diff --check')
+def ci():
+ t=rd(C['ci_workflow']); cibody(t); n=0
+ for m in (t.replace('  pull_request:\n','  # pull_request:\n',1),t.replace('run: python scripts/validate_harness.py','note: python scripts/validate_harness.py',1)):
+  try:cibody(m)
+  except E:n+=1
+  else:raise E('CI negative fixture unexpectedly passed')
+ return n
+def sect(t,h):
+ k=h+'\n'
+ if k not in t: raise E(f'artifact registry missing section: {h}')
+ return t.split(k,1)[1].split('\n## ',1)[0]
+def rows(t):
+ out=[]
+ for raw in sect(t,'## Registered artifacts').splitlines():
+  if not raw.strip().startswith('|'):continue
+  a=[x.strip() for x in raw.strip().strip('|').split('|')]
+  if not a or a[0] in ('Artifact','---'):continue
+  if len(a)!=5 or not(a[1].startswith('`') and a[1].endswith('`')):raise E('artifact registry row/owner format invalid')
+  out.append((a[0],a[1][1:-1],a[2],a[3],a[4]))
+ if not out:raise E('artifact registry has no rows')
+ return out
+def regbody(t,files=True):
+ a=rows(t); names=[x[0] for x in a]; owners=[x[1] for x in a]
+ if len(names)!=len(set(names)):raise E('artifact names must be unique')
+ if len(owners)!=len(set(owners)):raise E('artifact owner paths must be unique')
+ by={x[0]:x for x in a}
+ for name,owner in OWN.items():
+  if name not in by:raise E(f'missing registered artifact: {name}')
+  row=by[name]
+  if row[1]!=owner:raise E(f'wrong owner for {name}: expected {owner}, got {row[1]}')
+  if not row[3] or not row[4]:raise E(f'missing generation/validation contract for {name}')
+  if files and not (R/owner).is_file():raise E(f'artifact owner does not exist: {owner}')
+def registry():
+ t=rd(C['artifact_registry']); regbody(t); n=0
+ for m in (t.replace('| Codebase map | `harness/CODEBASE_MAP.md` |','| Codebase map | `AGENTS.md` |',1),t.replace('| Codebase map | `harness/CODEBASE_MAP.md` |','| Codebase map | `harness/DOES_NOT_EXIST.md` |',1)):
+  try:regbody(m)
+  except E:n+=1
+  else:raise E('artifact registry negative fixture unexpectedly passed')
+ return n
+def gov():
+ p=subprocess.run([sys.executable,str(R/'scripts/validate_governance.py')],cwd=R,text=True,capture_output=True)
+ if p.returncode:raise E('governance validator failed: '+(p.stdout+p.stderr).strip())
+def main():
+ try:
+  d=manifest()
+  for p,ms in MARK.items():need(p,ms)
+  ar=registry(); hk=hooks(); cy=ci()
+  for p in MARK:
+   if re.search(r'\b(?:TODO|TBD|FIXME)\b',rd(p)):raise E(f'placeholder marker found in {p}')
+  gov()
+ except E as e:print(f'HARNESS_VALIDATION: FAIL: {e}',file=sys.stderr);return 1
+ print('HARNESS_VALIDATION: PASS');print(f'manifest={M.relative_to(R)}');print(f'components={len(C)}');print(f'schema={S}');print(f'artifact_self_tests={ar}');print(f'hook_self_tests={hk}');print(f'ci_self_tests={cy}');print('governance_validator=PASS');return 0
+if __name__=='__main__':raise SystemExit(main())

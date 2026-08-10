@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+
+python scripts/validate_governance.py
+python scripts/validate_harness.py
+git diff --cached --check

@@ -1,0 +1,23 @@
+{
+  "schema": "escapehatch-harness/v1",
+  "canonical_governance": "AGENTS.md",
+  "components": {
+    "codebase_map": "harness/CODEBASE_MAP.md",
+    "workflow_specs": "harness/WORKFLOWS.md",
+    "artifact_registry": "ARTIFACT_REGISTRY.md",
+    "harness_validator": "scripts/validate_harness.py",
+    "governance_validator": "scripts/validate_governance.py",
+    "pre_commit_hook": ".githooks/pre-commit",
+    "pre_push_hook": ".githooks/pre-push",
+    "scoped_skill": "skills/harness-operations/SKILL.md",
+    "operator_report": "harness/reports/CURRENT_STATE.md",
+    "lua_design_constraints": "harness/constraints/LUA_EMBEDDING.md",
+    "ci_workflow": ".github/workflows/harness.yml"
+  },
+  "validation_order": [
+    "python scripts/validate_governance.py",
+    "python scripts/validate_harness.py",
+    "git diff --check"
+  ],
+  "artifact_registry": "ARTIFACT_REGISTRY.md"
+}

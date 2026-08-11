@@ -1,0 +1,52 @@
+#!/bin/sh
+set -eu
+
+remote_name=${1:-origin}
+zero=0000000000000000000000000000000000000000
+repo=$(git rev-parse --show-toplevel)
+cd "$repo"
+
+snapshot=
+archive=
+cleanup() {
+  if [ -n "$snapshot" ] && [ -d "$snapshot" ]; then
+    rm -rf "$snapshot"
+  fi
+  if [ -n "$archive" ] && [ -f "$archive" ]; then
+    rm -f "$archive"
+  fi
+}
+trap cleanup EXIT HUP INT TERM
+
+while read -r local_ref local_sha remote_ref remote_sha
+do
+  if [ -z "${local_sha:-}" ] || [ "$local_sha" = "$zero" ]; then
+    continue
+  fi
+
+  snapshot=$(mktemp -d "${TMPDIR:-/tmp}/escapehatch-prepush.XXXXXX")
+  archive=$(mktemp "${TMPDIR:-/tmp}/escapehatch-prepush.XXXXXX.tar")
+  git archive --format=tar --output="$archive" "$local_sha"
+  tar -xf "$archive" -C "$snapshot"
+
+  (
+    cd "$snapshot"
+    python scripts/validate_governance.py
+    python scripts/validate_harness.py
+  )
+
+  if [ "$remote_sha" != "$zero" ] && git cat-file -e "$remote_sha^{commit}" 2>/dev/null; then
+    base=$remote_sha
+  elif git rev-parse --verify "refs/remotes/$remote_name/main^{commit}" >/dev/null 2>&1; then
+    base=$(git merge-base "$local_sha" "refs/remotes/$remote_name/main")
+  elif git rev-parse --verify "$local_sha^" >/dev/null 2>&1; then
+    base=$(git rev-parse "$local_sha^")
+  else
+    base=$(git hash-object -t tree /dev/null)
+  fi
+
+  git diff --check "$base" "$local_sha" --
+  cleanup
+  snapshot=
+  archive=
+done

@@ -8,6 +8,7 @@ This file is the canonical registry for durable EscapeHatch artifacts. An artifa
 - Current human-readable state uses a stable owner path such as `harness/reports/CURRENT_STATE.md`.
 - Generated evidence, when introduced, must use deterministic names or timestamped receipts under a registered output directory.
 - Portable career-state exports must identify artifact ownership explicitly and must not rely on machine-specific absolute paths.
+- Study-guidance records remain part of user-owned career state; the exporter emits a portable StudySyndicate packet without committing private tracker state.
 - Do not register secrets, credentials, caches, dependency trees, or disposable local output.
 
 ## Registered artifacts
@@ -23,6 +24,9 @@ This file is the canonical registry for durable EscapeHatch artifacts. An artifa
 | Career-state schema | `contracts/career-state.v1.schema.json` | tracked versioned product contract | change only through an explicit schema-versioned product sprint | `python scripts/validate_career_state.py` |
 | Career-state example fixture | `fixtures/career-state.v1.example.json` | tracked portable validation fixture | update with schema-compatible representative state | `python scripts/validate_career_state.py` |
 | Career-state validator | `scripts/validate_career_state.py` | tracked product contract validator | update with the owning schema/reference rules | `python scripts/validate_career_state.py` |
+| Study-guidance exporter | `scripts/export_study_guidance.py` | tracked cross-repo adapter | export `study_guidance` records from user-owned career state | `python tests/test_study_guidance_export.py` |
+| Study-guidance export tests | `tests/test_study_guidance_export.py` | tracked behavior test | exercise the canonical example fixture | `python tests/test_study_guidance_export.py` |
+| Career-state CI | `.github/workflows/career-state.yml` | tracked validation workflow | runs on product-contract changes | GitHub Actions |
 
 ## Validation output
 
@@ -30,6 +34,8 @@ Validator stdout is evidence, not a canonical tracked artifact. CI logs or opera
 
 ## Product artifact gate
 
-`contracts/career-state.v1.schema.json` now owns the durable relationship contract for profile → opportunity → resume → application → evidence. The schema deliberately stores artifact references rather than claiming ownership of external files. Each artifact reference declares `owner` (`user`, `escapehatch`, or `external`), `kind`, and a portable locator; relative-path locators are rejected when absolute or parent-escaping. Real user career-state exports remain user-owned data and are not committed by default.
+`contracts/career-state.v1.schema.json` owns the durable relationship contract for profile → opportunity → resume → application → study guidance → evidence. An opportunity with recorded `requirements_gaps` must have non-superseded `requirements-gap` study guidance; this prevents tracker gaps from becoming dead-end notes. Guidance resources preserve typed inputs including books, and `scripts/export_study_guidance.py` maps those records to the external `study-syndicate/study-guidance/v1` contract while preserving application/opportunity provenance and iteration number.
 
-Resume rendering, job discovery, application submission, scraping, auto-apply behavior, and Lua runtime execution remain unregistered product scope.
+The schema stores artifact references rather than claiming ownership of external files. Each artifact reference declares `owner` (`user`, `escapehatch`, or `external`), `kind`, and a portable locator; relative-path locators are rejected when absolute or parent-escaping. Real user career-state exports remain user-owned data and are not committed by default.
+
+Resume rendering, job discovery, application submission, scraping, auto-apply behavior, and StudySyndicate runtime execution remain outside EscapeHatch product authority.

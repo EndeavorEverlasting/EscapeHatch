@@ -1,15 +1,12 @@
 {
   "schema_version": "escapehatch-career-state/v1",
   "state_id": "state-example",
-  "revision": 2,
-  "updated_at": "2026-08-11T13:00:00-04:00",
+  "revision": 3,
+  "updated_at": "2026-08-11T14:20:00-04:00",
   "profile": {
     "id": "profile-primary",
     "headline": "Technical project and operations leader",
-    "skills": [
-      "project delivery",
-      "IT operations"
-    ],
+    "skills": ["project delivery", "IT operations"],
     "source_artifacts": []
   },
   "opportunities": [
@@ -20,25 +17,11 @@
       "status": "targeted",
       "priority": "high",
       "fit_score": 86,
-      "requirements_gaps": [
-        "Verify travel expectations before applying."
-      ],
-      "next_action": "Tailor the resume against the saved employer posting.",
-      "source": {
-        "owner": "external",
-        "kind": "uri",
-        "locator": "https://example.invalid/jobs/123"
-      },
-      "apply_link": {
-        "owner": "external",
-        "kind": "uri",
-        "locator": "https://example.invalid/apply/123"
-      },
-      "posting_snapshot": {
-        "owner": "user",
-        "kind": "relative_path",
-        "locator": "opportunities/opp-example/posting.txt"
-      },
+      "requirements_gaps": ["Strengthen SQL evidence for reporting-oriented roles."],
+      "next_action": "Tailor the resume and export the associated study guidance.",
+      "source": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/jobs/123"},
+      "apply_link": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/apply/123"},
+      "posting_snapshot": {"owner": "user", "kind": "relative_path", "locator": "opportunities/opp-example/posting.txt"},
       "captured_at": "2026-08-11T12:45:00-04:00"
     }
   ],
@@ -47,11 +30,7 @@
       "id": "resume-example-v1",
       "profile_id": "profile-primary",
       "opportunity_id": "opp-example",
-      "artifact": {
-        "owner": "user",
-        "kind": "relative_path",
-        "locator": "resumes/example-installation-coordinator.pdf"
-      },
+      "artifact": {"owner": "user", "kind": "relative_path", "locator": "resumes/example-installation-coordinator.pdf"},
       "created_at": "2026-08-11T12:50:00-04:00"
     }
   ],
@@ -63,6 +42,33 @@
       "status": "draft",
       "submitted_at": null,
       "external_reference": null
+    }
+  ],
+  "study_guidance": [
+    {
+      "id": "guidance-opp-example-sql-001",
+      "opportunity_id": "opp-example",
+      "application_id": "app-example",
+      "contract": "study-syndicate/study-guidance/v1",
+      "trigger_kind": "requirements-gap",
+      "reason": "The opportunity surfaced a SQL evidence gap that should generate targeted study material.",
+      "cascade_concept_ids": ["databases.relational-model"],
+      "iteration": 1,
+      "concepts": [
+        {"concept_id": "sql.joins", "reason": "Practice joins used in operational reporting.", "priority": 5}
+      ],
+      "resources": [
+        {
+          "kind": "book",
+          "title": "Learning SQL",
+          "author": "Alan Beaulieu",
+          "relation": "primary",
+          "concept_ids": ["sql.joins"],
+          "note": "Preserve the book as guidance input; reading alone is not mastery evidence."
+        }
+      ],
+      "status": "queued",
+      "created_at": "2026-08-11T14:20:00-04:00"
     }
   ],
   "evidence": []

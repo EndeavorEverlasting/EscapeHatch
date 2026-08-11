@@ -7,6 +7,7 @@ This file is the canonical registry for durable EscapeHatch artifacts. An artifa
 - Schemas and manifests include an explicit version, for example `*.v1.json`.
 - Current human-readable state uses a stable owner path such as `harness/reports/CURRENT_STATE.md`.
 - Generated evidence, when introduced, must use deterministic names or timestamped receipts under a registered output directory.
+- Durable Windows repository/worktree state belongs under the resolved `Desktop\Dev` development root, never under a temporary-directory convention.
 - Portable career-state exports must identify artifact ownership explicitly and must not rely on machine-specific absolute paths.
 - Do not register secrets, credentials, caches, dependency trees, or disposable local output.
 
@@ -18,6 +19,7 @@ This file is the canonical registry for durable EscapeHatch artifacts. An artifa
 | Harness manifest | `harness/manifest.v1.json` | tracked machine-readable registry | harness sprint only | `python scripts/validate_harness.py` |
 | Codebase map | `harness/CODEBASE_MAP.md` | tracked operator/agent map | update when repo structure or commands change | `python scripts/validate_harness.py` |
 | Workflow specs | `harness/WORKFLOWS.md` | tracked operating contract | update when validated workflow changes | `python scripts/validate_harness.py` |
+| Windows repo resolver | `scripts/resolve_repo.ps1` | tracked harness acquisition helper | update when durable Windows checkout/worktree policy changes | `python scripts/validate_harness.py` and Windows CI path-policy proof |
 | Lua embedding constraints | `harness/constraints/LUA_EMBEDDING.md` | tracked design input | update only with an explicit architecture decision | `python scripts/validate_harness.py` |
 | Current-state report | `harness/reports/CURRENT_STATE.md` | tracked human-readable report | update when verified repository state materially changes | `python scripts/validate_harness.py` |
 | Career-state schema | `contracts/career-state.v1.schema.json` | tracked versioned product contract | change only through an explicit schema-versioned product sprint | `python scripts/validate_career_state.py` |

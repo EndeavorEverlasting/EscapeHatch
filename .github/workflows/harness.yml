@@ -27,6 +27,9 @@ jobs:
       - name: Validate harness
         run: python scripts/validate_harness.py
 
+      - name: Validate career-state contract
+        run: python scripts/validate_career_state.py
+
       - name: Check whitespace
         shell: bash
         run: |
@@ -43,3 +46,22 @@ jobs:
           else
             git diff --check
           fi
+
+  windows-location:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate durable Windows repo root
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $expected = Join-Path $HOME 'Desktop\Dev'
+          New-Item -ItemType Directory -Path $expected -Force | Out-Null
+          $actual = & ./scripts/resolve_repo.ps1 -ResolveOnly
+          if ([IO.Path]::GetFullPath($actual) -ne [IO.Path]::GetFullPath($expected)) {
+            throw "Expected durable dev root $expected, got $actual"
+          }
+          Write-Host "WINDOWS_REPO_ROOT=PASS"
+          Write-Host "DEV_ROOT=$actual"

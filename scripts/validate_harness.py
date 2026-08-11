@@ -1,135 +1,511 @@
 #!/usr/bin/env python3
 """Fail-closed completeness checks for the EscapeHatch harness."""
-import json, re, subprocess, sys
+
+import json
+import re
+import subprocess
+import sys
 from pathlib import Path
-R=Path(__file__).resolve().parents[1]; M=R/'harness/manifest.v1.json'; S='escapehatch-harness/v1'
-C={'codebase_map':'harness/CODEBASE_MAP.md','workflow_specs':'harness/WORKFLOWS.md','artifact_registry':'ARTIFACT_REGISTRY.md','harness_validator':'scripts/validate_harness.py','governance_validator':'scripts/validate_governance.py','pre_commit_hook':'.githooks/pre-commit','pre_push_hook':'.githooks/pre-push','scoped_skill':'skills/harness-operations/SKILL.md','operator_report':'harness/reports/CURRENT_STATE.md','lua_design_constraints':'harness/constraints/LUA_EMBEDDING.md','ci_workflow':'.github/workflows/harness.yml'}
-OWN={'Agent governance doctrine':'AGENTS.md','Harness manifest':'harness/manifest.v1.json','Codebase map':'harness/CODEBASE_MAP.md','Workflow specs':'harness/WORKFLOWS.md','Lua embedding constraints':'harness/constraints/LUA_EMBEDDING.md','Current-state report':'harness/reports/CURRENT_STATE.md'}
-MARK={C['codebase_map']:('## Repository floor','## Structure','## Product entry points','## Validation commands','## Build, test, and deploy commands','## Fresh-agent path'),C['workflow_specs']:('## Task Pickup','## Pre-commit validation','## Failure Recovery','## Artifact discipline','## Handoff','## Product-runtime introduction gate'),C['artifact_registry']:('## Naming rules','## Registered artifacts','## Validation output','## Product artifact gate'),C['lua_design_constraints']:('## Host owns the application','## State isolation','## Error boundary','## Sandboxing','## Execution model','## Type discipline','## Conceptual integrity','## Validation expectations for the first Lua product sprint'),C['scoped_skill']:('## Trigger','## Required inputs','## Procedure','## Failure behavior','## Expected outputs'),C['operator_report']:('## Working','## Broken','## Missing / intentionally not yet established','## Principal risks')}
-PC=('repo=$(git rev-parse --show-toplevel)','git -C "$repo" checkout-index --all --prefix="$snapshot/"','python scripts/validate_governance.py','python scripts/validate_harness.py','git -C "$repo" diff --cached --check')
-PP=('while read -r local_ref local_sha remote_ref remote_sha','git archive --format=tar --output="$archive" "$local_sha"','python scripts/validate_governance.py','python scripts/validate_harness.py','git diff --check "$base" "$local_sha" --')
-class E(ValueError): pass
-def rd(p):
- q=R/p
- if not q.is_file(): raise E(f'missing component: {p}')
- return q.read_text(encoding='utf-8')
-def need(p,ms):
- t=rd(p); x=[m for m in ms if m not in t]
- if x: raise E(f'{p} missing markers: '+', '.join(x))
+
+R = Path(__file__).resolve().parents[1]
+M = R / "harness/manifest.v1.json"
+S = "escapehatch-harness/v1"
+
+C = {
+    "codebase_map": "harness/CODEBASE_MAP.md",
+    "workflow_specs": "harness/WORKFLOWS.md",
+    "artifact_registry": "ARTIFACT_REGISTRY.md",
+    "harness_validator": "scripts/validate_harness.py",
+    "governance_validator": "scripts/validate_governance.py",
+    "repo_resolver": "scripts/resolve_repo.ps1",
+    "pre_commit_hook": ".githooks/pre-commit",
+    "pre_push_hook": ".githooks/pre-push",
+    "scoped_skill": "skills/harness-operations/SKILL.md",
+    "operator_report": "harness/reports/CURRENT_STATE.md",
+    "lua_design_constraints": "harness/constraints/LUA_EMBEDDING.md",
+    "ci_workflow": ".github/workflows/harness.yml",
+}
+
+OWN = {
+    "Agent governance doctrine": "AGENTS.md",
+    "Harness manifest": "harness/manifest.v1.json",
+    "Codebase map": "harness/CODEBASE_MAP.md",
+    "Workflow specs": "harness/WORKFLOWS.md",
+    "Windows repo resolver": "scripts/resolve_repo.ps1",
+    "Lua embedding constraints": "harness/constraints/LUA_EMBEDDING.md",
+    "Current-state report": "harness/reports/CURRENT_STATE.md",
+    "Career-state schema": "contracts/career-state.v1.schema.json",
+    "Career-state example fixture": "fixtures/career-state.v1.example.json",
+    "Career-state validator": "scripts/validate_career_state.py",
+}
+
+MARK = {
+    C["codebase_map"]: (
+        "## Repository floor",
+        "## Structure",
+        "## Durable Windows repository root",
+        "## Product entry points",
+        "## Validation commands",
+        "## Build, test, and deploy commands",
+        "## Fresh-agent path",
+    ),
+    C["workflow_specs"]: (
+        "## Repository Location",
+        "## Task Pickup",
+        "## Pre-commit validation",
+        "## Failure Recovery",
+        "## Artifact discipline",
+        "## Handoff",
+        "## Product-runtime introduction gate",
+    ),
+    C["artifact_registry"]: (
+        "## Naming rules",
+        "## Registered artifacts",
+        "## Validation output",
+        "## Product artifact gate",
+    ),
+    C["lua_design_constraints"]: (
+        "## Host owns the application",
+        "## State isolation",
+        "## Error boundary",
+        "## Sandboxing",
+        "## Execution model",
+        "## Type discipline",
+        "## Conceptual integrity",
+        "## Validation expectations for the first Lua product sprint",
+    ),
+    C["scoped_skill"]: (
+        "## Trigger",
+        "## Required inputs",
+        "## Procedure",
+        "## Failure behavior",
+        "## Expected outputs",
+    ),
+    C["operator_report"]: (
+        "## Working",
+        "## Broken",
+        "## Missing / intentionally not yet established",
+        "## Principal risks",
+    ),
+}
+
+PC = (
+    'repo=$(git rev-parse --show-toplevel)',
+    'git -C "$repo" checkout-index --all --prefix="$snapshot/"',
+    "python scripts/validate_governance.py",
+    "python scripts/validate_harness.py",
+    'git -C "$repo" diff --cached --check',
+)
+
+PP = (
+    "while read -r local_ref local_sha remote_ref remote_sha",
+    'git archive --format=tar --output="$archive" "$local_sha"',
+    "python scripts/validate_governance.py",
+    "python scripts/validate_harness.py",
+    'git diff --check "$base" "$local_sha" --',
+)
+
+PS_REQUIRED = (
+    "[string]$RepositoryUrl = 'https://github.com/EndeavorEverlasting/EscapeHatch.git',",
+    "if ($ResolveOnly) {",
+    "$preferred = Join-Path $HOME 'Desktop\\Dev'",
+    "if ($cursor.Name -ieq 'Dev' -and $cursor.Parent -and $cursor.Parent.Name -ieq 'Desktop') {",
+    "Invoke-Git -Arguments @('-C', $canonical, 'fetch', 'origin', 'main')",
+    "Invoke-Git -Arguments @('-C', $canonical, 'worktree', 'add', '--detach', $target, $targetCommit)",
+    "Write-Output $resolvedDevRoot",
+    "Write-Output $target",
+)
+
+
+class E(ValueError):
+    pass
+
+
+def rd(path):
+    q = R / path
+    if not q.is_file():
+        raise E(f"missing component: {path}")
+    return q.read_text(encoding="utf-8")
+
+
+def need(path, markers):
+    text = rd(path)
+    missing = [m for m in markers if m not in text]
+    if missing:
+        raise E(f"{path} missing markers: " + ", ".join(missing))
+
+
 def manifest():
- try:d=json.loads(M.read_text(encoding='utf-8'))
- except (OSError,json.JSONDecodeError) as e: raise E(f'invalid harness manifest: {e}') from e
- if d.get('schema')!=S or d.get('canonical_governance')!='AGENTS.md' or d.get('components')!=C: raise E('manifest schema/governance/component map is not canonical')
- if len(set(C.values()))!=len(C): raise E('manifest component paths must be unique')
- for p in C.values():
-  if Path(p).is_absolute() or '..' in Path(p).parts or not (R/p).is_file(): raise E(f'invalid or missing manifest component: {p}')
- if d.get('validation_order')!=['python scripts/validate_governance.py','python scripts/validate_harness.py','git diff --check']: raise E('manifest validation_order is not canonical')
- if d.get('artifact_registry')!=C['artifact_registry']: raise E('artifact_registry alias mismatch')
- return d
-def active(t): return {x.strip() for x in t.splitlines() if x.strip() and not x.lstrip().startswith('#')}
-def hookbody(p,t,req):
- if not t.startswith('#!/bin/sh\nset -eu\n'): raise E(f'{p} must start with #!/bin/sh and set -eu')
- a=active(t); x=[v for v in req if v not in a]
- if x: raise E(f'{p} missing active commands: '+', '.join(x))
+    try:
+        data = json.loads(M.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise E(f"invalid harness manifest: {exc}") from exc
+
+    if data.get("schema") != S:
+        raise E("manifest schema is not canonical")
+    if data.get("canonical_governance") != "AGENTS.md":
+        raise E("manifest governance owner is not canonical")
+    if data.get("components") != C:
+        raise E("manifest component map is not canonical")
+    if len(set(C.values())) != len(C):
+        raise E("manifest component paths must be unique")
+
+    for path in C.values():
+        p = Path(path)
+        if p.is_absolute() or ".." in p.parts or not (R / path).is_file():
+            raise E(f"invalid or missing manifest component: {path}")
+
+    expected = [
+        "python scripts/validate_governance.py",
+        "python scripts/validate_harness.py",
+        "git diff --check",
+    ]
+    if data.get("validation_order") != expected:
+        raise E("manifest validation_order is not canonical")
+    if data.get("artifact_registry") != C["artifact_registry"]:
+        raise E("artifact_registry alias mismatch")
+    return data
+
+
+def active_shell(text):
+    return {
+        line.strip()
+        for line in text.splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    }
+
+
+def hookbody(path, text, required):
+    if not text.startswith("#!/bin/sh\nset -eu\n"):
+        raise E(f"{path} must start with #!/bin/sh and set -eu")
+    lines = active_shell(text)
+    missing = [line for line in required if line not in lines]
+    if missing:
+        raise E(f"{path} missing active commands: " + ", ".join(missing))
+
+
 def hooks():
- n=0
- for p,req in ((C['pre_commit_hook'],PC),(C['pre_push_hook'],PP)):
-  t=rd(p); hookbody(p,t,req); target='python scripts/validate_harness.py'
-  for rep in ('# '+target,"echo '"+target+"'"):
-   try:hookbody(p,t.replace(target,rep,1),req)
-   except E:n+=1
-   else:raise E(f'hook negative fixture unexpectedly passed: {p}')
- return n
-def ylines(t):
- z=[]
- for raw in t.splitlines():
-  if not raw.strip() or raw.lstrip().startswith('#'):continue
-  pre=raw[:len(raw)-len(raw.lstrip(' '))]
-  if '\t' in pre: raise E('CI workflow indentation must use spaces')
-  z.append((len(pre),raw.strip()))
- return z
-def sub(z,key,ind):
- tok=key+':'
- for i,(n,s) in enumerate(z):
-  if n==ind and s==tok:
-   j=next((j for j in range(i+1,len(z)) if z[j][0]<=ind),len(z)); return z[i+1:j]
- raise E(f'CI workflow missing active mapping: {tok}')
-def ciruns(t):
- z=ylines(t)
- if (0,'name: Harness Validation') not in z: raise E('CI missing active top-level name')
- on=sub(z,'on',0); ev={s[:-1] for n,s in on if n==2 and s.endswith(':')}
- if not {'push','pull_request'}<=ev: raise E('CI must actively enable push and pull_request')
- st=sub(sub(sub(z,'jobs',0),'validate',2),'steps',4); runs={}; i=0
- while i<len(st):
-  n,s=st[i]
-  if n!=6 or not s.startswith('- name: '): i+=1; continue
-  name=s[8:].strip(); j=i+1
-  while j<len(st) and not (st[j][0]==6 and st[j][1].startswith('- ')): j+=1
-  part=st[i+1:j]; val=None
-  for k,(a,b) in enumerate(part):
-   if a==8 and b.startswith('run:'):
-    tail=b[4:].strip()
-    if tail and tail!='|': val=tail
-    elif tail=='|': val='\n'.join(x for q,x in part[k+1:] if q>8)
-    break
-  if val is not None:runs[name]=val
-  i=j
- return runs
-def cibody(t):
- r=ciruns(t)
- if r.get('Validate governance')!='python scripts/validate_governance.py': raise E('CI governance validator must be an active run step')
- if r.get('Validate harness')!='python scripts/validate_harness.py': raise E('CI harness validator must be an active run step')
- if not r.get('Check whitespace') or not any(x.strip().startswith('git diff --check') for x in r['Check whitespace'].splitlines()): raise E('CI whitespace step must actively execute git diff --check')
+    count = 0
+    for path, required in ((C["pre_commit_hook"], PC), (C["pre_push_hook"], PP)):
+        text = rd(path)
+        hookbody(path, text, required)
+        target = "python scripts/validate_harness.py"
+        for replacement in ("# " + target, "echo '" + target + "'"):
+            try:
+                hookbody(path, text.replace(target, replacement, 1), required)
+            except E:
+                count += 1
+            else:
+                raise E(f"hook negative fixture unexpectedly passed: {path}")
+    return count
+
+
+def active_powershell(text):
+    lines = []
+    in_block_comment = False
+    for raw in text.splitlines():
+        stripped = raw.strip()
+        if stripped.startswith("<#"):
+            in_block_comment = True
+        if not in_block_comment and stripped and not stripped.startswith("#"):
+            lines.append(stripped)
+        if in_block_comment and stripped.endswith("#>"):
+            in_block_comment = False
+    return set(lines)
+
+
+def resolverbody(text):
+    lines = active_powershell(text)
+    missing = [line for line in PS_REQUIRED if line not in lines]
+    if missing:
+        raise E("repo resolver missing active controls: " + ", ".join(missing))
+
+    joined = "\n".join(lines)
+    forbidden = (
+        r"\$env:(?:TEMP|TMP)\b",
+        r"AppData[\\/]+Local[\\/]+Temp",
+        r"Join-Path\s+\$env:(?:TEMP|TMP)",
+    )
+    if any(re.search(pattern, joined, re.IGNORECASE) for pattern in forbidden):
+        raise E("repo resolver must not place durable repository state in temporary storage")
+
+
+def resolver():
+    text = rd(C["repo_resolver"])
+    resolverbody(text)
+    count = 0
+    mutations = (
+        text.replace("$preferred = Join-Path $HOME 'Desktop\\Dev'", "$preferred = $env:TEMP", 1),
+        text.replace(
+            "Invoke-Git -Arguments @('-C', $canonical, 'worktree', 'add', '--detach', $target, $targetCommit)",
+            "# worktree disabled",
+            1,
+        ),
+        text.replace(
+            "if ($cursor.Name -ieq 'Dev' -and $cursor.Parent -and $cursor.Parent.Name -ieq 'Desktop') {",
+            "if ($false) {",
+            1,
+        ),
+    )
+    for candidate in mutations:
+        try:
+            resolverbody(candidate)
+        except E:
+            count += 1
+        else:
+            raise E("repo resolver negative fixture unexpectedly passed")
+    return count
+
+
+def ylines(text):
+    result = []
+    for raw in text.splitlines():
+        if not raw.strip() or raw.lstrip().startswith("#"):
+            continue
+        prefix = raw[: len(raw) - len(raw.lstrip(" "))]
+        if "\t" in prefix:
+            raise E("CI workflow indentation must use spaces")
+        result.append((len(prefix), raw.strip()))
+    return result
+
+
+def sub(lines, key, indent):
+    token = key + ":"
+    for index, (depth, text) in enumerate(lines):
+        if depth == indent and text == token:
+            end = next(
+                (j for j in range(index + 1, len(lines)) if lines[j][0] <= indent),
+                len(lines),
+            )
+            return lines[index + 1 : end]
+    raise E(f"CI workflow missing active mapping: {token}")
+
+
+def step_runs(job_lines):
+    steps = sub(job_lines, "steps", 4)
+    runs = {}
+    index = 0
+    while index < len(steps):
+        depth, text = steps[index]
+        if depth != 6 or not text.startswith("- name: "):
+            index += 1
+            continue
+        name = text[8:].strip()
+        end = index + 1
+        while end < len(steps) and not (
+            steps[end][0] == 6 and steps[end][1].startswith("- ")
+        ):
+            end += 1
+        part = steps[index + 1 : end]
+        value = None
+        for offset, (item_depth, item) in enumerate(part):
+            if item_depth == 8 and item.startswith("run:"):
+                tail = item[4:].strip()
+                if tail and tail != "|":
+                    value = tail
+                elif tail == "|":
+                    value = "\n".join(x for q, x in part[offset + 1 :] if q > 8)
+                break
+        if value is not None:
+            runs[name] = value
+        index = end
+    return runs
+
+
+def ci_structure(text):
+    lines = ylines(text)
+    if (0, "name: Harness Validation") not in lines:
+        raise E("CI missing active top-level name")
+
+    on = sub(lines, "on", 0)
+    events = {text[:-1] for depth, text in on if depth == 2 and text.endswith(":")}
+    if not {"push", "pull_request"} <= events:
+        raise E("CI must actively enable push and pull_request")
+
+    jobs = sub(lines, "jobs", 0)
+
+    validate_job = sub(jobs, "validate", 2)
+    if (4, "runs-on: ubuntu-latest") not in validate_job:
+        raise E("CI validate job must run on ubuntu-latest")
+    validate_runs = step_runs(validate_job)
+    if validate_runs.get("Validate governance") != "python scripts/validate_governance.py":
+        raise E("CI governance validator must be an active run step")
+    if validate_runs.get("Validate harness") != "python scripts/validate_harness.py":
+        raise E("CI harness validator must be an active run step")
+    if validate_runs.get("Validate career-state contract") != "python scripts/validate_career_state.py":
+        raise E("CI career-state validator must remain an active run step")
+    whitespace = validate_runs.get("Check whitespace", "")
+    if not any(line.strip().startswith("git diff --check") for line in whitespace.splitlines()):
+        raise E("CI whitespace step must actively execute git diff --check")
+
+    windows_job = sub(jobs, "windows-location", 2)
+    if (4, "runs-on: windows-latest") not in windows_job:
+        raise E("CI windows-location job must run on windows-latest")
+    windows_runs = step_runs(windows_job)
+    path_proof = windows_runs.get("Validate durable Windows repo root", "")
+    for marker in (
+        "$expected = Join-Path $HOME 'Desktop\\Dev'",
+        "& ./scripts/resolve_repo.ps1 -ResolveOnly",
+        "WINDOWS_REPO_ROOT=PASS",
+    ):
+        if marker not in path_proof:
+            raise E(f"CI Windows path-policy proof missing active control: {marker}")
+
+
 def ci():
- t=rd(C['ci_workflow']); cibody(t); n=0
- for m in (t.replace('  pull_request:\n','  # pull_request:\n',1),t.replace('run: python scripts/validate_harness.py','note: python scripts/validate_harness.py',1)):
-  try:cibody(m)
-  except E:n+=1
-  else:raise E('CI negative fixture unexpectedly passed')
- return n
-def sect(t,h):
- k=h+'\n'
- if k not in t: raise E(f'artifact registry missing section: {h}')
- return t.split(k,1)[1].split('\n## ',1)[0]
-def rows(t):
- out=[]
- for raw in sect(t,'## Registered artifacts').splitlines():
-  if not raw.strip().startswith('|'):continue
-  a=[x.strip() for x in raw.strip().strip('|').split('|')]
-  if not a or a[0] in ('Artifact','---'):continue
-  if len(a)!=5 or not(a[1].startswith('`') and a[1].endswith('`')):raise E('artifact registry row/owner format invalid')
-  out.append((a[0],a[1][1:-1],a[2],a[3],a[4]))
- if not out:raise E('artifact registry has no rows')
- return out
-def regbody(t,files=True):
- a=rows(t); names=[x[0] for x in a]; owners=[x[1] for x in a]
- if len(names)!=len(set(names)):raise E('artifact names must be unique')
- if len(owners)!=len(set(owners)):raise E('artifact owner paths must be unique')
- by={x[0]:x for x in a}
- for name,owner in OWN.items():
-  if name not in by:raise E(f'missing registered artifact: {name}')
-  row=by[name]
-  if row[1]!=owner:raise E(f'wrong owner for {name}: expected {owner}, got {row[1]}')
-  if not row[3] or not row[4]:raise E(f'missing generation/validation contract for {name}')
-  if files and not (R/owner).is_file():raise E(f'artifact owner does not exist: {owner}')
+    text = rd(C["ci_workflow"])
+    ci_structure(text)
+    count = 0
+    mutations = (
+        text.replace("  pull_request:\n", "  # pull_request:\n", 1),
+        text.replace(
+            "run: python scripts/validate_harness.py",
+            "note: python scripts/validate_harness.py",
+            1,
+        ),
+        text.replace(
+            "run: python scripts/validate_career_state.py",
+            "note: python scripts/validate_career_state.py",
+            1,
+        ),
+        text.replace("  windows-location:\n", "  # windows-location:\n", 1),
+        text.replace(
+            "& ./scripts/resolve_repo.ps1 -ResolveOnly",
+            "# resolver disabled",
+            1,
+        ),
+    )
+    for candidate in mutations:
+        try:
+            ci_structure(candidate)
+        except E:
+            count += 1
+        else:
+            raise E("CI negative fixture unexpectedly passed")
+    return count
+
+
+def section(text, heading):
+    key = heading + "\n"
+    if key not in text:
+        raise E(f"artifact registry missing section: {heading}")
+    return text.split(key, 1)[1].split("\n## ", 1)[0]
+
+
+def rows(text):
+    output = []
+    for raw in section(text, "## Registered artifacts").splitlines():
+        if not raw.strip().startswith("|"):
+            continue
+        cells = [cell.strip() for cell in raw.strip().strip("|").split("|")]
+        if not cells or cells[0] in ("Artifact", "---"):
+            continue
+        if len(cells) != 5 or not (
+            cells[1].startswith("`") and cells[1].endswith("`")
+        ):
+            raise E("artifact registry row/owner format invalid")
+        output.append((cells[0], cells[1][1:-1], cells[2], cells[3], cells[4]))
+    if not output:
+        raise E("artifact registry has no rows")
+    return output
+
+
+def registrybody(text, check_files=True):
+    artifacts = rows(text)
+    names = [row[0] for row in artifacts]
+    owners = [row[1] for row in artifacts]
+    if len(names) != len(set(names)):
+        raise E("artifact names must be unique")
+    if len(owners) != len(set(owners)):
+        raise E("artifact owner paths must be unique")
+
+    by_name = {row[0]: row for row in artifacts}
+    for name, owner in OWN.items():
+        if name not in by_name:
+            raise E(f"missing registered artifact: {name}")
+        row = by_name[name]
+        if row[1] != owner:
+            raise E(f"wrong owner for {name}: expected {owner}, got {row[1]}")
+        if not row[3] or not row[4]:
+            raise E(f"missing generation/validation contract for {name}")
+        if check_files and not (R / owner).is_file():
+            raise E(f"artifact owner does not exist: {owner}")
+
+
 def registry():
- t=rd(C['artifact_registry']); regbody(t); n=0
- for m in (t.replace('| Codebase map | `harness/CODEBASE_MAP.md` |','| Codebase map | `AGENTS.md` |',1),t.replace('| Codebase map | `harness/CODEBASE_MAP.md` |','| Codebase map | `harness/DOES_NOT_EXIST.md` |',1)):
-  try:regbody(m)
-  except E:n+=1
-  else:raise E('artifact registry negative fixture unexpectedly passed')
- return n
+    text = rd(C["artifact_registry"])
+    registrybody(text)
+    count = 0
+    mutations = (
+        text.replace(
+            "| Codebase map | `harness/CODEBASE_MAP.md` |",
+            "| Codebase map | `AGENTS.md` |",
+            1,
+        ),
+        text.replace(
+            "| Codebase map | `harness/CODEBASE_MAP.md` |",
+            "| Codebase map | `harness/DOES_NOT_EXIST.md` |",
+            1,
+        ),
+        text.replace(
+            "| Windows repo resolver | `scripts/resolve_repo.ps1` |",
+            "| Windows repo resolver | `harness/CODEBASE_MAP.md` |",
+            1,
+        ),
+    )
+    for candidate in mutations:
+        try:
+            registrybody(candidate)
+        except E:
+            count += 1
+        else:
+            raise E("artifact registry negative fixture unexpectedly passed")
+    return count
+
+
 def gov():
- p=subprocess.run([sys.executable,str(R/'scripts/validate_governance.py')],cwd=R,text=True,capture_output=True)
- if p.returncode:raise E('governance validator failed: '+(p.stdout+p.stderr).strip())
+    process = subprocess.run(
+        [sys.executable, str(R / "scripts/validate_governance.py")],
+        cwd=R,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if process.returncode:
+        raise E(
+            "governance validator failed: "
+            + (process.stdout + process.stderr).strip()
+        )
+
+
 def main():
- try:
-  d=manifest()
-  for p,ms in MARK.items():need(p,ms)
-  ar=registry(); hk=hooks(); cy=ci()
-  for p in MARK:
-   if re.search(r'\b(?:TODO|TBD|FIXME)\b',rd(p)):raise E(f'placeholder marker found in {p}')
-  gov()
- except E as e:print(f'HARNESS_VALIDATION: FAIL: {e}',file=sys.stderr);return 1
- print('HARNESS_VALIDATION: PASS');print(f'manifest={M.relative_to(R)}');print(f'components={len(C)}');print(f'schema={S}');print(f'artifact_self_tests={ar}');print(f'hook_self_tests={hk}');print(f'ci_self_tests={cy}');print('governance_validator=PASS');return 0
-if __name__=='__main__':raise SystemExit(main())
+    try:
+        manifest()
+        for path, markers in MARK.items():
+            need(path, markers)
+        artifact_tests = registry()
+        hook_tests = hooks()
+        resolver_tests = resolver()
+        ci_tests = ci()
+        for path in MARK:
+            if re.search(r"\b(?:TODO|TBD|FIXME)\b", rd(path)):
+                raise E(f"placeholder marker found in {path}")
+        gov()
+    except E as exc:
+        print(f"HARNESS_VALIDATION: FAIL: {exc}", file=sys.stderr)
+        return 1
+
+    print("HARNESS_VALIDATION: PASS")
+    print(f"manifest={M.relative_to(R)}")
+    print(f"components={len(C)}")
+    print(f"schema={S}")
+    print(f"artifact_self_tests={artifact_tests}")
+    print(f"hook_self_tests={hook_tests}")
+    print(f"repo_resolver_self_tests={resolver_tests}")
+    print(f"ci_self_tests={ci_tests}")
+    print("governance_validator=PASS")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

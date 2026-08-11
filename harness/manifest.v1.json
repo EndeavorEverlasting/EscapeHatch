@@ -7,6 +7,7 @@
     "artifact_registry": "ARTIFACT_REGISTRY.md",
     "harness_validator": "scripts/validate_harness.py",
     "governance_validator": "scripts/validate_governance.py",
+    "repo_resolver": "scripts/resolve_repo.ps1",
     "pre_commit_hook": ".githooks/pre-commit",
     "pre_push_hook": ".githooks/pre-push",
     "scoped_skill": "skills/harness-operations/SKILL.md",

@@ -1,0 +1,80 @@
+{
+  "schema_version": "escapehatch-application-autofill/v1",
+  "policy_id": "application-autofill",
+  "mission": "Fill ordinary application identity/contact fields from user-owned browser-local profile data without submitting applications or answering questionnaires.",
+  "storage": {
+    "browser_storage_key": "escapeHatch.applicationAutofillProfile.v1",
+    "export_schema": "escapehatch-application-autofill-profile/v1",
+    "max_import_bytes": 65536,
+    "persistence": "browser_extension_local_storage",
+    "ownership": "user",
+    "clear_behavior": "remove_entire_storage_key",
+    "controls": [
+      "Save Profile",
+      "Fill Current Page",
+      "Export Profile",
+      "Import Profile",
+      "Clear Profile"
+    ],
+    "import_behavior": "replace_with_whitelisted_fields_only",
+    "export_behavior": "versioned_json_without_repository_write"
+  },
+  "invocation": {
+    "mode": "explicit_user_gesture",
+    "browser_permissions": ["activeTab", "scripting", "storage"],
+    "host_permissions": [],
+    "background_service": false,
+    "automatic_page_scan": false
+  },
+  "profile_fields": [
+    "name_prefix",
+    "first_name",
+    "last_name",
+    "preferred_name",
+    "email",
+    "phone",
+    "linkedin_url",
+    "street_address",
+    "city",
+    "region",
+    "postal_code",
+    "country"
+  ],
+  "fill_policy": {
+    "fill_only_empty_controls": true,
+    "supported_controls": ["input", "select"],
+    "never_submit": true,
+    "never_click_navigation": true,
+    "never_fill_passwords": true,
+    "never_fill_file_inputs": true,
+    "never_answer_questionnaires": true,
+    "never_invent_missing_values": true,
+    "preserve_existing_values": true,
+    "dispatch_input_and_change_events": true
+  },
+  "matching": {
+    "prefer_standard_autocomplete_tokens": true,
+    "fallback": "normalized_label_name_id_placeholder_semantics",
+    "unknown_fields": "leave_untouched",
+    "select_behavior": "exact_normalized_option_match_only"
+  },
+  "portability_principles": {
+    "donor": "EndeavorEverlasting/web-excel-repair-triage Prompt Kit portability",
+    "adopted": [
+      "version_browser_storage_key",
+      "version_export_schema",
+      "bound_import_size",
+      "reject_unsupported_schema",
+      "never_execute_imported_content",
+      "user_owned_portable_state",
+      "explicit_export_import_controls"
+    ],
+    "pii_specific_additions": [
+      "no_committed_real_profile_data",
+      "no_broad_host_permission",
+      "manual_active_tab_only",
+      "one_action_clear"
+    ]
+  },
+  "proof_ceiling": "Repository contract, deterministic field-matching tests, extension static safety checks, and CI prove the bounded implementation. Live third-party ATS compatibility requires observed browser runtime proof."
+}

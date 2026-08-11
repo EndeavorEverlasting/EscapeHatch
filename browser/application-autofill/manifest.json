@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "EscapeHatch Application Autofill",
+  "version": "0.1.0",
+  "description": "User-invoked local autofill for ordinary job application identity and contact fields. Never submits applications.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "action": {
+    "default_title": "EscapeHatch Autofill",
+    "default_popup": "popup.html"
+  }
+}

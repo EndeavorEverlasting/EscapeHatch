@@ -1,38 +1,65 @@
 {
   "schema_version": "escapehatch-career-state/v1",
   "state_id": "state-example",
-  "revision": 1,
-  "updated_at": "2026-08-10T20:00:00-04:00",
+  "revision": 2,
+  "updated_at": "2026-08-11T13:00:00-04:00",
   "profile": {
     "id": "profile-primary",
     "headline": "Technical project and operations leader",
-    "skills": ["project delivery", "IT operations"],
+    "skills": [
+      "project delivery",
+      "IT operations"
+    ],
     "source_artifacts": []
   },
   "opportunities": [
     {
-      "id": "opp-pickpoint",
+      "id": "opp-example",
       "title": "Installation Coordinator",
       "organization": "Example Employer",
       "status": "targeted",
-      "source": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/job/123"},
-      "captured_at": "2026-08-10T20:00:00-04:00"
+      "priority": "high",
+      "fit_score": 86,
+      "requirements_gaps": [
+        "Verify travel expectations before applying."
+      ],
+      "next_action": "Tailor the resume against the saved employer posting.",
+      "source": {
+        "owner": "external",
+        "kind": "uri",
+        "locator": "https://example.invalid/jobs/123"
+      },
+      "apply_link": {
+        "owner": "external",
+        "kind": "uri",
+        "locator": "https://example.invalid/apply/123"
+      },
+      "posting_snapshot": {
+        "owner": "user",
+        "kind": "relative_path",
+        "locator": "opportunities/opp-example/posting.txt"
+      },
+      "captured_at": "2026-08-11T12:45:00-04:00"
     }
   ],
   "resumes": [
     {
-      "id": "resume-pickpoint-v1",
+      "id": "resume-example-v1",
       "profile_id": "profile-primary",
-      "opportunity_id": "opp-pickpoint",
-      "artifact": {"owner": "user", "kind": "relative_path", "locator": "resumes/pickpoint-installation-coordinator.pdf"},
-      "created_at": "2026-08-10T20:05:00-04:00"
+      "opportunity_id": "opp-example",
+      "artifact": {
+        "owner": "user",
+        "kind": "relative_path",
+        "locator": "resumes/example-installation-coordinator.pdf"
+      },
+      "created_at": "2026-08-11T12:50:00-04:00"
     }
   ],
   "applications": [
     {
-      "id": "app-pickpoint",
-      "opportunity_id": "opp-pickpoint",
-      "resume_id": "resume-pickpoint-v1",
+      "id": "app-example",
+      "opportunity_id": "opp-example",
+      "resume_id": "resume-example-v1",
       "status": "draft",
       "submitted_at": null,
       "external_reference": null

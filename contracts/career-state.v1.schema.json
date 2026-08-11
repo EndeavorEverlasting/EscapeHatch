@@ -4,7 +4,7 @@
   "title": "EscapeHatch Career State v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "state_id", "revision", "updated_at", "profile", "opportunities", "resumes", "applications", "study_guidance", "evidence"],
+  "required": ["schema_version", "state_id", "revision", "updated_at", "profile", "opportunities", "resumes", "applications", "evidence"],
   "properties": {
     "schema_version": {"const": "escapehatch-career-state/v1"},
     "state_id": {"type": "string", "minLength": 1},

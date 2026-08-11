@@ -7,7 +7,7 @@ This file is the canonical registry for durable EscapeHatch artifacts. An artifa
 - Schemas and manifests include an explicit version, for example `*.v1.json`.
 - Current human-readable state uses a stable owner path such as `harness/reports/CURRENT_STATE.md`.
 - Generated evidence, when introduced, must use deterministic names or timestamped receipts under a registered output directory.
-- Opportunity, profile, resume, and application artifacts are future product scope and must be registered here when their generators/contracts exist.
+- Portable career-state exports must identify artifact ownership explicitly and must not rely on machine-specific absolute paths.
 - Do not register secrets, credentials, caches, dependency trees, or disposable local output.
 
 ## Registered artifacts
@@ -20,6 +20,9 @@ This file is the canonical registry for durable EscapeHatch artifacts. An artifa
 | Workflow specs | `harness/WORKFLOWS.md` | tracked operating contract | update when validated workflow changes | `python scripts/validate_harness.py` |
 | Lua embedding constraints | `harness/constraints/LUA_EMBEDDING.md` | tracked design input | update only with an explicit architecture decision | `python scripts/validate_harness.py` |
 | Current-state report | `harness/reports/CURRENT_STATE.md` | tracked human-readable report | update when verified repository state materially changes | `python scripts/validate_harness.py` |
+| Career-state schema | `contracts/career-state.v1.schema.json` | tracked versioned product contract | change only through an explicit schema-versioned product sprint | `python scripts/validate_career_state.py` |
+| Career-state example fixture | `fixtures/career-state.v1.example.json` | tracked portable validation fixture | update with schema-compatible representative state | `python scripts/validate_career_state.py` |
+| Career-state validator | `scripts/validate_career_state.py` | tracked product contract validator | update with the owning schema/reference rules | `python scripts/validate_career_state.py` |
 
 ## Validation output
 
@@ -27,4 +30,6 @@ Validator stdout is evidence, not a canonical tracked artifact. CI logs or opera
 
 ## Product artifact gate
 
-No EscapeHatch career-profile, opportunity, resume, application, evidence, database, package, build, or deployment artifact is registered yet. Future product sprints must register each durable artifact before relying on it as canonical.
+`contracts/career-state.v1.schema.json` now owns the durable relationship contract for profile → opportunity → resume → application → evidence. The schema deliberately stores artifact references rather than claiming ownership of external files. Each artifact reference declares `owner` (`user`, `escapehatch`, or `external`), `kind`, and a portable locator; relative-path locators are rejected when absolute or parent-escaping. Real user career-state exports remain user-owned data and are not committed by default.
+
+Resume rendering, job discovery, application submission, scraping, auto-apply behavior, and Lua runtime execution remain unregistered product scope.

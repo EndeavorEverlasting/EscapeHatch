@@ -1,35 +1,36 @@
 # EscapeHatch Current State
 
-**Verified floor:** `main` at `f46c34b8b6a842b56c9536eb2ac91a2ce80da93a` before this harness branch.
+**Verified product branch floor before this sprint:** `feat/harness-infrastructure-20260810` at `ebb0593ba20815aabb09a07bf28405886a0201b2`; PR #2 open against `main`.
 
 ## Working
 
 - Root governance authority exists at `AGENTS.md`.
-- Governance validator exists at `scripts/validate_governance.py`.
-- Governance PR #1 was merged before the Harness Infrastructure Build began.
-- The harness branch adds a codebase map, workflow specs, artifact registry, completeness validator, staged-snapshot pre-commit validation, pushed-commit/range pre-push validation, structurally validated CI triggers/run steps, artifact-owner uniqueness/existence checks, scoped skill, CI workflow, Lua design constraints, and this operator report.
+- Governance and harness validators exist and the harness branch is the verified operational floor.
+- `contracts/career-state.v1.schema.json` now defines the first product persistence contract connecting profile → opportunity → resume → application → evidence.
+- Career-state entities use stable IDs and explicit references; resume/application/evidence relationships are checked for dangling links.
+- Artifact references declare ownership (`user`, `escapehatch`, or `external`) and portable locator type rather than letting application installation state implicitly own career data.
+- `scripts/validate_career_state.py` validates the representative fixture and three negative fixtures for dangling profile linkage, dangling resume linkage, and parent-escaping relative paths.
 
 ## Broken
 
-- No known repository contract failure at harness construction time.
+- No known contract failure in the bounded career-state slice at authoring time.
 
 ## Missing / intentionally not yet established
 
-- Product source code and application entry point.
-- Product package/dependency manifest.
-- Product build command.
-- Product test suite beyond repository contract validators.
-- Product deployment configuration.
-- Career-profile/application data schema.
-- Resume-engine integration.
-- Opportunity discovery implementation.
+- Executable product application/runtime and UI.
+- Resume rendering or Resume Matcher integration.
+- Opportunity discovery implementation or scraper.
+- Application submission or auto-apply behavior.
+- Persistent database/storage adapter for real user career-state exports.
+- Import/export UX beyond the portable JSON contract.
+- Product build/deployment configuration.
 - Lua runtime, host binding, sandbox, or executable script surface.
 
-These are product or later infrastructure concerns. Their absence must not be disguised by fabricated commands.
+These remain later product concerns. The contract floor must be preserved before those surfaces are introduced.
 
 ## Lua direction
 
-Lua is now captured as an architectural constraint for future implementation, not installed as product code. The host must remain in control, states must be isolatable and explicitly released, host calls must be allow-listed, and script errors must be caught at protected host boundaries. See `harness/constraints/LUA_EMBEDDING.md`.
+Lua remains an architectural constraint only. This sprint introduces no Lua runtime or script execution capability. See `harness/constraints/LUA_EMBEDDING.md`.
 
 ## Validation floor
 
@@ -38,19 +39,18 @@ Run:
 ```text
 python scripts/validate_governance.py
 python scripts/validate_harness.py
+python scripts/validate_career_state.py
 git diff --check
 ```
 
-Any future product test/build/deploy command must be added to `harness/CODEBASE_MAP.md` before it can be claimed as part of the verified floor.
-
 ## Principal risks
 
-- Introducing product architecture before durable profile/application contracts are defined.
-- Treating AI-generated logic as proof without deterministic validation.
-- Giving future Lua scripts ambient OS/I/O capabilities instead of explicit allow-listed host functions.
-- Allowing application upgrades to own or erase user career-state data.
-- Letting new manifests, schemas, or artifact paths compete with existing canonical owners.
+- Expanding the v1 persistence contract prematurely to mirror one job board, ATS, or resume generator.
+- Treating external URLs/files as application-owned data and breaking portability or upgrade safety.
+- Adding scraping/auto-apply before opportunity/application evidence semantics are proven in real operator use.
+- Introducing Lua before a host runtime and capability boundary are selected and tested.
+- Committing real personal career-state data or credentials instead of keeping repository fixtures synthetic.
 
-## Next product gate after harness merge
+## Next product gate after this sprint
 
-Recover and formalize the smallest persistent EscapeHatch career-state contract (profile/opportunity/resume/application/evidence relationships) before adding scrapers, auto-apply behavior, or broad Lua scripting.
+Build the smallest import/export persistence adapter around the v1 contract, preserving user ownership and round-trip fidelity, before adding discovery, resume generation, ATS automation, or Lua execution.

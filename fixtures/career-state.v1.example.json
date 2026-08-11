@@ -1,0 +1,42 @@
+{
+  "schema_version": "escapehatch-career-state/v1",
+  "state_id": "state-example",
+  "revision": 1,
+  "updated_at": "2026-08-10T20:00:00-04:00",
+  "profile": {
+    "id": "profile-primary",
+    "headline": "Technical project and operations leader",
+    "skills": ["project delivery", "IT operations"],
+    "source_artifacts": []
+  },
+  "opportunities": [
+    {
+      "id": "opp-pickpoint",
+      "title": "Installation Coordinator",
+      "organization": "Example Employer",
+      "status": "targeted",
+      "source": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/job/123"},
+      "captured_at": "2026-08-10T20:00:00-04:00"
+    }
+  ],
+  "resumes": [
+    {
+      "id": "resume-pickpoint-v1",
+      "profile_id": "profile-primary",
+      "opportunity_id": "opp-pickpoint",
+      "artifact": {"owner": "user", "kind": "relative_path", "locator": "resumes/pickpoint-installation-coordinator.pdf"},
+      "created_at": "2026-08-10T20:05:00-04:00"
+    }
+  ],
+  "applications": [
+    {
+      "id": "app-pickpoint",
+      "opportunity_id": "opp-pickpoint",
+      "resume_id": "resume-pickpoint-v1",
+      "status": "draft",
+      "submitted_at": null,
+      "external_reference": null
+    }
+  ],
+  "evidence": []
+}

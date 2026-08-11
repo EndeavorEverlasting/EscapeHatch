@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://escapehatch.local/contracts/career-state.v1.schema.json",
+  "title": "EscapeHatch Career State v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "state_id", "revision", "updated_at", "profile", "opportunities", "resumes", "applications", "evidence"],
+  "properties": {
+    "schema_version": {"const": "escapehatch-career-state/v1"},
+    "state_id": {"type": "string", "minLength": 1},
+    "revision": {"type": "integer", "minimum": 1},
+    "updated_at": {"type": "string", "format": "date-time"},
+    "profile": {"$ref": "#/$defs/profile"},
+    "opportunities": {"type": "array", "items": {"$ref": "#/$defs/opportunity"}},
+    "resumes": {"type": "array", "items": {"$ref": "#/$defs/resume"}},
+    "applications": {"type": "array", "items": {"$ref": "#/$defs/application"}},
+    "evidence": {"type": "array", "items": {"$ref": "#/$defs/evidence"}}
+  },
+  "$defs": {
+    "artifactRef": {
+      "type": "object", "additionalProperties": false,
+      "required": ["owner", "kind", "locator"],
+      "properties": {
+        "owner": {"enum": ["user", "escapehatch", "external"]},
+        "kind": {"enum": ["inline", "relative_path", "uri", "content_hash"]},
+        "locator": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "profile": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "headline", "skills"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "headline": {"type": "string"},
+        "skills": {"type": "array", "items": {"type": "string"}},
+        "source_artifacts": {"type": "array", "items": {"$ref": "#/$defs/artifactRef"}}
+      }
+    },
+    "opportunity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "title", "organization", "status", "source"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "title": {"type": "string"},
+        "organization": {"type": "string"},
+        "status": {"enum": ["discovered", "targeted", "closed", "rejected", "withdrawn"]},
+        "source": {"$ref": "#/$defs/artifactRef"},
+        "captured_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "resume": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "profile_id", "artifact"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "profile_id": {"type": "string", "minLength": 1},
+        "opportunity_id": {"type": "string", "minLength": 1},
+        "artifact": {"$ref": "#/$defs/artifactRef"},
+        "created_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "application": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "opportunity_id", "resume_id", "status", "submitted_at"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "opportunity_id": {"type": "string", "minLength": 1},
+        "resume_id": {"type": "string", "minLength": 1},
+        "status": {"enum": ["draft", "submitted", "screen", "interview", "offer", "rejected", "withdrawn", "closed"]},
+        "submitted_at": {"type": ["string", "null"], "format": "date-time"},
+        "external_reference": {"type": ["string", "null"]}
+      }
+    },
+    "evidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "application_id", "kind", "artifact", "observed_at"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "application_id": {"type": "string", "minLength": 1},
+        "kind": {"enum": ["submission_receipt", "confirmation", "correspondence", "interview", "offer", "rejection", "note"]},
+        "artifact": {"$ref": "#/$defs/artifactRef"},
+        "observed_at": {"type": "string", "format": "date-time"}
+      }
+    }
+  }
+}

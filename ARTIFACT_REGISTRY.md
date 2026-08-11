@@ -34,7 +34,9 @@ Validator stdout is evidence, not a canonical tracked artifact. CI logs or opera
 
 ## Product artifact gate
 
-`contracts/career-state.v1.schema.json` owns the durable relationship contract for profile → opportunity → resume → application → study guidance → evidence. An opportunity with recorded `requirements_gaps` must have non-superseded `requirements-gap` study guidance; this prevents tracker gaps from becoming dead-end notes. Guidance resources preserve typed inputs including books, and `scripts/export_study_guidance.py` maps those records to the external `study-syndicate/study-guidance/v1` contract while preserving application/opportunity provenance and iteration number.
+`contracts/career-state.v1.schema.json` owns the durable relationship contract for profile → opportunity → resume → application → study guidance → evidence. `study_guidance` is a backward-compatible v1 extension: legacy v1 states without that field remain readable. Once a state opts into the extension, an opportunity with recorded `requirements_gaps` must have non-superseded `requirements-gap` guidance so tracker gaps cannot become dead-end notes. Guidance linked to an application must match that application's opportunity.
+
+Guidance resources preserve typed inputs including books, and `scripts/export_study_guidance.py` validates the complete career state before mapping records to the external `study-syndicate/study-guidance/v1` contract. The adapter preserves application/opportunity provenance, iteration number, and typed resource metadata.
 
 The schema stores artifact references rather than claiming ownership of external files. Each artifact reference declares `owner` (`user`, `escapehatch`, or `external`), `kind`, and a portable locator; relative-path locators are rejected when absolute or parent-escaping. Real user career-state exports remain user-owned data and are not committed by default.
 

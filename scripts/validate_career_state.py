@@ -35,7 +35,7 @@ def validate(d):
     require_keys(d,("schema_version","state_id","revision","updated_at","profile","opportunities","resumes","applications","evidence"),
                  ("schema_version","state_id","revision","updated_at","profile","opportunities","resumes","applications","evidence"),"state")
     if d["schema_version"]!=VERSION: raise ContractError("schema_version mismatch")
-    if not isinstance(d["revision"],int) or d["revision"]<1: raise ContractError("revision must be >= 1")
+    if not isinstance(d["revision"],int) or isinstance(d["revision"],bool) or d["revision"]<1: raise ContractError("revision must be >= 1")
     p=d["profile"]; require_keys(p,("id","headline","skills"),("id","headline","skills","source_artifacts"),"profile")
     if not isinstance(p["id"],str) or not p["id"]: raise ContractError("profile.id invalid")
     if not isinstance(p["skills"],list) or any(not isinstance(x,str) for x in p["skills"]): raise ContractError("profile.skills invalid")
@@ -44,8 +44,19 @@ def validate(d):
         if not isinstance(d[key],list): raise ContractError(f"{key} must be an array")
     oids=uniq(d["opportunities"],"opportunity"); rids=uniq(d["resumes"],"resume"); aids=uniq(d["applications"],"application"); uniq(d["evidence"],"evidence")
     for i,o in enumerate(d["opportunities"]):
-        require_keys(o,("id","title","organization","status","source"),("id","title","organization","status","source","captured_at"),f"opportunities[{i}]")
+        allowed=("id","title","organization","status","priority","fit_score","requirements_gaps","next_action","source","apply_link","posting_snapshot","captured_at")
+        require_keys(o,("id","title","organization","status","source"),allowed,f"opportunities[{i}]")
         artifact(o["source"],f"opportunities[{i}].source")
+        if "priority" in o and o["priority"] not in {"low","medium","high"}: raise ContractError(f"opportunities[{i}].priority invalid")
+        if "fit_score" in o and (not isinstance(o["fit_score"],int) or isinstance(o["fit_score"],bool) or not 0<=o["fit_score"]<=100):
+            raise ContractError(f"opportunities[{i}].fit_score must be integer 0..100")
+        if "requirements_gaps" in o and (not isinstance(o["requirements_gaps"],list) or any(not isinstance(x,str) for x in o["requirements_gaps"])):
+            raise ContractError(f"opportunities[{i}].requirements_gaps invalid")
+        if "next_action" in o and not isinstance(o["next_action"],str): raise ContractError(f"opportunities[{i}].next_action invalid")
+        if "apply_link" in o:
+            artifact(o["apply_link"],f"opportunities[{i}].apply_link")
+            if o["apply_link"]["kind"]!="uri": raise ContractError(f"opportunities[{i}].apply_link must be uri")
+        if "posting_snapshot" in o: artifact(o["posting_snapshot"],f"opportunities[{i}].posting_snapshot")
     for i,r in enumerate(d["resumes"]):
         require_keys(r,("id","profile_id","artifact"),("id","profile_id","opportunity_id","artifact","created_at"),f"resumes[{i}]")
         if r["profile_id"]!=p["id"]: raise ContractError(f"resumes[{i}].profile_id dangling")
@@ -64,6 +75,9 @@ def self_tests(good):
     x=json.loads(json.dumps(good)); x["resumes"][0]["profile_id"]="missing"; tests.append(x)
     x=json.loads(json.dumps(good)); x["applications"][0]["resume_id"]="missing"; tests.append(x)
     x=json.loads(json.dumps(good)); x["resumes"][0]["artifact"]["locator"]="../escape.pdf"; tests.append(x)
+    x=json.loads(json.dumps(good)); x["opportunities"][0]["fit_score"]=101; tests.append(x)
+    x=json.loads(json.dumps(good)); x["opportunities"][0]["apply_link"]={"owner":"external","kind":"relative_path","locator":"apply.html"}; tests.append(x)
+    x=json.loads(json.dumps(good)); x["opportunities"][0]["posting_snapshot"]["locator"]="../posting.txt"; tests.append(x)
     for n,x in enumerate(tests,1):
         try: validate(x)
         except ContractError: continue

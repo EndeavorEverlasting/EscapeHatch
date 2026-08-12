@@ -1,36 +1,43 @@
 # EscapeHatch Current State
 
-**Verified product branch floor before this sprint:** `feat/harness-infrastructure-20260810` at `ebb0593ba20815aabb09a07bf28405886a0201b2`; PR #2 open against `main`.
+**Verified `main` floor before this harness sprint:** `9c364a78f9a77a61cecb2f55c50c3e3b805c89a0`, after the application study-guidance bridge merged.
 
 ## Working
 
 - Root governance authority exists at `AGENTS.md`.
-- Governance and harness validators exist and the harness branch is the verified operational floor.
-- `contracts/career-state.v1.schema.json` now defines the first product persistence contract connecting profile → opportunity → resume → application → evidence.
-- Career-state entities use stable IDs and explicit references; resume/application/evidence relationships are checked for dangling links.
-- Artifact references declare ownership (`user`, `escapehatch`, or `external`) and portable locator type rather than letting application installation state implicitly own career data.
-- `scripts/validate_career_state.py` validates the representative fixture and three negative fixtures for dangling profile linkage, dangling resume linkage, and parent-escaping relative paths.
+- Career-state v1 persists profile → opportunity → resume → application → study guidance → evidence with portable artifact ownership.
+- Study-guidance export to StudySyndicate exists and has dedicated product CI.
+- Base harness maps, workflows, registry, hooks, skill, operator report, validators, and CI exist.
+- The durable Windows repository resolver from the older harness lane is incorporated into this harness floor so durable work resolves under `Desktop\Dev`, not temporary storage.
+- Application question semantics are now modeled independently of employer, ATS vendor, page number, and field order.
+- Application preference persistence is defined as user-owned browser-local state with explicit Save/Export/Import/Clear controls and no repository tracking.
+- Application question coverage includes identity/contact, EEO/demographic, eligibility/history, compensation/education/accommodation, legal/compliance, and certification families.
+- Unknown questions fail closed to mapping; selected answers are never committed as fixtures.
+- The concurrent application-autofill product PR remains separately owned and is not modified by this harness sprint.
 
 ## Broken
 
-- No known contract failure in the bounded career-state slice at authoring time.
+- The older Windows-resolver harness PR was based on a stale pre-product floor and is no longer the correct convergence vehicle. Its durable resolver behavior is preserved here instead of merging the stale tree over newer product work.
 
 ## Missing / intentionally not yet established
 
-- Executable product application/runtime and UI.
-- Resume rendering or Resume Matcher integration.
-- Opportunity discovery implementation or scraper.
-- Application submission or auto-apply behavior.
-- Persistent database/storage adapter for real user career-state exports.
-- Import/export UX beyond the portable JSON contract.
-- Product build/deployment configuration.
-- Lua runtime, host binding, sandbox, or executable script surface.
+- Product implementation for questionnaire families beyond identity/contact autofill.
+- Automatic capture of newly selected questionnaire preferences from arbitrary ATS controls.
+- Live cross-employer proof of semantic question matching.
+- Product UI for per-application confirmation of current legal/compliance answers.
+- Product support for opportunity-specific compensation overrides through the browser cache.
+- Automatic application submission/navigation.
+- Automatic truth/accuracy certification or signature.
+- Broad scraping/discovery automation.
+- Broad Lua runtime.
 
-These remain later product concerns. The contract floor must be preserved before those surfaces are introduced.
+## Application automation boundary
 
-## Lua direction
+The harness models recurring questions by canonical meaning, not page order. The observed application evidence motivated reusable families including EEO, veteran, race/ethnicity, gender, prior-employer status, work authorization, sponsorship, compensation, education, accommodation, non-compete/restrictive agreement, debarment/exclusion/investigation, and final truth/accuracy certification.
 
-Lua remains an architectural constraint only. This sprint introduces no Lua runtime or script execution capability. See `harness/constraints/LUA_EMBEDDING.md`.
+Real selected answers from operator applications are user-owned private state. They are deliberately absent from tracked contracts/reports. Product implementations should store them under the browser-local preference contract and expose a full clear action.
+
+Certification/attestation stays manual even when all preceding fields can be filled automatically.
 
 ## Validation floor
 
@@ -38,19 +45,31 @@ Run:
 
 ```text
 python scripts/validate_governance.py
+python scripts/validate_application_harness.py
 python scripts/validate_harness.py
 python scripts/validate_career_state.py
+python tests/test_study_guidance_export.py
 git diff --check
+```
+
+On Windows:
+
+```powershell
+pwsh -NoProfile -File scripts/resolve_repo.ps1 -ResolveOnly
 ```
 
 ## Principal risks
 
-- Expanding the v1 persistence contract prematurely to mirror one job board, ATS, or resume generator.
-- Treating external URLs/files as application-owned data and breaking portability or upgrade safety.
-- Adding scraping/auto-apply before opportunity/application evidence semantics are proven in real operator use.
-- Introducing Lua before a host runtime and capability boundary are selected and tested.
-- Committing real personal career-state data or credentials instead of keeping repository fixtures synthetic.
+- Coupling automation to one corporation's page sequence or ATS DOM shape.
+- Storing real demographic/legal/financial answers in tracked fixtures, reports, or logs.
+- Inferring sensitive demographic/accommodation values.
+- Reusing a salary target across opportunities without an explicit override decision.
+- Reusing stale legal/compliance answers without per-application confirmation.
+- Automatically checking certification/attestation or submitting an application.
+- Weakening unknown-question failure behavior to increase fill rate.
+- Reintroducing temporary directories for durable repository/worktree state.
+- Colliding with the separately owned application-autofill product branch.
 
-## Next product gate after this sprint
+## Next product gate after this harness sprint
 
-Build the smallest import/export persistence adapter around the v1 contract, preserving user ownership and round-trip fidelity, before adding discovery, resume generation, ATS automation, or Lua execution.
+After this harness merges, reconcile the open application-autofill product lane onto the new floor, then implement the smallest questionnaire-preference adapter that consumes canonical question IDs, writes only user-owned browser-local preference state, leaves unknown questions blank, and stops at certification/submission boundaries.

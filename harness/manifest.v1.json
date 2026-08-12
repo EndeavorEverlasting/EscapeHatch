@@ -7,16 +7,25 @@
     "artifact_registry": "ARTIFACT_REGISTRY.md",
     "harness_validator": "scripts/validate_harness.py",
     "governance_validator": "scripts/validate_governance.py",
+    "application_harness_validator": "scripts/validate_application_harness.py",
+    "repo_resolver": "scripts/resolve_repo.ps1",
+    "application_form_taxonomy": "harness/contracts/application-form-taxonomy.v1.json",
+    "application_preference_cache": "harness/contracts/application-preference-cache.v1.json",
+    "application_form_workflow": "harness/workflows/APPLICATION_FORM_INTAKE.md",
     "pre_commit_hook": ".githooks/pre-commit",
     "pre_push_hook": ".githooks/pre-push",
     "scoped_skill": "skills/harness-operations/SKILL.md",
+    "application_mapping_skill": "skills/application-form-mapping/SKILL.md",
     "operator_report": "harness/reports/CURRENT_STATE.md",
+    "application_operator_report": "harness/reports/APPLICATION_FORM_AUTOMATION_STATE.md",
     "lua_design_constraints": "harness/constraints/LUA_EMBEDDING.md",
     "ci_workflow": ".github/workflows/harness.yml"
   },
   "validation_order": [
     "python scripts/validate_governance.py",
+    "python scripts/validate_application_harness.py",
     "python scripts/validate_harness.py",
+    "python scripts/validate_career_state.py",
     "git diff --check"
   ],
   "artifact_registry": "ARTIFACT_REGISTRY.md"

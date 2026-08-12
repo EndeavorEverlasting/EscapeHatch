@@ -24,8 +24,20 @@ jobs:
       - name: Validate governance
         run: python scripts/validate_governance.py
 
+      - name: Validate application harness
+        run: python scripts/validate_application_harness.py
+
       - name: Validate harness
         run: python scripts/validate_harness.py
+
+      - name: Validate career-state contract
+        run: python scripts/validate_career_state.py
+
+      - name: Test StudySyndicate export
+        run: python tests/test_study_guidance_export.py
+
+      - name: Compile harness validators
+        run: python -m py_compile scripts/validate_governance.py scripts/validate_application_harness.py scripts/validate_harness.py scripts/validate_career_state.py scripts/export_study_guidance.py tests/test_study_guidance_export.py
 
       - name: Check whitespace
         shell: bash
@@ -43,3 +55,22 @@ jobs:
           else
             git diff --check
           fi
+
+  windows-location:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate durable Windows repo root
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $expected = Join-Path $HOME 'Desktop\Dev'
+          New-Item -ItemType Directory -Path $expected -Force | Out-Null
+          $actual = & ./scripts/resolve_repo.ps1 -ResolveOnly
+          if ([IO.Path]::GetFullPath($actual) -ne [IO.Path]::GetFullPath($expected)) {
+            throw "Expected durable dev root $expected, got $actual"
+          }
+          Write-Host "WINDOWS_REPO_ROOT=PASS"
+          Write-Host "DEV_ROOT=$actual"

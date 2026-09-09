@@ -2,72 +2,60 @@
 
 ## Repository floor
 
-EscapeHatch has canonical governance, an operational harness, a portable career-state graph, and a StudySyndicate guidance bridge. Application-form automation is split into a product lane and a harness lane: product code owns browser behavior; this harness owns semantic question identity, preference safety policy, validation, and operating procedures.
+EscapeHatch has canonical governance, an operational application harness, a portable career-state graph with optional trajectory preservation, a StudySyndicate guidance bridge, and a bounded browser-local identity/contact autofill product. The harness owns semantic question identity, claim truthfulness, preference safety, validation, and operating procedures; browser code owns only explicit user-invoked fill behavior.
 
 ## Structure
 
 | Path | Purpose |
 | --- | --- |
-| `AGENTS.md` | Canonical repository-wide agent governance. Do not create a competing authority. |
-| `ARTIFACT_REGISTRY.md` | Canonical registry for tracked and generated artifacts. |
-| `contracts/career-state.v1.schema.json` | Versioned product persistence contract for career state, study guidance, and artifact ownership. |
-| `fixtures/career-state.v1.example.json` | Portable representative product fixture with no real personal data. |
-| `scripts/validate_career_state.py` | Deterministic career-state/reference-graph validator. |
-| `scripts/export_study_guidance.py` | Cross-repo StudySyndicate guidance exporter. |
-| `harness/manifest.v1.json` | Machine-readable harness component map and validation order. |
-| `harness/CODEBASE_MAP.md` | This repository map. |
-| `harness/WORKFLOWS.md` | Task pickup, repo acquisition, application intake, validation, failure, and handoff workflows. |
-| `harness/contracts/application-form-taxonomy.v1.json` | Employer/order-independent canonical application question taxonomy. |
-| `harness/contracts/application-preference-cache.v1.json` | User-owned browser-local preference persistence and portability policy. |
-| `harness/workflows/APPLICATION_FORM_INTAKE.md` | Modular application-question intake/mapping workflow. |
-| `harness/reports/APPLICATION_FORM_AUTOMATION_STATE.md` | Human-readable application automation coverage and gaps. |
-| `harness/constraints/LUA_EMBEDDING.md` | Lua design constraints for future runtime work. |
-| `harness/reports/CURRENT_STATE.md` | Human-readable repository operational status. |
+| `AGENTS.md` | Canonical repository-wide agent governance. |
+| `ARTIFACT_REGISTRY.md` | Canonical durable artifact registry. |
+| `contracts/career-state.v1.schema.json` | Career state, optional trajectory, opportunities, resumes, applications, guidance, and evidence. |
+| `fixtures/career-state.v1.example.json` | Synthetic portable career-state fixture. |
+| `scripts/validate_career_state.py` | Career graph, trajectory, provenance, and backward-compatibility validator. |
+| `scripts/export_study_guidance.py` | StudySyndicate guidance exporter. |
+| `contracts/application-autofill.v1.json` | Browser autofill safety and portability contract. |
+| `browser/application-autofill/` | Manual MV3 identity/contact autofill extension. |
+| `docs/APPLICATION_AUTOFILL.md` | Autofill operator guide and proof ceiling. |
+| `harness/manifest.v1.json` | Harness component map and validation order. |
+| `harness/contracts/application-form-taxonomy.v1.json` | Employer/order-independent question taxonomy and evidence-backed professional claims. |
+| `harness/contracts/application-preference-cache.v1.json` | User-owned preference persistence, reuse, privacy, and claim policy. |
+| `harness/workflows/APPLICATION_FORM_INTAKE.md` | Trajectory/claim preflight and semantic form intake. |
+| `skills/application-form-mapping/SKILL.md` | Safe mapping/evidence procedure. |
+| `harness/reports/APPLICATION_FORM_AUTOMATION_STATE.md` | Current application automation coverage/gaps. |
+| `scripts/validate_application_harness.py` | Application taxonomy/preference/claim validator. |
 | `scripts/resolve_repo.ps1` | Durable Windows repo/worktree resolver under `Desktop\Dev`. |
-| `scripts/validate_application_harness.py` | Application taxonomy/preference safety validator with negative fixtures. |
-| `scripts/validate_governance.py` | Governance contract validator. |
+| `scripts/validate_governance.py` | Governance validator. |
 | `scripts/validate_harness.py` | Harness completeness/integration validator. |
-| `.githooks/` | Opt-in local pre-commit and pre-push validation. |
-| `.github/workflows/harness.yml` | Linux harness/product-contract validation plus Windows durable-root proof. |
-| `skills/harness-operations/SKILL.md` | Repeatable repo harness operating procedure. |
-| `skills/application-form-mapping/SKILL.md` | Procedure for adding/reusing application question semantics safely. |
+| `.github/workflows/harness.yml` | Harness and Windows location CI. |
+| `.github/workflows/application-autofill.yml` | Autofill contract/runtime CI. |
 
 ## Durable Windows repository root
 
-Durable Windows checkouts/worktrees belong under an observed `Desktop\Dev` ancestor or `$HOME\Desktop\Dev`. `%TEMP%` and `AppData\Local\Temp` are valid only for disposable validator snapshots.
-
-Resolve the durable root:
+Durable Windows checkouts/worktrees belong under an observed `Desktop\Dev` ancestor or `$HOME\Desktop\Dev`; temporary directories are validator-only.
 
 ```powershell
 pwsh -NoProfile -File scripts/resolve_repo.ps1 -ResolveOnly
 ```
 
-Resolve/acquire an exact unmerged branch non-destructively:
-
-```powershell
-pwsh -NoProfile -File scripts/resolve_repo.ps1 -Branch '<branch>' -ExpectedCommit '<sha>'
-```
-
-The resolver verifies origin and requested remote head, preserves dirty/differently owned canonical work, and uses a detached worktree when needed.
+For an exact unmerged branch, use `scripts/resolve_repo.ps1 -Branch '<branch>' -ExpectedCommit '<sha>'`; it verifies origin/head and preserves separately owned work.
 
 ## Product entry points
 
-Canonical product persistence remains `contracts/career-state.v1.schema.json`; `scripts/validate_career_state.py` validates it. `scripts/export_study_guidance.py` exports typed guidance to StudySyndicate.
+Career persistence enters through `contracts/career-state.v1.schema.json`. When a trajectory is known, preserve target/adjacent/avoid titles, preferred/avoid activities, constraints, and per-opportunity trajectory lane/reasons so repeated applications do not silently redefine the desired career direction.
 
-An application-autofill product lane may implement browser behavior, but harness contracts do not become product code. The harness defines semantic question IDs and preference boundaries so product implementations can remain modular across corporations, ATS vendors, page counts, and question order.
-
-The harness does not authorize scraping, automatic application submission, automatic navigation, or automatic certification/attestation.
+Browser autofill enters through `browser/application-autofill/manifest.json` and `contracts/application-autofill.v1.json`. It fills only empty recognized identity/contact controls after explicit user invocation. It does not own questionnaire claims, resume tailoring, navigation, certification, or submission.
 
 ## Application-question entry points
 
 - Taxonomy: `harness/contracts/application-form-taxonomy.v1.json`
-- Preference policy: `harness/contracts/application-preference-cache.v1.json`
+- Preference/claim policy: `harness/contracts/application-preference-cache.v1.json`
 - Workflow: `harness/workflows/APPLICATION_FORM_INTAKE.md`
 - Skill: `skills/application-form-mapping/SKILL.md`
 - Operator report: `harness/reports/APPLICATION_FORM_AUTOMATION_STATE.md`
 - Validator: `scripts/validate_application_harness.py`
 
-Canonical question IDs, not page positions, own meaning. Unknown questions fail closed into a mapping queue. Real selected answers never belong in tracked fixtures, reports, or contracts.
+Professional questions reuse semantic IDs but remain evidence-backed. Unknown/ambiguous questions fail closed. Real selected answers never belong in tracked fixtures, reports, or contracts.
 
 ## Configuration and contracts
 
@@ -75,6 +63,7 @@ Canonical question IDs, not page positions, own meaning. Unknown questions fail 
 - Harness manifest: `harness/manifest.v1.json`
 - Artifact registry: `ARTIFACT_REGISTRY.md`
 - Career-state contract: `contracts/career-state.v1.schema.json`
+- Autofill product contract: `contracts/application-autofill.v1.json`
 - Application taxonomy: `harness/contracts/application-form-taxonomy.v1.json`
 - Preference-cache policy: `harness/contracts/application-preference-cache.v1.json`
 - Lua design input: `harness/constraints/LUA_EMBEDDING.md`
@@ -89,30 +78,30 @@ python scripts/validate_application_harness.py
 python scripts/validate_harness.py
 python scripts/validate_career_state.py
 python tests/test_study_guidance_export.py
+python tests/test_application_autofill_contract.py
+node tests/test_application_autofill.mjs
 git diff --check
 ```
 
 ## Build, test, and deploy commands
 
-- Product build on `main`: **not established**
-- Career-state contract: `python scripts/validate_career_state.py`
+- Career-state/trajectory contract: `python scripts/validate_career_state.py`
 - Study-guidance adapter: `python tests/test_study_guidance_export.py`
-- Application harness: `python scripts/validate_application_harness.py`
-- Repository convergence: run validation commands above
+- Application semantics/claims: `python scripts/validate_application_harness.py`
+- Browser autofill contract: `python tests/test_application_autofill_contract.py`
+- Browser autofill runtime: `node tests/test_application_autofill.mjs`
 - Windows path-policy proof: `.github/workflows/harness.yml`
-- Product deployment: **not established**
+- Product deployment: **not established**; unpacked browser loading is operator runtime, not deployment proof.
 
-Do not claim browser/ATS runtime proof from repository validation.
+Do not claim ATS compatibility from repository validation.
 
 ## Fresh-agent path
 
-1. Read `AGENTS.md`.
-2. Read `harness/reports/CURRENT_STATE.md`.
-3. Read this map, `harness/manifest.v1.json`, and `ARTIFACT_REGISTRY.md`.
-4. On Windows, resolve durable repo state through `scripts/resolve_repo.ps1`.
-5. Select the workflow in `harness/WORKFLOWS.md`.
-6. For application pages/questions, read the taxonomy, preference policy, application workflow, and mapping skill before writing.
-7. Read the career-state schema before product persistence work and Lua constraints only when scripting is in scope.
-8. Declare sprint scope before the first write.
-9. Run validators in manifest order before committing.
-10. Report only the proof actually observed.
+1. Read `AGENTS.md`, current reports, this map, manifest, and artifact registry.
+2. Resolve durable repo state through `scripts/resolve_repo.ps1` on Windows.
+3. Read career-state trajectory before job-search/application work when available; do not re-interview the operator for facts already persisted.
+4. For application questions, read taxonomy, preference policy, intake workflow, and mapping skill before writing.
+5. For browser fill changes, read `contracts/application-autofill.v1.json` and its tests before editing runtime code.
+6. Declare sprint scope before the first write.
+7. Run the owning validators plus manifest validation before commit/integration.
+8. Report only proof actually observed; live ATS behavior remains a separate runtime gate.

@@ -1,75 +1,53 @@
 {
   "schema_version": "escapehatch-career-state/v1",
   "state_id": "state-example",
-  "revision": 3,
-  "updated_at": "2026-08-11T14:20:00-04:00",
+  "revision": 4,
+  "updated_at": "2026-09-09T14:35:00-04:00",
   "profile": {
     "id": "profile-primary",
     "headline": "Technical project and operations leader",
     "skills": ["project delivery", "IT operations"],
-    "source_artifacts": []
+    "source_artifacts": [],
+    "trajectory": {
+      "target_titles": ["AI Deployment Strategist", "AI Automation Engineer", "AI Solutions Engineer", "Forward Deployed Engineer"],
+      "adjacent_titles": ["AI Adoption Consultant", "Technical Program Manager - AI"],
+      "avoid_titles": ["Project Coordinator"],
+      "preferred_activities": ["agent workflows", "automation", "AI-assisted software delivery", "technical implementation"],
+      "avoid_activities": ["meeting-only coordination", "manual repetitive application work"],
+      "hard_constraints": ["Do not convert unverified familiarity into claimed professional experience."],
+      "source_artifacts": []
+    }
   },
-  "opportunities": [
-    {
-      "id": "opp-example",
-      "title": "Installation Coordinator",
-      "organization": "Example Employer",
-      "status": "targeted",
-      "priority": "high",
-      "fit_score": 86,
-      "requirements_gaps": ["Strengthen SQL evidence for reporting-oriented roles."],
-      "next_action": "Tailor the resume and export the associated study guidance.",
-      "source": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/jobs/123"},
-      "apply_link": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/apply/123"},
-      "posting_snapshot": {"owner": "user", "kind": "relative_path", "locator": "opportunities/opp-example/posting.txt"},
-      "captured_at": "2026-08-11T12:45:00-04:00"
-    }
-  ],
-  "resumes": [
-    {
-      "id": "resume-example-v1",
-      "profile_id": "profile-primary",
-      "opportunity_id": "opp-example",
-      "artifact": {"owner": "user", "kind": "relative_path", "locator": "resumes/example-installation-coordinator.pdf"},
-      "created_at": "2026-08-11T12:50:00-04:00"
-    }
-  ],
-  "applications": [
-    {
-      "id": "app-example",
-      "opportunity_id": "opp-example",
-      "resume_id": "resume-example-v1",
-      "status": "draft",
-      "submitted_at": null,
-      "external_reference": null
-    }
-  ],
-  "study_guidance": [
-    {
-      "id": "guidance-opp-example-sql-001",
-      "opportunity_id": "opp-example",
-      "application_id": "app-example",
-      "contract": "study-syndicate/study-guidance/v1",
-      "trigger_kind": "requirements-gap",
-      "reason": "The opportunity surfaced a SQL evidence gap that should generate targeted study material.",
-      "cascade_concept_ids": ["databases.relational-model"],
-      "iteration": 1,
-      "concepts": [
-        {"concept_id": "sql.joins", "reason": "Practice joins used in operational reporting.", "priority": 5}
-      ],
-      "resources": [
-        {
-          "kind": "book",
-          "title": "Learning SQL",
-          "author": "Alan Beaulieu",
-          "relation": "primary",
-          "concept_ids": ["sql.joins"],
-          "note": "Preserve the book as guidance input; reading alone is not mastery evidence."
-        }
-      ],
-      "status": "queued",
-      "created_at": "2026-08-11T14:20:00-04:00"
-    }
-  ],
+  "opportunities": [{
+    "id": "opp-example",
+    "title": "AI Deployment Strategist",
+    "organization": "Example Employer",
+    "status": "targeted",
+    "priority": "high",
+    "fit_score": 91,
+    "trajectory_lane": "primary",
+    "trajectory_reasons": ["The role combines AI workflow implementation with customer-facing delivery."],
+    "requirements_gaps": ["Strengthen SQL evidence for reporting-oriented integrations."],
+    "next_action": "Tailor the resume from verified evidence and export the associated study guidance.",
+    "source": {"owner":"external","kind":"uri","locator":"https://example.invalid/jobs/123"},
+    "apply_link": {"owner":"external","kind":"uri","locator":"https://example.invalid/apply/123"},
+    "posting_snapshot": {"owner":"user","kind":"relative_path","locator":"opportunities/opp-example/posting.txt"},
+    "captured_at": "2026-09-09T12:45:00-04:00"
+  }],
+  "resumes": [{
+    "id":"resume-example-v1","profile_id":"profile-primary","opportunity_id":"opp-example",
+    "artifact":{"owner":"user","kind":"relative_path","locator":"resumes/example-ai-deployment-strategist.pdf"},
+    "created_at":"2026-09-09T12:50:00-04:00"
+  }],
+  "applications": [{"id":"app-example","opportunity_id":"opp-example","resume_id":"resume-example-v1","status":"draft","submitted_at":null,"external_reference":null}],
+  "study_guidance": [{
+    "id":"guidance-opp-example-sql-001","opportunity_id":"opp-example","application_id":"app-example",
+    "contract":"study-syndicate/study-guidance/v1","trigger_kind":"requirements-gap",
+    "reason":"The opportunity surfaced a SQL evidence gap that should generate targeted study material.",
+    "cascade_concept_ids":["databases.relational-model"],"iteration":1,
+    "concepts":[{"concept_id":"sql.joins","reason":"Practice joins used in operational reporting.","priority":5}],
+    "resources":[{"kind":"book","title":"Learning SQL","author":"Alan Beaulieu","relation":"primary","concept_ids":["sql.joins"],"note":"Preserve the book as guidance input; reading alone is not mastery evidence."}],
+    "status":"queued","created_at":"2026-09-09T14:20:00-04:00"
+  }],
   "evidence": []
 }

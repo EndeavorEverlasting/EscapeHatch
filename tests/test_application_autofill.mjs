@@ -17,7 +17,9 @@ const cases = [
   [{ label: "City / Municipality *", type: "text" }, "city"],
   [{ label: "Zip Code *", type: "text" }, "postal_code"],
   [{ label: "State / Province", autocomplete: "address-level1", type: "text" }, "region"],
-  [{ label: "Country", autocomplete: "country-name", type: "text" }, "country"]
+  [{ label: "Country", autocomplete: "country-name", type: "text" }, "country"],
+  [{ autocomplete: "given-name", type: "text" }, "first_name"],
+  [{ autocomplete: "shipping address-level1", type: "text" }, "region"]
 ];
 
 for (const [descriptor, expected] of cases) {
@@ -73,6 +75,49 @@ assert.deepEqual(
   ["name_prefix", "first_name", "email", "phone", "linkedin_url", "street_address", "city", "postal_code"]
 );
 assert.equal(assignments.some((item) => item.key === "last_name"), false, "existing value must be preserved");
+
+class FakeInput extends EventTarget {
+  constructor({ label, autocomplete = "", value = "", type = "text", name = "", id = "" }) {
+    super();
+    this.tagName = "INPUT";
+    this.type = type;
+    this.name = name;
+    this.id = id;
+    this.placeholder = "";
+    this.disabled = false;
+    this.readOnly = false;
+    this.isConnected = true;
+    this.labels = [{ textContent: label }];
+    this._attrs = { autocomplete };
+    this._value = value;
+  }
+  get value() { return this._value; }
+  set value(next) { this._value = String(next); }
+  getAttribute(name) { return this._attrs[name] || ""; }
+}
+
+const first = new FakeInput({ label: "First Name", autocomplete: "given-name" });
+const email = new FakeInput({ label: "Email", autocomplete: "email" });
+const events = [];
+first.addEventListener("input", () => {
+  events.push("first:input");
+  email.value = "framework@already.invalid";
+});
+first.addEventListener("change", () => events.push("first:change"));
+email.addEventListener("input", () => events.push("email:input"));
+email.addEventListener("change", () => events.push("email:change"));
+const fakeDocument = { querySelectorAll: () => [first, email] };
+const filled = core.fillDocument(fakeDocument, { first_name: "Alex", email: "alex@example.invalid" });
+assert.equal(first.value, "Alex");
+assert.equal(email.value, "framework@already.invalid", "reactive fill must not be overwritten by a stale plan");
+assert.deepEqual(events, ["first:input", "first:change"]);
+assert.deepEqual(filled, { filled: 1, matched_fields: ["first_name"], inspected: 2 });
+
+const detached = new FakeInput({ label: "Last Name" });
+detached.isConnected = false;
+const detachedResult = core.fillDocument({ querySelectorAll: () => [detached] }, { last_name: "Example" });
+assert.equal(detached.value, "");
+assert.equal(detachedResult.filled, 0);
 
 const runtime = fs.readFileSync(new URL("../browser/application-autofill/content.js", import.meta.url), "utf8");
 for (const forbidden of [".submit(", ".requestSubmit(", ".click(", "fetch(", "XMLHttpRequest", "WebSocket"]) {

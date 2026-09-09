@@ -99,6 +99,14 @@
       .trim();
   }
 
+  function autocompleteTokens(value) {
+    return String(value || "")
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+  }
+
   function compactSignal(value) {
     return normalizeSignal(value).replace(/\s+/g, "");
   }
@@ -114,7 +122,7 @@
   function classifyField(field) {
     if (!isSupportedDescriptor(field)) return null;
 
-    const autocomplete = normalizeSignal(field.autocomplete).split(" ").filter(Boolean);
+    const autocomplete = autocompleteTokens(field.autocomplete);
     const label = normalizeSignal(field.label);
     const name = compactSignal(field.name);
     const id = compactSignal(field.id);
@@ -221,20 +229,35 @@
   }
 
   function fillDocument(documentObject, profile) {
+    const clean = normalizeProfile(profile);
     const elements = Array.from(documentObject.querySelectorAll("input, select"));
     const descriptors = elements.map(descriptorFromElement);
-    const assignments = planAssignments(descriptors, profile);
+    const assignments = planAssignments(descriptors, clean);
+    const filled = [];
 
     for (const assignment of assignments) {
       const element = elements[assignment.index];
-      setNativeValue(element, assignment.value);
+      if (!element || element.isConnected === false) continue;
+
+      const live = descriptorFromElement(element);
+      if (currentValue(live) || classifyField(live) !== assignment.key) continue;
+
+      let value = clean[assignment.key];
+      if (!value) continue;
+      if (live.tag === "select") {
+        value = selectExactOption(live.options, value);
+        if (value == null) continue;
+      }
+
+      setNativeValue(element, value);
       element.dispatchEvent(new Event("input", { bubbles: true }));
       element.dispatchEvent(new Event("change", { bubbles: true }));
+      filled.push(assignment.key);
     }
 
     return {
-      filled: assignments.length,
-      matched_fields: assignments.map((item) => item.key),
+      filled: filled.length,
+      matched_fields: filled,
       inspected: elements.length
     };
   }

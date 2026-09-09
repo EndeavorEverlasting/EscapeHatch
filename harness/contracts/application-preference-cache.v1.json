@@ -8,35 +8,16 @@
     "repository_tracking": "forbidden",
     "remote_sync": "not_required",
     "clear_behavior": "remove_entire_storage_key",
-    "controls": [
-      "Save Preferences",
-      "Export Preferences",
-      "Import Preferences",
-      "Clear Preferences"
-    ]
+    "controls": ["Save Preferences", "Export Preferences", "Import Preferences", "Clear Preferences"]
   },
   "portability": {
     "export_schema": "escapehatch-application-question-preferences/v1",
     "max_import_bytes": 65536,
-    "required_fields": [
-      "schema_version",
-      "exported_at",
-      "preferences"
-    ],
-    "security": [
-      "reject_oversized_payload",
-      "reject_unsupported_schema",
-      "accept_only_known_question_ids",
-      "never_execute_imported_content",
-      "never_log_preference_values"
-    ]
+    "required_fields": ["schema_version", "exported_at", "preferences"],
+    "security": ["reject_oversized_payload", "reject_unsupported_schema", "accept_only_known_question_ids", "never_execute_imported_content", "never_log_preference_values"]
   },
   "resolution": {
-    "precedence": [
-      "session_confirmation",
-      "opportunity_override",
-      "profile_preference"
-    ],
+    "precedence": ["session_confirmation", "opportunity_override", "profile_preference"],
     "no_match": "leave_blank_and_surface_for_mapping",
     "option_mismatch": "leave_blank_and_surface_available_options"
   },
@@ -46,19 +27,18 @@
     "session_confirmation": "current confirmation for legal/compliance or other per-application facts"
   },
   "privacy": {
-    "sensitive_categories": [
-      "sensitive-demographic",
-      "sensitive-accommodation",
-      "legal-current",
-      "financial",
-      "eligibility"
-    ],
-    "rules": [
-      "never_commit_real_preferences",
-      "never_print_preference_values_in_logs",
-      "clear_must_be_user_accessible",
-      "export_is_explicit_user_action"
-    ]
+    "sensitive_categories": ["sensitive-demographic", "sensitive-accommodation", "legal-current", "financial", "eligibility"],
+    "rules": ["never_commit_real_preferences", "never_print_preference_values_in_logs", "clear_must_be_user_accessible", "export_is_explicit_user_action"]
   },
-  "attestation_policy": "manual_only"
+  "attestation_policy": "manual_only",
+  "professional_claims": {
+    "policy": "evidence_backed",
+    "rules": [
+      "do_not_upgrade_familiarity_into_experience",
+      "do_not_upgrade_adjacent_skill_into_tool_specific_experience",
+      "do_not_claim_industry_experience_from_adjacent_work",
+      "do_not_claim_certification_or_pursuit_without_current_supporting_evidence",
+      "self_rating_may_reflect_demonstrable_capability_even_when_recent_frequency_is_low"
+    ]
+  }
 }

@@ -36,8 +36,7 @@ function readForm() {
 
 function writeForm(profile) {
   for (const key of PROFILE_KEYS) {
-    document.getElementById(key).value =
-      profile && typeof profile[key] === "string" ? profile[key] : "";
+    document.getElementById(key).value = profile && typeof profile[key] === "string" ? profile[key] : "";
   }
 }
 
@@ -74,8 +73,8 @@ async function clearProfile() {
   setStatus("Cleared the browser-local EscapeHatch autofill profile.");
 }
 
-function downloadJson(payload) {
-  const blob = new Blob([JSON.stringify(payload, null, 2) + "\n"], { type: "application/json" });
+function downloadJsonText(text) {
+  const blob = new Blob([text], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
@@ -89,12 +88,17 @@ function downloadJson(payload) {
 async function exportProfile() {
   const stored = await chrome.storage.local.get(STORAGE_KEY);
   const profile = sanitizeProfile(stored[STORAGE_KEY] || {});
-  downloadJson({
+  const payload = {
     schema_version: EXPORT_SCHEMA,
     exported_at: new Date().toISOString(),
     source: "escapehatch-browser-autofill",
     profile
-  });
+  };
+  const text = JSON.stringify(payload, null, 2) + "\n";
+  if (new TextEncoder().encode(text).length > MAX_IMPORT_BYTES) {
+    throw new Error("Export rejected: payload exceeds 64 KiB.");
+  }
+  downloadJsonText(text);
   setStatus("Exported a portable profile JSON file.");
 }
 
@@ -129,14 +133,8 @@ async function fillCurrentPage() {
     throw new Error("No active browser tab is available.");
   }
 
-  await chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    files: ["autofill-core.js"]
-  });
-  const results = await chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    files: ["content.js"]
-  });
+  await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["autofill-core.js"] });
+  const results = await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content.js"] });
   const result = results && results[0] ? results[0].result : null;
   if (!result || result.status !== "ok") {
     setStatus("Autofill could not run on this page.");
@@ -152,9 +150,7 @@ document.getElementById("export").addEventListener("click", () => exportProfile(
 document.getElementById("import").addEventListener("click", () => importFile.click());
 importFile.addEventListener("change", () => {
   const file = importFile.files && importFile.files[0];
-  importProfile(file).catch((error) => setStatus(error.message)).finally(() => {
-    importFile.value = "";
-  });
+  importProfile(file).catch((error) => setStatus(error.message)).finally(() => { importFile.value = ""; });
 });
 
 loadStoredProfile().catch((error) => setStatus(error.message));

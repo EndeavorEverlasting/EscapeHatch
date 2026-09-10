@@ -7,9 +7,10 @@ This file is the canonical registry for durable EscapeHatch artifacts. A plausib
 - Schemas/manifests/contracts include an explicit version, for example `*.v1.json`.
 - Current human-readable state uses stable owner paths under `harness/reports/`.
 - Durable Windows repository/worktree state belongs under resolved `Desktop\Dev`, never process temporary storage.
-- Portable career-state, application-companion, and study-guidance artifacts use explicit ownership/provenance and portable locators.
+- Portable career-state, application-companion, study-guidance, and resume-presentation artifacts use explicit ownership/provenance and portable locators.
 - Application question contracts store semantic IDs/aliases only; real selected answers remain user-owned local data.
 - User profiles and career/application state are private by default and must not be baked into distribution artifacts or repository history.
+- Resume presentation rules are tracked, but real resume text, contact details, and rendered current-user resume files remain user-owned private artifacts outside Git.
 - A public website is not required for the companion experience; local/store-delivered surfaces may consume the same user-owned state contract.
 - Remote synchronization is optional and explicit. A Google Drive adapter may target only a user-selected file/folder and may not require public sharing or persist provider credentials in career state.
 - Preference exports, when product support exists, use the registered versioned transfer schema and are not committed by default.
@@ -34,6 +35,8 @@ This file is the canonical registry for durable EscapeHatch artifacts. A plausib
 | Application companion contract | `contracts/application-companion.v1.json` | tracked versioned product contract | update delivery/privacy/progress/sync invariants; never add real user state | `python scripts/validate_application_companion.py` |
 | Application companion example fixture | `fixtures/application-companion.v1.example.json` | tracked synthetic product fixture | exercise companion session/progress/sync semantics without real user data | `python scripts/validate_application_companion.py` |
 | Application companion validator | `scripts/validate_application_companion.py` | tracked product contract validator | update fail-closed companion privacy/sync/progress rules | `python scripts/validate_application_companion.py` |
+| Resume presentation contract | `contracts/resume-presentation.v1.json` | tracked versioned quality contract | update ATS-conservative typography/layout/output/QA invariants without real resume data | `python scripts/validate_resume_presentation.py` |
+| Resume presentation validator | `scripts/validate_resume_presentation.py` | tracked quality-contract validator | update fail-closed presentation regression checks | `python scripts/validate_resume_presentation.py` |
 | Lua embedding constraints | `harness/constraints/LUA_EMBEDDING.md` | tracked design input | explicit architecture decision only | `python scripts/validate_harness.py` |
 | Current-state report | `harness/reports/CURRENT_STATE.md` | tracked human-readable report | update verified repository state | `python scripts/validate_harness.py` |
 | Harness operations skill | `skills/harness-operations/SKILL.md` | tracked scoped skill | update when harness procedure changes | `python scripts/validate_harness.py` |
@@ -59,6 +62,7 @@ The following are intentionally **not** tracked repository artifacts:
 | Google Drive synchronized career-state copy | user-selected Drive destination | optional explicit sync only; private sharing is sufficient; divergence preserves both copies until resolved |
 | Companion sync receipt | user | metadata only; no profile values, application answers, resume content, provider tokens, or credentials |
 | Real career-state export | user | portable contract, outside Git by default |
+| Current rendered resume DOCX/PDF | user | derive from the canonical private resume, validate against `contracts/resume-presentation.v1.json`, inspect rendered pages, and preserve existing Drive IDs when replacing current projections |
 | Live ATS/application evidence | user/operator | keep local unless sanitized into an approved fixture/report |
 
 ## Validation output
@@ -67,10 +71,12 @@ Validator stdout is evidence, not a canonical tracked artifact. CI logs/operator
 
 ## Product artifact gate
 
-`contracts/career-state.v1.schema.json` owns profile → opportunity → resume → application → study guidance → evidence. `contracts/application-companion.v1.json` owns how installable/local companion surfaces may consume that state: user-owned and local-first, private by default, no public website requirement, explicit optional Google Drive synchronization, conflict preservation, progress recording without submission authority, and distribution upgrades that do not erase user state. `scripts/export_study_guidance.py` owns the typed StudySyndicate adapter.
+`contracts/career-state.v1.schema.json` owns profile → opportunity → resume → application → study guidance → evidence. `contracts/application-companion.v1.json` owns how installable/local companion surfaces may consume that state: user-owned and local-first, private by default, no public website requirement, explicit optional Google Drive synchronization, conflict preservation, progress recording without submission authority, and distribution upgrades that do not erase user state. `contracts/resume-presentation.v1.json` owns the ATS-conservative visual and structural floor for master/tailored resumes and their DOCX/PDF projections without owning the private resume content itself. `scripts/export_study_guidance.py` owns the typed StudySyndicate adapter.
+
+The resume presentation contract requires single-column selectable text, the registered Trebuchet MS + Arial hierarchy, conservative navy/slate color use, a 10 pt minimum body-text floor, DOCX + text-preserving PDF outputs, rendered-page inspection, and contact/output consistency. It does not guarantee universal ATS-vendor parsing or recruiter preference. Real name, phone, email, address, and resume content stay outside this public repository.
 
 The application harness does **not** own user answers or browser execution. `harness/contracts/application-form-taxonomy.v1.json` owns semantic question identity and `harness/contracts/application-preference-cache.v1.json` owns preference storage/privacy policy. Product code may consume those contracts but may not turn employer/page order into canonical identity or silently store real values in Git.
 
 Unknown application questions remain blank until mapped. Sensitive demographic/accommodation values require explicit user preference. Legal/compliance facts require current per-application confirmation. Certification/attestation remains manual-only. A companion may record a submission only from explicit user action, same-session page confirmation, or user-confirmed external evidence; it may not submit on the user's behalf under this contract.
 
-Resume rendering, job discovery, scraping, automatic submission/auto-apply, store packaging/publishing, live Google Drive OAuth/runtime behavior, and broad Lua runtime execution remain outside this contract proof ceiling until implemented and separately validated.
+Live employer ATS behavior, recruiter preference, automatic submission/auto-apply, store packaging/publishing, live Google Drive OAuth/runtime behavior, and broad Lua runtime execution remain outside repository-contract proof until implemented and separately validated. A specific resume's visual conformance is proven only when its rendered DOCX/PDF artifacts are actually inspected against the presentation contract.

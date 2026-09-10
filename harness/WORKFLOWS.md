@@ -4,7 +4,7 @@ These workflows implement `AGENTS.md`; they do not override governance.
 
 ## Workflow selection
 
-Use **Repository Location** for durable Windows checkout/worktree acquisition. Use **Task Pickup** for every writing sprint. Use **Application Form Intake** when application questions/pages are being mapped or automated. Use **Application Companion** when an installable/local client records career/application progress or synchronizes user-owned state. Use **Failure Recovery** when a required command fails. Use **Handoff** before changing owners/chats or when an external blocker stops the lane.
+Use **Repository Location** for durable Windows checkout/worktree acquisition. Use **Task Pickup** for every writing sprint. Use **Application Form Intake** when application questions/pages are being mapped or automated. Use **Application Companion** when an installable/local client records career/application progress or synchronizes user-owned state. Use **Resume Presentation** whenever an agent creates, refreshes, tailors, exports, or synchronizes a resume/CV. Use **Failure Recovery** when a required command fails. Use **Handoff** before changing owners/chats or when an external blocker stops the lane.
 
 ## Repository Location
 
@@ -76,6 +76,25 @@ The companion is an adapter around the canonical user-owned career-state contrac
 
 Prompt Kit portability is a donor pattern, not a runtime dependency: preserve stable local identity across upgrades, keep transfer explicit and validated, treat imported content as data, and avoid making one hosted artifact the owner of user state.
 
+## Resume Presentation
+
+Resume content is user-owned private state. The repository owns the presentation contract that agents must use to avoid silently degrading a polished current resume into a generic template.
+
+1. Read `contracts/resume-presentation.v1.json` before creating, refreshing, tailoring, exporting, or synchronizing a resume or CV.
+2. Resolve the canonical private resume/source and existing current projections before creating anything. Reuse established Drive file IDs and current workspace owners instead of creating duplicate `Resume 2` files.
+3. Keep real names, phone numbers, email addresses, street addresses, and resume text out of this public repository. The presentation contract and synthetic validation data may be tracked; the user's resume may not.
+4. Preserve the registered ATS-conservative structure unless the user explicitly approves a different style: one column, selectable text, no sidebar, no layout tables, no text boxes, no graphical skill bars, no semantic icons, and no meaningful content hidden in headers/footers.
+5. Preserve the registered visual hierarchy rather than falling back to a generic document default: Trebuchet MS for name/headline/section and title hierarchy, Arial for body copy, restrained navy/slate accents, and the contract's exact sizes/spacing/margins.
+6. Do not shrink body text below the contract minimum merely to force a page count. Tighten weak wording before reducing readability.
+7. For an agentic/AI-automation target lane, keep evidenced software and agentic systems visually ahead of conventional employment history. Never manufacture employment titles or turn target-lane language into fake job history.
+8. Produce both DOCX and text-preserving PDF projections when the current workflow owns those outputs. Derived projections must match the canonical private content and current contact identity.
+9. When replacing current Drive projections, preserve existing file IDs when possible so tracker/application references do not break.
+10. Render the DOCX to page images and inspect every page for clipping, overlap, broken glyphs, spacing, hierarchy, and page balance. Run an accessibility audit when supported and verify that PDF text extraction succeeds.
+11. If a tailored resume intentionally departs from the master hierarchy, record the explicit user/role reason; do not treat generic agent taste as authorization to regress the master style.
+12. Validate the repository rule set with `python scripts/validate_resume_presentation.py`, then run the manifest validation order. Validation of the contract does not substitute for inspecting the actual private resume artifacts.
+
+A resume can be ATS-conservative without being visually anonymous. The registered quality floor uses typography, whitespace, thin rules, and content hierarchy rather than parser-hostile graphics. No repository validator can guarantee universal ATS-vendor parsing, recruiter preference, or application success.
+
 ## Pre-commit validation
 
 Required manifest floor:
@@ -84,6 +103,7 @@ Required manifest floor:
 python scripts/validate_governance.py
 python scripts/validate_application_harness.py
 python scripts/validate_application_companion.py
+python scripts/validate_resume_presentation.py
 python scripts/validate_harness.py
 python scripts/validate_career_state.py
 git diff --check
@@ -97,7 +117,7 @@ Enable optional repo-local hooks with:
 git config core.hooksPath .githooks
 ```
 
-The hooks validate isolated staged/committed snapshots through the harness validator. The harness validator invokes both application-harness and companion contract validators, so preference/question and local-first privacy/sync boundaries are enforced without reading or printing real user state.
+The hooks validate isolated staged/committed snapshots through the harness validator. The harness validator invokes the application-harness, companion, and resume-presentation validators, so preference/question boundaries, local-first privacy/sync boundaries, and resume-presentation regression rules are enforced without reading or printing real user state.
 
 ## Failure Recovery
 
@@ -111,9 +131,10 @@ The hooks validate isolated staged/committed snapshots through the harness valid
 8. For an attestation boundary, require operator action.
 9. For a Drive/local divergence, preserve both state copies and create/surface conflict metadata; do not pick a winner silently.
 10. For an invalid import, keep the current local state unchanged.
-11. If durable repository work landed in temporary storage, preserve unique/dirty work and reacquire through the resolver before cleanup.
-12. Never weaken validators, force-push, or expand scope silently.
-13. Rerun the complete declared validation order after repair.
+11. For a resume-style regression, restore the registered presentation contract first, then regenerate/recheck the private artifact rather than compensating with ad hoc formatting.
+12. If durable repository work landed in temporary storage, preserve unique/dirty work and reacquire through the resolver before cleanup.
+13. Never weaken validators, force-push, or expand scope silently.
+14. Rerun the complete declared validation order after repair.
 
 ## Artifact discipline
 
@@ -122,6 +143,8 @@ The hooks validate isolated staged/committed snapshots through the harness valid
 - Resolve paths through the registry/manifest/owning producer.
 - Durable Windows repo paths come from `scripts/resolve_repo.ps1`.
 - Real application preferences and career/application state are user-owned local data and never tracked repository artifacts.
+- Real resume content and contact data are user-owned private inputs; the repository may track presentation rules but not those values.
+- Current resume DOCX/PDF projections should preserve their established Drive IDs when refreshed so tracker references stay stable.
 - Distribution artifacts must not seed real user profiles, application answers, resume content, provider tokens, or credentials.
 - Sanitized question text/aliases and synthetic companion fixtures may be tracked only when real selected answers/user state are absent.
 - A Google Drive synchronized copy remains user-owned and private unless the user separately changes Drive sharing; public sharing is not a product requirement.
@@ -136,6 +159,8 @@ For application-form work also include canonical question IDs added/reused, alia
 
 For companion work also include surface(s) exercised, career-state revision/identity handling, progress evidence source, sync authorization state, conflict disposition, and whether Google Drive/store/local-web runtime proof was actually observed. Never include provider credentials or real profile/application content in handoff prose.
 
+For resume work also include the presentation-contract version, private source owner, generated/current projection identities, rendered-page QA performed, PDF text-extraction result, any explicit style override, and unresolved artifact proof. Do not paste private contact values into repository handoff prose.
+
 On Windows, advancing commands that require a checkout/worktree must resolve the durable `Desktop\Dev` root.
 
 ## Product-runtime introduction gate
@@ -145,3 +170,5 @@ A product runtime must register real source/config entry points, build/test/depl
 Application automation must additionally preserve the harness boundaries: semantic/order-independent question matching, user-owned clearable preference state, unknown-question fail-closed behavior, no inferred sensitive values, current legal confirmations, and manual certification/attestation.
 
 A companion runtime must additionally preserve `contracts/application-companion.v1.json`: local-first private state, no public-host requirement, distribution/state separation, explicit optional Drive synchronization, divergence preservation, provider-independent export/import, no profile/application-content telemetry, and user-owned submission/attestation boundaries. Store packaging, live OAuth, cross-device sync, and live local-web/browser behavior require their own observed runtime proof before those claims are made.
+
+A resume-generation runtime must additionally preserve `contracts/resume-presentation.v1.json`: ATS-conservative structure, registered typography/spacing/page rules, private content isolation, stable current-output identity, and actual rendered-artifact QA. Repository contract validation alone cannot certify a private DOCX/PDF that was not rendered and inspected.

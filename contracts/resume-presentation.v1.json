@@ -1,0 +1,189 @@
+{
+  "schema": "escapehatch-resume-presentation/v1",
+  "version": 1,
+  "purpose": "Preserve a distinctive, readable, ATS-conservative presentation floor for user-owned resumes without storing private resume content in the repository.",
+  "authority": {
+    "canonical_contract": true,
+    "applies_to": [
+      "master_resume",
+      "tailored_resume",
+      "docx_projection",
+      "pdf_projection"
+    ],
+    "private_content_in_repository": false,
+    "universal_ats_compatibility_claim": false
+  },
+  "page": {
+    "size": "US Letter",
+    "orientation": "portrait",
+    "layout": "single_column",
+    "target_pages": 2,
+    "margins_inches": {
+      "top": 0.55,
+      "bottom": 0.55,
+      "left": 0.65,
+      "right": 0.65
+    },
+    "minimum_body_font_pt": 10.0
+  },
+  "palette": {
+    "primary_navy": "#17365D",
+    "secondary_slate": "#34495E",
+    "primary_text": "#202020",
+    "secondary_text": "#505050",
+    "background": "#FFFFFF",
+    "color_is_decorative_only": true,
+    "must_remain_legible_in_grayscale": true
+  },
+  "typography": {
+    "name": {
+      "font": "Trebuchet MS",
+      "size_pt": 23.0,
+      "bold": true,
+      "color": "#17365D",
+      "space_before_pt": 0.0,
+      "space_after_pt": 2.0
+    },
+    "career_headline": {
+      "font": "Trebuchet MS",
+      "size_pt": 11.5,
+      "bold": true,
+      "color": "#34495E",
+      "space_before_pt": 0.0,
+      "space_after_pt": 5.0
+    },
+    "contact_line": {
+      "font": "Arial",
+      "size_pt": 9.5,
+      "bold": false,
+      "color": "#404040",
+      "space_before_pt": 0.0,
+      "space_after_pt": 8.0
+    },
+    "section_heading": {
+      "font": "Trebuchet MS",
+      "size_pt": 11.5,
+      "bold": true,
+      "uppercase": true,
+      "color": "#17365D",
+      "space_before_pt": 10.0,
+      "space_after_pt": 4.0,
+      "bottom_rule_pt": 0.5,
+      "bottom_rule_color": "#17365D"
+    },
+    "project_or_position_title": {
+      "font": "Trebuchet MS",
+      "size_pt": 10.75,
+      "bold": true,
+      "color": "#202020",
+      "space_before_pt": 6.0,
+      "space_after_pt": 1.0
+    },
+    "body": {
+      "font": "Arial",
+      "size_pt": 10.5,
+      "bold": false,
+      "color": "#202020",
+      "line_spacing": 1.06,
+      "space_before_pt": 0.0,
+      "space_after_pt": 4.0
+    },
+    "bullet": {
+      "font": "Arial",
+      "size_pt": 10.25,
+      "bold": false,
+      "color": "#202020",
+      "line_spacing": 1.05,
+      "space_before_pt": 0.0,
+      "space_after_pt": 2.5,
+      "glyph": "•",
+      "bullet_position_in": 0.18,
+      "text_indent_in": 0.35,
+      "hanging_indent_in": 0.17
+    },
+    "skills": {
+      "font": "Arial",
+      "size_pt_min": 9.75,
+      "size_pt_max": 10.0,
+      "color": "#303030",
+      "line_spacing": 1.05,
+      "space_after_pt": 3.0
+    },
+    "dates_and_metadata": {
+      "font": "Arial",
+      "size_pt": 9.5,
+      "color": "#505050"
+    }
+  },
+  "structure": {
+    "single_column": true,
+    "selectable_text_required": true,
+    "text_boxes_allowed": false,
+    "sidebars_allowed": false,
+    "layout_tables_allowed": false,
+    "graphical_skill_bars_allowed": false,
+    "semantic_icons_allowed": false,
+    "meaningful_content_in_headers_or_footers_allowed": false,
+    "image_based_text_allowed": false,
+    "standard_round_bullets_required": true,
+    "standard_section_names_preferred": true,
+    "dates_must_be_conventional_text": true,
+    "hyperlinks_must_have_visible_text": true
+  },
+  "content_hierarchy": {
+    "career_identity_before_employment_history": true,
+    "software_and_agentic_systems_before_professional_experience_for_agentic_lane": true,
+    "employment_titles_must_remain_factual": true,
+    "projects_may_be_visually_prominent_only_when_supported_by_evidence": true,
+    "professional_summary_max_visual_lines": 5,
+    "bullet_target_words_min": 18,
+    "bullet_target_words_max": 32,
+    "avoid_repeated_three_or_four_line_bullets": true
+  },
+  "pagination": {
+    "keep_section_heading_with_next": true,
+    "keep_project_or_position_title_with_next": true,
+    "avoid_splitting_short_bullets": true,
+    "do_not_shrink_body_below_minimum_to_force_page_count": true,
+    "page_two_should_begin_with_substantive_content": true
+  },
+  "outputs": {
+    "required_formats": [
+      "docx",
+      "pdf"
+    ],
+    "pdf_must_preserve_extractable_text": true,
+    "docx_must_preserve_real_text": true,
+    "derived_outputs_must_match_canonical_resume_content": true
+  },
+  "quality_gate": {
+    "render_docx_to_page_images": true,
+    "inspect_every_rendered_page": true,
+    "check_for_clipping": true,
+    "check_for_overlap": true,
+    "check_for_broken_glyphs": true,
+    "check_page_balance": true,
+    "run_accessibility_audit_when_supported": true,
+    "verify_pdf_text_extraction": true,
+    "verify_contact_identity_consistency_across_current_outputs": true,
+    "preserve_existing_drive_ids_when_replacing_current_projections": true
+  },
+  "privacy": {
+    "real_name": "user_owned_input_only",
+    "phone": "user_owned_input_only",
+    "email": "user_owned_input_only",
+    "address": "user_owned_input_only",
+    "resume_content": "user_owned_input_only",
+    "tracked_fixtures_must_be_synthetic": true
+  },
+  "proof_ceiling": {
+    "contract_validation_proves": "The repository requires the registered presentation, structure, privacy, and artifact-QA rules.",
+    "artifact_qa_proves": "A specific rendered DOCX/PDF was inspected against the contract when that artifact is available to the executing agent.",
+    "does_not_prove": [
+      "universal ATS vendor compatibility",
+      "recruiter preference",
+      "application success",
+      "live employer parser behavior"
+    ]
+  }
+}

@@ -14,10 +14,12 @@ COMPONENTS = {
     "harness_validator": "scripts/validate_harness.py",
     "governance_validator": "scripts/validate_governance.py",
     "application_harness_validator": "scripts/validate_application_harness.py",
+    "resume_presentation_validator": "scripts/validate_resume_presentation.py",
     "repo_resolver": "scripts/resolve_repo.ps1",
     "application_form_taxonomy": "harness/contracts/application-form-taxonomy.v1.json",
     "application_preference_cache": "harness/contracts/application-preference-cache.v1.json",
     "application_form_workflow": "harness/workflows/APPLICATION_FORM_INTAKE.md",
+    "resume_presentation_contract": "contracts/resume-presentation.v1.json",
     "pre_commit_hook": ".githooks/pre-commit",
     "pre_push_hook": ".githooks/pre-push",
     "scoped_skill": "skills/harness-operations/SKILL.md",
@@ -31,18 +33,19 @@ VALIDATION_ORDER = [
     "python scripts/validate_governance.py",
     "python scripts/validate_application_harness.py",
     "python scripts/validate_application_companion.py",
+    "python scripts/validate_resume_presentation.py",
     "python scripts/validate_harness.py",
     "python scripts/validate_career_state.py",
     "git diff --check",
 ]
 MARKERS = {
-    "harness/CODEBASE_MAP.md": ("## Repository floor","## Structure","## Durable Windows repository root","## Product entry points","## Application-question entry points","## Application companion entry points","## Validation commands","## Build, test, and deploy commands","## Fresh-agent path"),
-    "harness/WORKFLOWS.md": ("## Repository Location","## Task Pickup","## Application Form Intake","## Application Companion","## Pre-commit validation","## Failure Recovery","## Artifact discipline","## Handoff","## Product-runtime introduction gate"),
+    "harness/CODEBASE_MAP.md": ("## Repository floor","## Structure","## Durable Windows repository root","## Product entry points","## Application-question entry points","## Application companion entry points","## Resume presentation entry points","## Validation commands","## Build, test, and deploy commands","## Fresh-agent path"),
+    "harness/WORKFLOWS.md": ("## Repository Location","## Task Pickup","## Application Form Intake","## Application Companion","## Resume Presentation","## Pre-commit validation","## Failure Recovery","## Artifact discipline","## Handoff","## Product-runtime introduction gate"),
     "ARTIFACT_REGISTRY.md": ("## Naming rules","## Registered artifacts","## User-owned local artifacts","## Validation output","## Product artifact gate"),
     "harness/workflows/APPLICATION_FORM_INTAKE.md": ("## Trigger","## Authorities","## Order-independent intake","## Preference resolution","## Sensitivity and freshness","## Learning a new form","## Failure handling","## Handoff"),
     "skills/harness-operations/SKILL.md": ("## Trigger","## Required inputs","## Procedure","## Failure behavior","## Expected outputs"),
     "skills/application-form-mapping/SKILL.md": ("## Trigger","## Required inputs","## Procedure","## Failure behavior","## Expected outputs"),
-    "harness/reports/CURRENT_STATE.md": ("## Working","## Broken","## Missing / intentionally not yet established","## Career escape-route boundary","## Local-first companion boundary","## Application automation boundary","## Validation floor","## Principal risks"),
+    "harness/reports/CURRENT_STATE.md": ("## Working","## Broken","## Missing / intentionally not yet established","## Career escape-route boundary","## Local-first companion boundary","## Resume presentation quality boundary","## Application automation boundary","## Validation floor","## Principal risks"),
     "harness/reports/APPLICATION_FORM_AUTOMATION_STATE.md": ("## Evidence reviewed","## Working","## Broken","## Missing / intentionally not yet established","## Principal risks","## Validation","## Proof ceiling"),
     "harness/constraints/LUA_EMBEDDING.md": ("## Host owns the application","## State isolation","## Error boundary","## Sandboxing","## Execution model","## Type discipline","## Conceptual integrity"),
 }
@@ -61,6 +64,8 @@ REQUIRED_REGISTRY = {
     "Application companion contract": "contracts/application-companion.v1.json",
     "Application companion example fixture": "fixtures/application-companion.v1.example.json",
     "Application companion validator": "scripts/validate_application_companion.py",
+    "Resume presentation contract": "contracts/resume-presentation.v1.json",
+    "Resume presentation validator": "scripts/validate_resume_presentation.py",
 }
 PLACEHOLDER = re.compile(r"\b(?:TODO|TBD|FIXME)\b")
 
@@ -158,7 +163,7 @@ def validate_resolver() -> None:
 
 def validate_ci() -> None:
     text = read(".github/workflows/harness.yml")
-    for marker in ("name: Harness Validation","push:","pull_request:","name: Validate governance","run: python scripts/validate_governance.py","name: Validate application harness","run: python scripts/validate_application_harness.py","name: Validate application companion","run: python scripts/validate_application_companion.py","name: Validate harness","run: python scripts/validate_harness.py","name: Validate career-state contract","run: python scripts/validate_career_state.py","git diff --check","windows-location:","scripts/resolve_repo.ps1 -ResolveOnly","WINDOWS_REPO_ROOT=PASS"):
+    for marker in ("name: Harness Validation","push:","pull_request:","name: Validate governance","run: python scripts/validate_governance.py","name: Validate application harness","run: python scripts/validate_application_harness.py","name: Validate application companion","run: python scripts/validate_application_companion.py","name: Validate resume presentation","run: python scripts/validate_resume_presentation.py","name: Validate harness","run: python scripts/validate_harness.py","name: Validate career-state contract","run: python scripts/validate_career_state.py","git diff --check","windows-location:","scripts/resolve_repo.ps1 -ResolveOnly","WINDOWS_REPO_ROOT=PASS"):
         if marker not in text:
             raise HarnessError(f"CI missing active marker: {marker}")
 
@@ -190,7 +195,7 @@ def self_tests(manifest: dict) -> int:
 def main() -> int:
     try:
         manifest = load_manifest(); validate_markers(); rows = parse_registry(); validate_hooks(); validate_resolver(); validate_ci()
-        run_validator("scripts/validate_governance.py"); run_validator("scripts/validate_application_harness.py"); run_validator("scripts/validate_application_companion.py")
+        run_validator("scripts/validate_governance.py"); run_validator("scripts/validate_application_harness.py"); run_validator("scripts/validate_application_companion.py"); run_validator("scripts/validate_resume_presentation.py")
         negatives = self_tests(manifest)
     except HarnessError as exc:
         print(f"HARNESS_VALIDATION: FAIL: {exc}", file=sys.stderr); return 1
@@ -202,6 +207,7 @@ def main() -> int:
     print("governance_validator=PASS")
     print("application_harness_validator=PASS")
     print("application_companion_validator=PASS")
+    print("resume_presentation_validator=PASS")
     return 0
 
 if __name__ == "__main__":

@@ -22,6 +22,9 @@ Search for existing contracts, helpers, schemas, validators, scripts, naming con
 ### No completion without proof
 A task is not complete because code was written or a plan looks plausible. Completion requires actual validation evidence appropriate to the claimed proof ceiling.
 
+### Resume presentation quality is contractual
+When an agent creates, refreshes, tailors, exports, or synchronizes a resume or CV, it must read and preserve the registered `contracts/resume-presentation.v1.json` presentation floor unless the user explicitly approves a different style. Content tailoring may change role-specific emphasis, but it must not silently regress typography, ATS-conservative structure, page-layout rules, output consistency, or required rendered-artifact QA. Real resume content and contact data remain user-owned private inputs and must not be committed to this public repository.
+
 ## 2. Instruction Precedence
 
 When instructions conflict, use this order from highest to lowest precedence:

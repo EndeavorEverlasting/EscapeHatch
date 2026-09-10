@@ -1,28 +1,38 @@
 {
   "schema_version": "escapehatch-career-state/v1",
   "state_id": "state-example",
-  "revision": 3,
-  "updated_at": "2026-08-11T14:20:00-04:00",
+  "revision": 4,
+  "updated_at": "2026-09-10T05:22:00-04:00",
   "profile": {
     "id": "profile-primary",
-    "headline": "Technical project and operations leader",
-    "skills": ["project delivery", "IT operations"],
-    "source_artifacts": []
+    "headline": "IT operations professional building toward agentic software engineering",
+    "skills": ["IT operations", "Python automation", "repository validation"],
+    "source_artifacts": [],
+    "career_objective": {
+      "target_lane": "Agentic software development and AI automation",
+      "target_roles": ["AI Automation Engineer", "AI Systems Engineer", "Applied AI Engineer"],
+      "deprioritized_roles": ["General project management", "Non-building AI enablement"],
+      "lead_capabilities": ["AI-assisted product engineering", "Repository automation", "Testing and validation", "Workflow automation"],
+      "proof_artifacts": [
+        {"owner": "user", "kind": "uri", "locator": "https://example.invalid/portfolio"},
+        {"owner": "user", "kind": "relative_path", "locator": "proof/live-product.md"}
+      ]
+    }
   },
   "opportunities": [
     {
       "id": "opp-example",
-      "title": "Installation Coordinator",
+      "title": "AI Automation Engineer",
       "organization": "Example Employer",
       "status": "targeted",
       "priority": "high",
-      "fit_score": 86,
-      "requirements_gaps": ["Strengthen SQL evidence for reporting-oriented roles."],
-      "next_action": "Tailor the resume and export the associated study guidance.",
+      "fit_score": 92,
+      "requirements_gaps": ["Strengthen LLM API integration evidence."],
+      "next_action": "Tailor the agentic-software resume and export the associated study guidance.",
       "source": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/jobs/123"},
       "apply_link": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/apply/123"},
       "posting_snapshot": {"owner": "user", "kind": "relative_path", "locator": "opportunities/opp-example/posting.txt"},
-      "captured_at": "2026-08-11T12:45:00-04:00"
+      "captured_at": "2026-09-10T04:45:00-04:00"
     }
   ],
   "resumes": [
@@ -30,8 +40,8 @@
       "id": "resume-example-v1",
       "profile_id": "profile-primary",
       "opportunity_id": "opp-example",
-      "artifact": {"owner": "user", "kind": "relative_path", "locator": "resumes/example-installation-coordinator.pdf"},
-      "created_at": "2026-08-11T12:50:00-04:00"
+      "artifact": {"owner": "user", "kind": "relative_path", "locator": "resumes/example-ai-automation-engineer.pdf"},
+      "created_at": "2026-09-10T04:50:00-04:00"
     }
   ],
   "applications": [
@@ -46,29 +56,29 @@
   ],
   "study_guidance": [
     {
-      "id": "guidance-opp-example-sql-001",
+      "id": "guidance-opp-example-llm-001",
       "opportunity_id": "opp-example",
       "application_id": "app-example",
       "contract": "study-syndicate/study-guidance/v1",
       "trigger_kind": "requirements-gap",
-      "reason": "The opportunity surfaced a SQL evidence gap that should generate targeted study material.",
-      "cascade_concept_ids": ["databases.relational-model"],
+      "reason": "The opportunity surfaced an LLM API integration evidence gap that should generate targeted study material.",
+      "cascade_concept_ids": ["ai.application-engineering"],
       "iteration": 1,
       "concepts": [
-        {"concept_id": "sql.joins", "reason": "Practice joins used in operational reporting.", "priority": 5}
+        {"concept_id": "llm.api-integration", "reason": "Practice reliable model API integration in an application workflow.", "priority": 5}
       ],
       "resources": [
         {
           "kind": "book",
-          "title": "Learning SQL",
-          "author": "Alan Beaulieu",
+          "title": "AI Engineering",
+          "author": "Chip Huyen",
           "relation": "primary",
-          "concept_ids": ["sql.joins"],
-          "note": "Preserve the book as guidance input; reading alone is not mastery evidence."
+          "concept_ids": ["llm.api-integration"],
+          "note": "Use the resource as guidance input; reading alone is not mastery evidence."
         }
       ],
       "status": "queued",
-      "created_at": "2026-08-11T14:20:00-04:00"
+      "created_at": "2026-09-10T05:00:00-04:00"
     }
   ],
   "evidence": []

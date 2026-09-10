@@ -1,28 +1,42 @@
 # EscapeHatch Current State
 
-**Verified `main` floor before this product sprint:** `9ed6fa7de83db67412b0150bb3783cf7521afc42`, after the operational application harness merged.
+**Verified `main` floor before this product sprint:** `61fa5d0bca9e3403803c60fd0827116423b126ad`, after durable career escape-route targeting merged.
 
 ## Working
 
 - Root governance authority exists at `AGENTS.md`.
 - Career-state v1 persists profile → opportunity → resume → application → study guidance → evidence with portable artifact ownership.
-- A profile may now carry an optional, backward-compatible `career_objective` that separates the user's desired lane from current employment identity. It records target role families, explicitly deprioritized role families, capabilities to lead with, and portable proof artifacts.
-- The representative career-state fixture now demonstrates an agentic-software escape route: a technical-operations profile targets AI/automation engineering roles, leads with software/automation proof, preserves role-specific gaps, and routes those gaps into StudySyndicate guidance.
+- A profile may carry an optional, backward-compatible `career_objective` that separates the user's desired lane from current employment identity. It records target role families, explicitly deprioritized role families, capabilities to lead with, and portable proof artifacts.
+- The representative career-state fixture demonstrates an agentic-software escape route: a technical-operations profile targets AI/automation engineering roles, leads with software/automation proof, preserves role-specific gaps, and routes those gaps into StudySyndicate guidance.
+- The versioned application-companion contract now defines a local-first/private state boundary shared by browser extension, Microsoft Store app, Play Store app, and local web delivery surfaces.
+- Public hosting and a public user profile are not required by the companion contract. Real profile/application state remains user-owned and must stay out of repository history and distribution bundles.
+- The companion may record progress from explicit user action, same-session page confirmation, or user-confirmed external evidence, but may not submit applications, navigate past the submission boundary, or perform attestation.
+- Google Drive is modeled as an optional explicit user-authorized sync adapter to a user-selected file/folder. Provider credentials do not belong in career state; public sharing is never required.
+- Divergent local/remote state must preserve both copies and surface resolution. Silent overwrite is forbidden.
+- Explicit validated export/import remains the provider-independent portability path.
+- Profile/application-content telemetry defaults off and is forbidden by the companion contract; authorized sync is kept distinct from telemetry.
 - Study-guidance export to StudySyndicate exists and has dedicated product CI.
 - Base harness maps, workflows, registry, hooks, skill, operator report, validators, and CI exist.
-- The durable Windows repository resolver from the older harness lane is incorporated into this harness floor so durable work resolves under `Desktop\Dev`, not temporary storage.
+- The durable Windows repository resolver preserves durable work under `Desktop\Dev`, not temporary storage.
 - Application question semantics are modeled independently of employer, ATS vendor, page number, and field order.
-- Application preference persistence is defined as user-owned browser-local state with explicit Save/Export/Import/Clear controls and no repository tracking.
+- Application preference persistence is user-owned browser-local state with explicit Save/Export/Import/Clear controls and no repository tracking; browser storage is one adapter rather than the whole companion architecture.
 - Application question coverage includes identity/contact, EEO/demographic, eligibility/history, compensation/education/accommodation, legal/compliance, and certification families.
 - Unknown questions fail closed to mapping; selected answers are never committed as fixtures.
-- The concurrent application-autofill product PR remains separately owned and is not modified by this career-state sprint.
+- The concurrent application-autofill product PR remains separately owned and is not modified by this companion-contract sprint.
 
 ## Broken
 
-- No known career-objective contract breakage is present on this sprint floor.
+- No known companion-contract or career-objective contract breakage is present on this sprint floor.
 
 ## Missing / intentionally not yet established
 
+- Runtime implementation of the cross-surface local logical store defined by `contracts/application-companion.v1.json`.
+- A packaged Microsoft Store application and store submission/publishing pipeline.
+- A packaged Android/Play Store application and store submission/publishing pipeline.
+- A live local-web companion runtime with stable loopback/origin behavior.
+- A live Google Drive OAuth/sync adapter, sync receipt producer, and observed conflict-resolution flow.
+- Runtime event capture that writes application progress back into career-state after the registered evidence gates.
+- Cross-device synchronization proof.
 - A scoring engine that derives opportunity fit from `career_objective`; current `fit_score` remains stored opportunity evidence rather than an automatically recomputed claim.
 - Product UI for editing target/deprioritized role families and proof artifacts.
 - Product implementation for questionnaire families beyond identity/contact autofill.
@@ -41,13 +55,23 @@
 
 The objective is optional so previously valid v1 states remain readable. Opportunity-specific requirements gaps, applications, receipts, correspondence, interviews, and outcomes remain owned by their existing records rather than being duplicated into the profile.
 
+## Local-first companion boundary
+
+`contracts/application-companion.v1.json` defines the companion as an adapter over `escapehatch-career-state/v1`, not a second database. Browser-extension, Windows Store, Android/Play Store, and local-web surfaces may choose platform-specific storage/runtime implementations while preserving one logical user-owned state contract.
+
+The Prompt Kit portability model is used as a donor pattern: preserve stable local identity across upgrades, keep export/import explicit and validated, treat imported content as data only, and do not make one generated or hosted artifact the owner of user state. EscapeHatch strengthens that pattern for career data by requiring private profiles, distribution/state separation, optional remote sync, conflict preservation, and telemetry exclusion.
+
+A public website is therefore a possible delivery surface, not an architectural prerequisite. A local web app can run from a stable loopback/packaged origin, and installable clients can be distributed independently. Google Drive can hold a synchronized user-owned copy when the user explicitly authorizes it, but Drive does not become public hosting, the canonical product database, or credential storage.
+
+Progress capture is assistive. A recorded application status must be based on explicit user action, same-session page confirmation, or user-confirmed external evidence and must preserve/link evidence. URL-only inference is insufficient. Submission, navigation beyond submission, and attestation remain user actions.
+
 ## Application automation boundary
 
 The harness models recurring questions by canonical meaning, not page order. The observed application evidence motivated reusable families including EEO, veteran, race/ethnicity, gender, prior-employer status, work authorization, sponsorship, compensation, education, accommodation, non-compete/restrictive agreement, debarment/exclusion/investigation, and final truth/accuracy certification.
 
-Real selected answers from operator applications are user-owned private state. They are deliberately absent from tracked contracts/reports. Product implementations should store them under the browser-local preference contract and expose a full clear action.
+Real selected answers from operator applications are user-owned private state. They are deliberately absent from tracked contracts/reports. Product implementations should preserve explicit clear/export/import controls and the per-question privacy/freshness policy regardless of delivery surface.
 
-Certification/attestation stays manual even when all preceding fields can be filled automatically.
+Certification/attestation stays manual even when preceding fields can be filled automatically.
 
 ## Validation floor
 
@@ -56,6 +80,7 @@ Run:
 ```text
 python scripts/validate_governance.py
 python scripts/validate_application_harness.py
+python scripts/validate_application_companion.py
 python scripts/validate_harness.py
 python scripts/validate_career_state.py
 python tests/test_study_guidance_export.py
@@ -70,6 +95,12 @@ pwsh -NoProfile -File scripts/resolve_repo.ps1 -ResolveOnly
 
 ## Principal risks
 
+- Treating a browser extension, hosted website, Google Drive file, or generated bundle as the canonical owner of career state instead of an adapter/copy around user-owned state.
+- Requiring public hosting or public profile visibility merely because one delivery surface is web technology.
+- Baking real profile/application data or provider credentials into Store/browser distribution artifacts.
+- Silently overwriting divergent local and Drive revisions.
+- Treating authorized Drive sync as blanket permission for telemetry or secondary data use.
+- Inferring application progress from URL/navigation alone or recording a submission that the user did not perform/confirm.
 - Treating current employment title as the desired career lane, or treating the desired lane as fabricated employment history.
 - Letting role search drift back toward explicitly deprioritized families because they superficially match prior job titles.
 - Recording proof claims without durable artifact references.
@@ -85,4 +116,4 @@ pwsh -NoProfile -File scripts/resolve_repo.ps1 -ResolveOnly
 
 ## Next product gate after this sprint
 
-Reconcile the open application-autofill product lane onto the refreshed career-state floor without absorbing this targeting contract into browser-specific code. After that, the next career-state product slice is a deterministic opportunity-ranking adapter that consumes `career_objective`, records why a role matches or conflicts with the target lane, and never converts a heuristic score into an unsupported employment or qualification claim.
+Reconcile the open application-autofill product lane onto the refreshed main floor while keeping browser-specific code as one adapter beneath `contracts/application-companion.v1.json`. The next companion implementation slice should establish the smallest shared progress-recorder/local-state adapter plus a local-web reader/writer path, with Google Drive remaining behind an explicit authorization interface until live OAuth/sync proof exists.

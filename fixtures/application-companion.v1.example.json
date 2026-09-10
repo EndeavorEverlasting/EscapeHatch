@@ -1,0 +1,35 @@
+{
+  "schema_version": "escapehatch-application-companion-session/v1",
+  "session_id": "companion-session-example",
+  "surface_id": "browser_extension",
+  "career_state": {
+    "schema_version": "escapehatch-career-state/v1",
+    "state_id": "state-example",
+    "revision": 4
+  },
+  "progress_event": {
+    "event_id": "progress-example-001",
+    "opportunity_id": "opp-example",
+    "application_id": "app-example",
+    "status": "submitted",
+    "source": "same_session_page_confirmation",
+    "observed_at": "2026-09-10T10:00:00-04:00",
+    "evidence": {
+      "owner": "user",
+      "kind": "relative_path",
+      "locator": "evidence/app-example/submission-confirmation.json"
+    }
+  },
+  "sync": {
+    "google_drive": {
+      "enabled": true,
+      "authorization": "explicit_user_authorization",
+      "destination": {
+        "owner": "user",
+        "kind": "uri",
+        "locator": "gdrive://user-selected/EscapeHatch/career-state.json"
+      },
+      "last_synced_revision": 4
+    }
+  }
+}

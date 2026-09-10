@@ -24,6 +24,7 @@
   "validation_order": [
     "python scripts/validate_governance.py",
     "python scripts/validate_application_harness.py",
+    "python scripts/validate_application_companion.py",
     "python scripts/validate_harness.py",
     "python scripts/validate_career_state.py",
     "git diff --check"

@@ -28,6 +28,17 @@
         "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
       }
     },
+    "careerObjective": {
+      "type": "object", "additionalProperties": false,
+      "required": ["target_lane", "target_roles", "lead_capabilities"],
+      "properties": {
+        "target_lane": {"type": "string", "minLength": 1},
+        "target_roles": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "deprioritized_roles": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "lead_capabilities": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "proof_artifacts": {"type": "array", "items": {"$ref": "#/$defs/artifactRef"}}
+      }
+    },
     "profile": {
       "type": "object", "additionalProperties": false,
       "required": ["id", "headline", "skills"],
@@ -35,7 +46,8 @@
         "id": {"type": "string", "minLength": 1},
         "headline": {"type": "string"},
         "skills": {"type": "array", "items": {"type": "string"}},
-        "source_artifacts": {"type": "array", "items": {"$ref": "#/$defs/artifactRef"}}
+        "source_artifacts": {"type": "array", "items": {"$ref": "#/$defs/artifactRef"}},
+        "career_objective": {"$ref": "#/$defs/careerObjective"}
       }
     },
     "opportunity": {

@@ -16,16 +16,16 @@ class ExportStudyGuidanceTests(unittest.TestCase):
 
     def test_exports_studysyndicate_contract_shape(self):
         packet = mod.export_all(self.state)[0]
-        self.assertEqual("guidance-opp-example-sql-001", packet["guidanceId"])
+        self.assertEqual("guidance-opp-example-llm-001", packet["guidanceId"])
         self.assertEqual("requirements-gap", packet["trigger"]["kind"])
-        self.assertEqual("sql.joins", packet["concepts"][0]["conceptId"])
+        self.assertEqual("llm.api-integration", packet["concepts"][0]["conceptId"])
 
     def test_book_metadata_survives_export(self):
         book = mod.export_all(self.state)[0]["resources"][0]
         self.assertEqual("book", book["kind"])
-        self.assertEqual("Learning SQL", book["title"])
-        self.assertEqual("Alan Beaulieu", book["author"])
-        self.assertEqual(["sql.joins"], book["conceptIds"])
+        self.assertEqual("AI Engineering", book["title"])
+        self.assertEqual("Chip Huyen", book["author"])
+        self.assertEqual(["llm.api-integration"], book["conceptIds"])
 
     def test_application_origin_is_preserved(self):
         origin = mod.export_all(self.state)[0]["origin"]

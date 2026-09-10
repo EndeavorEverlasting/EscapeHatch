@@ -8,8 +8,8 @@ import sys
 from pathlib import Path
 
 R = Path(__file__).resolve().parents[1]
-SCHEMA = R / "contracts/career-state.v1.schema.json"
-FIXTURE = R / "fixtures/career-state.v1.example.json"
+SCHEMA = R / "contracts" / "career-state.v1.schema.json"
+FIXTURE = R / "fixtures" / "career-state.v1.example.json"
 VERSION = "escapehatch-career-state/v1"
 GUIDANCE_CONTRACT = "study-syndicate/study-guidance/v1"
 SHA = re.compile(r"^[a-f0-9]{64}$")
@@ -67,6 +67,17 @@ def artifact(value, where):
         raise ContractError(f"{where}.locator must be portable relative path")
     if "sha256" in value and not SHA.fullmatch(value["sha256"]):
         raise ContractError(f"{where}.sha256 invalid")
+
+
+def string_list(value, where, *, min_items=0):
+    if (
+        not isinstance(value, list)
+        or len(value) < min_items
+        or any(not isinstance(item, str) or not item for item in value)
+        or len(value) != len(set(value))
+    ):
+        requirement = f" with at least {min_items} item(s)" if min_items else ""
+        raise ContractError(f"{where} must be a unique non-empty string array{requirement}")
 
 
 def uniq(items, name):
@@ -179,13 +190,36 @@ def validate(state):
         raise ContractError("revision must be >= 1")
 
     profile = state["profile"]
-    require_keys(profile, ("id", "headline", "skills"), ("id", "headline", "skills", "source_artifacts"), "profile")
+    require_keys(
+        profile,
+        ("id", "headline", "skills"),
+        ("id", "headline", "skills", "source_artifacts", "career_objective"),
+        "profile",
+    )
     if not isinstance(profile["id"], str) or not profile["id"]:
         raise ContractError("profile.id invalid")
+    if not isinstance(profile["headline"], str):
+        raise ContractError("profile.headline invalid")
     if not isinstance(profile["skills"], list) or any(not isinstance(item, str) for item in profile["skills"]):
         raise ContractError("profile.skills invalid")
     for index, source in enumerate(profile.get("source_artifacts", [])):
         artifact(source, f"profile.source_artifacts[{index}]")
+
+    objective = profile.get("career_objective")
+    if objective is not None:
+        require_keys(
+            objective,
+            ("target_lane", "target_roles", "lead_capabilities"),
+            ("target_lane", "target_roles", "deprioritized_roles", "lead_capabilities", "proof_artifacts"),
+            "profile.career_objective",
+        )
+        if not isinstance(objective["target_lane"], str) or not objective["target_lane"]:
+            raise ContractError("profile.career_objective.target_lane invalid")
+        string_list(objective["target_roles"], "profile.career_objective.target_roles", min_items=1)
+        string_list(objective.get("deprioritized_roles", []), "profile.career_objective.deprioritized_roles")
+        string_list(objective["lead_capabilities"], "profile.career_objective.lead_capabilities", min_items=1)
+        for index, proof in enumerate(objective.get("proof_artifacts", [])):
+            artifact(proof, f"profile.career_objective.proof_artifacts[{index}]")
 
     for key in ("opportunities", "resumes", "applications", "evidence"):
         if not isinstance(state[key], list):
@@ -279,6 +313,7 @@ def validate(state):
         "opportunities": len(opportunity_ids),
         "applications": len(application_ids),
         "guidance": len(guidance_ids),
+        "career_objective": objective is not None,
     }
 
 
@@ -290,9 +325,13 @@ def self_tests(good):
     item = json.loads(json.dumps(good)); item["opportunities"][0]["fit_score"] = 101; negatives.append(item)
     item = json.loads(json.dumps(good)); item["study_guidance"][0]["opportunity_id"] = "missing"; negatives.append(item)
     item = json.loads(json.dumps(good)); item["study_guidance"][0]["resources"][0]["kind"] = "magazine"; negatives.append(item)
-    item = json.loads(json.dumps(good)); item["study_guidance"][0]["resources"][0]["concept_ids"] = ["sql.missing"]; negatives.append(item)
+    item = json.loads(json.dumps(good)); item["study_guidance"][0]["resources"][0]["concept_ids"] = ["llm.missing"]; negatives.append(item)
     item = json.loads(json.dumps(good)); item["study_guidance"] = []; negatives.append(item)
     item = json.loads(json.dumps(good)); item["study_guidance"][0]["resources"][0]["author"] = 42; negatives.append(item)
+    item = json.loads(json.dumps(good)); item["profile"]["career_objective"]["target_roles"] = []; negatives.append(item)
+    item = json.loads(json.dumps(good)); item["profile"]["career_objective"]["lead_capabilities"].append(item["profile"]["career_objective"]["lead_capabilities"][0]); negatives.append(item)
+    item = json.loads(json.dumps(good)); item["profile"]["career_objective"]["proof_artifacts"][1]["locator"] = "../private-proof.md"; negatives.append(item)
+    item = json.loads(json.dumps(good)); item["profile"]["career_objective"]["unknown"] = "value"; negatives.append(item)
 
     item = json.loads(json.dumps(good))
     other = json.loads(json.dumps(item["opportunities"][0]))
@@ -312,6 +351,10 @@ def self_tests(good):
     legacy = json.loads(json.dumps(good))
     legacy.pop("study_guidance")
     validate(legacy)
+
+    legacy_without_objective = json.loads(json.dumps(good))
+    legacy_without_objective["profile"].pop("career_objective")
+    validate(legacy_without_objective)
     return len(negatives)
 
 
@@ -324,6 +367,11 @@ def main():
             raise ContractError("schema must expose the optional study_guidance extension")
         if "study_guidance" in schema.get("required", []):
             raise ContractError("career-state v1 study_guidance must remain backward-compatible")
+        profile_schema = schema.get("$defs", {}).get("profile", {})
+        if "career_objective" not in profile_schema.get("properties", {}):
+            raise ContractError("profile schema must expose the optional career_objective extension")
+        if "career_objective" in profile_schema.get("required", []):
+            raise ContractError("career-state v1 career_objective must remain backward-compatible")
         state = load(FIXTURE)
         counts = validate(state)
         negative_count = self_tests(state)
@@ -333,8 +381,10 @@ def main():
     print("CAREER_STATE_VALIDATION: PASS")
     print(f"schema={SCHEMA.relative_to(R)}")
     print(f"fixture={FIXTURE.relative_to(R)}")
+    print(f"career_objective={'PASS' if counts['career_objective'] else 'ABSENT'}")
     print(f"guidance_records={counts['guidance']}")
     print("legacy_v1_without_guidance=PASS")
+    print("legacy_v1_without_career_objective=PASS")
     print(f"negative_fixtures={negative_count}")
     return 0
 

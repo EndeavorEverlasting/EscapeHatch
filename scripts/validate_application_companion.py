@@ -15,6 +15,7 @@ CAREER_SCHEMA = "escapehatch-career-state/v1"
 SURFACES = {"browser_extension", "windows_store_app", "android_store_app", "local_web_app"}
 STATUSES = {"draft", "submitted", "screen", "interview", "offer", "rejected", "withdrawn", "closed"}
 SOURCES = {"explicit_user_action", "same_session_page_confirmation", "user_confirmed_external_evidence"}
+RECEIPT_METADATA = {"state_id", "local_revision", "remote_revision", "direction", "result", "observed_at"}
 
 
 class CompanionError(ValueError):
@@ -120,9 +121,12 @@ def validate_contract(contract: dict) -> None:
     require(conflicts.get("divergence") == "preserve_both_and_require_resolution", "divergence must preserve both copies")
     require(conflicts.get("silent_overwrite") == "forbidden", "silent overwrite must be forbidden")
     receipt = sync.get("receipt", {})
+    allowed_receipt = set(receipt.get("allowed_metadata", []))
+    require(allowed_receipt == RECEIPT_METADATA, "sync receipt metadata allowlist mismatch")
     forbidden_receipt = set(receipt.get("forbidden_content", []))
     for marker in {"profile_values", "application_answers", "resume_content", "provider_tokens", "provider_credentials"}:
         require(marker in forbidden_receipt, f"sync receipt privacy marker missing: {marker}")
+    require(not allowed_receipt.intersection(forbidden_receipt), "sync receipt allowlist overlaps forbidden content")
 
     portability = contract.get("portability")
     require(isinstance(portability, dict), "portability contract missing")
@@ -182,6 +186,7 @@ def validate_fixture(fixture: dict, contract: dict) -> None:
     validate_artifact(drive.get("destination"), "sync.google_drive.destination")
     require(drive["destination"]["owner"] == "user" and drive["destination"]["kind"] == "uri", "sync destination must be a user-owned URI")
     require(isinstance(drive.get("last_synced_revision"), int) and drive["last_synced_revision"] >= 1, "last_synced_revision invalid")
+    require(drive["last_synced_revision"] == career["revision"], "synthetic sync revision must match referenced career-state revision")
     forbidden = {"token", "access_token", "refresh_token", "password", "secret", "credential"}
     require(not any(key.lower() in forbidden for key in drive), "fixture must not contain provider credentials")
 
@@ -197,9 +202,11 @@ def self_tests(contract: dict, fixture: dict) -> int:
     c, f = pair(); c["surfaces"] = [item for item in c["surfaces"] if item["id"] != "local_web_app"]; negatives.append((c, f))
     c, f = pair(); c["sync"]["default"] = "enabled"; negatives.append((c, f))
     c, f = pair(); c["sync"]["conflict_policy"]["silent_overwrite"] = "allowed"; negatives.append((c, f))
+    c, f = pair(); c["sync"]["receipt"]["allowed_metadata"].append("profile_values"); negatives.append((c, f))
     c, f = pair(); c["progress"]["write_rules"].remove("never_submit_application"); negatives.append((c, f))
     c, f = pair(); c["telemetry"]["profile_or_application_content"] = "allowed"; negatives.append((c, f))
     c, f = pair(); f["progress_event"]["evidence"]["locator"] = "../private.json"; negatives.append((c, f))
+    c, f = pair(); f["sync"]["google_drive"]["last_synced_revision"] = f["career_state"]["revision"] - 1; negatives.append((c, f))
     c, f = pair(); f["sync"]["google_drive"]["access_token"] = "example"; negatives.append((c, f))
 
     passed = 0
@@ -231,6 +238,8 @@ def main() -> int:
     print("public_hosting_required=FALSE")
     print("profile_visibility=PRIVATE")
     print("google_drive_sync=EXPLICIT_OPT_IN")
+    print("sync_receipt_allowlist=PASS")
+    print("sync_revision_binding=PASS")
     print("silent_overwrite=FORBIDDEN")
     print("submission_boundary=USER")
     print(f"negative_fixtures={negatives}")

@@ -1,0 +1,145 @@
+{
+  "schema": "escapehatch/application-companion/v1",
+  "version": 1,
+  "mission": "A local-first private companion that records job-application progress across installable and local web surfaces without requiring a public profile or public website.",
+  "state": {
+    "owner": "user",
+    "canonical_career_state": "escapehatch-career-state/v1",
+    "primary_residence": "local-first",
+    "repository_tracking": "forbidden",
+    "public_hosting_required": false,
+    "runtime_bundle_contains_user_state": false,
+    "storage_identity": "stable_user_owned_logical_store"
+  },
+  "surfaces": [
+    {
+      "id": "browser_extension",
+      "distribution": ["browser_store", "side_load"],
+      "storage_adapter": "extension_local_or_user_selected_store",
+      "public_hosting_required": false
+    },
+    {
+      "id": "windows_store_app",
+      "distribution": ["microsoft_store", "side_load"],
+      "storage_adapter": "platform_app_data_or_user_selected_store",
+      "public_hosting_required": false
+    },
+    {
+      "id": "android_store_app",
+      "distribution": ["play_store", "side_load"],
+      "storage_adapter": "platform_app_data_or_user_selected_store",
+      "public_hosting_required": false
+    },
+    {
+      "id": "local_web_app",
+      "distribution": ["stable_loopback_origin", "packaged_webview"],
+      "storage_adapter": "stable_origin_or_user_selected_store",
+      "public_hosting_required": false
+    }
+  ],
+  "profile_privacy": {
+    "visibility": "private",
+    "public_profile_required": false,
+    "public_website_required": false,
+    "build_seed_with_real_profile": "forbidden",
+    "tracked_fixture_with_real_profile": "forbidden",
+    "rules": [
+      "keep_profile_and_application_answers_out_of_distribution_artifacts",
+      "keep_profile_and_application_answers_out_of_repository_history",
+      "never_make_public_sharing_a_sync_requirement",
+      "clear_and_export_controls_must_remain_user_accessible"
+    ]
+  },
+  "progress": {
+    "authority": "assist_and_record_only",
+    "allowed_application_statuses": [
+      "draft",
+      "submitted",
+      "screen",
+      "interview",
+      "offer",
+      "rejected",
+      "withdrawn",
+      "closed"
+    ],
+    "observation_sources": [
+      "explicit_user_action",
+      "same_session_page_confirmation",
+      "user_confirmed_external_evidence"
+    ],
+    "write_rules": [
+      "validate_career_state_before_commit",
+      "append_or_link_evidence_with_progress_change",
+      "never_infer_status_from_url_alone",
+      "never_submit_application",
+      "never_navigate_past_submission_boundary",
+      "never_accept_or_apply_attestation"
+    ],
+    "submission_boundary": "user_performs_submission",
+    "attestation_policy": "manual_only"
+  },
+  "sync": {
+    "default": "disabled",
+    "adapters": [
+      {
+        "id": "google_drive",
+        "kind": "optional_remote_sync",
+        "authorization": "explicit_user_authorization",
+        "destination": "user_selected_file_or_folder",
+        "credential_storage": "platform_secret_store_or_provider_session",
+        "credential_in_state": "forbidden",
+        "public_sharing": "never_required"
+      }
+    ],
+    "conflict_policy": {
+      "identity": ["state_id", "revision"],
+      "same_revision_same_hash": "noop",
+      "one_side_strictly_newer_and_other_unchanged": "fast_forward_when_sync_enabled",
+      "divergence": "preserve_both_and_require_resolution",
+      "silent_overwrite": "forbidden"
+    },
+    "receipt": {
+      "allowed_metadata": [
+        "state_id",
+        "local_revision",
+        "remote_revision",
+        "direction",
+        "result",
+        "observed_at"
+      ],
+      "forbidden_content": [
+        "profile_values",
+        "application_answers",
+        "resume_content",
+        "provider_tokens",
+        "provider_credentials"
+      ]
+    }
+  },
+  "portability": {
+    "explicit_export_import": true,
+    "import_rules": [
+      "validate_schema_before_replace_or_merge",
+      "treat_imported_content_as_data_only",
+      "preserve_current_state_on_invalid_import",
+      "never_silently_delete_current_state",
+      "surface_conflicts_for_resolution"
+    ],
+    "upgrade_invariants": [
+      "preserve_stable_logical_storage_identity",
+      "do_not_bind_user_state_to_one_generated_bundle_path",
+      "distribution_upgrade_must_not_clear_user_state"
+    ]
+  },
+  "telemetry": {
+    "default": "off",
+    "profile_or_application_content": "forbidden",
+    "sync_is_not_telemetry": true
+  },
+  "proof_ceiling": [
+    "repository_contract_and_fixture_validation",
+    "no_store_packaging_claim",
+    "no_live_google_drive_claim",
+    "no_live_browser_or_mobile_runtime_claim"
+  ]
+}

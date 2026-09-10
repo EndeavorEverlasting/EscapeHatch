@@ -30,6 +30,8 @@ REQUIRED_BY_SECTION = {
         "One writer per branch",
         "Reuse before replacing",
         "No completion without proof",
+        "Resume presentation quality is contractual",
+        "contracts/resume-presentation.v1.json",
     ),
     REQUIRED_HEADINGS[2]: (
         "Repo and branch",

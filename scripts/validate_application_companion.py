@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = ROOT / "contracts" / "application-companion.v1.json"
 FIXTURE = ROOT / "fixtures" / "application-companion.v1.example.json"
+CAREER_FIXTURE = ROOT / "fixtures" / "career-state.v1.example.json"
 CONTRACT_SCHEMA = "escapehatch/application-companion/v1"
 SESSION_SCHEMA = "escapehatch-application-companion-session/v1"
 CAREER_SCHEMA = "escapehatch-career-state/v1"
@@ -16,6 +18,7 @@ SURFACES = {"browser_extension", "windows_store_app", "android_store_app", "loca
 STATUSES = {"draft", "submitted", "screen", "interview", "offer", "rejected", "withdrawn", "closed"}
 SOURCES = {"explicit_user_action", "same_session_page_confirmation", "user_confirmed_external_evidence"}
 RECEIPT_METADATA = {"state_id", "local_revision", "remote_revision", "direction", "result", "observed_at"}
+SHA256 = re.compile(r"^[a-f0-9]{64}$")
 
 
 class CompanionError(ValueError):
@@ -40,13 +43,17 @@ def require(value: bool, message: str) -> None:
 def validate_artifact(value: object, where: str) -> None:
     require(isinstance(value, dict), f"{where} must be an object")
     assert isinstance(value, dict)
-    require(set(value) == {"owner", "kind", "locator"}, f"{where} fields invalid")
+    required = {"owner", "kind", "locator"}
+    allowed = required | {"sha256"}
+    require(required.issubset(value) and set(value).issubset(allowed), f"{where} fields invalid")
     require(value["owner"] in {"user", "escapehatch", "external"}, f"{where}.owner invalid")
     require(value["kind"] in {"inline", "relative_path", "uri", "content_hash"}, f"{where}.kind invalid")
     require(isinstance(value["locator"], str) and bool(value["locator"]), f"{where}.locator invalid")
     if value["kind"] == "relative_path":
         locator = Path(value["locator"])
         require(not locator.is_absolute() and ".." not in locator.parts, f"{where}.locator must be portable")
+    if "sha256" in value:
+        require(isinstance(value["sha256"], str) and bool(SHA256.fullmatch(value["sha256"])), f"{where}.sha256 invalid")
 
 
 def validate_contract(contract: dict) -> None:
@@ -153,7 +160,7 @@ def validate_contract(contract: dict) -> None:
     require(telemetry.get("sync_is_not_telemetry") is True, "authorized sync must stay distinct from telemetry")
 
 
-def validate_fixture(fixture: dict, contract: dict) -> None:
+def validate_fixture(fixture: dict, contract: dict, career_fixture: dict) -> None:
     require(fixture.get("schema_version") == SESSION_SCHEMA, "session fixture schema mismatch")
     require(isinstance(fixture.get("session_id"), str) and bool(fixture["session_id"]), "session_id invalid")
     surface_ids = {item["id"] for item in contract["surfaces"]}
@@ -165,6 +172,9 @@ def validate_fixture(fixture: dict, contract: dict) -> None:
     require(career.get("schema_version") == CAREER_SCHEMA, "session career-state schema mismatch")
     require(isinstance(career.get("state_id"), str) and bool(career["state_id"]), "state_id invalid")
     require(isinstance(career.get("revision"), int) and not isinstance(career["revision"], bool) and career["revision"] >= 1, "revision invalid")
+    require(career_fixture.get("schema_version") == CAREER_SCHEMA, "canonical career fixture schema mismatch")
+    require(career["state_id"] == career_fixture.get("state_id"), "session state_id must reference canonical career fixture")
+    require(career["revision"] == career_fixture.get("revision"), "session revision must reference canonical career fixture")
 
     event = fixture.get("progress_event")
     require(isinstance(event, dict), "progress event missing")
@@ -174,6 +184,20 @@ def validate_fixture(fixture: dict, contract: dict) -> None:
     require(event.get("status") in STATUSES, "progress_event.status invalid")
     require(event.get("source") in SOURCES, "progress_event.source invalid")
     validate_artifact(event.get("evidence"), "progress_event.evidence")
+
+    opportunities = {
+        item.get("id"): item
+        for item in career_fixture.get("opportunities", [])
+        if isinstance(item, dict) and isinstance(item.get("id"), str)
+    }
+    applications = {
+        item.get("id"): item
+        for item in career_fixture.get("applications", [])
+        if isinstance(item, dict) and isinstance(item.get("id"), str)
+    }
+    require(event["opportunity_id"] in opportunities, "progress_event.opportunity_id must reference canonical career fixture")
+    require(event["application_id"] in applications, "progress_event.application_id must reference canonical career fixture")
+    require(applications[event["application_id"]].get("opportunity_id") == event["opportunity_id"], "progress event application/opportunity mismatch")
 
     sync = fixture.get("sync")
     require(isinstance(sync, dict), "sync fixture missing")
@@ -191,7 +215,7 @@ def validate_fixture(fixture: dict, contract: dict) -> None:
     require(not any(key.lower() in forbidden for key in drive), "fixture must not contain provider credentials")
 
 
-def self_tests(contract: dict, fixture: dict) -> int:
+def self_tests(contract: dict, fixture: dict, career_fixture: dict) -> int:
     negatives: list[tuple[dict, dict]] = []
 
     def pair() -> tuple[dict, dict]:
@@ -205,7 +229,11 @@ def self_tests(contract: dict, fixture: dict) -> int:
     c, f = pair(); c["sync"]["receipt"]["allowed_metadata"].append("profile_values"); negatives.append((c, f))
     c, f = pair(); c["progress"]["write_rules"].remove("never_submit_application"); negatives.append((c, f))
     c, f = pair(); c["telemetry"]["profile_or_application_content"] = "allowed"; negatives.append((c, f))
+    c, f = pair(); f["career_state"]["revision"] += 1; negatives.append((c, f))
+    c, f = pair(); f["progress_event"]["application_id"] = "missing"; negatives.append((c, f))
+    c, f = pair(); f["progress_event"]["opportunity_id"] = "missing"; negatives.append((c, f))
     c, f = pair(); f["progress_event"]["evidence"]["locator"] = "../private.json"; negatives.append((c, f))
+    c, f = pair(); f["progress_event"]["evidence"]["sha256"] = "bad"; negatives.append((c, f))
     c, f = pair(); f["sync"]["google_drive"]["last_synced_revision"] = f["career_state"]["revision"] - 1; negatives.append((c, f))
     c, f = pair(); f["sync"]["google_drive"]["access_token"] = "example"; negatives.append((c, f))
 
@@ -213,7 +241,7 @@ def self_tests(contract: dict, fixture: dict) -> int:
     for number, (candidate_contract, candidate_fixture) in enumerate(negatives, 1):
         try:
             validate_contract(candidate_contract)
-            validate_fixture(candidate_fixture, candidate_contract)
+            validate_fixture(candidate_fixture, candidate_contract, career_fixture)
         except CompanionError:
             passed += 1
             continue
@@ -225,18 +253,21 @@ def main() -> int:
     try:
         contract = load(CONTRACT)
         fixture = load(FIXTURE)
+        career_fixture = load(CAREER_FIXTURE)
         validate_contract(contract)
-        validate_fixture(fixture, contract)
-        negatives = self_tests(contract, fixture)
+        validate_fixture(fixture, contract, career_fixture)
+        negatives = self_tests(contract, fixture, career_fixture)
     except CompanionError as exc:
         print(f"APPLICATION_COMPANION_VALIDATION: FAIL: {exc}", file=sys.stderr)
         return 1
     print("APPLICATION_COMPANION_VALIDATION: PASS")
     print(f"contract={CONTRACT.relative_to(ROOT)}")
     print(f"fixture={FIXTURE.relative_to(ROOT)}")
+    print(f"career_fixture={CAREER_FIXTURE.relative_to(ROOT)}")
     print(f"surfaces={len(contract['surfaces'])}")
     print("public_hosting_required=FALSE")
     print("profile_visibility=PRIVATE")
+    print("canonical_career_state_binding=PASS")
     print("google_drive_sync=EXPLICIT_OPT_IN")
     print("sync_receipt_allowlist=PASS")
     print("sync_revision_binding=PASS")

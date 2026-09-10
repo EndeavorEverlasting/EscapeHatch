@@ -30,6 +30,9 @@ jobs:
       - name: Validate application companion
         run: python scripts/validate_application_companion.py
 
+      - name: Validate resume presentation
+        run: python scripts/validate_resume_presentation.py
+
       - name: Validate harness
         run: python scripts/validate_harness.py
 
@@ -40,7 +43,7 @@ jobs:
         run: python tests/test_study_guidance_export.py
 
       - name: Compile harness validators
-        run: python -m py_compile scripts/validate_governance.py scripts/validate_application_harness.py scripts/validate_application_companion.py scripts/validate_harness.py scripts/validate_career_state.py scripts/export_study_guidance.py tests/test_study_guidance_export.py
+        run: python -m py_compile scripts/validate_governance.py scripts/validate_application_harness.py scripts/validate_application_companion.py scripts/validate_resume_presentation.py scripts/validate_harness.py scripts/validate_career_state.py scripts/export_study_guidance.py tests/test_study_guidance_export.py
 
       - name: Check whitespace
         shell: bash

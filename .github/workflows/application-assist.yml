@@ -5,17 +5,23 @@ on:
     paths:
       - "browser/application-assist/**"
       - "contracts/application-assist-session.v1.json"
+      - "contracts/application-assist-modality.v1.json"
       - "docs/APPLICATION_ASSIST_SESSION.md"
       - "tests/test_application_assist_session_contract.py"
       - "tests/test_application_assist_session.mjs"
+      - "tests/test_application_assist_modality_contract.py"
+      - "tests/test_application_assist_modality.mjs"
       - ".github/workflows/application-assist.yml"
   pull_request:
     paths:
       - "browser/application-assist/**"
       - "contracts/application-assist-session.v1.json"
+      - "contracts/application-assist-modality.v1.json"
       - "docs/APPLICATION_ASSIST_SESSION.md"
       - "tests/test_application_assist_session_contract.py"
       - "tests/test_application_assist_session.mjs"
+      - "tests/test_application_assist_modality_contract.py"
+      - "tests/test_application_assist_modality.mjs"
       - ".github/workflows/application-assist.yml"
 
 permissions:
@@ -36,13 +42,20 @@ jobs:
           node-version: "22"
       - name: Validate assist session contract and extension safety
         run: python tests/test_application_assist_session_contract.py
+      - name: Validate assist modality contract
+        run: python tests/test_application_assist_modality_contract.py
       - name: Test Fill Plan, policy gate, stop, and undo runtime
         run: node tests/test_application_assist_session.mjs
-      - name: Parse popup runtime
-        run: node --check browser/application-assist/popup.js
+      - name: Test three-mode modality harness
+        run: node tests/test_application_assist_modality.mjs
+      - name: Parse popup and modality runtime
+        run: |
+          node --check browser/application-assist/modality.js
+          node --check browser/application-assist/popup.js
       - name: Validate JSON syntax
         run: |
           python -m json.tool contracts/application-assist-session.v1.json > /dev/null
+          python -m json.tool contracts/application-assist-modality.v1.json > /dev/null
           python -m json.tool browser/application-assist/manifest.json > /dev/null
       - name: Check whitespace
         shell: bash

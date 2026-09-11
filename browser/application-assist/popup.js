@@ -347,19 +347,194 @@ document.getElementById("phone").addEventListener("input", () => {
     setStatus("Phone changed. Reconfirm which primary career number you control before autofill can use it.");
   }
 });
-document.getElementById("save").addEventListener("click", () => saveProfile().catch((error) => setStatus(error.message)));
-document.getElementById("clear").addEventListener("click", () => clearProfile().catch((error) => setStatus(error.message)));
-document.getElementById("export").addEventListener("click", () => exportProfile().catch((error) => setStatus(error.message)));
-document.getElementById("import").addEventListener("click", () => importFile.click());
-document.getElementById("startAssist").addEventListener("click", () => startAssist().catch((error) => setStatus(error.message)));
-document.getElementById("fillAllowed").addEventListener("click", () => fillAllowedFields().catch((error) => setStatus(error.message)));
-document.getElementById("pause").addEventListener("click", () => pauseAssist().catch((error) => setStatus(error.message)));
-document.getElementById("resume").addEventListener("click", () => resumeAssist().catch((error) => setStatus(error.message)));
-document.getElementById("emergencyStop").addEventListener("click", () => emergencyStop().catch((error) => setStatus(error.message)));
-document.getElementById("undoLast").addEventListener("click", () => undoLastFill().catch((error) => setStatus(error.message)));
-document.getElementById("recordConfirmation").addEventListener("click", () =>
-  recordConfirmationEvidence().catch((error) => setStatus(error.message))
-);
+
+const modality = globalThis.EscapeHatchAssistModality;
+const modeChip = document.getElementById("modeChip");
+const commandPalette = document.getElementById("commandPalette");
+const commandQuery = document.getElementById("commandQuery");
+const commandList = document.getElementById("commandList");
+const phoneSheetActions = document.getElementById("phoneSheetActions");
+const phoneBackToSheet = document.getElementById("phoneBackToSheet");
+
+let activeMode = "mouse";
+let paletteOpen = false;
+
+function setProfileOpen(open) {
+  document.documentElement.classList.toggle("profile-open", !!open);
+  if (phoneBackToSheet) phoneBackToSheet.hidden = !open;
+  if (!open && document.activeElement && modality.isEditableTarget(document.activeElement)) {
+    document.activeElement.blur();
+  }
+}
+
+function closeCommandPalette() {
+  paletteOpen = false;
+  if (commandPalette) commandPalette.classList.remove("open");
+  if (commandQuery && document.activeElement === commandQuery) commandQuery.blur();
+}
+
+function renderCommandList(query) {
+  if (!commandList) return;
+  const actions = modality.paletteActions(query);
+  commandList.innerHTML = "";
+  for (const action of actions) {
+    if (action.id === "open_command_palette") continue;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "sheet-btn";
+    button.dataset.action = action.id;
+    button.textContent = action.label;
+    if (action.shortcuts && action.shortcuts.length) {
+      const hint = document.createElement("span");
+      hint.className = "hint";
+      hint.textContent = action.shortcuts.join(" · ");
+      button.appendChild(document.createElement("br"));
+      button.appendChild(hint);
+    }
+    button.addEventListener("click", () => {
+      closeCommandPalette();
+      invokeAction(action.id, "keyboard").catch((error) => setStatus(error.message));
+    });
+    commandList.appendChild(button);
+  }
+}
+
+function openCommandPalette() {
+  paletteOpen = true;
+  commandPalette.classList.add("open");
+  renderCommandList("");
+  commandQuery.value = "";
+  commandQuery.focus();
+}
+
+function renderPhoneSheet() {
+  if (!phoneSheetActions) return;
+  phoneSheetActions.innerHTML = "";
+  for (const action of modality.phoneHomeActions()) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "sheet-btn";
+    button.dataset.action = action.id;
+    button.textContent = action.label;
+    const hint = document.createElement("span");
+    hint.className = "hint";
+    hint.textContent = action.destructive
+      ? "Latches stop until Start Assist"
+      : "Same terminal result as mouse/keyboard";
+    button.appendChild(hint);
+    button.addEventListener(
+      "pointerup",
+      (event) => {
+        if (event.pointerType === "mouse" && event.button !== 0) return;
+        event.preventDefault();
+        invokeAction(action.id, event.pointerType === "touch" ? "touch" : "sheet").catch((error) =>
+          setStatus(error.message)
+        );
+      },
+      { passive: false }
+    );
+    button.addEventListener("click", () => {
+      invokeAction(action.id, "click").catch((error) => setStatus(error.message));
+    });
+    phoneSheetActions.appendChild(button);
+  }
+}
+
+async function invokeAction(actionId, source) {
+  const outcome = modality.invokeSemantic(actionId, source);
+  if (outcome && outcome.deduped) return outcome;
+  if (outcome && outcome.result && typeof outcome.result.then === "function") {
+    await outcome.result;
+  }
+  return outcome;
+}
+
+function bindSemanticHandlers() {
+  modality.registerHandler("start_assist", () => startAssist());
+  modality.registerHandler("fill_allowed", () => fillAllowedFields());
+  modality.registerHandler("pause_session", () => pauseAssist());
+  modality.registerHandler("resume_session", () => resumeAssist());
+  modality.registerHandler("undo_last_fill", () => undoLastFill());
+  modality.registerHandler("emergency_stop", () => emergencyStop());
+  modality.registerHandler("record_confirmation", () => recordConfirmationEvidence());
+  modality.registerHandler("save_profile", () => saveProfile());
+  modality.registerHandler("clear_profile", () => clearProfile());
+  modality.registerHandler("export_profile", () => exportProfile());
+  modality.registerHandler("import_profile", () => {
+    importFile.click();
+  });
+  modality.registerHandler("open_command_palette", () => {
+    openCommandPalette();
+  });
+  modality.registerHandler("open_profile_panel", () => {
+    closeCommandPalette();
+    setProfileOpen(true);
+    setStatus("Profile destination open. Text entry is intentional here.");
+  });
+  modality.registerHandler("dismiss_overlay", () => {
+    if (paletteOpen) {
+      closeCommandPalette();
+      setStatus("Command palette closed. Session state unchanged.");
+      return;
+    }
+    if (document.documentElement.classList.contains("profile-open") && activeMode === "phone") {
+      setProfileOpen(false);
+      setStatus("Returned to session command sheet. Session state unchanged.");
+    }
+  });
+}
+
+function bindDirectControls() {
+  const pairs = [
+    ["startAssist", "start_assist"],
+    ["fillAllowed", "fill_allowed"],
+    ["pause", "pause_session"],
+    ["resume", "resume_session"],
+    ["undoLast", "undo_last_fill"],
+    ["emergencyStop", "emergency_stop"],
+    ["recordConfirmation", "record_confirmation"],
+    ["openCommands", "open_command_palette"],
+    ["save", "save_profile"],
+    ["clear", "clear_profile"],
+    ["export", "export_profile"]
+  ];
+  for (const [elementId, actionId] of pairs) {
+    const node = document.getElementById(elementId);
+    if (!node) continue;
+    node.addEventListener("click", () => {
+      invokeAction(actionId, "click").catch((error) => setStatus(error.message));
+    });
+  }
+  document.getElementById("import").addEventListener("click", () => {
+    invokeAction("import_profile", "click").catch((error) => setStatus(error.message));
+  });
+  const dismiss = document.getElementById("dismissPalette");
+  if (dismiss) {
+    dismiss.addEventListener("click", () => {
+      invokeAction("dismiss_overlay", "click").catch((error) => setStatus(error.message));
+    });
+  }
+  if (phoneBackToSheet) {
+    phoneBackToSheet.addEventListener("click", () => {
+      invokeAction("dismiss_overlay", "click").catch((error) => setStatus(error.message));
+    });
+  }
+}
+
+function applyMode() {
+  const env = modality.readEnvironment(window);
+  activeMode = modality.detectMode(env);
+  modality.applyDocumentMode(document, activeMode);
+  if (modeChip) modeChip.textContent = `Mode: ${activeMode}`;
+  if (activeMode === "phone") {
+    setProfileOpen(false);
+    renderPhoneSheet();
+    if (document.activeElement && modality.isEditableTarget(document.activeElement)) {
+      document.activeElement.blur();
+    }
+  }
+}
+
 importFile.addEventListener("change", () => {
   const file = importFile.files && importFile.files[0];
   importProfile(file)
@@ -369,4 +544,37 @@ importFile.addEventListener("change", () => {
     });
 });
 
-Promise.all([loadStoredProfile(), loadStoredSession()]).catch((error) => setStatus(error.message));
+if (commandQuery) {
+  commandQuery.addEventListener("input", () => {
+    renderCommandList(commandQuery.value);
+  });
+}
+
+document.addEventListener("keydown", (event) => {
+  const actionId = modality.shortcutAction(event);
+  if (!actionId) return;
+  if (
+    actionId === "dismiss_overlay" &&
+    !paletteOpen &&
+    !(activeMode === "phone" && document.documentElement.classList.contains("profile-open"))
+  ) {
+    return;
+  }
+  event.preventDefault();
+  invokeAction(actionId, "keyboard").catch((error) => setStatus(error.message));
+});
+
+window.matchMedia("(pointer: coarse)").addEventListener("change", applyMode);
+window.matchMedia("(max-width: 640px)").addEventListener("change", applyMode);
+
+bindSemanticHandlers();
+bindDirectControls();
+applyMode();
+
+Promise.all([loadStoredProfile(), loadStoredSession()])
+  .then(() => {
+    if (activeMode === "phone" && document.activeElement && modality.isEditableTarget(document.activeElement)) {
+      document.activeElement.blur();
+    }
+  })
+  .catch((error) => setStatus(error.message));

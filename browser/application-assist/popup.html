@@ -2,73 +2,242 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>EscapeHatch Application Assist</title>
   <style>
-    body { font: 14px system-ui, sans-serif; margin: 14px; min-width: 380px; color: #111; }
-    h1 { font-size: 18px; margin: 0 0 6px; }
-    p { margin: 6px 0 12px; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; }
-    label { display: grid; gap: 3px; font-weight: 600; }
-    input, select { font: inherit; padding: 7px; min-width: 0; }
+    :root {
+      color-scheme: light;
+      --bg: #f6f3ee;
+      --ink: #1c1917;
+      --muted: #57534e;
+      --line: #d6d3d1;
+      --panel: #fffdf9;
+      --accent: #0f766e;
+      --danger: #b91c1c;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+    }
+    * { box-sizing: border-box; }
+    body {
+      font: 14px/1.4 "Segoe UI", system-ui, sans-serif;
+      margin: 0;
+      padding: calc(12px + var(--safe-top)) calc(12px + var(--safe-right)) calc(12px + var(--safe-bottom)) calc(12px + var(--safe-left));
+      min-width: 320px;
+      max-width: 440px;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 240px at 0% 0%, #d9efe9 0%, transparent 55%),
+        linear-gradient(180deg, #f8f5f0 0%, var(--bg) 100%);
+    }
+    h1 { font-size: 1.15rem; margin: 0 0 4px; letter-spacing: -0.02em; }
+    .lede { margin: 0 0 10px; color: var(--muted); font-size: 12px; }
+    .mode-chip {
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+      margin: 0 0 10px;
+      padding: 4px 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+      font-size: 11px;
+      color: var(--muted);
+    }
+    #sessionState, #status {
+      min-height: 1.3em;
+      margin: 0 0 10px;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+    }
+    .actions, .sheet {
+      display: grid;
+      gap: 8px;
+      margin: 0 0 12px;
+    }
+    .actions {
+      grid-template-columns: 1fr 1fr;
+    }
+    button, .sheet-btn {
+      font: inherit;
+      min-height: 44px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      color: var(--ink);
+      cursor: pointer;
+      text-align: left;
+    }
+    button:hover, .sheet-btn:hover { border-color: #a8a29e; }
+    button:focus-visible, .sheet-btn:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    #startAssist, #fillAllowed, .sheet-btn[data-action="start_assist"], .sheet-btn[data-action="fill_allowed"] {
+      grid-column: 1 / -1;
+      font-weight: 700;
+      background: #0f766e;
+      color: #fff;
+      border-color: #0f766e;
+    }
+    #emergencyStop, .sheet-btn[data-action="emergency_stop"] {
+      grid-column: 1 / -1;
+      color: #fff;
+      background: var(--danger);
+      border-color: var(--danger);
+      font-weight: 700;
+    }
+    .sheet-btn .hint {
+      display: block;
+      margin-top: 2px;
+      font-size: 11px;
+      opacity: 0.8;
+      font-weight: 500;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 10px;
+    }
+    label { display: grid; gap: 3px; font-weight: 600; font-size: 12px; }
+    input, select {
+      font: inherit;
+      padding: 9px 10px;
+      min-height: 44px;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+    }
     .wide { grid-column: 1 / -1; }
-    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
-    button { font: inherit; padding: 8px; cursor: pointer; }
-    #startAssist, #fillAllowed { grid-column: 1 / -1; font-weight: 700; }
-    #emergencyStop { grid-column: 1 / -1; }
-    #status, #sessionState { min-height: 1.4em; margin-top: 8px; }
-    .privacy { font-size: 12px; color: #444; }
+    .privacy { font-size: 11px; color: var(--muted); margin: 8px 0 0; }
     #importFile { display: none; }
-    .session { border-top: 1px solid #ddd; margin-top: 12px; padding-top: 10px; }
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255, 253, 249, 0.92);
+      padding: 10px;
+      margin-bottom: 12px;
+    }
+    .panel h2 {
+      margin: 0 0 8px;
+      font-size: 13px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    #commandPalette {
+      display: none;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      margin-bottom: 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      box-shadow: 0 10px 30px rgba(28, 25, 23, 0.12);
+      padding: 10px;
+    }
+    #commandPalette.open { display: block; }
+    #commandQuery {
+      width: 100%;
+      margin-bottom: 8px;
+    }
+    #commandList {
+      display: grid;
+      gap: 6px;
+      max-height: 220px;
+      overflow: auto;
+    }
+    .kbd-hint { font-size: 11px; color: var(--muted); margin: 0 0 8px; }
+    html.modality-phone .mouse-actions { display: none; }
+    html.modality-phone .profile-panel { display: none; }
+    html.modality-phone.profile-open .profile-panel { display: block; }
+    html.modality-phone.profile-open .phone-sheet { display: none; }
+    html:not(.modality-phone) .phone-sheet { display: none; }
+    html.modality-phone body {
+      min-width: 0;
+      max-width: none;
+    }
+    html.modality-phone .grid { grid-template-columns: 1fr; }
+    html.modality-phone .actions { grid-template-columns: 1fr; }
   </style>
 </head>
 <body>
   <h1>EscapeHatch Application Assist</h1>
-  <p class="privacy">User-owned browser-local state. Writes go through a canonical Fill Plan and policy gate. Phone is withheld unless you explicitly mark it as the primary career number you control. Never auto-submits, never clicks Next/Continue, never attests.</p>
-
+  <p class="lede">Same semantic session controls for mouse, keyboard, and phone. Phone lands on commands first — not a shrunken desktop form.</p>
+  <div class="mode-chip" id="modeChip" aria-live="polite">Mode: detecting</div>
   <div id="sessionState" role="status" aria-live="polite">Session: idle</div>
 
-  <div class="session actions">
-    <button id="startAssist" type="button">Start Assist</button>
-    <button id="fillAllowed" type="button">Fill Allowed Fields</button>
-    <button id="pause" type="button">Pause</button>
-    <button id="resume" type="button">Resume</button>
-    <button id="undoLast" type="button">Undo Last Fill</button>
-    <button id="emergencyStop" type="button">Emergency Stop</button>
-    <button id="recordConfirmation" type="button">Record Confirmation Evidence</button>
+  <div id="commandPalette" role="dialog" aria-label="Command palette" aria-modal="true">
+    <p class="kbd-hint">Type to filter. Enter runs the action. Esc closes without changing session state.</p>
+    <input id="commandQuery" type="text" autocomplete="off" spellcheck="false" placeholder="Filter commands" aria-label="Filter commands">
+    <div id="commandList"></div>
+    <div class="actions" style="grid-template-columns: 1fr; margin: 8px 0 0;">
+      <button id="dismissPalette" type="button">Close commands</button>
+    </div>
   </div>
 
-  <div class="grid" style="margin-top: 14px;">
-    <label>Title / prefix <input id="name_prefix" autocomplete="honorific-prefix"></label>
-    <label>Preferred name <input id="preferred_name" autocomplete="nickname"></label>
-    <label>First name <input id="first_name" autocomplete="given-name"></label>
-    <label>Last name <input id="last_name" autocomplete="family-name"></label>
-    <label>Email <input id="email" type="email" autocomplete="email"></label>
-    <label>Phone <input id="phone" type="tel" autocomplete="tel"></label>
-    <label>Phone authority
-      <select id="phone_authority">
-        <option value="unconfirmed">Do not fill — not explicitly confirmed</option>
-        <option value="user_confirmed_primary">Primary career number I control</option>
-        <option value="secondary_or_forwarded">Secondary / forwarding / other</option>
-      </select>
-    </label>
-    <label class="wide">LinkedIn <input id="linkedin_url" type="url"></label>
-    <label class="wide">Street address <input id="street_address" autocomplete="street-address"></label>
-    <label>City <input id="city" autocomplete="address-level2"></label>
-    <label>State / region <input id="region" autocomplete="address-level1"></label>
-    <label>ZIP / postal code <input id="postal_code" autocomplete="postal-code"></label>
-    <label>Country <input id="country" autocomplete="country-name"></label>
-  </div>
+  <section class="panel phone-sheet" id="phoneSheet" aria-label="Session command sheet">
+    <h2>Session commands</h2>
+    <div class="sheet" id="phoneSheetActions"></div>
+    <button id="phoneBackToSheet" type="button" hidden>Back to commands</button>
+  </section>
 
-  <div class="actions">
-    <button id="save" type="button">Save Profile</button>
-    <button id="clear" type="button">Clear Profile</button>
-    <button id="export" type="button">Export Profile</button>
-    <button id="import" type="button">Import Profile</button>
-  </div>
+  <section class="panel mouse-actions" aria-label="Direct session controls">
+    <h2>Session controls</h2>
+    <div class="actions">
+      <button id="startAssist" type="button" title="Shortcut: S" data-action="start_assist">Start Assist</button>
+      <button id="fillAllowed" type="button" title="Shortcut: F" data-action="fill_allowed">Fill Allowed Fields</button>
+      <button id="pause" type="button" title="Shortcut: P" data-action="pause_session">Pause</button>
+      <button id="resume" type="button" title="Shortcut: R" data-action="resume_session">Resume</button>
+      <button id="undoLast" type="button" title="Shortcut: U" data-action="undo_last_fill">Undo Last Fill</button>
+      <button id="emergencyStop" type="button" title="Shortcut: Shift+Esc or !" data-action="emergency_stop">Emergency Stop</button>
+      <button id="recordConfirmation" type="button" title="Shortcut: C" data-action="record_confirmation">Record Confirmation Evidence</button>
+      <button id="openCommands" type="button" title="Shortcut: / or Ctrl+K" data-action="open_command_palette">Commands…</button>
+    </div>
+  </section>
+
+  <section class="panel profile-panel" id="profilePanel" aria-label="Profile destination">
+    <h2>Profile</h2>
+    <div class="grid">
+      <label>Title / prefix <input id="name_prefix" autocomplete="honorific-prefix"></label>
+      <label>Preferred name <input id="preferred_name" autocomplete="nickname"></label>
+      <label>First name <input id="first_name" autocomplete="given-name"></label>
+      <label>Last name <input id="last_name" autocomplete="family-name"></label>
+      <label>Email <input id="email" type="email" autocomplete="email"></label>
+      <label>Phone <input id="phone" type="tel" autocomplete="tel"></label>
+      <label>Phone authority
+        <select id="phone_authority">
+          <option value="unconfirmed">Do not fill — not explicitly confirmed</option>
+          <option value="user_confirmed_primary">Primary career number I control</option>
+          <option value="secondary_or_forwarded">Secondary / forwarding / other</option>
+        </select>
+      </label>
+      <label class="wide">LinkedIn <input id="linkedin_url" type="url"></label>
+      <label class="wide">Street address <input id="street_address" autocomplete="street-address"></label>
+      <label>City <input id="city" autocomplete="address-level2"></label>
+      <label>State / region <input id="region" autocomplete="address-level1"></label>
+      <label>ZIP / postal code <input id="postal_code" autocomplete="postal-code"></label>
+      <label>Country <input id="country" autocomplete="country-name"></label>
+    </div>
+    <div class="actions" style="margin-top: 10px;">
+      <button id="save" type="button" data-action="save_profile">Save Profile</button>
+      <button id="clear" type="button" data-action="clear_profile">Clear Profile</button>
+      <button id="export" type="button" data-action="export_profile">Export Profile</button>
+      <button id="import" type="button" data-action="import_profile">Import Profile</button>
+    </div>
+  </section>
+
   <input id="importFile" type="file" accept="application/json,.json">
   <div id="status" role="status" aria-live="polite"></div>
+  <p class="privacy">User-owned browser-local state. Writes go through a canonical Fill Plan and policy gate. Phone is withheld unless explicitly marked as the primary career number you control. Never auto-submits, never clicks Next/Continue, never attests.</p>
   <script src="assist-core.js"></script>
+  <script src="modality.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

@@ -1,0 +1,247 @@
+{
+  "schema": "escapehatch/application-assist-modality/v1",
+  "version": 1,
+  "product_surface": "browser/application-assist",
+  "session_contract": "contracts/application-assist-session.v1.json",
+  "mission": "Provide mouse, keyboard, and phone-native interaction languages over one Application Assist semantic model without resizing desktop chrome into a fake mobile experience.",
+  "semantic_pipeline": [
+    "capability",
+    "semantic_action",
+    "mode_adapter",
+    "shared_handler",
+    "session_or_profile_state",
+    "feedback"
+  ],
+  "invariants": [
+    "equivalent_intent_invokes_identical_semantic_action",
+    "no_second_session_state_machine",
+    "no_second_command_registry_outside_modality_adapters",
+    "hover_may_enrich_never_sole_essential_path",
+    "phone_must_not_require_hover_double_click_or_desktop_find",
+    "opening_non_text_command_surface_must_not_autofocus_text_inputs",
+    "touch_must_not_double_dispatch_through_synthesized_click",
+    "escape_dismisses_overlay_without_erasing_unrelated_session_state",
+    "important_gestures_require_labeled_fallback"
+  ],
+  "modes": ["mouse", "keyboard", "phone"],
+  "mode_detection": {
+    "phone": [
+      "pointer_coarse",
+      "max_width_640px",
+      "standalone_display_mode"
+    ],
+    "keyboard": "always_available_when_document_focused",
+    "mouse": "default_when_fine_pointer_and_wider_layout"
+  },
+  "capabilities": [
+    {
+      "id": "start_assist",
+      "semantic_action": "start_assist",
+      "state_owner": "escapeHatch.applicationAssistSession.v1",
+      "handler": "popup.startAssist",
+      "mouse": "visible_primary_button",
+      "keyboard": ["s", "command:Start Assist"],
+      "phone": "command_sheet_row",
+      "terminal_result": "session_active_bound_to_origin",
+      "proof": "tests/test_application_assist_modality_contract.py + node modality harness"
+    },
+    {
+      "id": "fill_allowed",
+      "semantic_action": "fill_allowed",
+      "state_owner": "session + Fill Plan pipeline",
+      "handler": "popup.fillAllowedFields",
+      "mouse": "visible_primary_button",
+      "keyboard": ["f", "command:Fill Allowed Fields"],
+      "phone": "command_sheet_row",
+      "terminal_result": "policy_gated_dom_writes_or_blocked_status",
+      "proof": "shared semantic invoke + existing fill runtime tests"
+    },
+    {
+      "id": "pause_session",
+      "semantic_action": "pause_session",
+      "state_owner": "session.status",
+      "handler": "popup.pauseAssist",
+      "mouse": "visible_button",
+      "keyboard": ["p", "command:Pause"],
+      "phone": "command_sheet_row",
+      "terminal_result": "session_paused_blocks_writes"
+    },
+    {
+      "id": "resume_session",
+      "semantic_action": "resume_session",
+      "state_owner": "session.status",
+      "handler": "popup.resumeAssist",
+      "mouse": "visible_button",
+      "keyboard": ["r", "command:Resume"],
+      "phone": "command_sheet_row",
+      "terminal_result": "session_active_same_origin"
+    },
+    {
+      "id": "emergency_stop",
+      "semantic_action": "emergency_stop",
+      "state_owner": "session.status=stopped",
+      "handler": "popup.emergencyStop",
+      "mouse": "visible_destructive_button",
+      "keyboard": ["shift+escape", "!", "command:Emergency Stop"],
+      "phone": "command_sheet_destructive_row",
+      "terminal_result": "future_fills_cancelled_until_restart",
+      "notes": "Bare Escape dismisses overlays only; it does not latch Emergency Stop."
+    },
+    {
+      "id": "undo_last_fill",
+      "semantic_action": "undo_last_fill",
+      "state_owner": "session.fill_stack",
+      "handler": "popup.undoLastFill",
+      "mouse": "visible_button",
+      "keyboard": ["u", "command:Undo Last Fill"],
+      "phone": "command_sheet_row",
+      "terminal_result": "restore_untouched_escapehatch_values"
+    },
+    {
+      "id": "record_confirmation",
+      "semantic_action": "record_confirmation",
+      "state_owner": "session.confirmation + companion export",
+      "handler": "popup.recordConfirmationEvidence",
+      "mouse": "visible_button",
+      "keyboard": ["c", "command:Record Confirmation Evidence"],
+      "phone": "command_sheet_row",
+      "terminal_result": "metadata_only_confirmation_recorded"
+    },
+    {
+      "id": "save_profile",
+      "semantic_action": "save_profile",
+      "state_owner": "escapeHatch.applicationAssistProfile.v1",
+      "handler": "popup.saveProfile",
+      "mouse": "visible_button_in_profile_panel",
+      "keyboard": ["command:Save Profile", "ctrl+enter_in_profile_panel"],
+      "phone": "profile_destination_action",
+      "terminal_result": "browser_local_profile_persisted"
+    },
+    {
+      "id": "clear_profile",
+      "semantic_action": "clear_profile",
+      "state_owner": "profile storage",
+      "handler": "popup.clearProfile",
+      "mouse": "visible_button_in_profile_panel",
+      "keyboard": ["command:Clear Profile"],
+      "phone": "profile_destination_action",
+      "terminal_result": "local_profile_cleared"
+    },
+    {
+      "id": "export_profile",
+      "semantic_action": "export_profile",
+      "state_owner": "profile storage",
+      "handler": "popup.exportProfile",
+      "mouse": "visible_button_in_profile_panel",
+      "keyboard": ["command:Export Profile"],
+      "phone": "profile_destination_action",
+      "terminal_result": "portable_json_download"
+    },
+    {
+      "id": "import_profile",
+      "semantic_action": "import_profile",
+      "state_owner": "profile storage",
+      "handler": "popup.importProfile",
+      "mouse": "visible_button_plus_file_picker",
+      "keyboard": ["command:Import Profile"],
+      "phone": "profile_destination_action",
+      "terminal_result": "validated_local_import"
+    },
+    {
+      "id": "open_command_palette",
+      "semantic_action": "open_command_palette",
+      "state_owner": "ui.overlay only",
+      "handler": "modality.openCommandPalette",
+      "mouse": "optional_button_Command",
+      "keyboard": ["/", "ctrl+k", "?"],
+      "phone": "command_sheet_is_default_home",
+      "terminal_result": "command_surface_visible_without_text_autofocus"
+    },
+    {
+      "id": "open_profile_panel",
+      "semantic_action": "open_profile_panel",
+      "state_owner": "ui.destination",
+      "handler": "modality.openProfilePanel",
+      "mouse": "always_visible_or_toggle",
+      "keyboard": ["g", "command:Edit Profile"],
+      "phone": "structured_destination_Edit_profile",
+      "terminal_result": "profile_fields_reachable_for_intentional_text_entry"
+    },
+    {
+      "id": "dismiss_overlay",
+      "semantic_action": "dismiss_overlay",
+      "state_owner": "ui.overlay only",
+      "handler": "modality.dismissOverlay",
+      "mouse": "click_dismiss_control",
+      "keyboard": ["escape"],
+      "phone": "labeled_Close_or_Back",
+      "terminal_result": "overlay_closed_session_preserved"
+    }
+  ],
+  "grammars": {
+    "mouse": {
+      "primary": "visible_direct_controls",
+      "enrichment": "hover_titles_may_show_shortcut_hints",
+      "forbidden_sole_path": ["hover_only_essential_action"]
+    },
+    "keyboard": {
+      "palette": ["/", "ctrl+k"],
+      "help": ["?"],
+      "direct": {
+        "s": "start_assist",
+        "f": "fill_allowed",
+        "p": "pause_session",
+        "r": "resume_session",
+        "u": "undo_last_fill",
+        "c": "record_confirmation",
+        "g": "open_profile_panel",
+        "!": "emergency_stop",
+        "shift+escape": "emergency_stop",
+        "escape": "dismiss_overlay"
+      },
+      "rules": [
+        "shortcuts_ignored_while_typing_in_text_fields_except_escape_and_shift_escape",
+        "command_selection_invokes_semantic_action_not_synthetic_mouse_only_path",
+        "escape_does_not_clear_profile_or_stop_session"
+      ]
+    },
+    "phone": {
+      "home": "session_command_sheet",
+      "destinations": ["command_sheet", "profile_panel"],
+      "rules": [
+        "default_land_on_command_sheet_not_profile_form",
+        "no_autofocus_on_text_inputs_at_open",
+        "min_tap_target_44px",
+        "single_column_thumb_stack",
+        "safe_area_insets_honored",
+        "no_hover_or_double_click_requirement",
+        "gesture_swipe_not_required_for_any_capability",
+        "software_keyboard_only_after_intentional_profile_field_focus"
+      ],
+      "conflict_policy": {
+        "vertical_scroll": "sheet_and_profile_scroll_native_no_swipe_actions",
+        "browser_back": "maps_to_dismiss_or_return_to_command_sheet_not_emergency_stop",
+        "touch_click_synthesis": "suppress_duplicate_semantic_invoke_within_700ms",
+        "long_press": "unused_no_hidden_essential_action"
+      }
+    }
+  },
+  "supported_exclusions": [
+    {
+      "capability": "drag_reorder_fill_plan",
+      "status": "unsupported",
+      "reason": "Fill Plan order is canonical/policy-owned, not operator-reordered in this surface."
+    },
+    {
+      "capability": "browser_find_as_command_discovery",
+      "status": "unsupported_on_phone",
+      "reason": "Phone uses the labeled command sheet; desktop Find is not a required path."
+    }
+  ],
+  "proof_ceiling": [
+    "repository_contract_and_adapter_tests",
+    "keyboard_shortcut_and_semantic_convergence_unit_proof",
+    "touch_emulation_and_layout_geometry_proof",
+    "physical_phone_ergonomics_require_observed_device_pass"
+  ]
+}

@@ -140,6 +140,7 @@
     }
   },
   "preference_policy": "harness/contracts/application-preference-cache.v1.json",
+  "modality_contract": "contracts/application-assist-modality.v1.json",
   "preference_runtime": {
     "storage_key": "escapeHatch.applicationQuestionPreferences.v1",
     "precedence": [

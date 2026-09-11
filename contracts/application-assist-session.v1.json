@@ -118,10 +118,12 @@
       "user_confirmed_external_evidence"
     ],
     "companion_contract": "escapehatch/application-companion/v1",
+    "companion_export_schema": "escapehatch-application-companion-session/v1",
     "stores_profile_values": false
   },
   "taxonomy_binding": {
     "owner": "harness/contracts/application-form-taxonomy.v1.json",
+    "runtime_enforcement": "question_automation_policy_mirror_in_assist_core",
     "profile_key_to_question_id": {
       "name_prefix": "identity.title",
       "first_name": "identity.first_name",
@@ -138,6 +140,15 @@
     }
   },
   "preference_policy": "harness/contracts/application-preference-cache.v1.json",
+  "preference_runtime": {
+    "storage_key": "escapeHatch.applicationQuestionPreferences.v1",
+    "precedence": [
+      "session_confirmation",
+      "opportunity_override",
+      "profile_preference"
+    ],
+    "assist_profile_projects_to_profile_preference_on_save": true
+  },
   "proof_ceiling": [
     "repository_contract_and_runtime_tests",
     "unpacked_extension_control_loop_requires_observed_browser_proof",

@@ -210,6 +210,50 @@ const confirmed = core.recordConfirmation(session, {
   application_id: "https://jobs.example.invalid"
 });
 assert.equal(confirmed.confirmation.source, "same_session_page_confirmation");
+assert.equal(confirmed.companion_export.schema_version, "escapehatch-application-companion-session/v1");
+assert.equal(confirmed.companion_export.surface_id, "browser_extension");
+assert.equal(confirmed.companion_export.progress_event.status, "submitted");
+assert.equal(confirmed.companion_export.progress_event.source, "same_session_page_confirmation");
+
+assert.equal(core.taxonomyAutomationPolicy("identity.email"), "fill_if_explicit_preference");
+assert.equal(core.taxonomyAllowsFill("attestation.truth_accuracy", null).allow, false);
+assert.equal(
+  core.resolveFillValue(
+    "email",
+    { email: "profile@example.invalid" },
+    {
+      preferences: {
+        "identity.email": { scope: "session_confirmation", value: "session@example.invalid" }
+      }
+    }
+  ),
+  "session@example.invalid"
+);
+assert.equal(
+  core.resolveFillValue(
+    "email",
+    { email: "profile@example.invalid" },
+    {
+      preferences: {
+        "identity.email": { scope: "profile_preference", value: "pref@example.invalid" }
+      }
+    }
+  ),
+  "pref@example.invalid"
+);
+
+const prefSession = core.createSession({ origin: "https://jobs.example.invalid" });
+const prefPlan = core.buildFillPlan(
+  [{ label: "Email", value: "" }],
+  { email: "profile@example.invalid" },
+  prefSession,
+  { preferences: { "identity.email": { scope: "opportunity_override", value: "opp@example.invalid" } } }
+);
+assert.deepEqual(prefPlan.items.map((item) => item.value), ["opp@example.invalid"]);
+
+const projected = core.projectProfileToPreferenceStore({ first_name: "Alex", email: "alex@example.invalid" }, null);
+assert.equal(projected.preferences["identity.first_name"].scope, "profile_preference");
+assert.equal(projected.preferences["identity.email"].value, "alex@example.invalid");
 
 assert.throws(
   () =>
@@ -232,5 +276,8 @@ for (const forbidden of [".submit(", ".requestSubmit(", ".click(", "fetch(", "XM
   assert.equal(coreSource.includes(forbidden), false, `core must not contain ${forbidden}`);
 }
 assert.equal(coreSource.includes("canonical Fill Plan"), true);
+assert.equal(coreSource.includes("QUESTION_AUTOMATION_POLICY"), true);
+assert.equal(coreSource.includes("PREFERENCE_STORAGE_KEY"), true);
+assert.equal(coreSource.includes("buildCompanionProgressEvent"), true);
 
 console.log("APPLICATION_ASSIST_SESSION_RUNTIME_TESTS: PASS");

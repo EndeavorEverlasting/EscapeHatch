@@ -8,6 +8,7 @@
 
   const message = globalThis.__ESCAPEHATCH_ASSIST_COMMAND__ || { type: "fill" };
   const profile = message.profile || {};
+  const preferenceStore = message.preferenceStore || null;
   let session = message.session;
 
   if (!session) {
@@ -44,7 +45,7 @@
         skipped_reason: session.status === "stopped" ? "emergency_stop" : "session_not_active"
       };
     }
-    const result = api.fillDocument(document, profile, session);
+    const result = api.fillDocument(document, profile, session, preferenceStore);
     return {
       status: "ok",
       action: "fill",

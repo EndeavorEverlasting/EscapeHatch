@@ -92,6 +92,21 @@ class ApplicationAssistSessionContractTests(unittest.TestCase):
         self.assertIn("function undoLastFill", self.core)
         self.assertIn("function stopSession", self.core)
         self.assertIn("cross_origin_transition", self.core)
+        self.assertIn("QUESTION_AUTOMATION_POLICY", self.core)
+        self.assertIn("function taxonomyAllowsFill", self.core)
+        self.assertIn("PREFERENCE_STORAGE_KEY", self.core)
+        self.assertIn("function resolveFillValue", self.core)
+        self.assertIn("function buildCompanionProgressEvent", self.core)
+        self.assertIn("projectProfileToPreferenceStore", self.popup)
+        self.assertIn("companion_export", self.popup)
+        self.assertEqual(
+            self.contract["evidence"]["companion_export_schema"],
+            "escapehatch-application-companion-session/v1",
+        )
+        self.assertEqual(
+            self.contract["preference_runtime"]["storage_key"],
+            "escapeHatch.applicationQuestionPreferences.v1",
+        )
 
     def test_page_runtime_never_submits_navigates_or_networks(self) -> None:
         combined = self.content + "\n" + self.core

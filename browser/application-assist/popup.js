@@ -116,8 +116,14 @@ async function saveSession(session) {
 
 async function saveProfile() {
   const profile = sanitizeProfile(readForm());
-  await chrome.storage.local.set({ [PROFILE_KEY]: profile });
-  setStatus(`Saved ${countProfileValues(profile)} profile fields locally.`);
+  const prefKey = api.PREFERENCE_STORAGE_KEY;
+  const existing = await chrome.storage.local.get(prefKey);
+  const preferenceStore = api.projectProfileToPreferenceStore(profile, existing[prefKey] || {});
+  await chrome.storage.local.set({
+    [PROFILE_KEY]: profile,
+    [prefKey]: preferenceStore
+  });
+  setStatus(`Saved ${countProfileValues(profile)} profile fields and projected preference-cache entries locally.`);
 }
 
 async function clearProfile() {
@@ -126,12 +132,12 @@ async function clearProfile() {
   setStatus("Cleared the browser-local EscapeHatch assist profile.");
 }
 
-function downloadJsonText(text) {
+function downloadJsonText(text, filename) {
   const blob = new Blob([text], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = "escapehatch-assist-profile.json";
+  anchor.download = filename || "escapehatch-assist-profile.json";
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
@@ -199,7 +205,7 @@ function tabOrigin(tab) {
   }
 }
 
-async function runPageCommand(command, profile, session) {
+async function runPageCommand(command, profile, session, preferenceStore) {
   const tab = await activeTab();
   const origin = tabOrigin(tab);
   session = api.observeOrigin(session, origin);
@@ -214,7 +220,7 @@ async function runPageCommand(command, profile, session) {
     func: (payload) => {
       globalThis.__ESCAPEHATCH_ASSIST_COMMAND__ = payload;
     },
-    args: [{ type: command, profile, session }]
+    args: [{ type: command, profile, session, preferenceStore: preferenceStore || null }]
   });
   if (!injected) {
     throw new Error("Assist command injection failed.");
@@ -258,7 +264,9 @@ async function fillAllowedFields() {
     setStatus("Start Assist on the application before filling.");
     return;
   }
-  const result = await runPageCommand("fill", profile, session);
+  const prefStored = await chrome.storage.local.get(api.PREFERENCE_STORAGE_KEY);
+  const preferenceStore = prefStored[api.PREFERENCE_STORAGE_KEY] || null;
+  const result = await runPageCommand("fill", profile, session, preferenceStore);
   if (result.skipped_reason === "emergency_stop") {
     setStatus("Emergency Stop is latched. No fields were written.");
     return;
@@ -325,7 +333,11 @@ async function recordConfirmationEvidence() {
     application_id: session.application_id || session.origin
   });
   await saveSession(session);
-  setStatus("Recorded confirmation metadata for companion evidence. Submission remains manual.");
+  if (session.companion_export) {
+    const text = JSON.stringify(session.companion_export, null, 2) + "\n";
+    downloadJsonText(text, "escapehatch-companion-confirmation.json");
+  }
+  setStatus("Recorded companion-compatible confirmation evidence (metadata only). Submission remains manual.");
 }
 
 document.getElementById("phone").addEventListener("input", () => {

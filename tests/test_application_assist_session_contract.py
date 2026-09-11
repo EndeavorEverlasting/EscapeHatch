@@ -74,6 +74,16 @@ class ApplicationAssistSessionContractTests(unittest.TestCase):
         self.assertIn('files: ["assist-core.js"]', self.popup)
         self.assertIn('files: ["content.js"]', self.popup)
 
+    def test_phone_authority_popup_fails_closed_across_edits_and_imports(self) -> None:
+        self.assertIn("function hasProfileValues", self.popup)
+        self.assertIn("PROFILE_KEYS.some", self.popup)
+        self.assertIn('document.getElementById("phone").addEventListener("input"', self.popup)
+        self.assertIn('authority.value = "unconfirmed"', self.popup)
+        self.assertIn("!Array.isArray(rawProfile)", self.popup)
+        self.assertIn("schema !== EXPORT_SCHEMA", self.popup)
+        self.assertIn('incoming.phone_authority = "unconfirmed"', self.popup)
+        self.assertNotIn("if (!Object.keys(profile).length)", self.popup)
+
     def test_pipeline_owners_exist_in_runtime(self) -> None:
         self.assertIn("function buildFillPlan", self.core)
         self.assertIn("function policyGate", self.core)

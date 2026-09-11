@@ -1,0 +1,55 @@
+name: Temporary Contact Authority Executor
+
+on:
+  push:
+    branches:
+      - fix/career-contact-authority-20260911
+
+permissions:
+  contents: write
+
+concurrency:
+  group: escapehatch-contact-authority-20260911
+  cancel-in-progress: false
+
+jobs:
+  execute:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/career-contact-authority-20260911
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Patch canonical owners, validate, clean carrier, and push
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main fix/career-contact-authority-20260911 --prune --tags
+          git merge --no-edit origin/main
+          python scripts/tmp_apply_contact_authority.py
+          python tests/test_application_assist_session_contract.py
+          node tests/test_application_assist_session.mjs
+          python -m json.tool contracts/application-assist-session.v1.json > /dev/null
+          python -m json.tool browser/application-assist/manifest.json > /dev/null
+          git diff --check
+
+          git rm -f scripts/tmp_apply_contact_authority.py .github/workflows/tmp-contact-authority-executor.yml
+          git add browser/application-assist/assist-core.js browser/application-assist/popup.js browser/application-assist/popup.html contracts/application-assist-session.v1.json docs/APPLICATION_ASSIST_SESSION.md tests/test_application_assist_session.mjs tests/test_application_assist_session_contract.py
+          git diff --cached --check
+          git commit -m "fix(application-assist): require explicit phone contact authority"
+
+          python tests/test_application_assist_session_contract.py
+          node tests/test_application_assist_session.mjs
+          python -m json.tool contracts/application-assist-session.v1.json > /dev/null
+          git diff --check
+          test -z "$(git status --porcelain)"
+          echo "EXACT_HEAD=$(git rev-parse HEAD)"
+          git push origin HEAD:fix/career-contact-authority-20260911

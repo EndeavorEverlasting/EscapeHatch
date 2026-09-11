@@ -38,6 +38,8 @@ jobs:
         run: python tests/test_application_assist_session_contract.py
       - name: Test Fill Plan, policy gate, stop, and undo runtime
         run: node tests/test_application_assist_session.mjs
+      - name: Parse popup runtime
+        run: node --check browser/application-assist/popup.js
       - name: Validate JSON syntax
         run: |
           python -m json.tool contracts/application-assist-session.v1.json > /dev/null

@@ -4,7 +4,7 @@ These workflows implement `AGENTS.md`; they do not override governance.
 
 ## Workflow selection
 
-Use **Repository Location** for durable Windows checkout/worktree acquisition. Use **Task Pickup** for every writing sprint. Use **Application Form Intake** when application questions/pages are being mapped or automated. Use **Application Companion** when an installable/local client records career/application progress or synchronizes user-owned state. Use **Application Assist Session** when operating the browser extension control loop that fills deterministic allowed fields on a live application. Use **Resume Presentation** whenever an agent creates, refreshes, tailors, exports, or synchronizes a resume/CV. Use **Failure Recovery** when a required command fails. Use **Handoff** before changing owners/chats or when an external blocker stops the lane.
+Use **Repository Location** for durable Windows checkout/worktree acquisition. Use **Task Pickup** for every writing sprint. Use **Application Form Intake** when application questions/pages are being mapped or automated. Use **Application Companion** when an installable/local client records career/application progress or synchronizes user-owned state. Use **Application Assist Session** when operating the browser extension control loop that fills deterministic allowed fields on a live application. Use **Resume Presentation** whenever an agent creates, refreshes, tailors, exports, or synchronizes a resume/CV. Use **Product Release Versioning** when establishing, bumping, tagging, or auditing the human-facing product release identity. Use **Failure Recovery** when a required command fails. Use **Handoff** before changing owners/chats or when an external blocker stops the lane.
 
 ## Repository Location
 
@@ -111,12 +111,28 @@ Resume content is user-owned private state. The repository owns the presentation
 
 A resume can be ATS-conservative without being visually anonymous. The registered quality floor uses typography, whitespace, thin rules, and content hierarchy rather than parser-hostile graphics. No repository validator can guarantee universal ATS-vendor parsing, recruiter preference, or application success.
 
+## Product Release Versioning
+
+`VERSION` is the sole human-facing EscapeHatch product release authority. Exact freshness is the Git commit SHA (and any annotated tag that points at that commit). Schema/protocol versions stay independent.
+
+1. Read `VERSION` and `contracts/product-release.v1.json` before claiming, bumping, or tagging a product release.
+2. Classify each accepted change as `major`, `minor`, `patch`, or `none` using the contract bump matrix. Do not ask automation to invent the classification.
+3. Compute the next version with `python scripts/product_version.py next --change <class> [...];` highest classification wins; repeated identical inputs are idempotent.
+4. Apply a release bump with `python scripts/product_version.py bump --change <class> [...] --notes '...'` so VERSION, declared mirrors, and CHANGELOG stay synchronized.
+5. Validate with `python scripts/validate_product_version.py` and `python tests/test_product_version.py`.
+6. Create a Git tag only after owning validation succeeds. Dry-run with `python scripts/product_version.py tag-plan`; never reuse a released version or rewrite published tags.
+7. Treat rollback as redeploying a previously tagged commit/artifact. Document withdrawn releases in CHANGELOG instead of erasing history.
+8. GitHub Release creation and store submission remain downstream publication gates after repository tag identity is valid.
+
+Docs-only, tests-only, internal tooling, generated-only, and schema-only changes default to `none` unless a mirrored product surface or user-visible installable behavior also changes.
+
 ## Pre-commit validation
 
 Required manifest floor:
 
 ```text
 python scripts/validate_governance.py
+python scripts/validate_product_version.py
 python scripts/validate_application_harness.py
 python scripts/validate_application_companion.py
 python scripts/validate_resume_presentation.py
@@ -125,7 +141,7 @@ python scripts/validate_career_state.py
 git diff --check
 ```
 
-Also run product-specific tests for changed scope, including `python tests/test_study_guidance_export.py` when the guidance bridge changes.
+Also run product-specific tests for changed scope, including `python tests/test_product_version.py` when versioning surfaces change and `python tests/test_study_guidance_export.py` when the guidance bridge changes.
 
 Enable optional repo-local hooks with:
 
@@ -165,6 +181,7 @@ The hooks validate isolated staged/committed snapshots through the harness valid
 - Sanitized question text/aliases and synthetic companion fixtures may be tracked only when real selected answers/user state are absent.
 - A Google Drive synchronized copy remains user-owned and private unless the user separately changes Drive sharing; public sharing is not a product requirement.
 - Schemas/manifests/contracts require explicit versions.
+- Product release identity requires the `VERSION` authority; schema versions are not product releases.
 - Do not commit secrets, credentials, caches, personal browser state, transient evidence, or generated junk.
 
 ## Handoff

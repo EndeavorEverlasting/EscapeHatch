@@ -14,6 +14,11 @@ EscapeHatch has canonical governance, an operational harness, a portable career-
 | `contracts/application-companion.v1.json` | Local-first product contract for private installable/local companion surfaces, progress recording, portability, and optional sync. |
 | `contracts/application-assist-session.v1.json` | Browser Application Assist Session contract: Fill Plan, policy gate, DOM writer, pause/stop/undo, confirmation evidence metadata. |
 | `browser/application-assist/` | Manifest V3 unpacked extension implementing the assist-session control loop without auto-submit. |
+| `VERSION` | Canonical human-facing EscapeHatch product release SemVer. Exact freshness remains the Git commit. |
+| `contracts/product-release.v1.json` | Product-release scheme, bump matrix, mirror list, cutover, compatibility, and tag policy. |
+| `scripts/product_version.py` | show/check/next/bump/tag-plan mechanics for the VERSION authority. |
+| `scripts/validate_product_version.py` | Fail-closed product version and mirror-drift validator. |
+| `CHANGELOG.md` | Human product release notes bound to VERSION. |
 | `docs/APPLICATION_ASSIST_SESSION.md` | Operator load and control-loop instructions for Application Assist. |
 | `contracts/resume-presentation.v1.json` | ATS-conservative typography, page-layout, structure, output, privacy, and rendered-QA contract for user-owned resumes. |
 | `fixtures/career-state.v1.example.json` | Portable representative product fixture with no real personal data. |
@@ -106,6 +111,19 @@ Progress recording is assistive only. The companion may write a career-state sta
 
 The assist session ports the proven browser fill matching from the stale autofill lane onto current main without wholesale PR merge. DOM writes must follow `user-owned state → canonical Fill Plan → policy gate → DOM writer`. Pause, Resume, Emergency Stop, and Undo Last Fill are first-class controls. Auto-submit, Next/Continue clicking, and attestation remain forbidden.
 
+## Product release versioning entry points
+
+- Canonical product release: `VERSION`
+- Policy contract: `contracts/product-release.v1.json`
+- Mechanics: `python scripts/product_version.py`
+- Validator: `python scripts/validate_product_version.py`
+- Tests: `python tests/test_product_version.py`
+- Changelog: `CHANGELOG.md`
+- Current mirrored surface: `browser/application-assist/manifest.json` `#/version`
+- Operating workflow: **Product Release Versioning** in `harness/WORKFLOWS.md`
+
+`VERSION` is the only human-facing product release authority. Schema/protocol versions (`escapehatch-*/vN`, contract `version` integers) remain independent. A Git tag `vX.Y.Z` must point at the exact validated release commit; UI labels and badges are not freshness proof. Rollback redeploys a prior tagged commit/artifact and never reuses or decrements a released version.
+
 ## Resume presentation entry points
 
 - Presentation contract: `contracts/resume-presentation.v1.json`
@@ -123,6 +141,8 @@ The contract does not prove universal ATS compatibility. A specific resume is vi
 - Governance: `AGENTS.md`
 - Harness manifest: `harness/manifest.v1.json`
 - Artifact registry: `ARTIFACT_REGISTRY.md`
+- Product release authority: `VERSION`
+- Product release policy: `contracts/product-release.v1.json`
 - Career-state contract: `contracts/career-state.v1.schema.json`
 - Application companion contract: `contracts/application-companion.v1.json`
 - Resume presentation contract: `contracts/resume-presentation.v1.json`
@@ -136,11 +156,13 @@ Run from repository root:
 
 ```text
 python scripts/validate_governance.py
+python scripts/validate_product_version.py
 python scripts/validate_application_harness.py
 python scripts/validate_application_companion.py
 python scripts/validate_resume_presentation.py
 python scripts/validate_harness.py
 python scripts/validate_career_state.py
+python tests/test_product_version.py
 python tests/test_study_guidance_export.py
 python tests/test_application_assist_session_contract.py
 node tests/test_application_assist_session.mjs
@@ -150,6 +172,7 @@ git diff --check
 ## Build, test, and deploy commands
 
 - Product build on `main`: **not established**
+- Product release identity: `python scripts/product_version.py show` / `python scripts/validate_product_version.py`
 - Career-state contract: `python scripts/validate_career_state.py`
 - Application companion contract: `python scripts/validate_application_companion.py`
 - Application assist session: `python tests/test_application_assist_session_contract.py` and `node tests/test_application_assist_session.mjs`
@@ -162,7 +185,7 @@ git diff --check
 - Google Drive runtime adapter: **not established**
 - Product deployment: **not established**
 
-Do not claim browser/ATS, Google Drive, Microsoft Store, or Play Store runtime proof from repository validation. Resume presentation validation proves the contract; rendered resume proof requires the private output artifacts themselves. Application Assist repository tests prove the Fill Plan control loop; live ATS proof still requires the unpacked extension on a real application page.
+Do not claim browser/ATS, Google Drive, Microsoft Store, or Play Store runtime proof from repository validation. Resume presentation validation proves the contract; rendered resume proof requires the private output artifacts themselves. Application Assist repository tests prove the Fill Plan control loop; live ATS proof still requires the unpacked extension on a real application page. Product version validation proves authority/mirror/tag-plan policy; a published GitHub Release or store listing requires the downstream publication gate.
 
 ## Fresh-agent path
 

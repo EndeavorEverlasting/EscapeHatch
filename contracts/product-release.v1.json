@@ -1,0 +1,184 @@
+{
+  "schema": "escapehatch/product-release/v1",
+  "version": 1,
+  "product": "EscapeHatch",
+  "scheme": "semver",
+  "canonical_authority": "VERSION",
+  "authority_field": "release_version",
+  "purpose": "Name the single human-facing EscapeHatch product release identity, classify competing version-like surfaces, and bind Git tags to exact validated commits without replacing commit/artifact identity.",
+  "scheme_justification": {
+    "selected": "semver",
+    "why": "Installable product surfaces exist (browser extension now; Microsoft Store / Play Store / local-web adapters planned). Users and operators need MAJOR/MINOR/PATCH meaning for upgrade risk. Companion upgrade invariants require distribution upgrades that preserve user-owned state; SemVer expresses product-surface compatibility separately from schema/protocol versions.",
+    "not_calver": "No fixed release cadence owns product identity today.",
+    "not_monotonic_only": "A bare build counter would hide whether an upgrade is breaking for installable clients.",
+    "evidence_to_reconsider": [
+      "If installable distribution is abandoned and only private operator tooling remains, reconsider a monotonic build sequence.",
+      "If cadence becomes the primary public identity and compatibility is wholly owned by schema versions, reconsider CalVer plus independent schema contracts."
+    ]
+  },
+  "cutover": {
+    "release": "1.0.0",
+    "rule": "Ratify the existing browser extension manifest version as the first authoritative product release. Pre-cutover contract 'version: 1' integers and '*.v1.json' schema labels remain schema/protocol versions only and were never product release authority. No Git tags or GitHub Releases existed at cutover; do not rename, reuse, or decrement released versions after this point.",
+    "pre_authority_labels": [
+      {
+        "surface": "browser/application-assist/manifest.json#version",
+        "value": "1.0.0",
+        "status": "ratified_as_cutover"
+      },
+      {
+        "surface": "contracts and harness schema version integers / escapehatch-*/v1 strings",
+        "status": "remain_schema_protocol_not_product"
+      }
+    ]
+  },
+  "tag": {
+    "format": "v{release}",
+    "example": "v1.0.0",
+    "must_point_at": "exact_validated_release_commit",
+    "ui_badge_is_freshness_proof": false
+  },
+  "changelog": "CHANGELOG.md",
+  "synchronized_mirrors": [
+    {
+      "path": "browser/application-assist/manifest.json",
+      "json_pointer": "/version",
+      "kind": "mirrored",
+      "notes": "MV3 extension package version must equal VERSION."
+    }
+  ],
+  "surface_classification": [
+    {
+      "surface": "VERSION",
+      "class": "PRODUCT_RELEASE_VERSION",
+      "role": "canonical_authority"
+    },
+    {
+      "surface": "browser/application-assist/manifest.json#version",
+      "class": "PRODUCT_RELEASE_VERSION",
+      "role": "mirrored"
+    },
+    {
+      "surface": "CHANGELOG.md headings",
+      "class": "PRODUCT_RELEASE_VERSION",
+      "role": "descriptive_release_notes_bound_to_authority"
+    },
+    {
+      "surface": "Git tag vX.Y.Z",
+      "class": "BUILD_ARTIFACT_IDENTITY",
+      "role": "names_exact_commit_for_release_X.Y.Z"
+    },
+    {
+      "surface": "Git commit SHA / CI run / artifact hash",
+      "class": "BUILD_ARTIFACT_IDENTITY",
+      "role": "forensic_freshness_proof"
+    },
+    {
+      "surface": "contracts/*/version integers and escapehatch-*/vN schema_version strings",
+      "class": "SCHEMA_PROTOCOL_VERSION",
+      "role": "independent_lifecycle"
+    },
+    {
+      "surface": "browser/application-assist/manifest.json#manifest_version",
+      "class": "DEPENDENCY_VERSION",
+      "role": "chrome_mv3_platform"
+    },
+    {
+      "surface": "CI python-version / node-version",
+      "class": "DEPENDENCY_VERSION",
+      "role": "toolchain"
+    },
+    {
+      "surface": "docs prose mentioning versions",
+      "class": "DESCRIPTIVE_DISPLAY_ONLY",
+      "role": "must_not_diverge_from_authority_when_stating_current_release"
+    }
+  ],
+  "bump_matrix": {
+    "judgment_gate": "A human or reviewed change record must classify each accepted change as one of major|minor|patch|none. Automation then applies the highest selected bump deterministically. Automation must not invent the classification.",
+    "aggregation": "highest_wins",
+    "rules": [
+      {
+        "change": "breaking_installable_behavior_config_cli_or_required_migration",
+        "bump": "major",
+        "notes": "Removes or changes shipped product behavior such that existing installs/operators must take non-automatic action, or breaks a documented product compatibility promise."
+      },
+      {
+        "change": "user_visible_compatible_feature",
+        "bump": "minor",
+        "notes": "Adds capability without requiring a breaking migration for existing installs."
+      },
+      {
+        "change": "user_visible_compatible_fix",
+        "bump": "patch",
+        "notes": "Fixes incorrect behavior without adding a feature or breaking compatibility."
+      },
+      {
+        "change": "docs_only",
+        "bump": "none",
+        "notes": "No product release bump; docs may ship on main without a release tag."
+      },
+      {
+        "change": "tests_only",
+        "bump": "none"
+      },
+      {
+        "change": "internal_refactor_tooling_or_generated_only",
+        "bump": "none",
+        "notes": "No bump unless user-visible behavior or a mirrored product surface changes."
+      },
+      {
+        "change": "schema_protocol_only_without_product_surface_change",
+        "bump": "none",
+        "notes": "Advance the independent schema/protocol version; do not pretend it is a product release."
+      },
+      {
+        "change": "prerelease_or_rc",
+        "bump": "suffix",
+        "notes": "Optional prerelease suffixes (for example 1.1.0-rc.1) are allowed only before that exact X.Y.Z is tagged as final. Never reuse a finalized X.Y.Z."
+      },
+      {
+        "change": "hotfix",
+        "bump": "patch",
+        "notes": "Ship from a maintenance line only by tagging a new patch derived from that line; do not reuse or decrement versions."
+      },
+      {
+        "change": "backport",
+        "bump": "patch_on_maintenance_line",
+        "notes": "Backports receive a new patch on the maintained MAJOR.MINOR line; identity remains the new tag plus commit SHA."
+      }
+    ]
+  },
+  "compatibility": {
+    "consumers": [
+      "side-loaded / store browser extension installs",
+      "future Microsoft Store / Play Store / local-web companion adapters",
+      "operators validating repository releases against Git tags and commit SHAs",
+      "user-owned career-state / preference stores (compatibility owned by schema versions, not product SemVer alone)"
+    ],
+    "product_semver_means": {
+      "MAJOR": "Breaking change to installable product behavior, config, CLI, or required operator/user migration.",
+      "MINOR": "Backward-compatible user-visible capability addition.",
+      "PATCH": "Backward-compatible fix or packaging correction."
+    },
+    "product_semver_does_not_mean": [
+      "career-state schema compatibility (owned by escapehatch-career-state/vN)",
+      "application-companion / assist-session / preference-cache contract compatibility (owned by those schema versions)",
+      "Chrome MV3 manifest_version",
+      "freshness; only commit SHA / tagged commit / artifact hash proves exact identity"
+    ],
+    "breaking_change_requirements": [
+      "CHANGELOG entry under the new MAJOR describing the break",
+      "migration or deprecation notes appropriate to the affected surface",
+      "schema breaks use independent schema version advancement plus migration evidence"
+    ],
+    "rollback": "Redeploy or restore a previously tagged commit/artifact. Never decrement VERSION or reuse a released number.",
+    "withdrawn_release": "Preserve the historical tag and CHANGELOG identity; document replacement or yank status in CHANGELOG rather than deleting history."
+  },
+  "release_mechanics": {
+    "entrypoint": "python scripts/product_version.py",
+    "validate": "python scripts/validate_product_version.py",
+    "tests": "python tests/test_product_version.py",
+    "tag_creation": "only_after_owning_validation_succeeds",
+    "publication_boundary": "GitHub Release creation, browser-store submission, and Microsoft/Play store submission remain downstream credentials/environment gates after repository tag identity is valid."
+  }
+}

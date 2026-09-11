@@ -29,6 +29,7 @@
 - Unknown questions fail closed to mapping; selected answers are never committed as fixtures.
 - The concurrent application-autofill product PR remains separately owned historical donor evidence. Current-main Application Assist Session owns the browser control loop under `browser/application-assist` and `contracts/application-assist-session.v1.json`.
 - Application Assist Session implements Start Assist, Fill Allowed Fields, Pause, Resume, Emergency Stop, Undo Last Fill, and confirmation-evidence metadata through `user-owned state → canonical Fill Plan → policy gate → DOM writer`.
+- Product release identity is owned by `VERSION` (cutover `1.0.0`) with policy at `contracts/product-release.v1.json`, mirror sync for the Application Assist extension package version, changelog binding, and fail-closed validation/tests.
 
 ## Broken
 
@@ -84,6 +85,12 @@ Private content remains outside Git. When a real resume is available to the exec
 
 Repository validation proves the presentation rules are registered and regression-tested. It does not prove that a private resume artifact was rendered correctly unless that artifact was actually inspected, and it does not guarantee universal ATS parsing, recruiter preference, or application success.
 
+## Product release versioning boundary
+
+`VERSION` is the sole human-facing EscapeHatch product release SemVer authority. `contracts/product-release.v1.json` owns scheme justification, bump matrix, synchronized mirrors, cutover rules, compatibility meaning, and tag format. Exact freshness remains the Git commit SHA; tag `vX.Y.Z` must resolve to that validated commit. Schema/protocol versions (`escapehatch-*/vN`, contract `version` integers, Chrome `manifest_version`) are classified separately and are not product authority. Rollback redeploys a prior tagged commit/artifact and never reuses or decrements a released number. GitHub Release and store publication remain downstream gates after repository validation.
+
+Current cutover release: `1.0.0`, ratifying the pre-existing Application Assist extension package version without rewriting history. Entrypoint: `python scripts/product_version.py`.
+
 ## Application automation boundary
 
 The harness models recurring questions by canonical meaning, not page order. The observed application evidence motivated reusable families including EEO, veteran, race/ethnicity, gender, prior-employer status, work authorization, sponsorship, compensation, education, accommodation, non-compete/restrictive agreement, debarment/exclusion/investigation, and final truth/accuracy certification.
@@ -98,11 +105,13 @@ Run:
 
 ```text
 python scripts/validate_governance.py
+python scripts/validate_product_version.py
 python scripts/validate_application_harness.py
 python scripts/validate_application_companion.py
 python scripts/validate_resume_presentation.py
 python scripts/validate_harness.py
 python scripts/validate_career_state.py
+python tests/test_product_version.py
 python tests/test_study_guidance_export.py
 python tests/test_application_assist_session_contract.py
 node tests/test_application_assist_session.mjs
@@ -141,6 +150,8 @@ pwsh -NoProfile -File scripts/resolve_repo.ps1 -ResolveOnly
 - Weakening unknown-question failure behavior to increase fill rate.
 - Reintroducing temporary directories for durable repository/worktree state.
 - Colliding with the separately owned application-autofill product branch.
+- Treating schema/protocol versions, Chrome `manifest_version`, CI toolchain pins, or UI badges as product release authority instead of `VERSION`.
+- Reusing or decrementing a released product version, or tagging a commit that failed owning validation.
 
 ## Next product gate after this sprint
 

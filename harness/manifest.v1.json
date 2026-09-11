@@ -9,6 +9,9 @@
     "governance_validator": "scripts/validate_governance.py",
     "application_harness_validator": "scripts/validate_application_harness.py",
     "resume_presentation_validator": "scripts/validate_resume_presentation.py",
+    "product_version_validator": "scripts/validate_product_version.py",
+    "product_version_authority": "VERSION",
+    "product_release_contract": "contracts/product-release.v1.json",
     "repo_resolver": "scripts/resolve_repo.ps1",
     "application_form_taxonomy": "harness/contracts/application-form-taxonomy.v1.json",
     "application_preference_cache": "harness/contracts/application-preference-cache.v1.json",
@@ -25,6 +28,7 @@
   },
   "validation_order": [
     "python scripts/validate_governance.py",
+    "python scripts/validate_product_version.py",
     "python scripts/validate_application_harness.py",
     "python scripts/validate_application_companion.py",
     "python scripts/validate_resume_presentation.py",

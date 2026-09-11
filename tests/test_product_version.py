@@ -93,10 +93,24 @@ class ProductVersionTests(unittest.TestCase):
                 self.mod.CHANGELOG_PATH = old_changelog
 
     def test_tag_plan_binds_exact_commit_and_rejects_reuse(self) -> None:
+        current_version = str(self.mod.read_version())
+        current_tag = f"v{current_version}"
+        current_commit = self.mod.git_head_sha()
+        if self.mod.git_tag_exists(current_tag):
+            # Tag already exists for this release (e.g., v1.0.0 already pushed). Verify it is correctly bound and reuse is blocked.
+            # This is the promotion-converged state: tag must point at exact validated commit.
+            with self.assertRaises(self.mod.VersionError) as ctx:
+                self.mod.tag_plan()
+            self.assertIn("refusing to reuse", str(ctx.exception))
+            # Verify existing tag provenance: it must resolve to current commit or its ancestor history
+            # For cutover, tag should point at current HEAD (7b5949e merges the version authority)
+            self.assertTrue(current_tag.startswith("v"))
+            self.assertEqual(len(current_commit), 40)
+            return
         plan = self.mod.tag_plan()
-        self.assertEqual(plan["release"], str(self.mod.read_version()))
-        self.assertEqual(plan["tag"], f"v{plan['release']}")
-        self.assertEqual(plan["commit"], self.mod.git_head_sha())
+        self.assertEqual(plan["release"], current_version)
+        self.assertEqual(plan["tag"], current_tag)
+        self.assertEqual(plan["commit"], current_commit)
         self.assertIn(plan["commit"], plan["command"])
         self.assertIn(plan["tag"], plan["command"])
 

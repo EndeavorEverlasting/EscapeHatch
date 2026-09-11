@@ -4,7 +4,7 @@ These workflows implement `AGENTS.md`; they do not override governance.
 
 ## Workflow selection
 
-Use **Repository Location** for durable Windows checkout/worktree acquisition. Use **Task Pickup** for every writing sprint. Use **Application Form Intake** when application questions/pages are being mapped or automated. Use **Application Companion** when an installable/local client records career/application progress or synchronizes user-owned state. Use **Application Assist Session** when operating the browser extension control loop that fills deterministic allowed fields on a live application. Use **Resume Presentation** whenever an agent creates, refreshes, tailors, exports, or synchronizes a resume/CV. Use **Product Release Versioning** when establishing, bumping, tagging, or auditing the human-facing product release identity. Use **Failure Recovery** when a required command fails. Use **Handoff** before changing owners/chats or when an external blocker stops the lane.
+Use **Repository Location** for durable Windows checkout/worktree acquisition. Use **Task Pickup** for every writing sprint. Use **Application Form Intake** when application questions/pages are being mapped or automated. Use **Application Companion** when an installable/local client records career/application progress or synchronizes user-owned state. Use **Application Assist Session** when operating the browser extension control loop that fills deterministic allowed fields on a live application. Use **Resume Presentation** whenever an agent creates, refreshes, tailors, exports, or synchronizes a resume/CV. Use **Product Release Versioning** when establishing, bumping, tagging, or auditing the human-facing product release identity. Use **Repository Promotion** when advancing an exact validated candidate through the provider-bound promotion pipeline to an authorized merge/tag/deployment. Use **Failure Recovery** when a required command fails. Use **Handoff** before changing owners/chats or when an external blocker stops the lane.
 
 ## Repository Location
 
@@ -126,6 +126,25 @@ A resume can be ATS-conservative without being visually anonymous. The registere
 
 Docs-only, tests-only, internal tooling, generated-only, and schema-only changes default to `none` unless a mirrored product surface or user-visible installable behavior also changes.
 
+## Repository Promotion
+
+Promotion is provider-agnostic at the contract and bound to one concrete host adapter at runtime. The contract at `contracts/repository-promotion.v1.json` owns the validation DAG, required-check manifest, triggers, and fail-closed gates; `.github/workflows/promotion.yml` is the GitHub Actions adapter for observed host `github.com`.
+
+1. Read `contracts/repository-promotion.v1.json` and `.github/workflows/promotion.yml` before changing promotion gates or destinations. Resolve the observed SCM host; fail closed if no adapter exists for that host.
+2. Capture exact candidate identity before promotion: `head_sha` (git rev-parse HEAD), `base_sha` (PR base or merge-base), `merge_base`, `VERSION` authority, and lock/mirror identities. Every required job must be attributable to that candidate; invalidate and rerun if head/base/validator/artifact moves after proof.
+3. Run the cheapest-to-strongest DAG through canonical commands — never duplicate test logic in provider YAML: `validate_governance` → compile/lint → unit (`test_product_version`, `test_repository_promotion`, `test_study_guidance_export`) → integration (`validate_application_harness`, `validate_application_companion`, `validate_resume_presentation`, `validate_career_state`) → build (`validate_harness`) → `harness-e2e` (`validate_harness`) and `application-e2e` (`test_application_assist_session_contract` + `node test_application_assist_session.mjs`) as distinct required gates → release-gate (`validate_product_version` + `tag-plan`) → promotion (guard + provider merge).
+4. Keep harness E2E and application E2E distinct and report each separately. Harness E2E validates repository contracts/validators together; application E2E validates browser Fill Plan → policy gate → DOM writer. One cannot substitute for the other.
+5. Query provider truth directly for the exact candidate SHA: required checks (exact names from manifest), review decision, unresolved thread count, PR state/head/base, draft, mergeability, queue eligibility. Treat missing/renamed/pending/SKIP/neutral/cancelled/timed-out as blocking. Do not infer readiness from an aggregate green badge.
+6. Enforce stale-proof invalidation: immediately before mutation, re-read provider truth and compare current head/base with the proven candidate; reject on `expected_head_sha` mismatch. Never promote whatever is currently on the branch after validating an earlier SHA.
+7. Use least-privilege permissions (read/validate jobs `contents:read` + `checks:read`; promote job `contents:write` + `pull-requests:write` only), serialize with `concurrency` or merge queue, and guard recursion so a bot promotion commit cannot trigger another writer. Reject unauthorized destinations even if the token could technically write.
+8. Keep explicit required-check names in the tracked manifest (policy versioned). A renamed/missing check is a contract mismatch that blocks until policy is deliberately updated.
+9. Prefer build-once/promote-the-same artifact; record SHA + run ID + checksum. Caches may not masquerade as fresh validation. Failed gates feed development: emit candidate SHA, failing check, artifact/log, owning surface, and proof ceiling; hand to P115 for repair but never reuse proof from a failed candidate.
+10. Validate degraded-provider handling: `PROVIDER_UNAVAILABLE` / `PROVIDER_RATE_LIMITED` / `PROVIDER_PARTIAL_TRUTH` block mutation while preserving harness receipts; bounded backoff only for transient provider failures.
+11. After provider merge/tag/release/deploy, refresh provider truth and verify containment: `git merge-base --is-ancestor <proven-integration-sha> origin/main` for branch integration, or artifact identity for release/deploy. A queued command is not success.
+12. Validate with `python scripts/validate_repository_promotion.py`, `python tests/test_repository_promotion.py`, and `python scripts/promotion_guard.py self-test`, then the manifest order.
+
+The durable promotion system must own the last-mile mutation via the adapter (GitHub Actions workflow + `scripts/promotion_guard.py` with `expected_head_sha` compare-and-set, idempotency, and queue fallback). A local `git merge` or branch tip is not provider promotion.
+
 ## Pre-commit validation
 
 Required manifest floor:
@@ -133,6 +152,7 @@ Required manifest floor:
 ```text
 python scripts/validate_governance.py
 python scripts/validate_product_version.py
+python scripts/validate_repository_promotion.py
 python scripts/validate_application_harness.py
 python scripts/validate_application_companion.py
 python scripts/validate_resume_presentation.py

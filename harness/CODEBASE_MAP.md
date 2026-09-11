@@ -43,6 +43,11 @@ EscapeHatch has canonical governance, an operational harness, a portable career-
 | `.githooks/` | Opt-in local pre-commit and pre-push validation. |
 | `.github/workflows/harness.yml` | Linux governance/harness/product-contract validation plus Windows durable-root proof. |
 | `.github/workflows/career-state.yml` | Career-state, companion, and StudySyndicate product-contract validation. |
+| `.github/workflows/promotion.yml` | GitHub Actions adapter for repository promotion (provider-side merge executor). |
+| `contracts/repository-promotion.v1.json` | Provider-agnostic promotion policy (DAG, required checks, triggers, fail-closed). |
+| `scripts/promotion_guard.py` | Promotion guard: exact candidate, required checks, stale proof, compare-and-set, degraded provider. |
+| `scripts/validate_repository_promotion.py` | Fail-closed promotion contract/adapter validator. |
+| `tests/test_repository_promotion.py` | Fault-injection tests for promotion blocking paths. |
 | `skills/harness-operations/SKILL.md` | Repeatable repo harness operating procedure. |
 | `skills/application-form-mapping/SKILL.md` | Procedure for adding/reusing application question semantics safely. |
 
@@ -124,6 +129,17 @@ The assist session ports the proven browser fill matching from the stale autofil
 
 `VERSION` is the only human-facing product release authority. Schema/protocol versions (`escapehatch-*/vN`, contract `version` integers) remain independent. A Git tag `vX.Y.Z` must point at the exact validated release commit; UI labels and badges are not freshness proof. Rollback redeploys a prior tagged commit/artifact and never reuses or decrements a released version.
 
+## Repository promotion entry points
+
+- Promotion contract: `contracts/repository-promotion.v1.json` (provider-agnostic, one concrete adapter bound at runtime)
+- Guard/executor: `scripts/promotion_guard.py` (exact SHA pin, required checks, review/threads, stale proof, compare-and-set, degraded provider, idempotency)
+- Validator: `python scripts/validate_repository_promotion.py`
+- Tests: `python tests/test_repository_promotion.py` + `python scripts/promotion_guard.py self-test`
+- CI adapter: `.github/workflows/promotion.yml` (GitHub Actions — observed host github.com; triggers pull_request/merge_group/push/workflow_dispatch; concurrency + recursion guard; gh api + expected_head_sha merge)
+- Operating workflow: **Repository Promotion** in `harness/WORKFLOWS.md`
+
+Promotion is provider-agnostic at the contract and bound to one concrete host adapter at runtime. The workflow orchestrates but does not duplicate validation — it invokes repo-owned validators. Promotion fails closed on SKIP/stale/partial truth, missing required checks, unresolved threads, insufficient approval, unauthorized targets, provider degradation, or head moves. Post-promotion containment is verified via `git merge-base --is-ancestor`.
+
 ## Resume presentation entry points
 
 - Presentation contract: `contracts/resume-presentation.v1.json`
@@ -143,6 +159,7 @@ The contract does not prove universal ATS compatibility. A specific resume is vi
 - Artifact registry: `ARTIFACT_REGISTRY.md`
 - Product release authority: `VERSION`
 - Product release policy: `contracts/product-release.v1.json`
+- Repository promotion policy: `contracts/repository-promotion.v1.json`
 - Career-state contract: `contracts/career-state.v1.schema.json`
 - Application companion contract: `contracts/application-companion.v1.json`
 - Resume presentation contract: `contracts/resume-presentation.v1.json`
@@ -157,15 +174,18 @@ Run from repository root:
 ```text
 python scripts/validate_governance.py
 python scripts/validate_product_version.py
+python scripts/validate_repository_promotion.py
 python scripts/validate_application_harness.py
 python scripts/validate_application_companion.py
 python scripts/validate_resume_presentation.py
 python scripts/validate_harness.py
 python scripts/validate_career_state.py
 python tests/test_product_version.py
+python tests/test_repository_promotion.py
 python tests/test_study_guidance_export.py
 python tests/test_application_assist_session_contract.py
 node tests/test_application_assist_session.mjs
+python scripts/promotion_guard.py self-test
 git diff --check
 ```
 

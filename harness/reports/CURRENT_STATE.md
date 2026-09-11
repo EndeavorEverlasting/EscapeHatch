@@ -30,6 +30,7 @@
 - The concurrent application-autofill product PR remains separately owned historical donor evidence. Current-main Application Assist Session owns the browser control loop under `browser/application-assist` and `contracts/application-assist-session.v1.json`.
 - Application Assist Session implements Start Assist, Fill Allowed Fields, Pause, Resume, Emergency Stop, Undo Last Fill, and confirmation-evidence metadata through `user-owned state → canonical Fill Plan → policy gate → DOM writer`.
 - Product release identity is owned by `VERSION` (cutover `1.0.0`) with policy at `contracts/product-release.v1.json`, mirror sync for the Application Assist extension package version, changelog binding, and fail-closed validation/tests.
+- Repository promotion is owned by `contracts/repository-promotion.v1.json` (provider-agnostic) bound to `.github/workflows/promotion.yml` (GitHub Actions adapter for observed host github.com). The pipeline enforces exact-candidate SHA pin, cheapest-to-strongest DAG (governance → product version → promotion policy → compile/lint → unit → integration → build → harness-e2e vs application-e2e distinct → release-gate → provider merge), explicit required-check manifest, review/thread gates, stale-proof invalidation via `expected_head_sha` compare-and-set, concurrency/recursion guards, least-privilege permissions, degraded-provider `PROVIDER_*` fail-closed handling, artifact provenance, and `merge-base --is-ancestor` post-containment. Promotion is provider-side merge/tag via `gh api`; local `git merge` is not promotion.
 
 ## Broken
 
@@ -91,6 +92,14 @@ Repository validation proves the presentation rules are registered and regressio
 
 Current cutover release: `1.0.0`, ratifying the pre-existing Application Assist extension package version without rewriting history. Entrypoint: `python scripts/product_version.py`.
 
+## Repository promotion boundary
+
+`contracts/repository-promotion.v1.json` is provider-agnostic and bound at runtime to `.github/workflows/promotion.yml` when the remote is `github.com`. It defines the cheapest-to-strongest validation DAG, distinct `harness-e2e` (`python scripts/validate_harness.py`) and `application-e2e` (`python tests/test_application_assist_session_contract.py` + `node tests/test_application_assist_session.mjs`) gates, an explicit required-check manifest per destination (policy version 1), trigger → candidate → validation → approval → promotion → post-proof flow, and fail-closed handling for SKIP/stale/partial truth, missing checks, unresolved threads, and provider degradation.
+
+The durable promotion system owns the last-mile mutation via a host-facing workflow/bot. For GitHub, that is the `Repository Promotion` workflow using `scripts/promotion_guard.py` with `expected_head_sha` compare-and-set, merge-queue fallback, concurrency serialization, recursion guards, least-privilege `contents:write`/`pull-requests:write` only in the promote job, and idempotent duplicate-wakeup handling. Local `git merge` or checkout state does not constitute promotion; proof is provider merge/queue result plus `git merge-base --is-ancestor` containment.
+
+Artifacts/caches record source SHA + run ID + checksum; caches never masquerade as fresh validation. Degraded provider (`PROVIDER_UNAVAILABLE` / `PROVIDER_RATE_LIMITED` / `PROVIDER_PARTIAL_TRUTH`) blocks mutation while preserving harness receipts. A queued command is not success; deployment health checks must pass.
+
 ## Application automation boundary
 
 The harness models recurring questions by canonical meaning, not page order. The observed application evidence motivated reusable families including EEO, veteran, race/ethnicity, gender, prior-employer status, work authorization, sponsorship, compensation, education, accommodation, non-compete/restrictive agreement, debarment/exclusion/investigation, and final truth/accuracy certification.
@@ -106,15 +115,18 @@ Run:
 ```text
 python scripts/validate_governance.py
 python scripts/validate_product_version.py
+python scripts/validate_repository_promotion.py
 python scripts/validate_application_harness.py
 python scripts/validate_application_companion.py
 python scripts/validate_resume_presentation.py
 python scripts/validate_harness.py
 python scripts/validate_career_state.py
 python tests/test_product_version.py
+python tests/test_repository_promotion.py
 python tests/test_study_guidance_export.py
 python tests/test_application_assist_session_contract.py
 node tests/test_application_assist_session.mjs
+python scripts/promotion_guard.py self-test
 git diff --check
 ```
 
@@ -152,6 +164,9 @@ pwsh -NoProfile -File scripts/resolve_repo.ps1 -ResolveOnly
 - Colliding with the separately owned application-autofill product branch.
 - Treating schema/protocol versions, Chrome `manifest_version`, CI toolchain pins, or UI badges as product release authority instead of `VERSION`.
 - Reusing or decrementing a released product version, or tagging a commit that failed owning validation.
+- Bypassing required checks, treating SKIP/stale/partial truth as green, or inferring readiness from an aggregate badge.
+- Treating a local `git merge` or checkout as provider promotion, or letting a bot commit recursively trigger another promotion.
+- Promoting to an unauthorized destination or with stale proof after a head/base move.
 
 ## Next product gate after this sprint
 

@@ -27,7 +27,8 @@
 - Application preference persistence is user-owned browser-local state with explicit Save/Export/Import/Clear controls and no repository tracking; browser storage is one adapter rather than the whole companion architecture.
 - Application question coverage includes identity/contact, EEO/demographic, eligibility/history, compensation/education/accommodation, legal/compliance, and certification families.
 - Unknown questions fail closed to mapping; selected answers are never committed as fixtures.
-- The concurrent application-autofill product PR remains separately owned and is not modified by this resume-presentation sprint.
+- The concurrent application-autofill product PR remains separately owned historical donor evidence. Current-main Application Assist Session owns the browser control loop under `browser/application-assist` and `contracts/application-assist-session.v1.json`.
+- Application Assist Session implements Start Assist, Fill Allowed Fields, Pause, Resume, Emergency Stop, Undo Last Fill, and confirmation-evidence metadata through `user-owned state → canonical Fill Plan → policy gate → DOM writer`.
 
 ## Broken
 
@@ -46,11 +47,12 @@
 - Cross-device synchronization proof.
 - A scoring engine that derives opportunity fit from `career_objective`; current `fit_score` remains stored opportunity evidence rather than an automatically recomputed claim.
 - Product UI for editing target/deprioritized role families and proof artifacts.
-- Product implementation for questionnaire families beyond identity/contact autofill.
+- Product implementation for questionnaire families beyond identity/contact Application Assist.
 - Automatic capture of newly selected questionnaire preferences from arbitrary ATS controls.
 - Live cross-employer proof of semantic question matching.
 - Product UI for per-application confirmation of current legal/compliance answers.
 - Product support for opportunity-specific compensation overrides through the browser cache.
+- Observed unpacked-extension proof on every third-party ATS; repository tests cover the control loop contract but not vendor DOM frameworks.
 - Automatic application submission/navigation.
 - Automatic truth/accuracy certification or signature.
 - Broad scraping/discovery automation.
@@ -88,7 +90,7 @@ The harness models recurring questions by canonical meaning, not page order. The
 
 Real selected answers from operator applications are user-owned private state. They are deliberately absent from tracked contracts/reports. Product implementations should preserve explicit clear/export/import controls and the per-question privacy/freshness policy regardless of delivery surface.
 
-Certification/attestation stays manual even when preceding fields can be filled automatically.
+Certification/attestation stays manual even when preceding fields can be filled automatically. Application Assist may record confirmation metadata after the operator submits; it may not submit or attest.
 
 ## Validation floor
 
@@ -102,6 +104,8 @@ python scripts/validate_resume_presentation.py
 python scripts/validate_harness.py
 python scripts/validate_career_state.py
 python tests/test_study_guidance_export.py
+python tests/test_application_assist_session_contract.py
+node tests/test_application_assist_session.mjs
 git diff --check
 ```
 

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EscapeHatch Application Assist</title>
+  <style>
+    body { font: 14px system-ui, sans-serif; margin: 14px; min-width: 380px; color: #111; }
+    h1 { font-size: 18px; margin: 0 0 6px; }
+    p { margin: 6px 0 12px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; }
+    label { display: grid; gap: 3px; font-weight: 600; }
+    input { font: inherit; padding: 7px; min-width: 0; }
+    .wide { grid-column: 1 / -1; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+    button { font: inherit; padding: 8px; cursor: pointer; }
+    #startAssist, #fillAllowed { grid-column: 1 / -1; font-weight: 700; }
+    #emergencyStop { grid-column: 1 / -1; }
+    #status, #sessionState { min-height: 1.4em; margin-top: 8px; }
+    .privacy { font-size: 12px; color: #444; }
+    #importFile { display: none; }
+    .session { border-top: 1px solid #ddd; margin-top: 12px; padding-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1>EscapeHatch Application Assist</h1>
+  <p class="privacy">User-owned browser-local state. Writes go through a canonical Fill Plan and policy gate. Never auto-submits, never clicks Next/Continue, never attests.</p>
+
+  <div id="sessionState" role="status" aria-live="polite">Session: idle</div>
+
+  <div class="session actions">
+    <button id="startAssist" type="button">Start Assist</button>
+    <button id="fillAllowed" type="button">Fill Allowed Fields</button>
+    <button id="pause" type="button">Pause</button>
+    <button id="resume" type="button">Resume</button>
+    <button id="undoLast" type="button">Undo Last Fill</button>
+    <button id="emergencyStop" type="button">Emergency Stop</button>
+    <button id="recordConfirmation" type="button">Record Confirmation Evidence</button>
+  </div>
+
+  <div class="grid" style="margin-top: 14px;">
+    <label>Title / prefix <input id="name_prefix" autocomplete="honorific-prefix"></label>
+    <label>Preferred name <input id="preferred_name" autocomplete="nickname"></label>
+    <label>First name <input id="first_name" autocomplete="given-name"></label>
+    <label>Last name <input id="last_name" autocomplete="family-name"></label>
+    <label>Email <input id="email" type="email" autocomplete="email"></label>
+    <label>Phone <input id="phone" type="tel" autocomplete="tel"></label>
+    <label class="wide">LinkedIn <input id="linkedin_url" type="url"></label>
+    <label class="wide">Street address <input id="street_address" autocomplete="street-address"></label>
+    <label>City <input id="city" autocomplete="address-level2"></label>
+    <label>State / region <input id="region" autocomplete="address-level1"></label>
+    <label>ZIP / postal code <input id="postal_code" autocomplete="postal-code"></label>
+    <label>Country <input id="country" autocomplete="country-name"></label>
+  </div>
+
+  <div class="actions">
+    <button id="save" type="button">Save Profile</button>
+    <button id="clear" type="button">Clear Profile</button>
+    <button id="export" type="button">Export Profile</button>
+    <button id="import" type="button">Import Profile</button>
+  </div>
+  <input id="importFile" type="file" accept="application/json,.json">
+  <div id="status" role="status" aria-live="polite"></div>
+  <script src="assist-core.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

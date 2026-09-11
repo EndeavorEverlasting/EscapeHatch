@@ -12,6 +12,9 @@ EscapeHatch has canonical governance, an operational harness, a portable career-
 | `ARTIFACT_REGISTRY.md` | Canonical registry for tracked and generated artifacts. |
 | `contracts/career-state.v1.schema.json` | Versioned product persistence contract for career state, study guidance, and artifact ownership. |
 | `contracts/application-companion.v1.json` | Local-first product contract for private installable/local companion surfaces, progress recording, portability, and optional sync. |
+| `contracts/application-assist-session.v1.json` | Browser Application Assist Session contract: Fill Plan, policy gate, DOM writer, pause/stop/undo, confirmation evidence metadata. |
+| `browser/application-assist/` | Manifest V3 unpacked extension implementing the assist-session control loop without auto-submit. |
+| `docs/APPLICATION_ASSIST_SESSION.md` | Operator load and control-loop instructions for Application Assist. |
 | `contracts/resume-presentation.v1.json` | ATS-conservative typography, page-layout, structure, output, privacy, and rendered-QA contract for user-owned resumes. |
 | `fixtures/career-state.v1.example.json` | Portable representative product fixture with no real personal data. |
 | `fixtures/application-companion.v1.example.json` | Synthetic companion session fixture demonstrating progress recording and opt-in Google Drive sync without real user data. |
@@ -90,6 +93,19 @@ The companion is local-first: the user's career state remains the primary logica
 
 Progress recording is assistive only. The companion may write a career-state status after explicit user action, same-session confirmation, or user-confirmed external evidence, but submission, navigation past the submission boundary, and attestation remain user actions.
 
+## Application assist session entry points
+
+- Assist contract: `contracts/application-assist-session.v1.json`
+- Extension runtime: `browser/application-assist/`
+- Operator docs: `docs/APPLICATION_ASSIST_SESSION.md`
+- Runtime tests: `tests/test_application_assist_session.mjs`
+- Contract tests: `tests/test_application_assist_session_contract.py`
+- CI: `.github/workflows/application-assist.yml`
+- Taxonomy binding: `harness/contracts/application-form-taxonomy.v1.json` identity-contact family
+- Operating workflow: **Application Assist Session** in `harness/WORKFLOWS.md`
+
+The assist session ports the proven browser fill matching from the stale autofill lane onto current main without wholesale PR merge. DOM writes must follow `user-owned state → canonical Fill Plan → policy gate → DOM writer`. Pause, Resume, Emergency Stop, and Undo Last Fill are first-class controls. Auto-submit, Next/Continue clicking, and attestation remain forbidden.
+
 ## Resume presentation entry points
 
 - Presentation contract: `contracts/resume-presentation.v1.json`
@@ -126,6 +142,8 @@ python scripts/validate_resume_presentation.py
 python scripts/validate_harness.py
 python scripts/validate_career_state.py
 python tests/test_study_guidance_export.py
+python tests/test_application_assist_session_contract.py
+node tests/test_application_assist_session.mjs
 git diff --check
 ```
 
@@ -134,6 +152,7 @@ git diff --check
 - Product build on `main`: **not established**
 - Career-state contract: `python scripts/validate_career_state.py`
 - Application companion contract: `python scripts/validate_application_companion.py`
+- Application assist session: `python tests/test_application_assist_session_contract.py` and `node tests/test_application_assist_session.mjs`
 - Resume presentation contract: `python scripts/validate_resume_presentation.py`
 - Study-guidance adapter: `python tests/test_study_guidance_export.py`
 - Application harness: `python scripts/validate_application_harness.py`
@@ -143,7 +162,7 @@ git diff --check
 - Google Drive runtime adapter: **not established**
 - Product deployment: **not established**
 
-Do not claim browser/ATS, Google Drive, Microsoft Store, or Play Store runtime proof from repository validation. Resume presentation validation proves the contract; rendered resume proof requires the private output artifacts themselves.
+Do not claim browser/ATS, Google Drive, Microsoft Store, or Play Store runtime proof from repository validation. Resume presentation validation proves the contract; rendered resume proof requires the private output artifacts themselves. Application Assist repository tests prove the Fill Plan control loop; live ATS proof still requires the unpacked extension on a real application page.
 
 ## Fresh-agent path
 

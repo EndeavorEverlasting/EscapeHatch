@@ -29,6 +29,7 @@ No real selected answers from the observed application are tracked in the reposi
 - Unknown questions fail closed to mapping rather than guessed answers.
 - `scripts/validate_application_harness.py` checks observed coverage, privacy boundaries, references, automation policies, and negative fixtures.
 - The Windows durable-root resolver from the superseded harness lane is preserved as `scripts/resolve_repo.ps1`.
+- Current-main Application Assist Session (`browser/application-assist`, `contracts/application-assist-session.v1.json`) ports the proven identity/contact fill matching into a persistent same-application control loop with Fill Plan → policy gate → DOM writer, Pause/Resume/Stop/Undo, and confirmation-evidence metadata.
 
 ## Broken
 
@@ -36,7 +37,7 @@ No known harness-contract failure at this authored floor.
 
 ## Missing / intentionally not yet established
 
-- Product support for questionnaire families beyond the currently open identity/contact autofill product lane.
+- Product support for questionnaire families beyond the identity/contact Application Assist lane.
 - Automatic capture of a newly chosen preference from arbitrary ATS controls.
 - Runtime semantic matching against every ATS framework/custom component.
 - A local UI for reviewing stale legal/current answers before an application.
@@ -63,6 +64,8 @@ python scripts/validate_governance.py
 python scripts/validate_application_harness.py
 python scripts/validate_harness.py
 python scripts/validate_career_state.py
+python tests/test_application_assist_session_contract.py
+node tests/test_application_assist_session.mjs
 git diff --check
 ```
 

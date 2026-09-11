@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>EscapeHatch Assist Demo Application</title>
+  <style>
+    body { font: 16px/1.4 system-ui, sans-serif; margin: 2rem; max-width: 40rem; }
+    label { display: grid; gap: 0.25rem; margin-bottom: 0.75rem; font-weight: 600; }
+    input, select { font: inherit; padding: 0.4rem; }
+    button { font: inherit; padding: 0.5rem 0.9rem; margin-right: 0.5rem; }
+    .note { color: #444; font-size: 0.95rem; }
+  </style>
+</head>
+<body>
+  <h1>Demo Job Application</h1>
+  <p class="note">Synthetic page for local Application Assist proof. Contains no real PII. Do not auto-submit.</p>
+  <form id="application" action="#" method="post" onsubmit="return false;">
+    <label>Title
+      <select name="title" aria-label="Title">
+        <option value="">Select a title</option>
+        <option value="Mr.">Mr.</option>
+        <option value="Ms.">Ms.</option>
+        <option value="Mx.">Mx.</option>
+      </select>
+    </label>
+    <label>First Name * <input name="firstName" autocomplete="given-name"></label>
+    <label>Last Name * <input name="lastName" autocomplete="family-name" value="Already Present"></label>
+    <label>Preferred Name * <input name="preferredName" autocomplete="nickname"></label>
+    <label>Email * <input name="email" type="email" autocomplete="email"></label>
+    <label>Phone Number * <input name="phone" type="tel" autocomplete="tel"></label>
+    <label>LinkedIn Profile <input name="linkedin" type="url"></label>
+    <label>Home Street Address * <input name="street" autocomplete="street-address"></label>
+    <label>City / Municipality * <input name="city" autocomplete="address-level2"></label>
+    <label>State / Province <input name="region" autocomplete="address-level1"></label>
+    <label>Zip Code * <input name="zip" autocomplete="postal-code"></label>
+    <label>Country <input name="country" autocomplete="country-name"></label>
+    <label>Why do you want this job? <input name="essay" type="text"></label>
+    <label>Password <input name="password" type="password"></label>
+    <label>Resume <input name="resume" type="file"></label>
+    <label><input name="certify" type="checkbox"> I certify that this information is true and accurate</label>
+    <p>
+      <button type="button" id="next">Next / Continue</button>
+      <button type="submit" id="submit">Submit Application</button>
+    </p>
+  </form>
+  <script>
+    document.getElementById("next").addEventListener("click", () => {
+      document.body.dataset.nextClicked = "1";
+    });
+    document.getElementById("application").addEventListener("submit", (event) => {
+      event.preventDefault();
+      document.body.dataset.submitted = "1";
+    });
+  </script>
+</body>
+</html>

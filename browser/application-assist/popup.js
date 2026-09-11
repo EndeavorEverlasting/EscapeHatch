@@ -62,6 +62,14 @@ function writeForm(profile) {
   document.getElementById("phone_authority").value = PHONE_AUTHORITY_VALUES.includes(authority) ? authority : "unconfirmed";
 }
 
+function hasProfileValues(profile) {
+  return PROFILE_KEYS.some((key) => typeof profile[key] === "string" && profile[key].trim());
+}
+
+function countProfileValues(profile) {
+  return PROFILE_KEYS.filter((key) => typeof profile[key] === "string" && profile[key].trim()).length;
+}
+
 function sanitizeProfile(profile) {
   if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
     throw new Error("Profile must be a JSON object.");
@@ -109,7 +117,7 @@ async function saveSession(session) {
 async function saveProfile() {
   const profile = sanitizeProfile(readForm());
   await chrome.storage.local.set({ [PROFILE_KEY]: profile });
-  setStatus(`Saved ${Object.keys(profile).length} profile fields locally.`);
+  setStatus(`Saved ${countProfileValues(profile)} profile fields locally.`);
 }
 
 async function clearProfile() {
@@ -161,12 +169,18 @@ async function importProfile(file) {
   if (schema !== EXPORT_SCHEMA && schema !== LEGACY_ASSIST_EXPORT_SCHEMA && schema !== LEGACY_EXPORT_SCHEMA) {
     throw new Error("Import rejected: unsupported schema.");
   }
-  const incoming = payload && payload.profile && typeof payload.profile === "object" ? { ...payload.profile } : payload.profile;
-  if (incoming && !Object.prototype.hasOwnProperty.call(incoming, "phone_authority")) incoming.phone_authority = "unconfirmed";
+  const rawProfile = payload && payload.profile;
+  const incoming =
+    rawProfile && typeof rawProfile === "object" && !Array.isArray(rawProfile) ? { ...rawProfile } : rawProfile;
+  if (incoming && typeof incoming === "object" && !Array.isArray(incoming)) {
+    if (schema !== EXPORT_SCHEMA || !Object.prototype.hasOwnProperty.call(incoming, "phone_authority")) {
+      incoming.phone_authority = "unconfirmed";
+    }
+  }
   const profile = sanitizeProfile(incoming);
   await chrome.storage.local.set({ [PROFILE_KEY]: profile });
   writeForm(profile);
-  setStatus(`Imported ${Object.keys(profile).length} profile fields locally.`);
+  setStatus(`Imported ${countProfileValues(profile)} profile fields locally.`);
 }
 
 async function activeTab() {
@@ -235,7 +249,7 @@ async function startAssist() {
 async function fillAllowedFields() {
   const storedProfile = await chrome.storage.local.get(PROFILE_KEY);
   const profile = sanitizeProfile(storedProfile[PROFILE_KEY] || readForm());
-  if (!Object.keys(profile).length) {
+  if (!hasProfileValues(profile)) {
     setStatus("No saved profile. Save or import one first.");
     return;
   }
@@ -314,6 +328,13 @@ async function recordConfirmationEvidence() {
   setStatus("Recorded confirmation metadata for companion evidence. Submission remains manual.");
 }
 
+document.getElementById("phone").addEventListener("input", () => {
+  const authority = document.getElementById("phone_authority");
+  if (authority.value !== "unconfirmed") {
+    authority.value = "unconfirmed";
+    setStatus("Phone changed. Reconfirm which primary career number you control before autofill can use it.");
+  }
+});
 document.getElementById("save").addEventListener("click", () => saveProfile().catch((error) => setStatus(error.message)));
 document.getElementById("clear").addEventListener("click", () => clearProfile().catch((error) => setStatus(error.message)));
 document.getElementById("export").addEventListener("click", () => exportProfile().catch((error) => setStatus(error.message)));

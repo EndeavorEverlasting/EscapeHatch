@@ -15,7 +15,11 @@
     "browser_extension": {
       "path": "browser/application-assist",
       "manifest_version": 3,
-      "permissions": ["activeTab", "scripting", "storage"],
+      "permissions": [
+        "activeTab",
+        "scripting",
+        "storage"
+      ],
       "host_permissions": "none",
       "background_service": "none",
       "always_on_content_script": false
@@ -30,9 +34,10 @@
     "legacy_autofill_profile_key": "escapeHatch.applicationAutofillProfile.v1"
   },
   "portability": {
-    "export_schema": "escapehatch-application-assist-profile/v1",
+    "export_schema": "escapehatch-application-assist-profile/v2",
     "max_import_bytes": 65536,
     "accepted_import_schemas": [
+      "escapehatch-application-assist-profile/v2",
       "escapehatch-application-assist-profile/v1",
       "escapehatch-application-autofill-profile/v1"
     ],
@@ -41,12 +46,18 @@
       "reject_unsupported_schema",
       "accept_only_known_profile_keys",
       "never_execute_imported_content",
-      "never_commit_real_profile_values"
+      "never_commit_real_profile_values",
+      "legacy_phone_defaults_to_unconfirmed"
     ]
   },
   "session": {
     "binding": "same_application_origin",
-    "statuses": ["idle", "active", "paused", "stopped"],
+    "statuses": [
+      "idle",
+      "active",
+      "paused",
+      "stopped"
+    ],
     "controls": [
       "Start Assist",
       "Fill Allowed Fields",
@@ -62,7 +73,9 @@
   },
   "fill_plan": {
     "authority": "canonical",
-    "allowed_families": ["identity-contact"],
+    "allowed_families": [
+      "identity-contact"
+    ],
     "item_fields": [
       "index",
       "profile_key",
@@ -81,7 +94,8 @@
       "attestation_manual_only",
       "no_password_file_hidden_or_disallowed_types",
       "select_requires_exact_normalized_option_match",
-      "taxonomy_automation_policy_must_allow_fill"
+      "taxonomy_automation_policy_must_allow_fill",
+      "phone_requires_explicit_user_confirmed_primary_contact_authority"
     ],
     "forbidden_actions": [
       "auto_submit",
@@ -128,5 +142,16 @@
     "repository_contract_and_runtime_tests",
     "unpacked_extension_control_loop_requires_observed_browser_proof",
     "no_live_ats_compatibility_claim"
-  ]
+  ],
+  "contact_authority": {
+    "phone_values": [
+      "unconfirmed",
+      "user_confirmed_primary",
+      "secondary_or_forwarded"
+    ],
+    "default": "unconfirmed",
+    "fill_requires": "user_confirmed_primary",
+    "principle": "observed_or_previously_used_contact_is_not_preferred_contact_authority",
+    "privacy_tradeoff": "operator_may_choose_a_more_direct_or_database_joining_channel_when_they_explicitly_value_control_and_reachability"
+  }
 }

@@ -36,15 +36,16 @@ Cross-origin transitions pause the session automatically.
 
 - Profile key: `escapeHatch.applicationAssistProfile.v1`
 - Session key: `escapeHatch.applicationAssistSession.v1`
-- Export schema: `escapehatch-application-assist-profile/v1`
-- Legacy autofill profile import remains accepted for portability from the PR #6 donor lane
+- Export schema: `escapehatch-application-assist-profile/v2`
+- v1 Assist and legacy autofill imports remain accepted, but any legacy phone defaults to **unconfirmed** and is withheld until the operator explicitly marks it primary
+- A phone being present, previously used, forwarded, or discovered elsewhere is not authority to use it for a life-changing application
 - Real profile data is never committed to EscapeHatch
 - Imports are capped at 64 KiB, schema-checked, field-whitelisted, and never executed
 
 ## Supported fields
 
 Title/prefix, first name, last name, preferred name, email, phone, LinkedIn URL, street address, city,
-region/state, postal code, and country. Matching prefers HTML `autocomplete` tokens and otherwise uses
+region/state, postal code, and country. **Phone is special:** it is fillable only when the browser-local profile marks it `user_confirmed_primary`; `unconfirmed` and `secondary_or_forwarded` are fail-closed. Matching prefers HTML `autocomplete` tokens and otherwise uses
 normalized label/name/id/placeholder semantics. Select controls require an exact normalized option match.
 
 Canonical question IDs bind to `harness/contracts/application-form-taxonomy.v1.json` identity-contact
@@ -58,6 +59,7 @@ Application Assist does **not**:
 - click Next, Continue, Apply, or Submit
 - fill passwords, file uploads, hidden controls, questionnaires, EEO, legal, or attestation controls
 - overwrite existing or user-edited values
+- infer that an observed, stale, forwarding, or merely known phone number is the operator's preferred high-stakes contact channel
 - continue writing after Pause or Emergency Stop
 - undo values the operator edited after EscapeHatch inserted them
 - request broad host permissions or make page-runtime network requests

@@ -3,8 +3,10 @@
 const PROFILE_KEY = "escapeHatch.applicationAssistProfile.v1";
 const LEGACY_PROFILE_KEY = "escapeHatch.applicationAutofillProfile.v1";
 const SESSION_KEY = "escapeHatch.applicationAssistSession.v1";
-const EXPORT_SCHEMA = "escapehatch-application-assist-profile/v1";
+const EXPORT_SCHEMA = "escapehatch-application-assist-profile/v2";
+const LEGACY_ASSIST_EXPORT_SCHEMA = "escapehatch-application-assist-profile/v1";
 const LEGACY_EXPORT_SCHEMA = "escapehatch-application-autofill-profile/v1";
+const PHONE_AUTHORITY_VALUES = ["unconfirmed", "user_confirmed_primary", "secondary_or_forwarded"];
 const MAX_IMPORT_BYTES = 65536;
 const PROFILE_KEYS = [
   "name_prefix",
@@ -47,6 +49,8 @@ function readForm() {
     const value = document.getElementById(key).value.trim();
     if (value) profile[key] = value;
   }
+  const authority = document.getElementById("phone_authority").value;
+  profile.phone_authority = PHONE_AUTHORITY_VALUES.includes(authority) ? authority : "unconfirmed";
   return profile;
 }
 
@@ -54,6 +58,16 @@ function writeForm(profile) {
   for (const key of PROFILE_KEYS) {
     document.getElementById(key).value = profile && typeof profile[key] === "string" ? profile[key] : "";
   }
+  const authority = profile && typeof profile.phone_authority === "string" ? profile.phone_authority : "unconfirmed";
+  document.getElementById("phone_authority").value = PHONE_AUTHORITY_VALUES.includes(authority) ? authority : "unconfirmed";
+}
+
+function hasProfileValues(profile) {
+  return PROFILE_KEYS.some((key) => typeof profile[key] === "string" && profile[key].trim());
+}
+
+function countProfileValues(profile) {
+  return PROFILE_KEYS.filter((key) => typeof profile[key] === "string" && profile[key].trim()).length;
 }
 
 function sanitizeProfile(profile) {
@@ -69,6 +83,11 @@ function sanitizeProfile(profile) {
     const value = profile[key].trim();
     if (value) clean[key] = value;
   }
+  const authority = typeof profile.phone_authority === "string" ? profile.phone_authority : "unconfirmed";
+  if (!PHONE_AUTHORITY_VALUES.includes(authority)) {
+    throw new Error("Profile phone_authority is invalid.");
+  }
+  clean.phone_authority = authority;
   return clean;
 }
 
@@ -98,7 +117,7 @@ async function saveSession(session) {
 async function saveProfile() {
   const profile = sanitizeProfile(readForm());
   await chrome.storage.local.set({ [PROFILE_KEY]: profile });
-  setStatus(`Saved ${Object.keys(profile).length} profile fields locally.`);
+  setStatus(`Saved ${countProfileValues(profile)} profile fields locally.`);
 }
 
 async function clearProfile() {
@@ -147,13 +166,21 @@ async function importProfile(file) {
   }
   const payload = JSON.parse(text);
   const schema = payload && payload.schema_version;
-  if (schema !== EXPORT_SCHEMA && schema !== LEGACY_EXPORT_SCHEMA) {
+  if (schema !== EXPORT_SCHEMA && schema !== LEGACY_ASSIST_EXPORT_SCHEMA && schema !== LEGACY_EXPORT_SCHEMA) {
     throw new Error("Import rejected: unsupported schema.");
   }
-  const profile = sanitizeProfile(payload.profile);
+  const rawProfile = payload && payload.profile;
+  const incoming =
+    rawProfile && typeof rawProfile === "object" && !Array.isArray(rawProfile) ? { ...rawProfile } : rawProfile;
+  if (incoming && typeof incoming === "object" && !Array.isArray(incoming)) {
+    if (schema !== EXPORT_SCHEMA || !Object.prototype.hasOwnProperty.call(incoming, "phone_authority")) {
+      incoming.phone_authority = "unconfirmed";
+    }
+  }
+  const profile = sanitizeProfile(incoming);
   await chrome.storage.local.set({ [PROFILE_KEY]: profile });
   writeForm(profile);
-  setStatus(`Imported ${Object.keys(profile).length} profile fields locally.`);
+  setStatus(`Imported ${countProfileValues(profile)} profile fields locally.`);
 }
 
 async function activeTab() {
@@ -222,7 +249,7 @@ async function startAssist() {
 async function fillAllowedFields() {
   const storedProfile = await chrome.storage.local.get(PROFILE_KEY);
   const profile = sanitizeProfile(storedProfile[PROFILE_KEY] || readForm());
-  if (!Object.keys(profile).length) {
+  if (!hasProfileValues(profile)) {
     setStatus("No saved profile. Save or import one first.");
     return;
   }
@@ -301,6 +328,13 @@ async function recordConfirmationEvidence() {
   setStatus("Recorded confirmation metadata for companion evidence. Submission remains manual.");
 }
 
+document.getElementById("phone").addEventListener("input", () => {
+  const authority = document.getElementById("phone_authority");
+  if (authority.value !== "unconfirmed") {
+    authority.value = "unconfirmed";
+    setStatus("Phone changed. Reconfirm which primary career number you control before autofill can use it.");
+  }
+});
 document.getElementById("save").addEventListener("click", () => saveProfile().catch((error) => setStatus(error.message)));
 document.getElementById("clear").addEventListener("click", () => clearProfile().catch((error) => setStatus(error.message)));
 document.getElementById("export").addEventListener("click", () => exportProfile().catch((error) => setStatus(error.message)));

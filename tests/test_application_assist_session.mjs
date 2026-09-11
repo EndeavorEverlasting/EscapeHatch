@@ -45,6 +45,7 @@ const profile = {
   preferred_name: "Alex",
   email: "alex@example.invalid",
   phone: "+1 555 010 0142",
+  phone_authority: "user_confirmed_primary",
   linkedin_url: "https://www.linkedin.com/in/example-candidate",
   street_address: "123 Example Avenue",
   city: "Example City",
@@ -54,6 +55,8 @@ const profile = {
   extra_field: "must not survive"
 };
 assert.deepEqual(Object.keys(core.normalizeProfile(profile)).sort(), [...core.PROFILE_KEYS].sort());
+assert.equal(core.phoneAuthority(profile), "user_confirmed_primary");
+assert.equal(core.phoneAuthority({ phone: "+1 555 010 0999" }), "unconfirmed");
 
 const session = core.createSession({ origin: "https://jobs.example.invalid" });
 assert.equal(session.status, "active");
@@ -74,6 +77,20 @@ const fields = [
 ];
 
 const plan = core.buildFillPlan(fields, profile, session);
+const unconfirmedPhonePlan = core.buildFillPlan(
+  [{ label: "Phone Number", value: "" }],
+  { phone: "+1 555 010 0999" },
+  session
+);
+assert.equal(unconfirmedPhonePlan.items.length, 0);
+assert.equal(unconfirmedPhonePlan.denied[0].decision, "phone_contact_not_user_confirmed_primary");
+const secondaryPhonePlan = core.buildFillPlan(
+  [{ label: "Phone Number", value: "" }],
+  { phone: "+1 555 010 0999", phone_authority: "secondary_or_forwarded" },
+  session
+);
+assert.equal(secondaryPhonePlan.items.length, 0);
+assert.equal(secondaryPhonePlan.denied[0].decision, "phone_contact_not_user_confirmed_primary");
 assert.equal(plan.schema_version, "escapehatch-application-fill-plan/v1");
 assert.deepEqual(
   plan.items.map((item) => item.profile_key),
@@ -169,7 +186,11 @@ assert.equal(blocked.skipped_reason, "session_not_active");
 
 const phone = new FakeInput({ label: "Phone Number", autocomplete: "tel" });
 const undoSession = core.createSession({ origin: "https://jobs.example.invalid" });
-const wrote = core.fillDocument({ querySelectorAll: () => [phone] }, { phone: "+1 555 010 0142" }, undoSession);
+const wrote = core.fillDocument(
+  { querySelectorAll: () => [phone] },
+  { phone: "+1 555 010 0142", phone_authority: "user_confirmed_primary" },
+  undoSession
+);
 assert.equal(phone.value, "+1 555 010 0142");
 const undone = core.undoLastFill({ querySelectorAll: () => [phone] }, wrote.session);
 assert.equal(undone.undone, 1);

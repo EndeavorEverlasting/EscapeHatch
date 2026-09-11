@@ -33,6 +33,7 @@ do
     cd "$snapshot"
     python scripts/validate_governance.py
     python scripts/validate_product_version.py
+    python scripts/validate_repository_promotion.py
     python scripts/validate_harness.py
   )
 

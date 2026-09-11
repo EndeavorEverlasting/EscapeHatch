@@ -1,0 +1,482 @@
+{
+  "schema": "escapehatch/repository-promotion/v1",
+  "version": 1,
+  "authority": "contracts/repository-promotion.v1.json",
+  "purpose": "Provider-agnostic repository promotion policy that advances an exact validated candidate through canonical validation to an authorized provider-side merge, tag, or deployment. GitHub Actions is the bound concrete adapter when the observed remote is github.com; the contract remains host-agnostic and fail-closed when identity, checks, or provider truth is stale or partial.",
+  "mcp_retrieval_contract": {
+    "status": "MCP_RETRIEVAL_BLOCKED",
+    "reason": "Augment Context Engine MCP not configured in this environment; promotion authority, validation owners, and write authority were resolved via direct checkout, refreshed Git state, GitHub API, and repository-owned validators. MCP maps architecture; it does not prove current SHA, branch protection, PR/check state, or credentials.",
+    "evidence_actions": [
+      "git fetch --all --prune --tags + resolve origin/main",
+      "gh api repos/EndeavorEverlasting/EscapeHatch/branches/main/protection",
+      "gh api repos/EndeavorEverlasting/EscapeHatch/actions/workflows",
+      "gh api repos/EndeavorEverlasting/EscapeHatch/actions/runs",
+      "inspection of .github/workflows/*.yml, scripts/validate_*.py, harness/manifest.v1.json, ARTIFACT_REGISTRY.md"
+    ]
+  },
+  "host_identity": {
+    "observed_host": "github.com",
+    "observed_remote": "https://github.com/EndeavorEverlasting/EscapeHatch.git",
+    "canonical_scm": "github",
+    "active_adapter": "github-actions",
+    "binding_rule": "Resolve remotes; if remote host is github.com or GHES, bind github-actions adapter. If gitlab, azure, bitbucket, gitea/forgejo, bind that host's adapter. Fail closed if no adapter exists for observed host.",
+    "supported_adapters": [
+      {
+        "id": "github-actions",
+        "scm": "github",
+        "hosts": ["github.com", "GHES"],
+        "workflow": ".github/workflows/promotion.yml",
+        "capability_map": {
+          "readiness_events": ["pull_request", "merge_group", "push", "workflow_dispatch"],
+          "required_check_query": "GET /repos/{owner}/{repo}/commits/{sha}/check-runs + GET /repos/{owner}/{repo}/commits/{sha}/status + GET /repos/{owner}/{repo}/pulls/{number}/reviews + GraphQL unresolved threads",
+          "review_thread_query": "GET /repos/{owner}/{repo}/pulls/{number}/reviews + GET /repos/{owner}/{repo}/pulls/{number}/comments + GraphQL reviewThreads",
+          "expected_head_merge": "PUT /repos/{owner}/{repo}/pulls/{number}/merge with sha parameter (compare-and-set)",
+          "merge_queue": "POST /repos/{owner}/{repo}/merges or merge queue API when protection requires queue",
+          "artifact_identity": "commit SHA + run ID + artifact checksum",
+          "least_privilege_scopes": {
+            "contents": "write (only in promote job)",
+            "pull-requests": "write (only in promote job)",
+            "checks": "read",
+            "actions": "read"
+          }
+        }
+      },
+      {
+        "id": "gitlab-ci",
+        "scm": "gitlab",
+        "hosts": ["gitlab.com", "self-hosted gitlab"],
+        "workflow": ".gitlab-ci.yml",
+        "capability_map": {
+          "readiness_events": ["merge_request", "push", "manual"],
+          "required_check_query": "pipelines + jobs API",
+          "review_thread_query": "merge request discussions API",
+          "expected_head_merge": "PUT /projects/:id/merge_requests/:iid/merge with merge_commit_sha",
+          "merge_queue": "merge trains",
+          "artifact_identity": "commit SHA + pipeline ID + artifact checksum",
+          "least_privilege_scopes": {
+            "note": "Adapter stub: contract is provider-agnostic; concrete GitLab adapter not yet bound. Fail closed with capability gap if observed host is GitLab without adapter implementation."
+          }
+        }
+      },
+      {
+        "id": "azure-devops",
+        "scm": "azure",
+        "hosts": ["dev.azure.com"],
+        "workflow": "azure-pipelines.yml",
+        "capability_map": {
+          "note": "Stub: provider-agnostic contract reserves Azure adapter; concrete implementation required before promotion on Azure host. Fail closed until adapter exists."
+        }
+      }
+    ],
+    "provider_capability_map_before_yaml": "Build event -> candidate SHA/base -> validation jobs -> artifacts -> approval/protection gates -> mutation/promotion action -> post-promotion proof. Reuse compatible pipeline; do not create second integration authority."
+  },
+  "separation_of_concerns": {
+    "authoring_ends_before_promotion": true,
+    "promotion_owns": "validation and authorized advancement of exact candidate",
+    "authoring_sources": ["human", "agent developer", "bounded repo-native generator"],
+    "no_opportunistic_rewrite": "CI must not rewrite source unless a separately owned canonical generator explicitly requires that step; preserve generated-surface ownership and one-writer rules."
+  },
+  "candidate_identity": {
+    "fields": ["head_sha", "base_sha", "merge_base", "version_authority", "dependency_locks"],
+    "head_sha_source": "git rev-parse HEAD at workflow start and re-read immediately before mutation",
+    "base_sha_source": "pull_request.base.sha or merge-base with origin/main",
+    "merge_base_source": "git merge-base HEAD origin/main",
+    "version_authority": "VERSION (SemVer) + contracts/product-release.v1.json mirrors + CHANGELOG.md heading",
+    "dependency_locks": ["browser/application-assist/manifest.json#version mirror", "no npm lock in this repo; if added, lock identity would be pinned"],
+    "artifact_identity": "commit SHA is primary; build artifacts later bind to SHA + run ID + checksum",
+    "pin_before_promotion": true,
+    "invalidate_on_move": true,
+    "attribution_rule": "Every required job/receipt must be attributable to candidate head SHA. If head, base, owning validator, required workflow, generated input, or artifact moves materially after proof, invalidate and rerun affected gates. Never promote whatever is currently on branch after validating earlier SHA. For merge queues, record source head plus tested merge candidate SHA.",
+    "merge_queue_synthetic_merge": "Record source head plus tested merge candidate (GH merge_group sha) when queue is in use."
+  },
+  "validation_dag": {
+    "principle": "cheapest-to-strongest; every required existing gate needs one owner, command, inputs, outputs, blocking semantics. Host CI invokes repo-owned commands; provider YAML orchestrates and does not become a second test implementation.",
+    "categories": [
+      "structural/schema/format",
+      "lint/type/static",
+      "unit",
+      "integration",
+      "build/package",
+      "harness-e2e",
+      "application-e2e",
+      "release/deploy-specific",
+      "promotion"
+    ],
+    "gates": [
+      {
+        "id": "governance-structure",
+        "category": "structural/schema/format",
+        "owner": "scripts/validate_governance.py",
+        "command": "python scripts/validate_governance.py",
+        "inputs": ["AGENTS.md"],
+        "outputs": ["GOVERNANCE_VALIDATION PASS/FAIL"],
+        "blocking": "REQUIRED"
+      },
+      {
+        "id": "product-version-structure",
+        "category": "structural/schema/format",
+        "owner": "scripts/validate_product_version.py",
+        "command": "python scripts/validate_product_version.py",
+        "inputs": ["VERSION", "contracts/product-release.v1.json", "CHANGELOG.md", "browser/application-assist/manifest.json"],
+        "outputs": ["PRODUCT_VERSION_VALIDATION PASS/FAIL"],
+        "blocking": "REQUIRED"
+      },
+      {
+        "id": "repository-promotion-structure",
+        "category": "structural/schema/format",
+        "owner": "scripts/validate_repository_promotion.py",
+        "command": "python scripts/validate_repository_promotion.py",
+        "inputs": ["contracts/repository-promotion.v1.json", ".github/workflows/promotion.yml", "harness/manifest.v1.json"],
+        "outputs": ["REPOSITORY_PROMOTION_VALIDATION PASS/FAIL"],
+        "blocking": "REQUIRED"
+      },
+      {
+        "id": "compile-static",
+        "category": "lint/type/static",
+        "owner": "python -m py_compile",
+        "command": "python -m py_compile scripts/validate_governance.py scripts/validate_product_version.py scripts/product_version.py scripts/validate_application_harness.py scripts/validate_application_companion.py scripts/validate_resume_presentation.py scripts/validate_harness.py scripts/validate_career_state.py scripts/validate_repository_promotion.py scripts/promotion_guard.py scripts/export_study_guidance.py tests/test_product_version.py tests/test_repository_promotion.py tests/test_study_guidance_export.py",
+        "inputs": ["scripts/**/*.py", "tests/**/*.py"],
+        "outputs": ["compile PASS/FAIL"],
+        "blocking": "REQUIRED"
+      },
+      {
+        "id": "whitespace-format",
+        "category": "lint/type/static",
+        "owner": "git diff --check",
+        "command": "git diff --check",
+        "inputs": ["tracked files"],
+        "outputs": ["whitespace PASS/FAIL"],
+        "blocking": "REQUIRED"
+      },
+      {
+        "id": "unit-product-version",
+        "category": "unit",
+        "owner": "tests/test_product_version.py",
+        "command": "python tests/test_product_version.py",
+        "inputs": ["VERSION", "contracts/product-release.v1.json"],
+        "outputs": ["unit PASS/FAIL"],
+        "blocking": "REQUIRED"
+      },
+      {
+        "id": "unit-promotion-guard",
+        "category": "unit",
+        "owner": "tests/test_repository_promotion.py",
+        "command": "python tests/test_repository_promotion.py",
+        "inputs": ["contracts/repository-promotion.v1.json", "scripts/promotion_guard.py"],
+        "outputs": ["unit PASS/FAIL"],
+        "blocking": "REQUIRED"
+      },
+      {
+        "id": "unit-study-guidance",
+        "category": "unit",
+        "owner": "tests/test_study_guidance_export.py",
+        "command": "python tests/test_study_guidance_export.py",
+        "inputs": ["fixtures/career-state.v1.example.json"],
+        "outputs": ["unit PASS/FAIL"],
+        "blocking": "REQUIRED"
+      },
+      {
+        "id": "integration-application-harness",
+        "category": "integration",
+        "owner": "scripts/validate_application_harness.py",
+        "command": "python scripts/validate_application_harness.py",
+        "inputs": ["harness/contracts/application-form-taxonomy.v1.json", "harness/contracts/application-preference-cache.v1.json"],
+        "outputs": ["APPLICATION_HARNESS PASS/FAIL"],
+        "blocking": "REQUIRED"
+      },
+      {
+        "id": "integration-application-companion",
+        "category": "integration",
+        "owner": "scripts/validate_application_companion.py",
+        "command": "python scripts/validate_application_companion.py",
+        "inputs": ["contracts/application-companion.v1.json", "fixtures/application-companion.v1.example.json"],
+        "outputs": ["APPLICATION_COMPANION PASS/FAIL"],
+        "blocking": "REQUIRED"
+      },
+      {
+        "id": "integration-resume-presentation",
+        "category": "integration",
+        "owner": "scripts/validate_resume_presentation.py",
+        "command": "python scripts/validate_resume_presentation.py",
+        "inputs": ["contracts/resume-presentation.v1.json"],
+        "outputs": ["RESUME_PRESENTATION PASS/FAIL"],
+        "blocking": "REQUIRED"
+      },
+      {
+        "id": "integration-career-state",
+        "category": "integration",
+        "owner": "scripts/validate_career_state.py",
+        "command": "python scripts/validate_career_state.py",
+        "inputs": ["contracts/career-state.v1.schema.json", "fixtures/career-state.v1.example.json"],
+        "outputs": ["CAREER_STATE PASS/FAIL"],
+        "blocking": "REQUIRED"
+      },
+      {
+        "id": "build-harness",
+        "category": "build/package",
+        "owner": "scripts/validate_harness.py (plus compile)",
+        "command": "python scripts/validate_harness.py",
+        "inputs": ["harness/manifest.v1.json", "ARTIFACT_REGISTRY.md", "harness/CODEBASE_MAP.md", "harness/WORKFLOWS.md"],
+        "outputs": ["HARNESS_VALIDATION PASS/FAIL"],
+        "blocking": "REQUIRED"
+      },
+      {
+        "id": "harness-e2e",
+        "category": "harness-e2e",
+        "owner": "scripts/validate_harness.py",
+        "command": "python scripts/validate_harness.py",
+        "description": "Validates repository contracts, validators, registries, fixtures, workflows, and proof machinery together. Synthetic/offline harness PASS cannot substitute for live/application E2E.",
+        "inputs": ["harness/manifest.v1.json + all validators"],
+        "outputs": ["harness receipt: manifest components, registered_artifacts, negative_fixtures, validator PASS lines"],
+        "blocking": "REQUIRED",
+        "cannot_substitute": "application-e2e"
+      },
+      {
+        "id": "application-e2e",
+        "category": "application-e2e",
+        "owner": "tests/test_application_assist_session.mjs + contract test",
+        "commands": [
+          "python tests/test_application_assist_session_contract.py",
+          "node tests/test_application_assist_session.mjs",
+          "node --check browser/application-assist/popup.js"
+        ],
+        "description": "Validates user/system behavior through real product entrypoint: browser extension Fill Plan -> policy gate -> DOM writer. Tests Pause/Resume/Emergency Stop/Undo. Application smoke cannot substitute for harness integrity.",
+        "inputs": ["browser/application-assist/**", "contracts/application-assist-session.v1.json"],
+        "outputs": ["application E2E receipt: Fill Plan, policy gate, stop/undo proofs"],
+        "blocking": "REQUIRED",
+        "cannot_substitute": "harness-e2e",
+        "compose_both": true
+      },
+      {
+        "id": "release-gate",
+        "category": "release/deploy-specific",
+        "owner": "scripts/validate_product_version.py + scripts/product_version.py tag-plan",
+        "command": "python scripts/validate_product_version.py && python scripts/product_version.py tag-plan",
+        "description": "Release-specific checks: VERSION mirror drift, CHANGELOG heading, tag reuse refusal, must_point_at exact_validated_commit.",
+        "inputs": ["VERSION", "CHANGELOG.md", "browser/application-assist/manifest.json"],
+        "outputs": ["release artifact identity: tag vX.Y.Z -> commit SHA"],
+        "blocking": "REQUIRED_FOR_TAG_RELEASE",
+        "optional_for_branch_merge": true
+      },
+      {
+        "id": "promotion",
+        "category": "promotion",
+        "owner": ".github/workflows/promotion.yml promote job + scripts/promotion_guard.py",
+        "command": "gh api merge with expected_head_sha (compare-and-set) or merge queue entry",
+        "description": "Promotion mutation via provider API only after all REQUIRED gates succeed for exact candidate. Never local git merge.",
+        "inputs": ["candidate SHA/base, required check conclusions, review decision, unresolved thread count"],
+        "outputs": ["promotion receipt: run ID, candidate HEAD/base, policy version, check conclusions, review status, merge API response, integration SHA"],
+        "blocking": "REQUIRED",
+        "depends_on": ["governance-structure", "compile-static", "unit-product-version", "unit-promotion-guard", "harness-e2e", "application-e2e"]
+      }
+    ],
+    "no_required_category_without_owner": true,
+    "provider_yaml_shall_not_duplicate_logic": true
+  },
+  "harness_vs_application_e2e": {
+    "rule": "Keep harness E2E and application E2E distinct; report each proof level separately. Harness E2E validates repository contracts/validators/registries/fixtures/workflows together. Application E2E validates user behavior through real product entrypoint (browser extension). Neither substitutes for the other.",
+    "harness_e2e_gate": "harness-e2e",
+    "application_e2e_gate": "application-e2e",
+    "both_required": true
+  },
+  "required_checks_manifest": {
+    "policy_version": "1",
+    "owner_path": "contracts/repository-promotion.v1.json#required_checks_manifest",
+    "description": "Explicit repository-owned required-check names for each destination. Query conclusions for exact candidate SHA; require every named check; do not infer readiness from whichever checks happen to be visible, aggregate green badge, or check counts. Renamed/missing check is blocking contract mismatch until policy deliberately updated.",
+    "destinations": {
+      "main": {
+        "branch": "main",
+        "checks": [
+          {
+            "workflow": "Harness Validation",
+            "job": "validate",
+            "name": "Harness Validation / validate",
+            "conclusion": "success"
+          },
+          {
+            "workflow": "Harness Validation",
+            "job": "windows-location",
+            "name": "Harness Validation / windows-location",
+            "conclusion": "success"
+          },
+          {
+            "workflow": "Career State Validation",
+            "job": "validate",
+            "name": "Career State Validation / validate",
+            "conclusion": "success"
+          },
+          {
+            "workflow": "Application Assist Session Validation",
+            "job": "validate",
+            "name": "Application Assist Session Validation / validate",
+            "conclusion": "success"
+          },
+          {
+            "workflow": "Repository Promotion",
+            "job": "validate",
+            "name": "Repository Promotion / validate",
+            "conclusion": "success"
+          },
+          {
+            "workflow": "Repository Promotion",
+            "job": "promotion-guard",
+            "name": "Repository Promotion / promotion-guard",
+            "conclusion": "success"
+          }
+        ]
+      },
+      "release-tag": {
+        "tag_pattern": "v{release}",
+        "checks": [
+          {
+            "workflow": "Harness Validation",
+            "job": "validate",
+            "name": "Harness Validation / validate",
+            "conclusion": "success"
+          },
+          {
+            "workflow": "Repository Promotion",
+            "job": "release-gate",
+            "name": "Repository Promotion / release-gate",
+            "conclusion": "success"
+          }
+        ]
+      }
+    }
+  },
+  "provider_triggers_and_dependencies": {
+    "github-actions": {
+      "candidate_validation_on": ["pull_request"],
+      "merge_group_when_queue": ["merge_group"],
+      "post_integration": ["push"],
+      "operator_initiated": ["workflow_dispatch"],
+      "schedule_external_only_when_needed": false,
+      "job_dependencies": "promotion cannot start before all REQUIRED gates succeed; encode via needs: [validate, harness-e2e, application-e2e, promotion-guard]",
+      "path_filters": "optimization only, not permission to skip gate whose inputs changed indirectly",
+      "prefer_reusable": true
+    }
+  },
+  "fail_closed": {
+    "classification": ["REQUIRED", "OPTIONAL", "INAPPLICABLE", "ENVIRONMENT-BLOCKED"],
+    "rules": [
+      "REQUIRED + SKIP is not green",
+      "Cancelled, timed-out, neutral, stale, missing required results cannot satisfy promotion",
+      "continue-on-error is forbidden for promotion-critical gates unless downstream explicitly consumes and rejects failure",
+      "Bounded retries may address identified transient infrastructure failures; deterministic test failures do not become green by repetition",
+      "Missing/renamed required check blocks promotion as contract mismatch"
+    ]
+  },
+  "write_authority_concurrency_recursion": {
+    "least_privilege": {
+      "read_jobs": {
+        "permissions": {
+          "contents": "read",
+          "checks": "read",
+          "pull-requests": "read",
+          "actions": "read"
+        }
+      },
+      "write_promote_job": {
+        "permissions": {
+          "contents": "write",
+          "pull-requests": "write",
+          "checks": "read",
+          "actions": "read"
+        },
+        "environment_scoped_credentials": "GitHub App or GITHUB_TOKEN with minimal scopes; never hardcode long-lived PAT; never echo secrets into logs/artifacts"
+      }
+    },
+    "concurrency": {
+      "group": "promotion-${{ github.ref }} or promotion-main",
+      "cancel_in_progress": false,
+      "serialize_mutation": "concurrency or merge queue so two successful runs cannot race branch/tag/deployment"
+    },
+    "recursion_guard": {
+      "actor_guard": "if github.actor == 'github-actions[bot]' and commit message contains 'chore(promotion)' skip promoter to avoid loop",
+      "event_guard": "push triggered by bot promotion commit does not recursively trigger another promotion; check commit author and tag message",
+      "path_guard": "promotion workflow does not trigger on its own receipt artifacts",
+      "provenance_guard": "require candidate head not already integrated; idempotency check before mutation"
+    },
+    "reject_unauthorized_destinations": "Even if token can technically write, reject destinations not listed in promotion policy destinations."
+  },
+  "provider_side_merge_executor": {
+    "durable_system_owns_last_mile": true,
+    "implementation": "Host-facing workflow/bot bound through promotion adapter. For GitHub remote, a GitHub Actions workflow (.github/workflows/promotion.yml) with promotion-guard and promote jobs acts as the merge executor.",
+    "required_check_manifest_usage": "Query provider truth directly for PR/MR state, exact head/base identity, draft/open state, head repository, mergeability/queue eligibility, branch/ruleset requirements, review decision, unresolved threads. Treat unresolved threads or insufficient approval as blocking even when CI is green. Keep explicit required-check names in tracked manifest; query conclusions for exact candidate SHA; require every named check; do not infer readiness from visible checks, aggregate badge, or counts. Renamed/missing check is blocking mismatch.",
+    "wake_events": ["pull_request.opened", "pull_request.synchronize", "pull_request.reopened", "pull_request.ready_for_review", "check_suite.completed", "workflow_run.completed", "pull_request_review.submitted", "pull_request_review_thread.resolved", "push to base (recheck base move)", "merge_group.checks_requested"],
+    "bounded_recovery_recheck": "Where provider event coverage is incomplete, schedule bounded polling (e.g., workflow_dispatch every 15m limited to promotion label) that reconstructs readiness from provider truth; does not trust remembered model state.",
+    "immediate_reread_before_mutation": "Immediately before mutation, re-read provider truth and compare current head/base/gates with proven candidate. Merge through provider API with expected_head_sha when direct merge authorized, or enter merge queue when protection requires it. Never bypass queue/protection merely because token can write.",
+    "local_checkout_not_part_of_merge": "Local branch switch/checkout is not part of normal merge convergence. Local checkout may be used for authoring/diagnostics/validation but readiness and merge side effect are provider-side operations. Terminal success criterion is provider merge/queue result plus refreshed containment, not local branch state.",
+    "idempotency": "Make duplicate wakeups idempotent. If PR already merged, verify integration SHA/containment and emit existing-success receipt rather than attempting another mutation. Serialize competing writers and use compare-and-set/expected-head semantics so head move between readiness evaluation and merge is rejected.",
+    "least_privilege": "Give merge executor only minimum GitHub App/workflow permissions (for GitHub adapter: contents:write + pull-requests:write on promote job only; read elsewhere). Never hardcode long-lived PAT. Record app/workflow identity, event ID/run ID, host adapter identity, policy/check-set version, candidate SHA/base, review-thread status, merge API/queue response, resulting integration SHA in promotion receipt.",
+    "promotion_receipt_fields": ["provider", "adapter", "run_id", "event_id", "actor", "policy_version", "candidate_head_sha", "base_sha", "merge_base", "required_checks_policy_version", "required_checks_and_conclusions", "review_decision", "unresolved_thread_count", "harness_receipt_id", "e2e_receipt_id", "artifact_identity", "target_branch_or_tag", "merge_api_response", "integration_sha", "post_promotion_containment", "proof_ceiling"]
+  },
+  "degraded_provider": {
+    "rule": "Promotion must remain correct when authoritative provider is down, rate-limited, or returns incomplete truth. Local validation may still run and write harness receipts while provider degraded; promotion mutation is blocked when required provider APIs unavailable/rate-limited/incomplete.",
+    "receipt_statuses": ["PROVIDER_UNAVAILABLE", "PROVIDER_RATE_LIMITED", "PROVIDER_PARTIAL_TRUTH"],
+    "retry": "Bounded backoff/retry applies only to identified transient provider infra failures. Deterministic validation failures and missing required checks do not become green by repetition; invented check conclusions forbidden.",
+    "preserve_last_known_good": "Preserve last known-good promotion receipt and candidate identity; do not rewrite history or claim success from local branch state.",
+    "neighbor_routing": "Test-floor reliability alone routes to P112; permissioned upstream polling/sync alone routes to P102; keep this prompt for promotion authority."
+  },
+  "artifacts_and_caches": {
+    "build_once_promote_same": "Prefer build-once/promote-the-same-artifact for deployable artifacts. Record source SHA, dependency/lock identity, build/run identity, checksums or equivalent immutable artifact identity, and destination.",
+    "cache_rule": "Cache hits may speed work but may not masquerade as fresh validation; keys/restoration rules must prevent stale artifacts or test outputs from satisfying new candidate. Validate reused artifacts where trust boundaries require it.",
+    "provenance_fields": ["source_sha", "dependency_lock_identity", "build_run_id", "checksum_or_artifact_identity", "destination"]
+  },
+  "test_environment_lifecycle": {
+    "harness_e2e_lifecycle": {
+      "fixtures": ["fixtures/career-state.v1.example.json", "fixtures/application-companion.v1.example.json"],
+      "startup": "No service/container needed; harness validators run in isolated tmp dir via python",
+      "readiness": "validator exit code 0",
+      "isolation": "Run in temp snapshot; never mutate repository root",
+      "teardown": "Remove tmp snapshot"
+    },
+    "application_e2e_lifecycle": {
+      "fixtures": ["browser/application-assist/**", "contracts/application-assist-session.v1.json"],
+      "startup": "Node test harness boots jsdom or lightweight DOM; no browser required for unit-level E2E. For live ATS proof, unpacked extension loaded manually via docs/APPLICATION_ASSIST_SESSION.md",
+      "readiness": "node tests/test_application_assist_session.mjs exit 0",
+      "isolation": "Test workspace is in-memory; never writes real user profile",
+      "bounded_waits": "Set timeout 5s per DOM operation; fail closed on timeout",
+      "teardown": "Clear in-memory stores",
+      "repeatable": true,
+      "no_production_corruption": true,
+      "when_production_like_unavailable": "Preserve exact proof ceiling rather than silently downgrading gate; report PROOF_CEILING not live ATS acceptance."
+    }
+  },
+  "prototype_success_and_blocking_paths": {
+    "prove": [
+      "green exact-head path reaches authorized provider-side promotion action without remembered human/agent merge step",
+      "harness-validator failure blocks promotion",
+      "application-E2E failure blocks promotion when required",
+      "required SKIP blocks",
+      "explicitly required check missing/renamed/pending/failing blocks",
+      "unresolved review thread or insufficient required approval blocks",
+      "stale/moved candidate blocks at final provider re-read (expected_head_sha mismatch)",
+      "unauthorized target blocks",
+      "duplicate wakeups are idempotent",
+      "concurrent writer/merge-queue behavior is safe (concurrency group)",
+      "recursion guard prevents bot loop"
+    ],
+    "method": "Prefer targeted fault injection/fixtures over damaging real branches/environments; inject failing validator, missing check, draft PR, unresolved thread fixture, stale SHA, unauthorized branch."
+  },
+  "failed_gates_feed_development": {
+    "pipeline_is_promotion_only": true,
+    "on_failure_emit": ["candidate_head_sha", "base_sha", "failing_job_or_check", "relevant_artifact_or_log", "owning_surface", "required_acceptance_condition", "proof_ceiling"],
+    "hand_to_P115": "When repository policy allows AFK repair, hand exact signal to P115 AFK Feedback-Driven Development Loop Executor and keep promotion blocked. Repair owner must create new exact candidate; re-enter P105 from beginning and never reuse proof from failed candidate."
+  },
+  "observability_and_audit": {
+    "workflow_summary_and_machine_receipt": {
+      "fields": ["provider_run_id", "event_id", "actor_identity", "candidate_head_sha", "base_sha", "required_check_policy_version", "exact_check_names_and_conclusions", "review_decision", "unresolved_thread_count", "harness_receipt_identity", "e2e_receipt_artifacts", "promoted_artifact_identity", "target", "merge_api_or_queue_result", "final_integration_or_deployment_sha", "proof_ceiling"]
+    },
+    "logs_must_make_first_failing_gate_obvious": true
+  },
+  "post_promotion_containment": {
+    "default_branch_integration": "After push/merge/release/deploy, refresh provider truth. For default-branch integration, verify proven integration SHA is ancestor of refreshed default head via git merge-base --is-ancestor; do not fail because later valid commits landed. For release/deploy, verify published/deployed artifact resolves to proven candidate/artifact identity and required health/smoke checks pass. Queued or accepted command is not successful deployment.",
+    "verification_command": "git fetch --all --prune --tags && git rev-parse origin/main && git merge-base --is-ancestor <proven-integration-sha> origin/main"
+  },
+  "stop_at_bounded_fixed_point": {
+    "inspect_once_more": ["successful run", "negative-path runs", "permissions", "concurrency", "trigger filters", "artifact lineage", "receipts", "post-promotion state"],
+    "repair_concrete_holes_and_rerun": true,
+    "stop_when": "one representative promotion path is reproducible, required failures reliably block it, and no practical bypass/stale-proof/race/recursive-writer gap remains. Expand destinations only through explicit scope."
+  }
+}

@@ -1,0 +1,132 @@
+{
+  "schema": "escapehatch/application-assist-session/v1",
+  "version": 1,
+  "mission": "Persistent same-application assist session that fills only deterministic allowed identity/contact fields through a canonical Fill Plan, while the operator navigates and submits manually.",
+  "architecture": {
+    "pipeline": [
+      "user_owned_state",
+      "canonical_fill_plan",
+      "policy_gate",
+      "dom_writer"
+    ],
+    "invariant": "no_dom_write_may_bypass_canonical_fill_plan"
+  },
+  "surfaces": {
+    "browser_extension": {
+      "path": "browser/application-assist",
+      "manifest_version": 3,
+      "permissions": ["activeTab", "scripting", "storage"],
+      "host_permissions": "none",
+      "background_service": "none",
+      "always_on_content_script": false
+    }
+  },
+  "storage": {
+    "profile_key": "escapeHatch.applicationAssistProfile.v1",
+    "session_key": "escapeHatch.applicationAssistSession.v1",
+    "ownership": "user",
+    "persistence": "browser-local",
+    "repository_tracking": "forbidden",
+    "legacy_autofill_profile_key": "escapeHatch.applicationAutofillProfile.v1"
+  },
+  "portability": {
+    "export_schema": "escapehatch-application-assist-profile/v1",
+    "max_import_bytes": 65536,
+    "accepted_import_schemas": [
+      "escapehatch-application-assist-profile/v1",
+      "escapehatch-application-autofill-profile/v1"
+    ],
+    "security": [
+      "reject_oversized_payload",
+      "reject_unsupported_schema",
+      "accept_only_known_profile_keys",
+      "never_execute_imported_content",
+      "never_commit_real_profile_values"
+    ]
+  },
+  "session": {
+    "binding": "same_application_origin",
+    "statuses": ["idle", "active", "paused", "stopped"],
+    "controls": [
+      "Start Assist",
+      "Fill Allowed Fields",
+      "Pause",
+      "Resume",
+      "Emergency Stop",
+      "Undo Last Fill",
+      "Record Confirmation Evidence"
+    ],
+    "cross_origin_transition": "pause",
+    "stop_cancels_future_writes": true,
+    "pause_blocks_writes": true
+  },
+  "fill_plan": {
+    "authority": "canonical",
+    "allowed_families": ["identity-contact"],
+    "item_fields": [
+      "index",
+      "profile_key",
+      "question_id",
+      "value",
+      "decision"
+    ],
+    "writer_rule": "dom_writer_executes_only_gate_allowed_plan_items"
+  },
+  "policy_gate": {
+    "rules": [
+      "session_must_be_active",
+      "field_must_be_empty_or_escapehatch_owned_for_undo_only",
+      "preserve_existing_and_user_edited_values",
+      "unknown_fields_stay_blank",
+      "attestation_manual_only",
+      "no_password_file_hidden_or_disallowed_types",
+      "select_requires_exact_normalized_option_match",
+      "taxonomy_automation_policy_must_allow_fill"
+    ],
+    "forbidden_actions": [
+      "auto_submit",
+      "click_next_or_continue",
+      "auto_attestation",
+      "broad_host_permissions",
+      "page_runtime_network_requests"
+    ]
+  },
+  "undo": {
+    "scope": "last_fill_batch",
+    "restores": "only_untouched_escapehatch_inserted_values",
+    "user_edited_after_fill": "leave_in_place"
+  },
+  "evidence": {
+    "confirmation_recording": "user_invoked",
+    "allowed_sources": [
+      "explicit_user_action",
+      "same_session_page_confirmation",
+      "user_confirmed_external_evidence"
+    ],
+    "companion_contract": "escapehatch/application-companion/v1",
+    "stores_profile_values": false
+  },
+  "taxonomy_binding": {
+    "owner": "harness/contracts/application-form-taxonomy.v1.json",
+    "profile_key_to_question_id": {
+      "name_prefix": "identity.title",
+      "first_name": "identity.first_name",
+      "last_name": "identity.last_name",
+      "preferred_name": "identity.preferred_name",
+      "email": "identity.email",
+      "phone": "identity.phone",
+      "linkedin_url": "identity.linkedin",
+      "street_address": "identity.street_address",
+      "city": "identity.city",
+      "region": "identity.region",
+      "postal_code": "identity.postal_code",
+      "country": "identity.country"
+    }
+  },
+  "preference_policy": "harness/contracts/application-preference-cache.v1.json",
+  "proof_ceiling": [
+    "repository_contract_and_runtime_tests",
+    "unpacked_extension_control_loop_requires_observed_browser_proof",
+    "no_live_ats_compatibility_claim"
+  ]
+}

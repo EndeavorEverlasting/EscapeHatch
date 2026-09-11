@@ -4,7 +4,7 @@ These workflows implement `AGENTS.md`; they do not override governance.
 
 ## Workflow selection
 
-Use **Repository Location** for durable Windows checkout/worktree acquisition. Use **Task Pickup** for every writing sprint. Use **Application Form Intake** when application questions/pages are being mapped or automated. Use **Application Companion** when an installable/local client records career/application progress or synchronizes user-owned state. Use **Resume Presentation** whenever an agent creates, refreshes, tailors, exports, or synchronizes a resume/CV. Use **Failure Recovery** when a required command fails. Use **Handoff** before changing owners/chats or when an external blocker stops the lane.
+Use **Repository Location** for durable Windows checkout/worktree acquisition. Use **Task Pickup** for every writing sprint. Use **Application Form Intake** when application questions/pages are being mapped or automated. Use **Application Companion** when an installable/local client records career/application progress or synchronizes user-owned state. Use **Application Assist Session** when operating the browser extension control loop that fills deterministic allowed fields on a live application. Use **Resume Presentation** whenever an agent creates, refreshes, tailors, exports, or synchronizes a resume/CV. Use **Failure Recovery** when a required command fails. Use **Handoff** before changing owners/chats or when an external blocker stops the lane.
 
 ## Repository Location
 
@@ -75,6 +75,22 @@ The companion is an adapter around the canonical user-owned career-state contrac
 13. Validate with `python scripts/validate_application_companion.py`, then run the manifest validation order.
 
 Prompt Kit portability is a donor pattern, not a runtime dependency: preserve stable local identity across upgrades, keep transfer explicit and validated, treat imported content as data, and avoid making one hosted artifact the owner of user state.
+
+## Application Assist Session
+
+Use the unpacked Manifest V3 extension under `browser/application-assist` for same-application assist. Do not wholesale-merge the stale autofill PR; the current-main assist contract owns the control loop.
+
+1. Read `contracts/application-assist-session.v1.json` and `docs/APPLICATION_ASSIST_SESSION.md`.
+2. Load unpacked `browser/application-assist` in Chrome or Edge developer mode.
+3. Open the target application page, then **Start Assist** so the session binds to that origin.
+4. Save or import only user-owned profile values in the browser; never commit real PII.
+5. Choose **Fill Allowed Fields**. The runtime must build a canonical Fill Plan, pass the policy gate, and only then write the DOM.
+6. Navigate pages manually. Never allow the extension to click Next/Continue or submit.
+7. Use **Pause** / **Resume** across review. Cross-origin transitions must pause automatically.
+8. Use **Emergency Stop** to latch cancellation of future writes.
+9. Use **Undo Last Fill** only to reverse untouched EscapeHatch-inserted values.
+10. After the operator manually submits, optionally **Record Confirmation Evidence** as metadata for companion progress.
+11. Validate with `python tests/test_application_assist_session_contract.py` and `node tests/test_application_assist_session.mjs`.
 
 ## Resume Presentation
 

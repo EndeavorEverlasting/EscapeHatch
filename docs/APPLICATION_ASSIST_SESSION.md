@@ -32,6 +32,16 @@ values directly into the page.
 
 Cross-origin transitions pause the session automatically.
 
+### Three interaction languages
+
+Mouse, keyboard, and phone share one semantic action table owned by `contracts/application-assist-modality.v1.json`.
+
+| Mode | Grammar |
+| --- | --- |
+| Mouse | Visible direct controls; hover titles may show shortcuts but never own an essential path |
+| Keyboard | `/` or `Ctrl+K` opens the command palette; `S/F/P/R/U/C/G` run session/profile destinations; `Esc` dismisses overlays without stopping the session; `Shift+Esc` or `!` latches Emergency Stop |
+| Phone | Lands on a labeled session command sheet (not a compressed desktop form). Profile is a separate destination. Opening the sheet does not autofocus text fields or summon the software keyboard. Touch and synthesized click are deduped |
+
 Fill values resolve through the preference-cache precedence (`session_confirmation` → `opportunity_override` → `profile_preference`) when `escapeHatch.applicationQuestionPreferences.v1` is present, then fall back to the assist profile. Saving the assist profile also projects identity values into that preference store as `profile_preference` entries. The policy gate consults the taxonomy automation-policy mirror before allowing a write.
 
 ## Privacy and browser-local cache
@@ -82,10 +92,10 @@ Application Assist does **not**:
 
 ```bash
 python tests/test_application_assist_session_contract.py
+python tests/test_application_assist_modality_contract.py
 node tests/test_application_assist_session.mjs
+node tests/test_application_assist_modality.mjs
 git diff --check
 ```
 
-Repository tests prove the Fill Plan / policy / writer contract and control-loop safety. Live ATS
-compatibility and a completed real application still require observed browser proof with the unpacked
-extension.
+Repository tests prove the Fill Plan / policy / writer contract, control-loop safety, and three-mode semantic convergence. Live ATS compatibility, physical-phone ergonomics, and a completed real application still require observed browser/device proof with the unpacked extension.

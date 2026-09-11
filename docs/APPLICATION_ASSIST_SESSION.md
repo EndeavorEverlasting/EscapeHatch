@@ -28,9 +28,11 @@ values directly into the page.
 | Resume | Allowed only while the tab origin still matches the session |
 | Emergency Stop | Latches stopped status and cancels future writes until a new Start Assist |
 | Undo Last Fill | Restores only untouched EscapeHatch-inserted values from the last batch |
-| Record Confirmation Evidence | Stores metadata-only confirmation for companion progress; never submits |
+| Record Confirmation Evidence | Stores metadata-only confirmation and downloads a companion-compatible progress export; never submits |
 
 Cross-origin transitions pause the session automatically.
+
+Fill values resolve through the preference-cache precedence (`session_confirmation` → `opportunity_override` → `profile_preference`) when `escapeHatch.applicationQuestionPreferences.v1` is present, then fall back to the assist profile. Saving the assist profile also projects identity values into that preference store as `profile_preference` entries. The policy gate consults the taxonomy automation-policy mirror before allowing a write.
 
 ## Privacy and browser-local cache
 

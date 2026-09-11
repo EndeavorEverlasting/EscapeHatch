@@ -119,10 +119,126 @@
 
   const SESSION_STATUSES = Object.freeze(["idle", "active", "paused", "stopped"]);
   const PHONE_AUTHORITY_VALUES = Object.freeze(["unconfirmed", "user_confirmed_primary", "secondary_or_forwarded"]);
+  const PREFERENCE_STORAGE_KEY = "escapeHatch.applicationQuestionPreferences.v1";
+  const PREFERENCE_PRECEDENCE = Object.freeze([
+    "session_confirmation",
+    "opportunity_override",
+    "profile_preference"
+  ]);
+  // Identity-contact slice mirrored from harness/contracts/application-form-taxonomy.v1.json.
+  const QUESTION_AUTOMATION_POLICY = Object.freeze({
+    "identity.title": "fill_if_explicit_preference",
+    "identity.first_name": "fill_if_explicit_preference",
+    "identity.last_name": "fill_if_explicit_preference",
+    "identity.preferred_name": "fill_if_explicit_preference",
+    "identity.email": "fill_if_explicit_preference",
+    "identity.phone": "fill_if_explicit_preference",
+    "identity.linkedin": "fill_if_explicit_preference",
+    "identity.street_address": "fill_if_explicit_preference",
+    "identity.city": "fill_if_explicit_preference",
+    "identity.region": "fill_if_explicit_preference",
+    "identity.postal_code": "fill_if_explicit_preference",
+    "identity.country": "fill_if_explicit_preference",
+    "attestation.truth_accuracy": "manual_only"
+  });
 
   function phoneAuthority(profile) {
     const raw = profile && typeof profile === "object" ? String(profile.phone_authority || "") : "";
     return PHONE_AUTHORITY_VALUES.includes(raw) ? raw : "unconfirmed";
+  }
+
+  function taxonomyAutomationPolicy(questionId) {
+    return QUESTION_AUTOMATION_POLICY[questionId] || "manual_only";
+  }
+
+  function normalizePreferenceStore(store) {
+    if (!store || typeof store !== "object" || Array.isArray(store)) return { preferences: {} };
+    const prefs = store.preferences;
+    if (!prefs || typeof prefs !== "object" || Array.isArray(prefs)) return { preferences: {} };
+    return { preferences: prefs };
+  }
+
+  function resolvePreferenceEntry(questionId, store) {
+    const prefs = normalizePreferenceStore(store).preferences;
+    const entry = prefs[questionId];
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
+    if (typeof entry.value === "string") {
+      const value = entry.value.trim();
+      if (!value) return null;
+      const scope = PREFERENCE_PRECEDENCE.includes(entry.scope) ? entry.scope : "profile_preference";
+      return { scope, value };
+    }
+    for (const scope of PREFERENCE_PRECEDENCE) {
+      const nested = entry[scope];
+      if (typeof nested === "string" && nested.trim()) return { scope, value: nested.trim() };
+      if (nested && typeof nested === "object" && typeof nested.value === "string" && nested.value.trim()) {
+        return { scope, value: nested.value.trim() };
+      }
+    }
+    return null;
+  }
+
+  function resolveFillValue(profileKey, profile, preferenceStore) {
+    const questionId = PROFILE_TO_QUESTION[profileKey];
+    const fromPref = resolvePreferenceEntry(questionId, preferenceStore);
+    if (fromPref) return fromPref.value;
+    const clean = normalizeProfile(profile);
+    return clean[profileKey] || "";
+  }
+
+  function projectProfileToPreferenceStore(profile, existing) {
+    const clean = normalizeProfile(profile);
+    const next = Object.assign({}, normalizePreferenceStore(existing).preferences);
+    for (const key of PROFILE_KEYS) {
+      if (!clean[key]) continue;
+      next[PROFILE_TO_QUESTION[key]] = { scope: "profile_preference", value: clean[key] };
+    }
+    return {
+      schema_version: "escapehatch-application-question-preferences/v1",
+      preferences: next
+    };
+  }
+
+  function taxonomyAllowsFill(questionId, preferenceStore) {
+    const policy = taxonomyAutomationPolicy(questionId);
+    if (policy === "manual_only") {
+      return { allow: false, reason: "taxonomy_automation_policy_manual_only" };
+    }
+    if (policy === "fill_if_confirmed_current") {
+      const resolved = resolvePreferenceEntry(questionId, preferenceStore);
+      if (!resolved || resolved.scope !== "session_confirmation") {
+        return { allow: false, reason: "taxonomy_requires_session_confirmation" };
+      }
+      return { allow: true, reason: "taxonomy_session_confirmation" };
+    }
+    if (policy === "fill_if_explicit_preference") {
+      return { allow: true, reason: "taxonomy_fill_if_explicit_preference" };
+    }
+    return { allow: false, reason: "taxonomy_automation_policy_denied" };
+  }
+
+  function buildCompanionProgressEvent(session, evidence) {
+    const applicationId = String(
+      (evidence && evidence.application_id) || session.application_id || session.origin || "unknown"
+    );
+    return {
+      schema_version: "escapehatch-application-companion-session/v1",
+      session_id: session.session_id,
+      surface_id: "browser_extension",
+      progress_event: {
+        event_id: `assist-confirm-${Date.now()}`,
+        opportunity_id: String((evidence && evidence.opportunity_id) || applicationId),
+        application_id: applicationId,
+        status: "submitted",
+        source: evidence.source,
+        observed_at: new Date().toISOString(),
+        evidence: {
+          owner: "user",
+          kind: "inline",
+          locator: "same_session_page_confirmation"
+        }
+      }
+    };
   }
 
   function normalizeSignal(value) {
@@ -272,14 +388,20 @@
   }
 
   function policyGate(session, field, profileKey, proposedValue, context) {
+    const preferenceStore = context && context.preferenceStore;
     if (!session || session.status !== "active") {
       return { allow: false, reason: "session_not_active" };
     }
     if (!profileKey || !PROFILE_TO_QUESTION[profileKey]) {
       return { allow: false, reason: "unknown_or_disallowed_field" };
     }
-    if (PROFILE_TO_QUESTION[profileKey] === "attestation.truth_accuracy") {
+    const questionId = PROFILE_TO_QUESTION[profileKey];
+    if (questionId === "attestation.truth_accuracy") {
       return { allow: false, reason: "attestation_manual_only" };
+    }
+    const taxonomy = taxonomyAllowsFill(questionId, preferenceStore);
+    if (!taxonomy.allow) {
+      return { allow: false, reason: taxonomy.reason };
     }
     if (!isSupportedDescriptor(field)) {
       return { allow: false, reason: "unsupported_control" };
@@ -307,10 +429,12 @@
   /**
    * Canonical Fill Plan. DOM writes must consume only gate-allowed items from this plan.
    */
-  function buildFillPlan(fields, profile, session) {
+  function buildFillPlan(fields, profile, session, preferenceStore) {
     assertSession(session);
-    const clean = normalizeProfile(profile);
-    const contactAuthority = { phone_authority: phoneAuthority(profile) };
+    const contactAuthority = {
+      phone_authority: phoneAuthority(profile),
+      preferenceStore: preferenceStore || null
+    };
     const items = [];
     const denied = [];
     for (let index = 0; index < fields.length; index += 1) {
@@ -321,7 +445,8 @@
         continue;
       }
       const questionId = PROFILE_TO_QUESTION[key];
-      const gated = policyGate(session, field, key, clean[key], contactAuthority);
+      const proposed = resolveFillValue(key, profile, preferenceStore);
+      const gated = policyGate(session, field, key, proposed, contactAuthority);
       if (!gated.allow) {
         denied.push({
           index,
@@ -391,7 +516,7 @@
   /**
    * DOM writer: executes only gate-allowed Fill Plan items. Re-gates on live DOM before each write.
    */
-  function applyFillPlan(documentObject, plan, profile, session) {
+  function applyFillPlan(documentObject, plan, profile, session, preferenceStore) {
     assertSession(session);
     if (session.status !== "active") {
       return {
@@ -405,8 +530,10 @@
     if (!plan || plan.schema_version !== "escapehatch-application-fill-plan/v1") {
       throw new Error("DOM writer requires a canonical Fill Plan.");
     }
-    const clean = normalizeProfile(profile);
-    const contactAuthority = { phone_authority: phoneAuthority(profile) };
+    const contactAuthority = {
+      phone_authority: phoneAuthority(profile),
+      preferenceStore: preferenceStore || null
+    };
     const elements = Array.from(documentObject.querySelectorAll("input, select"));
     const matched = [];
     const writes = [];
@@ -416,7 +543,8 @@
       const element = elements[item.index];
       if (!element || element.isConnected === false) continue;
       const live = descriptorFromElement(element);
-      const gated = policyGate(session, live, item.profile_key, clean[item.profile_key], contactAuthority);
+      const proposed = resolveFillValue(item.profile_key, profile, preferenceStore);
+      const gated = policyGate(session, live, item.profile_key, proposed, contactAuthority);
       if (!gated.allow) continue;
       if (gated.value !== item.value) continue;
       const previous = element.value || "";
@@ -457,13 +585,14 @@
     };
   }
 
-  function fillDocument(documentObject, profile, session) {
+  function fillDocument(documentObject, profile, session, preferenceStore) {
     const plan = buildFillPlan(
       Array.from(documentObject.querySelectorAll("input, select")).map(descriptorFromElement),
       profile,
-      session
+      session,
+      preferenceStore
     );
-    return Object.assign({ plan }, applyFillPlan(documentObject, plan, profile, session));
+    return Object.assign({ plan }, applyFillPlan(documentObject, plan, profile, session, preferenceStore));
   }
 
   function undoLastFill(documentObject, session) {
@@ -515,22 +644,25 @@
     if (!allowed.has(source)) {
       throw new Error("Confirmation evidence source is not permitted.");
     }
+    const companion_export = buildCompanionProgressEvent(session, evidence);
     return touchSession(
       Object.assign({}, session, {
         confirmation: {
-          recorded_at: new Date().toISOString(),
+          recorded_at: companion_export.progress_event.observed_at,
           source,
-          application_id: String((evidence && evidence.application_id) || session.application_id || ""),
-          note: "operator_recorded_confirmation_metadata_only"
-        }
+          application_id: companion_export.progress_event.application_id,
+          note: "operator_recorded_confirmation_metadata_only",
+          companion_schema: "escapehatch/application-companion/v1"
+        },
+        companion_export
       })
     );
   }
 
   // Donor-compatible helper used by legacy-style planners in tests.
-  function planAssignments(fields, profile) {
+  function planAssignments(fields, profile, preferenceStore) {
     const session = createSession({ origin: "https://example.invalid" });
-    return buildFillPlan(fields, profile, session).items.map((item) => ({
+    return buildFillPlan(fields, profile, session, preferenceStore).items.map((item) => ({
       index: item.index,
       key: item.profile_key,
       value: item.value
@@ -542,7 +674,17 @@
     PROFILE_TO_QUESTION,
     SESSION_STATUSES,
     PHONE_AUTHORITY_VALUES,
+    PREFERENCE_STORAGE_KEY,
+    PREFERENCE_PRECEDENCE,
+    QUESTION_AUTOMATION_POLICY,
     phoneAuthority,
+    taxonomyAutomationPolicy,
+    taxonomyAllowsFill,
+    normalizePreferenceStore,
+    resolvePreferenceEntry,
+    resolveFillValue,
+    projectProfileToPreferenceStore,
+    buildCompanionProgressEvent,
     normalizeSignal,
     normalizeProfile,
     classifyField,

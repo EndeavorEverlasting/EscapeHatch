@@ -39,6 +39,9 @@ class ApplicationAssistSessionContractTests(unittest.TestCase):
         self.assertIn("auto_attestation", forbidden)
         self.assertEqual(self.contract["session"]["cross_origin_transition"], "pause")
         self.assertTrue(self.contract["session"]["stop_cancels_future_writes"])
+        self.assertIn("phone_requires_explicit_user_confirmed_primary_contact_authority", self.contract["policy_gate"]["rules"])
+        self.assertEqual(self.contract["contact_authority"]["default"], "unconfirmed")
+        self.assertEqual(self.contract["contact_authority"]["fill_requires"], "user_confirmed_primary")
 
     def test_manifest_permissions_are_minimal(self) -> None:
         self.assertEqual(self.manifest["manifest_version"], 3)
@@ -64,7 +67,10 @@ class ApplicationAssistSessionContractTests(unittest.TestCase):
             self.assertIn(f'id="{control_id}"', self.html)
         self.assertIn("chrome.storage.local.remove", self.popup)
         self.assertIn("MAX_IMPORT_BYTES = 65536", self.popup)
+        self.assertIn("escapehatch-application-assist-profile/v2", self.popup)
         self.assertIn("escapehatch-application-assist-profile/v1", self.popup)
+        self.assertIn('id="phone_authority"', self.html)
+        self.assertIn("user_confirmed_primary", self.popup)
         self.assertIn('files: ["assist-core.js"]', self.popup)
         self.assertIn('files: ["content.js"]', self.popup)
 
@@ -91,6 +97,7 @@ class ApplicationAssistSessionContractTests(unittest.TestCase):
             self.assertNotIn(forbidden, combined)
         self.assertIn('querySelectorAll("input, select")', self.core)
         self.assertIn("preserve_existing_value", self.core)
+        self.assertIn("phone_contact_not_user_confirmed_primary", self.core)
 
     def test_repository_contains_no_real_profile_seed(self) -> None:
         combined = self.popup + self.content + self.core + self.html + self.docs
@@ -106,6 +113,7 @@ class ApplicationAssistSessionContractTests(unittest.TestCase):
             "Emergency Stop",
             "Undo Last Fill",
             "canonical Fill Plan",
+            "user_confirmed_primary",
             "Load unpacked",
         ):
             self.assertIn(marker, self.docs)

@@ -118,6 +118,12 @@
   ]);
 
   const SESSION_STATUSES = Object.freeze(["idle", "active", "paused", "stopped"]);
+  const PHONE_AUTHORITY_VALUES = Object.freeze(["unconfirmed", "user_confirmed_primary", "secondary_or_forwarded"]);
+
+  function phoneAuthority(profile) {
+    const raw = profile && typeof profile === "object" ? String(profile.phone_authority || "") : "";
+    return PHONE_AUTHORITY_VALUES.includes(raw) ? raw : "unconfirmed";
+  }
 
   function normalizeSignal(value) {
     return String(value || "")
@@ -265,7 +271,7 @@
     return session;
   }
 
-  function policyGate(session, field, profileKey, proposedValue) {
+  function policyGate(session, field, profileKey, proposedValue, context) {
     if (!session || session.status !== "active") {
       return { allow: false, reason: "session_not_active" };
     }
@@ -287,6 +293,9 @@
     if (!proposedValue) {
       return { allow: false, reason: "missing_user_value" };
     }
+    if (profileKey === "phone" && (!context || context.phone_authority !== "user_confirmed_primary")) {
+      return { allow: false, reason: "phone_contact_not_user_confirmed_primary" };
+    }
     if (String(field.tag || "input").toLowerCase() === "select") {
       const matched = selectExactOption(field.options, proposedValue);
       if (matched == null) return { allow: false, reason: "option_mismatch" };
@@ -301,6 +310,7 @@
   function buildFillPlan(fields, profile, session) {
     assertSession(session);
     const clean = normalizeProfile(profile);
+    const contactAuthority = { phone_authority: phoneAuthority(profile) };
     const items = [];
     const denied = [];
     for (let index = 0; index < fields.length; index += 1) {
@@ -311,7 +321,7 @@
         continue;
       }
       const questionId = PROFILE_TO_QUESTION[key];
-      const gated = policyGate(session, field, key, clean[key]);
+      const gated = policyGate(session, field, key, clean[key], contactAuthority);
       if (!gated.allow) {
         denied.push({
           index,
@@ -396,6 +406,7 @@
       throw new Error("DOM writer requires a canonical Fill Plan.");
     }
     const clean = normalizeProfile(profile);
+    const contactAuthority = { phone_authority: phoneAuthority(profile) };
     const elements = Array.from(documentObject.querySelectorAll("input, select"));
     const matched = [];
     const writes = [];
@@ -405,7 +416,7 @@
       const element = elements[item.index];
       if (!element || element.isConnected === false) continue;
       const live = descriptorFromElement(element);
-      const gated = policyGate(session, live, item.profile_key, clean[item.profile_key]);
+      const gated = policyGate(session, live, item.profile_key, clean[item.profile_key], contactAuthority);
       if (!gated.allow) continue;
       if (gated.value !== item.value) continue;
       const previous = element.value || "";
@@ -530,6 +541,8 @@
     PROFILE_KEYS,
     PROFILE_TO_QUESTION,
     SESSION_STATUSES,
+    PHONE_AUTHORITY_VALUES,
+    phoneAuthority,
     normalizeSignal,
     normalizeProfile,
     classifyField,

@@ -10,7 +10,7 @@
     p { margin: 6px 0 12px; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; }
     label { display: grid; gap: 3px; font-weight: 600; }
-    input { font: inherit; padding: 7px; min-width: 0; }
+    input, select { font: inherit; padding: 7px; min-width: 0; }
     .wide { grid-column: 1 / -1; }
     .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
     button { font: inherit; padding: 8px; cursor: pointer; }
@@ -24,7 +24,7 @@
 </head>
 <body>
   <h1>EscapeHatch Application Assist</h1>
-  <p class="privacy">User-owned browser-local state. Writes go through a canonical Fill Plan and policy gate. Never auto-submits, never clicks Next/Continue, never attests.</p>
+  <p class="privacy">User-owned browser-local state. Writes go through a canonical Fill Plan and policy gate. Phone is withheld unless you explicitly mark it as the primary career number you control. Never auto-submits, never clicks Next/Continue, never attests.</p>
 
   <div id="sessionState" role="status" aria-live="polite">Session: idle</div>
 
@@ -45,6 +45,13 @@
     <label>Last name <input id="last_name" autocomplete="family-name"></label>
     <label>Email <input id="email" type="email" autocomplete="email"></label>
     <label>Phone <input id="phone" type="tel" autocomplete="tel"></label>
+    <label>Phone authority
+      <select id="phone_authority">
+        <option value="unconfirmed">Do not fill — not explicitly confirmed</option>
+        <option value="user_confirmed_primary">Primary career number I control</option>
+        <option value="secondary_or_forwarded">Secondary / forwarding / other</option>
+      </select>
+    </label>
     <label class="wide">LinkedIn <input id="linkedin_url" type="url"></label>
     <label class="wide">Street address <input id="street_address" autocomplete="street-address"></label>
     <label>City <input id="city" autocomplete="address-level2"></label>

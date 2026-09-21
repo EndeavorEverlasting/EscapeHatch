@@ -1,0 +1,8 @@
+{
+  "donor_commit": "b01f62860a27081418877069f599dbc6aa510b8e",
+  "payload_sha256": "d13fff1b6eea0a6694e378459c81c451b2f26713856d5ce55fad0f324fc794ed",
+  "payload_bytes": 127800,
+  "base64_chars": 170400,
+  "chunks": 22,
+  "files": 211
+}

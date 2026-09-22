@@ -8,4 +8,8 @@ if not exist "%~dp0scripts\windows\EscapeHatch-Runtime.ps1" (
 )
 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Status-EscapeHatch.ps1"
-exit /b %ERRORLEVEL%
+set "STATUS_EXIT=%ERRORLEVEL%"
+echo.
+echo Press any key to close this status window...
+pause >nul
+exit /b %STATUS_EXIT%

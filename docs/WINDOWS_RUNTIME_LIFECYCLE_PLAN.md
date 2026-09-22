@@ -1,6 +1,6 @@
 # EscapeHatch Windows Runtime Lifecycle Plan
 
-Status: TRACKED PLAN — EH-R0 contract floor implemented; EH-R1/R2 implementation not started.
+Status: TRACKED PLAN — EH-R0 through EH-R2 integrated on the candidate; EH-R3/R4 are the active successor wave; EH-R5 remains pending.
 
 Canonical planning owner for this work: `docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md`.
 
@@ -8,11 +8,11 @@ Canonical planning owner for this work: `docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md`
 
 - Provider repository: `EndeavorEverlasting/EscapeHatch`.
 - Provider default branch: `main@0824535b9dc1341def885a79a098d297df770ac8`.
-- Current prepared integration owner: `integration/replit-donor-b01f628-20260921` after local launcher convergence (includes exact launcher commit content formerly at `5effcd293bdf4ded725a4ca28908b8b986b359ec` plus the overnight spaces/node-shim fix).
+- Current prepared integration owner: `integration/replit-donor-b01f628-20260921@da6d2e40f348d7e7f59fb9ba998b54a9fa663656`, containing the converged launcher floor, EH-R0 contract, EH-R1 runtime control, and EH-R2 Windows lifecycle manager.
 - Operator-local launcher implementation was recovered onto the integration floor via cherry-pick convergence; EH-R2 no longer waits on a provider-resolvable `5effcd2` object.
 - EH-R0 owns `contracts/local-runtime-lifecycle.v1.json`, `fixtures/local-runtime-lifecycle.v1.example.json`, and `scripts/validate_local_runtime_lifecycle.py`.
 - The prepared provider branch contains the donor web cockpit and the original root workspace package contract that the local launcher commit modifies.
-- Current `artifacts/escape-hatch/vite.config.ts` binds Vite to an explicit host/port with `strictPort: true`, but it has no runtime identity, control-plane health response, or graceful shutdown API (EH-R1 not started).
+- `artifacts/escape-hatch/vite.config.ts` now wires the EH-R1 loopback runtime identity and authenticated graceful-shutdown control plane; the focused runtime-control suite passed before integration.
 - Existing repository governance requires product/runtime behavior to live in application/scripts/contracts rather than prompt-only workflow.
 - Prior launcher/distribution planning defined EH-L2 as install-like Windows start/reuse/stop behavior with health diagnostics.
 - New operator runtime evidence shows manual stale-port cleanup and PowerShell job creation during recovery. That is sufficient to treat “find an existing instance / recover stale listeners / stop cleanly” as a first-class runtime-lifecycle problem rather than another one-off port-kill snippet.
@@ -254,6 +254,15 @@ Target shape after the contract sprint:
 11. `OWNED_ADOPTABLE`: because the shutdown token is unrecoverable by design, immediately re-prove ownership and use bounded owned-process termination without creating a token-recovery path.
 12. `OWNED_UNHEALTHY`: use the ownership-proven fallback path.
 13. `FOREIGN_CONFLICT`: leave the listener untouched and return a conflict diagnosis.
+
+## Execution checkpoint — 2026-09-22
+
+- EH-R0 contract floor: `e6d42ae270b29df281ca764f21dcf83a96f8fb72`; orphan-secret contradiction repaired and integrated by PR #17 at `77e5894086b6f40c92a60c2941e2149bcae4facf`.
+- EH-R1 runtime identity/shutdown: PR #18 exact head `1a4aaf463e2d302c4ba459e1142a9a29023fcf09`, integrated at `b4c58ff24a82bbbdf3934543645c35ae7840a23b`; runtime-control tests 6/6 and exact-head Harness green.
+- EH-R2 Windows lifecycle manager: PR #19 exact head `916d8f135bee680a51dac646b5882c23de0bf2dd`, integrated at `da6d2e40f348d7e7f59fb9ba998b54a9fa663656`; five review findings repaired, zero unresolved threads, exact-head and post-merge Harness green.
+- Default branch remains `main@0824535b9dc1341def885a79a098d297df770ac8`; promotion is intentionally deferred until EH-R5 because Windows CI/fault proof, friendly adapters, workstation acceptance, release classification, and promotion gates remain.
+- Active dependency-ready wave: EH-R3 (Windows lifecycle regression/fault-injection floor) and EH-R4 (Close/Status UX + runbook), with disjoint mutation ownership and graph width 2.
+- Known validation gap entering EH-R3: the artifact `tsconfig.json` references missing repository paths, so typecheck is not yet a valid passing proof surface; R3 must prove runtime/control/Windows behavior and Vite build without relabeling that gap.
 
 ## Sprint dependency graph
 
@@ -524,6 +533,6 @@ Do not rename it to `manifest.json` or claim dispatch proof until the canonical 
 
 ## First executable transition
 
-DONE on the convergence floor: the exact local launcher commit content (`5effcd293bdf4ded725a4ca28908b8b986b359ec`) plus the overnight spaces/node-shim fix were cherry-picked onto `integration/replit-donor-b01f628-20260921`, and EH-R0 (`contracts/local-runtime-lifecycle.v1.json`, `fixtures/local-runtime-lifecycle.v1.example.json`, `scripts/validate_local_runtime_lifecycle.py`) was executed against that refreshed exact head. EH-R2 must not reconstruct the launcher from chat prose.
+DONE through Wave 1 on the provider candidate: launcher convergence + EH-R0 + EH-R1 + EH-R2 are integrated through `da6d2e40f348d7e7f59fb9ba998b54a9fa663656`, and the push Harness run on that exact head succeeded.
 
-Next unproven lanes: EH-R1 (Vite identity + graceful shutdown) and, after EH-R0 acceptance, EH-R2 (Windows lifecycle manager) may proceed in parallel per the dependency graph.
+Next unproven lanes: EH-R3 (Windows lifecycle regression/fault injection + CI wiring) and EH-R4 (friendly Close/Status adapters + runbook) are dependency-ready and must execute in parallel on isolated writers. EH-R5 remains the convergence owner after both return.

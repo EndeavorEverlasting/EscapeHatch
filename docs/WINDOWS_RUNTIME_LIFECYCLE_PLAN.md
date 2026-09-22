@@ -166,7 +166,7 @@ State: `OWNED_ADOPTABLE` only when:
 - reported PID owns the configured listening socket;
 - OS command line is consistent with the current EscapeHatch Vite runtime.
 
-Reconstruct the local receipt from authoritative observations and continue. Do not kill/restart merely because the receipt was lost.
+The per-instance shutdown token is intentionally unavailable when its receipt is lost: the control plane does not expose it, and the manager must not invent a token-recovery endpoint or synthesize a secret-bearing receipt. Start may safely reuse the verified healthy runtime without a receipt. Stop must immediately re-prove process/socket/repository ownership and use the bounded owned-process termination path; the next cold start creates a fresh managed receipt and token.
 
 ### D. Listener is an owned but unhealthy/orphaned EscapeHatch process
 
@@ -229,7 +229,7 @@ Target shape after the contract sprint:
 6. Resolve port owner when a listener exists.
 7. Classify state using the ownership state machine.
 8. If `OWNED_HEALTHY`, reuse it and open the browser.
-9. If `OWNED_ADOPTABLE`, rebuild the receipt, then reuse it.
+9. If `OWNED_ADOPTABLE`, reuse the verified healthy runtime without reconstructing a missing shutdown token or secret-bearing receipt.
 10. If `OWNED_UNHEALTHY`, re-prove ownership, stop it safely, and prove the port is free.
 11. If `FOREIGN_CONFLICT`, fail closed without killing anything.
 12. Generate instanceId/token and spawn Node/Vite directly.
@@ -251,7 +251,7 @@ Target shape after the contract sprint:
 8. Only if ownership still matches, stop the exact process; use process-tree force only as the final bounded fallback.
 9. Verify the port is free or no longer owned by EscapeHatch.
 10. Remove receipt and report success.
-11. `OWNED_ADOPTABLE`: adopt receipt, then follow graceful shutdown.
+11. `OWNED_ADOPTABLE`: because the shutdown token is unrecoverable by design, immediately re-prove ownership and use bounded owned-process termination without creating a token-recovery path.
 12. `OWNED_UNHEALTHY`: use the ownership-proven fallback path.
 13. `FOREIGN_CONFLICT`: leave the listener untouched and return a conflict diagnosis.
 
@@ -492,7 +492,7 @@ The whole lifecycle outcome is not complete until all are proven:
 - Close is graceful when the runtime is healthy.
 - Close is idempotent.
 - Restart leaves exactly one healthy instance.
-- Lost/stale receipt self-heals.
+- Lost/stale receipt self-heals without reconstructing or exposing a missing shutdown token.
 - Same-repo owned orphan recovery is bounded and safe.
 - Unrelated port-21031 processes are never killed.
 - PID reuse cannot authorize termination.

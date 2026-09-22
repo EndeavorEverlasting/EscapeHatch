@@ -58,13 +58,35 @@ function Get-RuntimePaths {
     }
 }
 
+function Get-ObjectPropertyValue {
+    param(
+        $Object,
+        [Parameter(Mandatory)][string]$Name
+    )
+    if ($null -eq $Object) { return $null }
+    $property = $Object.PSObject.Properties[$Name]
+    if ($null -eq $property) { return $null }
+    return $property.Value
+}
+
 function Read-RuntimeReceipt {
     param([Parameter(Mandatory)][string]$Path)
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $null }
     try {
-        $receipt = Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json
-        Add-Member -InputObject $receipt -NotePropertyName malformed -NotePropertyValue $false -Force
-        return $receipt
+        $raw = Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json
+        return [PSCustomObject]@{
+            malformed = $false
+            schema = Get-ObjectPropertyValue -Object $raw -Name 'schema'
+            instanceId = Get-ObjectPropertyValue -Object $raw -Name 'instanceId'
+            repoFingerprint = Get-ObjectPropertyValue -Object $raw -Name 'repoFingerprint'
+            pid = Get-ObjectPropertyValue -Object $raw -Name 'pid'
+            processStartTimeUtc = Get-ObjectPropertyValue -Object $raw -Name 'processStartTimeUtc'
+            host = Get-ObjectPropertyValue -Object $raw -Name 'host'
+            port = Get-ObjectPropertyValue -Object $raw -Name 'port'
+            runtimeProtocol = Get-ObjectPropertyValue -Object $raw -Name 'runtimeProtocol'
+            shutdownToken = Get-ObjectPropertyValue -Object $raw -Name 'shutdownToken'
+            startedAtUtc = Get-ObjectPropertyValue -Object $raw -Name 'startedAtUtc'
+        }
     } catch {
         return [PSCustomObject]@{ malformed = $true }
     }
@@ -165,13 +187,22 @@ function Test-HealthMatchesCurrentRepo {
         [Parameter(Mandatory)][int]$ListenerPid
     )
     if ($null -eq $Health) { return $false }
-    return (
-        [string]$Health.app -eq 'EscapeHatch' -and
-        [int]$Health.protocol -eq $RuntimeProtocol -and
-        [string]$Health.repoFingerprint -eq $Fingerprint -and
-        [int]$Health.pid -eq $ListenerPid -and
-        -not [string]::IsNullOrWhiteSpace([string]$Health.instanceId)
-    )
+    try {
+        $app = Get-ObjectPropertyValue -Object $Health -Name 'app'
+        $protocol = Get-ObjectPropertyValue -Object $Health -Name 'protocol'
+        $repoFingerprint = Get-ObjectPropertyValue -Object $Health -Name 'repoFingerprint'
+        $healthPid = Get-ObjectPropertyValue -Object $Health -Name 'pid'
+        $instanceId = Get-ObjectPropertyValue -Object $Health -Name 'instanceId'
+        return (
+            [string]$app -eq 'EscapeHatch' -and
+            [int]$protocol -eq $RuntimeProtocol -and
+            [string]$repoFingerprint -eq $Fingerprint -and
+            [int]$healthPid -eq $ListenerPid -and
+            -not [string]::IsNullOrWhiteSpace([string]$instanceId)
+        )
+    } catch {
+        return $false
+    }
 }
 
 function Test-ReceiptMatchesHealthyRuntime {
@@ -185,9 +216,9 @@ function Test-ReceiptMatchesHealthyRuntime {
     try {
         return (
             [string]$Receipt.schema -eq 'escapehatch-local-runtime/v1' -and
-            [string]$Receipt.instanceId -eq [string]$Health.instanceId -and
+            [string]$Receipt.instanceId -eq [string](Get-ObjectPropertyValue -Object $Health -Name 'instanceId') -and
             [string]$Receipt.repoFingerprint -eq $Fingerprint -and
-            [int]$Receipt.pid -eq [int]$Health.pid -and
+            [int]$Receipt.pid -eq [int](Get-ObjectPropertyValue -Object $Health -Name 'pid') -and
             [int]$Receipt.runtimeProtocol -eq $RuntimeProtocol -and
             [string]$Receipt.processStartTimeUtc -eq [string]$Process.StartTimeUtc -and
             -not [string]::IsNullOrWhiteSpace([string]$Receipt.shutdownToken)
@@ -431,11 +462,11 @@ function Start-ColdRuntime {
         $health = Get-RuntimeIdentity
         if (
             $null -ne $health -and
-            [string]$health.app -eq 'EscapeHatch' -and
-            [int]$health.protocol -eq $RuntimeProtocol -and
-            [string]$health.instanceId -eq $instanceId -and
-            [string]$health.repoFingerprint -eq $Fingerprint -and
-            [int]$health.pid -eq [int]$process.Id
+            [string](Get-ObjectPropertyValue -Object $health -Name 'app') -eq 'EscapeHatch' -and
+            [int](Get-ObjectPropertyValue -Object $health -Name 'protocol') -eq $RuntimeProtocol -and
+            [string](Get-ObjectPropertyValue -Object $health -Name 'instanceId') -eq $instanceId -and
+            [string](Get-ObjectPropertyValue -Object $health -Name 'repoFingerprint') -eq $Fingerprint -and
+            [int](Get-ObjectPropertyValue -Object $health -Name 'pid') -eq [int]$process.Id
         ) {
             $ready = $true
             break

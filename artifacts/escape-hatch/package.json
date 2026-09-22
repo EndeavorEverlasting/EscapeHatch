@@ -10,7 +10,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:unit": "tsx --test src/lib/storage.test.ts src/lib/assist.test.ts src/lib/assist-session.test.ts",
     "test:browser": "playwright test --config=playwright.config.ts",
-    "test": "npm run test:unit && npm run test:browser"
+    "test": "npm run test:unit && npm run test:browser",
+    "test:runtime-control": "node --experimental-strip-types --test runtime-control.test.ts"
   },
   "devDependencies": {
     "@hookform/resolvers": "^3.10.0",

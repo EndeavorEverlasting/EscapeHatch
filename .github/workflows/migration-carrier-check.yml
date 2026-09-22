@@ -1,0 +1,39 @@
+name: Migration Carrier Reconstruction Check
+
+on:
+  push:
+    branches:
+      - migration/replit-harvest-reconstruct-20260921
+    paths:
+      - ".migration-carrier/**"
+      - ".github/workflows/migration-carrier-check.yml"
+  pull_request:
+    paths:
+      - ".migration-carrier/**"
+      - ".github/workflows/migration-carrier-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  reconstruct:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Verify carrier and produce collision report
+        run: |
+          set -euo pipefail
+          python .migration-carrier/verify_expand.py --report /tmp/reconstruction-report.json --extract /tmp/escapehatch-donor
+          test -f /tmp/escapehatch-donor/package.json
+          test -f /tmp/escapehatch-donor/artifacts/escape-hatch/vite.config.ts
+      - name: Upload reconstruction report
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-carrier-reconstruction-report
+          path: /tmp/reconstruction-report.json
+          if-no-files-found: error

@@ -45,3 +45,4 @@ jobs:
           name: migration-carrier-reconstructed-tree
           path: /tmp/escapehatch-donor
           if-no-files-found: error
+          include-hidden-files: true

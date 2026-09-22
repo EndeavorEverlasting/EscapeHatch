@@ -41,6 +41,6 @@ The browser application never receives the shutdown token. There is intentionall
 
 ## Troubleshooting
 
-If Start or Close reports `FOREIGN_CONFLICT`, use `Status-EscapeHatch.cmd` and inspect the reported process information. The lifecycle manager will not terminate an unproven listener. Do not use broad commands such as `taskkill /IM node.exe` or `Get-Process node | Stop-Process`.
+If `Status-EscapeHatch.cmd` reports `FOREIGN_CONFLICT`, or Start/Close reports that the listener is unproven and was left untouched, inspect the reported process information. The lifecycle manager will not terminate an unproven listener. Do not use broad commands such as `taskkill /IM node.exe` or `Get-Process node | Stop-Process`.
 
 If Vite dependencies are missing, install the artifact dependencies under `artifacts\escape-hatch` before retrying the launcher. Lifecycle validation in CI uses the same managed runtime path and permanently checks that a foreign listener survives untouched.

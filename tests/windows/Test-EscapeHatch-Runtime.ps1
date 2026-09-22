@@ -74,16 +74,35 @@ function Invoke-PowerShellEntryPoint {
     param(
         [Parameter(Mandatory)][string]$Path,
         [string[]]$Arguments = @(),
-        [int[]]$ExpectedExitCodes = @(0)
+        [int[]]$ExpectedExitCodes = @(0),
+        [int]$TimeoutSeconds = 45
     )
-    $output = @(& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $Path @Arguments 2>&1)
-    $code = $LASTEXITCODE
+    $stamp = [Guid]::NewGuid().ToString('N')
+    $stdout = Join-Path $env:TEMP "eh-entry-$stamp.out.log"
+    $stderr = Join-Path $env:TEMP "eh-entry-$stamp.err.log"
+    $script:tempLogPaths += @($stdout, $stderr)
+    $processArgs = @('-NoProfile','-ExecutionPolicy','Bypass','-File',('"' + $Path + '"')) + $Arguments
+    $process = Start-Process powershell.exe -ArgumentList $processArgs -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+    if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
+        try { Stop-Process -Id $process.Id -Force -ErrorAction Stop } catch {}
+        $partial = @(
+            if (Test-Path -LiteralPath $stdout) { Get-Content -LiteralPath $stdout -Raw -ErrorAction SilentlyContinue }
+            if (Test-Path -LiteralPath $stderr) { Get-Content -LiteralPath $stderr -Raw -ErrorAction SilentlyContinue }
+        ) -join [Environment]::NewLine
+        throw ("PowerShell entry point {0} exceeded {1}s. Partial output: {2}" -f $Path, $TimeoutSeconds, $partial)
+    }
+    $process.Refresh()
+    $output = @(
+        if (Test-Path -LiteralPath $stdout) { Get-Content -LiteralPath $stdout -Raw -ErrorAction SilentlyContinue }
+        if (Test-Path -LiteralPath $stderr) { Get-Content -LiteralPath $stderr -Raw -ErrorAction SilentlyContinue }
+    ) -join [Environment]::NewLine
+    $code = $process.ExitCode
     if ($ExpectedExitCodes -notcontains $code) {
-        throw "PowerShell entry point $Path exit $code; expected $($ExpectedExitCodes -join ','). Output: $($output -join [Environment]::NewLine)"
+        throw "PowerShell entry point $Path exit $code; expected $($ExpectedExitCodes -join ','). Output: $output"
     }
     [PSCustomObject]@{
         ExitCode = $code
-        Output = ($output -join [Environment]::NewLine)
+        Output = $output
     }
 }
 
@@ -197,14 +216,26 @@ function Invoke-ConcurrentStarts {
     $args = @('-NoProfile','-ExecutionPolicy','Bypass','-File',('"' + $Manager + '"'),'-Action','Start')
     $p1 = Start-Process powershell.exe -ArgumentList $args -PassThru -RedirectStandardOutput $out1 -RedirectStandardError $err1
     $p2 = Start-Process powershell.exe -ArgumentList $args -PassThru -RedirectStandardOutput $out2 -RedirectStandardError $err2
-    $p1.WaitForExit()
-    $p2.WaitForExit()
-    try {
-        Assert-Equal $p1.ExitCode 0 "first concurrent Start must succeed"
-        Assert-Equal $p2.ExitCode 0 "second concurrent Start must succeed"
-    } finally {
-        Remove-Item -LiteralPath $out1,$err1,$out2,$err2 -Force -ErrorAction SilentlyContinue
+    $script:tempLogPaths += @($out1, $err1, $out2, $err2)
+    $p1Done = $p1.WaitForExit(45000)
+    $p2Done = $p2.WaitForExit(45000)
+    if (-not $p1Done -or -not $p2Done) {
+        foreach ($p in @($p1, $p2)) {
+            try {
+                $p.Refresh()
+                if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force -ErrorAction Stop }
+            } catch {}
+        }
+        $detail = @(
+            if (Test-Path -LiteralPath $out1) { Get-Content -LiteralPath $out1 -Raw -ErrorAction SilentlyContinue }
+            if (Test-Path -LiteralPath $err1) { Get-Content -LiteralPath $err1 -Raw -ErrorAction SilentlyContinue }
+            if (Test-Path -LiteralPath $out2) { Get-Content -LiteralPath $out2 -Raw -ErrorAction SilentlyContinue }
+            if (Test-Path -LiteralPath $err2) { Get-Content -LiteralPath $err2 -Raw -ErrorAction SilentlyContinue }
+        ) -join [Environment]::NewLine
+        throw "Concurrent Start exceeded 45 seconds. Output: $detail"
     }
+    Assert-Equal $p1.ExitCode 0 "first concurrent Start must succeed"
+    Assert-Equal $p2.ExitCode 0 "second concurrent Start must succeed"
 }
 
 function Stop-TestOwnedProcess {

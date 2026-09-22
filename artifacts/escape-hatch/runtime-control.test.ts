@@ -3,6 +3,7 @@ import http from 'node:http';
 import test from 'node:test';
 import {
   ESCAPEHATCH_RUNTIME_PROTOCOL,
+  createShutdownGate,
   handleRuntimeControlRequest,
   isLoopbackAddress,
   readManagedRuntime,
@@ -105,6 +106,17 @@ test('shutdown rejects missing token and mismatched identity without invoking sh
     await new Promise((resolve) => setImmediate(resolve));
     assert.equal(shutdowns(), 0);
   });
+});
+
+test('shutdown gate dispatches only once across concurrent authorized completions', () => {
+  let calls = 0;
+  const requestShutdown = createShutdownGate(() => {
+    calls += 1;
+  });
+  requestShutdown();
+  requestShutdown();
+  requestShutdown();
+  assert.equal(calls, 1);
 });
 
 test('authorized shutdown responds before dispatch and never echoes the secret', async () => {

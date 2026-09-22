@@ -62,7 +62,9 @@ function Read-RuntimeReceipt {
     param([Parameter(Mandatory)][string]$Path)
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $null }
     try {
-        return (Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json)
+        $receipt = Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json
+        Add-Member -InputObject $receipt -NotePropertyName malformed -NotePropertyValue $false -Force
+        return $receipt
     } catch {
         return [PSCustomObject]@{ malformed = $true }
     }
@@ -121,12 +123,12 @@ function Get-ListenerObservation {
 }
 
 function Get-ProcessObservation {
-    param([Parameter(Mandatory)][int]$Pid)
+    param([Parameter(Mandatory)][int]$ProcessId)
     try {
-        $process = Get-Process -Id $Pid -ErrorAction Stop
-        $cim = Get-CimInstance Win32_Process -Filter "ProcessId=$Pid" -ErrorAction Stop
+        $process = Get-Process -Id $ProcessId -ErrorAction Stop
+        $cim = Get-CimInstance Win32_Process -Filter "ProcessId=$ProcessId" -ErrorAction Stop
         [PSCustomObject]@{
-            Pid = $Pid
+            Pid = $ProcessId
             Name = $process.ProcessName
             StartTimeUtc = $process.StartTime.ToUniversalTime().ToString('o')
             CommandLine = [string]$cim.CommandLine
@@ -147,6 +149,7 @@ function Get-RuntimeIdentity {
 function Test-SameRepoViteProcess {
     param([Parameter(Mandatory)]$Process)
     if ($null -eq $Process -or -not $Process.CommandLine) { return $false }
+    if ([string]$Process.Name -ne 'node') { return $false }
     $viteJs = [IO.Path]::GetFullPath((Join-Path $RepoRoot 'artifacts\escape-hatch\node_modules\vite\bin\vite.js'))
     $viteConfig = [IO.Path]::GetFullPath((Join-Path $RepoRoot 'artifacts\escape-hatch\vite.config.ts'))
     return (
@@ -205,9 +208,25 @@ function Get-RuntimeObservation {
 
     if (-not $listener.Present) {
         if ($null -ne $receipt) {
+            if (-not $receipt.malformed) {
+                try {
+                    $receiptProcess = Get-ProcessObservation -ProcessId ([int]$receipt.pid)
+                    if (
+                        $null -ne $receiptProcess -and
+                        [string]$receiptProcess.StartTimeUtc -eq [string]$receipt.processStartTimeUtc -and
+                        (Test-SameRepoViteProcess -Process $receiptProcess)
+                    ) {
+                        return [PSCustomObject]@{
+                            State = 'OWNED_UNHEALTHY'; Receipt = $receipt; Listener = $listener
+                            Health = $null; Process = $receiptProcess
+                            Reason = 'Receipt identifies a live same-repo Vite process, but no listening socket proves destructive ownership.'
+                        }
+                    }
+                } catch {}
+            }
             return [PSCustomObject]@{
                 State = 'STALE_RECEIPT'; Receipt = $receipt; Listener = $listener
-                Health = $null; Process = $null; Reason = 'Receipt exists but no process owns the configured listening socket.'
+                Health = $null; Process = $null; Reason = 'Receipt does not identify a current process owning the configured listening socket.'
             }
         }
         return [PSCustomObject]@{
@@ -223,7 +242,7 @@ function Get-RuntimeObservation {
         }
     }
 
-    $process = Get-ProcessObservation -Pid $listener.Pid
+    $process = Get-ProcessObservation -ProcessId $listener.Pid
     $health = Get-RuntimeIdentity
     $sameRepo = Test-SameRepoViteProcess -Process $process
     $healthMatches = Test-HealthMatchesCurrentRepo -Health $health -Fingerprint $Fingerprint -ListenerPid $listener.Pid
@@ -257,26 +276,26 @@ function Get-RuntimeObservation {
 
 function Test-ExactOwnershipNow {
     param(
-        [Parameter(Mandatory)][int]$Pid,
+        [Parameter(Mandatory)][int]$ProcessId,
         [Parameter(Mandatory)][string]$ExpectedStartTimeUtc
     )
     $listener = Get-ListenerObservation
-    if (-not $listener.Present -or $listener.Multiple -or [int]$listener.Pid -ne $Pid) { return $false }
-    $process = Get-ProcessObservation -Pid $Pid
+    if (-not $listener.Present -or $listener.Multiple -or [int]$listener.Pid -ne $ProcessId) { return $false }
+    $process = Get-ProcessObservation -ProcessId $ProcessId
     if ($null -eq $process -or [string]$process.StartTimeUtc -ne $ExpectedStartTimeUtc) { return $false }
     return (Test-SameRepoViteProcess -Process $process)
 }
 
 function Wait-ForOwnedExit {
     param(
-        [Parameter(Mandatory)][int]$Pid,
+        [Parameter(Mandatory)][int]$ProcessId,
         [Parameter(Mandatory)][int]$TimeoutSeconds
     )
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     while ((Get-Date) -lt $deadline) {
-        $alive = $null -ne (Get-ProcessObservation -Pid $Pid)
+        $alive = $null -ne (Get-ProcessObservation -ProcessId $ProcessId)
         $listener = Get-ListenerObservation
-        $sameListener = $listener.Present -and -not $listener.Multiple -and [int]$listener.Pid -eq $Pid
+        $sameListener = $listener.Present -and -not $listener.Multiple -and [int]$listener.Pid -eq $ProcessId
         if (-not $alive -and -not $sameListener) { return $true }
         Start-Sleep -Milliseconds 250
     }
@@ -285,25 +304,25 @@ function Wait-ForOwnedExit {
 
 function Stop-ProvenOwnedProcess {
     param(
-        [Parameter(Mandatory)][int]$Pid,
+        [Parameter(Mandatory)][int]$ProcessId,
         [Parameter(Mandatory)][string]$ExpectedStartTimeUtc
     )
 
-    if (-not (Test-ExactOwnershipNow -Pid $Pid -ExpectedStartTimeUtc $ExpectedStartTimeUtc)) {
-        throw "Ownership reproof failed for PID $Pid; refusing destructive action."
+    if (-not (Test-ExactOwnershipNow -ProcessId $ProcessId -ExpectedStartTimeUtc $ExpectedStartTimeUtc)) {
+        throw "Ownership reproof failed for PID $ProcessId; refusing destructive action."
     }
 
-    Stop-Process -Id $Pid -ErrorAction Stop
-    if (Wait-ForOwnedExit -Pid $Pid -TimeoutSeconds 3) { return }
+    Stop-Process -Id $ProcessId -ErrorAction Stop
+    if (Wait-ForOwnedExit -ProcessId $ProcessId -TimeoutSeconds 3) { return }
 
-    if (-not (Test-ExactOwnershipNow -Pid $Pid -ExpectedStartTimeUtc $ExpectedStartTimeUtc)) {
-        throw "Ownership changed before forced process-tree fallback for PID $Pid; refusing escalation."
+    if (-not (Test-ExactOwnershipNow -ProcessId $ProcessId -ExpectedStartTimeUtc $ExpectedStartTimeUtc)) {
+        throw "Ownership changed before forced process-tree fallback for PID $ProcessId; refusing escalation."
     }
 
-    & taskkill.exe /PID $Pid /T /F | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw "taskkill failed for proven owned PID $Pid with exit code $LASTEXITCODE." }
-    if (-not (Wait-ForOwnedExit -Pid $Pid -TimeoutSeconds 3)) {
-        throw "Proven owned PID $Pid did not exit after bounded process-tree termination."
+    & taskkill.exe /PID $ProcessId /T /F | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "taskkill failed for proven owned PID $ProcessId with exit code $LASTEXITCODE." }
+    if (-not (Wait-ForOwnedExit -ProcessId $ProcessId -TimeoutSeconds 3)) {
+        throw "Proven owned PID $ProcessId did not exit after bounded process-tree termination."
     }
 }
 
@@ -426,8 +445,8 @@ function Start-ColdRuntime {
 
     if (-not $ready) {
         $process.Refresh()
-        if (-not $process.HasExited -and (Test-ExactOwnershipNow -Pid $process.Id -ExpectedStartTimeUtc $processStart)) {
-            Stop-ProvenOwnedProcess -Pid $process.Id -ExpectedStartTimeUtc $processStart
+        if (-not $process.HasExited -and (Test-ExactOwnershipNow -ProcessId $process.Id -ExpectedStartTimeUtc $processStart)) {
+            Stop-ProvenOwnedProcess -ProcessId $process.Id -ExpectedStartTimeUtc $processStart
         }
         Remove-RuntimeReceipt -Path $Paths.Receipt -ExpectedInstanceId $instanceId
         Show-LogTail -Path $stdout
@@ -466,7 +485,7 @@ function Invoke-StartAction {
         }
         'OWNED_UNHEALTHY' {
             Write-Host "Recovering positively owned unhealthy EscapeHatch PID $($observation.Process.Pid)." -ForegroundColor Yellow
-            Stop-ProvenOwnedProcess -Pid $observation.Process.Pid -ExpectedStartTimeUtc $observation.Process.StartTimeUtc
+            Stop-ProvenOwnedProcess -ProcessId $observation.Process.Pid -ExpectedStartTimeUtc $observation.Process.StartTimeUtc
             Remove-RuntimeReceipt -Path $Paths.Receipt
         }
         'STALE_RECEIPT' {
@@ -504,8 +523,8 @@ function Invoke-HealthyGracefulStop {
         Write-Host 'Graceful shutdown request failed; ownership will be re-proven before bounded fallback.' -ForegroundColor Yellow
     }
 
-    if (-not (Wait-ForOwnedExit -Pid $Observation.Process.Pid -TimeoutSeconds $StopTimeoutSeconds)) {
-        Stop-ProvenOwnedProcess -Pid $Observation.Process.Pid -ExpectedStartTimeUtc $Observation.Process.StartTimeUtc
+    if (-not (Wait-ForOwnedExit -ProcessId $Observation.Process.Pid -TimeoutSeconds $StopTimeoutSeconds)) {
+        Stop-ProvenOwnedProcess -ProcessId $Observation.Process.Pid -ExpectedStartTimeUtc $Observation.Process.StartTimeUtc
     }
     Remove-RuntimeReceipt -Path $Paths.Receipt -ExpectedInstanceId ([string]$Observation.Receipt.instanceId)
 }
@@ -535,11 +554,11 @@ function Invoke-StopAction {
         }
         'OWNED_ADOPTABLE' {
             Write-Host 'Stopping verified healthy orphan via ownership-reproved bounded termination; its shutdown token is intentionally unrecoverable.' -ForegroundColor Yellow
-            Stop-ProvenOwnedProcess -Pid $observation.Process.Pid -ExpectedStartTimeUtc $observation.Process.StartTimeUtc
+            Stop-ProvenOwnedProcess -ProcessId $observation.Process.Pid -ExpectedStartTimeUtc $observation.Process.StartTimeUtc
             Remove-RuntimeReceipt -Path $Paths.Receipt
         }
         'OWNED_UNHEALTHY' {
-            Stop-ProvenOwnedProcess -Pid $observation.Process.Pid -ExpectedStartTimeUtc $observation.Process.StartTimeUtc
+            Stop-ProvenOwnedProcess -ProcessId $observation.Process.Pid -ExpectedStartTimeUtc $observation.Process.StartTimeUtc
             Remove-RuntimeReceipt -Path $Paths.Receipt
         }
         default { throw "Unknown runtime state: $($observation.State)" }
@@ -580,7 +599,7 @@ function Invoke-StatusAction {
 $fingerprint = Get-RepoFingerprint -Path $RepoRoot
 $paths = Get-RuntimePaths -Fingerprint $fingerprint
 $mutexName = "Local\EscapeHatch.Runtime.$fingerprint"
-$mutex = New-Object Threading.Mutex($false, $mutexName)
+$mutex = New-Object System.Threading.Mutex -ArgumentList $false, $mutexName
 $lockTaken = $false
 $exitCode = 0
 $script:StatusExitCode = 0

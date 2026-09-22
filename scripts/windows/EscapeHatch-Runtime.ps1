@@ -109,6 +109,19 @@ function Write-RuntimeReceipt {
     }
 }
 
+function Assert-RuntimeStorageWritable {
+    param([Parameter(Mandatory)]$Paths)
+    New-Item -ItemType Directory -Path $Paths.RuntimeDir -Force | Out-Null
+    New-Item -ItemType Directory -Path $Paths.LogDir -Force | Out-Null
+    $probe = Join-Path $Paths.RuntimeDir ("write-probe.{0}.tmp" -f ([Guid]::NewGuid().ToString('N')))
+    try {
+        $encoding = New-Object System.Text.UTF8Encoding -ArgumentList $false
+        [IO.File]::WriteAllText($probe, 'escapehatch-runtime-storage-probe', $encoding)
+    } finally {
+        Remove-Item -LiteralPath $probe -Force -ErrorAction SilentlyContinue
+    }
+}
+
 function Remove-RuntimeReceipt {
     param(
         [Parameter(Mandatory)][string]$Path,
@@ -396,7 +409,7 @@ function Start-ColdRuntime {
     if (-not (Test-Path -LiteralPath $viteJs -PathType Leaf)) { throw "Vite runtime not found at $viteJs" }
     if (-not (Test-Path -LiteralPath $viteConfig -PathType Leaf)) { throw "Vite config not found at $viteConfig" }
 
-    New-Item -ItemType Directory -Path $Paths.LogDir -Force | Out-Null
+    Assert-RuntimeStorageWritable -Paths $Paths
 
     $instanceId = New-RandomHex -Bytes 16
     $shutdownToken = New-RandomHex -Bytes 32
@@ -476,10 +489,16 @@ function Start-ColdRuntime {
 
     if (-not $ready) {
         $process.Refresh()
+        $safeToRemoveReceipt = $process.HasExited
         if (-not $process.HasExited -and (Test-ExactOwnershipNow -ProcessId $process.Id -ExpectedStartTimeUtc $processStart)) {
             Stop-ProvenOwnedProcess -ProcessId $process.Id -ExpectedStartTimeUtc $processStart
+            $safeToRemoveReceipt = $true
         }
-        Remove-RuntimeReceipt -Path $Paths.Receipt -ExpectedInstanceId $instanceId
+        if ($safeToRemoveReceipt) {
+            Remove-RuntimeReceipt -Path $Paths.Receipt -ExpectedInstanceId $instanceId
+        } else {
+            Write-Host "Startup failed but PID $($process.Id) is still live without sufficient socket ownership proof; preserving its receipt and refusing destructive cleanup." -ForegroundColor Yellow
+        }
         Show-LogTail -Path $stdout
         Show-LogTail -Path $stderr
         throw "EscapeHatch runtime did not establish the expected managed identity within $StartTimeoutSeconds seconds."

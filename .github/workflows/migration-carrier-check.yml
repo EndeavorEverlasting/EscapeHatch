@@ -93,10 +93,17 @@ jobs:
               )
           PY
 
+          protected_workflow=".github/workflows/web-cockpit.yml"
+          test -f "/tmp/escapehatch-donor/$protected_workflow"
+          rm "/tmp/escapehatch-donor/$protected_workflow"
+
+          remaining_count="$(find /tmp/escapehatch-donor -type f | wc -l | tr -d ' ')"
+          test "$remaining_count" = "210"
+
           cp -a /tmp/escapehatch-donor/. .
           git add -A
           staged_count="$(git diff --cached --name-only | wc -l | tr -d ' ')"
-          test "$staged_count" = "211"
+          test "$staged_count" = "210"
           test -z "$(git diff --cached --name-only --diff-filter=DMRT)"
           git diff --cached --check
       - name: Commit and publish isolated integration branch
@@ -110,5 +117,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git switch -c "$INTEGRATION_BRANCH"
-          git commit -m "chore(migration): materialize sanitized donor tree b01f628"
+          git commit -m "chore(migration): materialize donor tree except protected workflow"
           git push origin "HEAD:refs/heads/$INTEGRATION_BRANCH"

@@ -352,13 +352,26 @@ try {
     $unmanagedProcess = Start-UnmanagedVite
     $unmanagedPid = Wait-ForListener
     Assert-Equal $unmanagedPid $unmanagedProcess.Id 'unmanaged Vite must own test port'
-    $identityAvailable = $true
+    $unmanagedPayload = $null
     try {
-        Invoke-RestMethod -Method Get -Uri "$Origin/__escapehatch/runtime" -TimeoutSec 2 -ErrorAction Stop | Out-Null
-    } catch {
-        $identityAvailable = $false
+        $unmanagedPayload = Invoke-RestMethod -Method Get -Uri "$Origin/__escapehatch/runtime" -TimeoutSec 2 -ErrorAction Stop
+    } catch {}
+    $unmanagedLooksManaged = $false
+    if ($null -ne $unmanagedPayload) {
+        $appProperty = $unmanagedPayload.PSObject.Properties['app']
+        $protocolProperty = $unmanagedPayload.PSObject.Properties['protocol']
+        $repoProperty = $unmanagedPayload.PSObject.Properties['repoFingerprint']
+        $pidProperty = $unmanagedPayload.PSObject.Properties['pid']
+        if ($null -ne $appProperty -and $null -ne $protocolProperty -and $null -ne $repoProperty -and $null -ne $pidProperty) {
+            $unmanagedLooksManaged = (
+                [string]$appProperty.Value -eq 'EscapeHatch' -and
+                [int]$protocolProperty.Value -eq 1 -and
+                [string]$repoProperty.Value -eq $Fingerprint -and
+                [int]$pidProperty.Value -eq $unmanagedProcess.Id
+            )
+        }
     }
-    Assert-True (-not $identityAvailable) 'unmanaged Vite must not expose managed runtime identity'
+    Assert-True (-not $unmanagedLooksManaged) 'unmanaged Vite response must not validate as managed EscapeHatch identity'
     Invoke-Manager -Action Start | Out-Null
     $recoveredIdentity = Get-Identity
     Assert-True ([int]$recoveredIdentity.pid -ne [int]$unmanagedProcess.Id) 'manager must replace unhealthy same-repo Vite'

@@ -7,6 +7,10 @@ $ErrorActionPreference = 'Stop'
 $RepoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..')).TrimEnd('\', '/')
 $Manager = Join-Path $RepoRoot 'scripts\windows\EscapeHatch-Runtime.ps1'
 $Launcher = Join-Path $RepoRoot 'Launch-EscapeHatch.ps1'
+$CloseAdapter = Join-Path $RepoRoot 'Close-EscapeHatch.ps1'
+$StatusAdapter = Join-Path $RepoRoot 'Status-EscapeHatch.ps1'
+$CloseCmd = Join-Path $RepoRoot 'Close-EscapeHatch.cmd'
+$StatusCmd = Join-Path $RepoRoot 'Status-EscapeHatch.cmd'
 $ViteRoot = Join-Path $RepoRoot 'artifacts\escape-hatch'
 $ViteJs = Join-Path $ViteRoot 'node_modules\vite\bin\vite.js'
 $ViteConfig = Join-Path $ViteRoot 'vite.config.ts'
@@ -286,8 +290,22 @@ try {
     Assert-True (Test-Path -LiteralPath $Manager -PathType Leaf) "lifecycle manager must exist"
     Assert-True (Test-Path -LiteralPath $ViteJs -PathType Leaf) "Vite runtime must be installed before lifecycle tests"
     Assert-True (Test-Path -LiteralPath $ForeignFixture -PathType Leaf) "foreign listener fixture must exist"
+    Assert-True (Test-Path -LiteralPath $CloseAdapter -PathType Leaf) "Close adapter must exist"
+    Assert-True (Test-Path -LiteralPath $StatusAdapter -PathType Leaf) "Status adapter must exist"
+    Assert-True (Test-Path -LiteralPath $CloseCmd -PathType Leaf) "Close CMD adapter must exist"
+    Assert-True (Test-Path -LiteralPath $StatusCmd -PathType Leaf) "Status CMD adapter must exist"
     Assert-ScriptParses -Path $Manager
     Assert-ScriptParses -Path $Launcher
+    Assert-ScriptParses -Path $CloseAdapter
+    Assert-ScriptParses -Path $StatusAdapter
+
+    $closeCmdText = Get-Content -LiteralPath $CloseCmd -Raw -Encoding UTF8
+    $statusCmdText = Get-Content -LiteralPath $StatusCmd -Raw -Encoding UTF8
+    Assert-True ($closeCmdText -match 'Close-EscapeHatch\.ps1') 'Close CMD must delegate to the PowerShell adapter'
+    Assert-True ($statusCmdText -match 'Status-EscapeHatch\.ps1') 'Status CMD must delegate to the PowerShell adapter'
+    Assert-True ($statusCmdText -match 'set "STATUS_EXIT=%ERRORLEVEL%"') 'Status CMD must preserve the manager exit code'
+    Assert-True ($statusCmdText -match 'pause >nul') 'Status CMD must keep the one-click window readable'
+    Assert-True ($statusCmdText -match 'exit /b %STATUS_EXIT%') 'Status CMD must return the preserved exit code'
 
     Invoke-Manager -Action Stop | Out-Null
     $initialPids = @(Get-ListenerPids)
@@ -301,6 +319,8 @@ try {
     Assert-Equal ([int]$identity1.protocol) 1 'identity protocol'
     Assert-Equal ([int]$identity1.pid) ([int]$receipt1.pid) 'receipt and identity PID'
     Assert-Equal @(Get-ListenerPids).Count 1 'cold start listener count'
+    $healthyStatus = Invoke-PowerShellEntryPoint -Path $StatusAdapter
+    Assert-True ($healthyStatus.Output -match 'ESCAPEHATCH_STATE=OWNED_HEALTHY') 'Status adapter must report the healthy managed state'
 
     Write-Case 'second start reuses the same instance and PID'
     Invoke-Manager -Action Start | Out-Null
@@ -318,7 +338,7 @@ try {
     Write-Case 'graceful stop frees port 21031'
     $gracefulPid = [int]$concurrentIdentity.pid
     $gracefulStarted = Get-Date
-    $gracefulStop = Invoke-Manager -Action Stop
+    $gracefulStop = Invoke-PowerShellEntryPoint -Path $CloseAdapter
     $gracefulElapsed = ((Get-Date) - $gracefulStarted).TotalSeconds
     Assert-True ($gracefulStop.Output -notmatch 'Graceful shutdown request failed') 'healthy Stop must not report graceful shutdown request failure'
     Assert-True ($gracefulElapsed -lt ([int]$env:ESCAPEHATCH_STOP_TIMEOUT_SECONDS)) 'healthy Stop must complete before the forced-fallback timeout'
@@ -326,8 +346,10 @@ try {
     Assert-True (-not (Test-ProcessAlive -ProcessId $gracefulPid)) 'gracefully stopped PID must exit'
 
     Write-Case 'second stop is idempotent success'
-    $secondStop = Invoke-Manager -Action Stop
-    Assert-Equal $secondStop.ExitCode 0 'second Stop exit code'
+    $secondStop = Invoke-PowerShellEntryPoint -Path $CloseAdapter
+    Assert-Equal $secondStop.ExitCode 0 'second Close adapter exit code'
+    $stoppedStatus = Invoke-PowerShellEntryPoint -Path $StatusAdapter
+    Assert-True ($stoppedStatus.Output -match 'ESCAPEHATCH_STATE=STOPPED') 'Status adapter must report STOPPED after Close'
 
     Write-Case 'stale receipt with no process self-heals'
     Write-FixtureReceipt -ProcessId 2147483000 -ProcessStartTimeUtc '2000-01-01T00:00:00.0000000Z' -InstanceId 'stale-fixture'

@@ -195,7 +195,26 @@ function Start-UnmanagedVite {
         '--port', [string]$Port,
         '--strictPort'
     )
-    Start-Process -FilePath $nodeExe -ArgumentList $args -WorkingDirectory $RepoRoot -PassThru -WindowStyle Hidden -RedirectStandardOutput $out -RedirectStandardError $err
+
+    $managedNames = @(
+        'ESCAPEHATCH_INSTANCE_ID',
+        'ESCAPEHATCH_REPO_FINGERPRINT',
+        'ESCAPEHATCH_SHUTDOWN_TOKEN',
+        'ESCAPEHATCH_STARTED_AT_UTC',
+        'ESCAPEHATCH_RUNTIME_PROTOCOL'
+    )
+    $savedManagedEnv = @{}
+    foreach ($name in $managedNames) {
+        $savedManagedEnv[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
+        [Environment]::SetEnvironmentVariable($name, $null, 'Process')
+    }
+    try {
+        Start-Process -FilePath $nodeExe -ArgumentList $args -WorkingDirectory $RepoRoot -PassThru -WindowStyle Hidden -RedirectStandardOutput $out -RedirectStandardError $err
+    } finally {
+        foreach ($name in $managedNames) {
+            [Environment]::SetEnvironmentVariable($name, $savedManagedEnv[$name], 'Process')
+        }
+    }
 }
 
 function Start-ForeignListener {

@@ -108,17 +108,24 @@ jobs:
         with:
           node-version: "22.16.0"
 
+      - name: Set up pnpm
+        shell: pwsh
+        run: |
+          corepack enable
+          corepack prepare pnpm@10 --activate
+          pnpm --version
+
       - name: Install EscapeHatch artifact dependencies
         shell: pwsh
-        run: npm install --prefix artifacts/escape-hatch --no-audit --no-fund
+        run: pnpm --dir artifacts/escape-hatch install
 
       - name: Test runtime control plane
         shell: pwsh
-        run: npm --prefix artifacts/escape-hatch run test:runtime-control
+        run: pnpm --dir artifacts/escape-hatch run test:runtime-control
 
       - name: Build Vite artifact
         shell: pwsh
-        run: npm --prefix artifacts/escape-hatch run build
+        run: pnpm --dir artifacts/escape-hatch run build
 
       - name: Test Windows runtime lifecycle
         shell: pwsh

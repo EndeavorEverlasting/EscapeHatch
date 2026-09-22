@@ -29,9 +29,10 @@ jobs:
         run: |
           set -euo pipefail
           python .migration-carrier/verify_expand.py --report /tmp/reconstruction-report.json --extract /tmp/escapehatch-donor
-          test -f /tmp/escapehatch-donor/package.json
+          test -f /tmp/escapehatch-donor/artifacts/escape-hatch/package.json
           test -f /tmp/escapehatch-donor/artifacts/escape-hatch/vite.config.ts
       - name: Upload reconstruction report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: migration-carrier-reconstruction-report

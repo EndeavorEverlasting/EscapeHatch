@@ -33,6 +33,7 @@ $unmanagedProcess = $null
 $unrelatedProcess = $null
 $runtimeControlBackup = $null
 $runtimeControlMutated = $false
+$tempLogPaths = @()
 $caseCount = 0
 
 function Assert-True {
@@ -69,20 +70,29 @@ $RuntimeDir = Join-Path $env:LOCALAPPDATA "EscapeHatch\runtime\$Fingerprint"
 $ReceiptPath = Join-Path $RuntimeDir 'runtime.json'
 $LogDir = Join-Path $env:LOCALAPPDATA "EscapeHatch\logs\$Fingerprint"
 
-function Invoke-Manager {
+function Invoke-PowerShellEntryPoint {
     param(
-        [Parameter(Mandatory)][ValidateSet('Start','Stop','Restart','Status')][string]$Action,
+        [Parameter(Mandatory)][string]$Path,
+        [string[]]$Arguments = @(),
         [int[]]$ExpectedExitCodes = @(0)
     )
-    $output = @(& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $Manager -Action $Action 2>&1)
+    $output = @(& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $Path @Arguments 2>&1)
     $code = $LASTEXITCODE
     if ($ExpectedExitCodes -notcontains $code) {
-        throw "Manager $Action exit $code; expected $($ExpectedExitCodes -join ','). Output: $($output -join [Environment]::NewLine)"
+        throw "PowerShell entry point $Path exit $code; expected $($ExpectedExitCodes -join ','). Output: $($output -join [Environment]::NewLine)"
     }
     [PSCustomObject]@{
         ExitCode = $code
         Output = ($output -join [Environment]::NewLine)
     }
+}
+
+function Invoke-Manager {
+    param(
+        [Parameter(Mandatory)][ValidateSet('Start','Stop','Restart','Status')][string]$Action,
+        [int[]]$ExpectedExitCodes = @(0)
+    )
+    Invoke-PowerShellEntryPoint -Path $Manager -Arguments @('-Action', $Action) -ExpectedExitCodes $ExpectedExitCodes
 }
 
 function Get-ListenerPids {
@@ -158,6 +168,7 @@ function Start-UnmanagedVite {
     $stamp = [Guid]::NewGuid().ToString('N')
     $out = Join-Path $env:TEMP "eh-unmanaged-$stamp.out.log"
     $err = Join-Path $env:TEMP "eh-unmanaged-$stamp.err.log"
+    $script:tempLogPaths += @($out, $err)
     $args = @(
         ('"' + $ViteJs + '"'),
         '--config', ('"' + $ViteConfig + '"'),
@@ -173,6 +184,7 @@ function Start-ForeignListener {
     $stamp = [Guid]::NewGuid().ToString('N')
     $out = Join-Path $env:TEMP "eh-foreign-$stamp.out.log"
     $err = Join-Path $env:TEMP "eh-foreign-$stamp.err.log"
+    $script:tempLogPaths += @($out, $err)
     Start-Process -FilePath $nodeExe -ArgumentList @(('"' + $ForeignFixture + '"')) -WorkingDirectory $RepoRoot -PassThru -WindowStyle Hidden -RedirectStandardOutput $out -RedirectStandardError $err
 }
 
@@ -253,7 +265,11 @@ try {
 
     Write-Case 'graceful stop frees port 21031'
     $gracefulPid = [int]$concurrentIdentity.pid
-    Invoke-Manager -Action Stop | Out-Null
+    $gracefulStarted = Get-Date
+    $gracefulStop = Invoke-Manager -Action Stop
+    $gracefulElapsed = ((Get-Date) - $gracefulStarted).TotalSeconds
+    Assert-True ($gracefulStop.Output -notmatch 'Graceful shutdown request failed') 'healthy Stop must not report graceful shutdown request failure'
+    Assert-True ($gracefulElapsed -lt ([int]$env:ESCAPEHATCH_STOP_TIMEOUT_SECONDS)) 'healthy Stop must complete before the forced-fallback timeout'
     Wait-ForNoListener
     Assert-True (-not (Test-ProcessAlive -ProcessId $gracefulPid)) 'gracefully stopped PID must exit'
 
@@ -301,9 +317,9 @@ try {
     Write-Case 'unrelated port listener survives untouched'
     $foreignProcess = Start-ForeignListener
     Assert-Equal (Wait-ForListener) $foreignProcess.Id 'foreign fixture must own test port'
-    $foreignStart = Invoke-Manager -Action Start -ExpectedExitCodes @(1)
-    Assert-True ($foreignStart.Output -match 'cannot prove|unproven|FOREIGN|will not terminate') 'foreign Start must explain refusal'
-    Assert-True (Test-ProcessAlive -ProcessId $foreignProcess.Id) 'foreign process must survive Start'
+    $foreignStart = Invoke-PowerShellEntryPoint -Path $Launcher -ExpectedExitCodes @(1)
+    Assert-True ($foreignStart.Output -match 'cannot prove|unproven|FOREIGN|will not terminate') 'foreign launcher Start must explain refusal'
+    Assert-True (Test-ProcessAlive -ProcessId $foreignProcess.Id) 'foreign process must survive launcher Start'
     Invoke-Manager -Action Stop -ExpectedExitCodes @(1) | Out-Null
     Assert-True (Test-ProcessAlive -ProcessId $foreignProcess.Id) 'foreign process must survive Stop'
     $foreignStatus = Invoke-Manager -Action Status -ExpectedExitCodes @(2)
@@ -402,6 +418,9 @@ export function createRuntimeControlPlugin(): Plugin {
     Stop-TestOwnedProcess -Process $unmanagedProcess
     Stop-TestOwnedProcess -Process $unrelatedProcess
     try { Invoke-Manager -Action Stop -ExpectedExitCodes @(0,1) | Out-Null } catch {}
+    if ($tempLogPaths.Count -gt 0) {
+        Remove-Item -LiteralPath $tempLogPaths -Force -ErrorAction SilentlyContinue
+    }
     foreach ($name in $previousEnv.Keys) {
         [Environment]::SetEnvironmentVariable($name, $previousEnv[$name], 'Process')
     }

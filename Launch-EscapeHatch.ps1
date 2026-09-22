@@ -47,6 +47,9 @@ if (-not (Test-Path -LiteralPath $viteConfig)) {
   Read-Host "Press Enter to exit"
   exit 1
 }
+# Use relative paths for Start-Process to avoid quoting issues with spaces in $RepoRoot ("OneDrive - Northwell Health")
+$viteJsRel = "artifacts\escape-hatch\node_modules\vite\bin\vite.js"
+$viteConfigRel = "artifacts\escape-hatch\vite.config.ts"
 
 # --- If already listening, just open browser ---
 try {
@@ -68,9 +71,18 @@ Write-Host "  PORT=$Port  BASE_PATH=$env:BASE_PATH" -ForegroundColor DarkGray
 Write-Host "  vite --config artifacts/escape-hatch/vite.config.ts --host 127.0.0.1 --port $Port --strictPort" -ForegroundColor DarkGray
 Write-Host ""
 
-$viteArgs = @($viteJs, "--config", $viteConfig, "--host", "127.0.0.1", "--port", $Port, "--strictPort")
+$viteArgs = @($viteJsRel, "--config", $viteConfigRel, "--host", "127.0.0.1", "--port", $Port, "--strictPort")
+# Resolve real node.exe (node on PATH is a .cmd shim that Start-Process cannot execute directly)
+$nodeExe = $null
+try { $nodeExe = (Get-Command node.exe -ErrorAction Stop).Source } catch {}
+if (-not $nodeExe -or -not (Test-Path -LiteralPath $nodeExe)) {
+  $maybe = $node.Source -replace '\.cmd$','.exe'
+  if (Test-Path -LiteralPath $maybe) { $nodeExe = $maybe } else { $nodeExe = "node.exe" }
+}
+Write-Host "  node: $nodeExe" -ForegroundColor DarkGray
+Write-Host "  args: $viteArgs" -ForegroundColor DarkGray
 # Start Vite as a child process; inherit env PORT/BASE_PATH
-$proc = Start-Process -FilePath "node" -ArgumentList $viteArgs -WorkingDirectory $RepoRoot -PassThru -WindowStyle Normal
+$proc = Start-Process -FilePath $nodeExe -ArgumentList $viteArgs -WorkingDirectory $RepoRoot -PassThru -WindowStyle Normal
 
 # --- Wait for HTTP ready (bounded, 30s) ---
 $deadline = (Get-Date).AddSeconds(30)

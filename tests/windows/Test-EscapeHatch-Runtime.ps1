@@ -225,9 +225,9 @@ try {
     Assert-ScriptParses -Path $Manager
     Assert-ScriptParses -Path $Launcher
 
-    $initialPids = @(Get-ListenerPids)
-    Assert-Equal $initialPids.Count 0 "test runner port $Port must start free"
     Invoke-Manager -Action Stop | Out-Null
+    $initialPids = @(Get-ListenerPids)
+    Assert-Equal $initialPids.Count 0 "test runner port $Port must be free after safe managed-runtime cleanup"
 
     Write-Case 'cold start creates one healthy instance'
     Invoke-Manager -Action Start | Out-Null

@@ -46,3 +46,69 @@ jobs:
           path: /tmp/escapehatch-donor
           if-no-files-found: error
           include-hidden-files: true
+
+  publish-integration-branch:
+    needs: reconstruct
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      INTEGRATION_BRANCH: integration/replit-donor-b01f628-20260921
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Download verified donor tree
+        uses: actions/download-artifact@v4
+        with:
+          name: migration-carrier-reconstructed-tree
+          path: /tmp/escapehatch-donor
+      - name: Verify additive publication candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          file_count="$(find /tmp/escapehatch-donor -type f | wc -l | tr -d ' ')"
+          test "$file_count" = "211"
+
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          root = Path("/tmp/escapehatch-donor")
+          donor = {
+              p.relative_to(root).as_posix()
+              for p in root.rglob("*")
+              if p.is_file()
+          }
+          tracked = set(
+              subprocess.check_output(["git", "ls-files"], text=True).splitlines()
+          )
+          collisions = sorted(donor & tracked)
+          if collisions:
+              raise SystemExit(
+                  "refusing non-additive donor publication; tracked collisions: "
+                  + ", ".join(collisions)
+              )
+          PY
+
+          cp -a /tmp/escapehatch-donor/. .
+          git add -A
+          staged_count="$(git diff --cached --name-only | wc -l | tr -d ' ')"
+          test "$staged_count" = "211"
+          test -z "$(git diff --cached --name-only --diff-filter=DMRT)"
+          git diff --cached --check
+      - name: Commit and publish isolated integration branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code origin "refs/heads/$INTEGRATION_BRANCH" >/dev/null 2>&1; then
+            echo "integration branch already exists; refusing to rewrite it" >&2
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$INTEGRATION_BRANCH"
+          git commit -m "chore(migration): materialize sanitized donor tree b01f628"
+          git push origin "HEAD:refs/heads/$INTEGRATION_BRANCH"

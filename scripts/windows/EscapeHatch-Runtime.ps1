@@ -17,6 +17,9 @@ $BasePath = if ($env:BASE_PATH) { $env:BASE_PATH } else { '/' }
 $StartTimeoutSeconds = if ($env:ESCAPEHATCH_START_TIMEOUT_SECONDS) { [int]$env:ESCAPEHATCH_START_TIMEOUT_SECONDS } else { 30 }
 $StopTimeoutSeconds = if ($env:ESCAPEHATCH_STOP_TIMEOUT_SECONDS) { [int]$env:ESCAPEHATCH_STOP_TIMEOUT_SECONDS } else { 10 }
 $Url = 'http://{0}:{1}' -f $RuntimeHost, $Port
+$normalizedBasePath = '/' + $BasePath.Trim('/') + '/'
+if ($normalizedBasePath -eq '//') { $normalizedBasePath = '/' }
+$AppUrl = $Url + $normalizedBasePath
 
 if ($Port -lt 1 -or $Port -gt 65535) { throw "PORT must be between 1 and 65535." }
 if ($StartTimeoutSeconds -lt 1 -or $StopTimeoutSeconds -lt 1) { throw "Lifecycle timeouts must be positive integers." }
@@ -101,11 +104,15 @@ function Write-RuntimeReceipt {
     New-Item -ItemType Directory -Path $directory -Force | Out-Null
     $temp = Join-Path $directory ("runtime.{0}.tmp" -f ([Guid]::NewGuid().ToString('N')))
     $encoding = New-Object System.Text.UTF8Encoding -ArgumentList $false
-    [IO.File]::WriteAllText($temp, (($Receipt | ConvertTo-Json -Depth 5) + [Environment]::NewLine), $encoding)
-    if ([IO.File]::Exists($Path)) {
-        [IO.File]::Replace($temp, $Path, $null)
-    } else {
-        [IO.File]::Move($temp, $Path)
+    try {
+        [IO.File]::WriteAllText($temp, (($Receipt | ConvertTo-Json -Depth 5) + [Environment]::NewLine), $encoding)
+        if ([IO.File]::Exists($Path)) {
+            [IO.File]::Replace($temp, $Path, $null)
+        } else {
+            [IO.File]::Move($temp, $Path)
+        }
+    } finally {
+        Remove-Item -LiteralPath $temp -Force -ErrorAction SilentlyContinue
     }
 }
 
@@ -138,11 +145,10 @@ function Remove-RuntimeReceipt {
 }
 
 function Get-ListenerObservation {
-    $listeners = @()
     try {
-        $listeners = @(Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction Stop)
+        $listeners = @(Get-NetTCPConnection -State Listen -ErrorAction Stop | Where-Object { [int]$_.LocalPort -eq $Port })
     } catch {
-        $listeners = @()
+        throw "Unable to query authoritative TCP listener state for port $Port: $($_.Exception.Message)"
     }
 
     if ($listeners.Count -eq 0) {
@@ -261,9 +267,9 @@ function Get-RuntimeObservation {
                         (Test-SameRepoViteProcess -Process $receiptProcess)
                     ) {
                         return [PSCustomObject]@{
-                            State = 'OWNED_UNHEALTHY'; Receipt = $receipt; Listener = $listener
+                            State = 'FOREIGN_CONFLICT'; Receipt = $receipt; Listener = $listener
                             Health = $null; Process = $receiptProcess
-                            Reason = 'Receipt identifies a live same-repo Vite process, but no listening socket proves destructive ownership.'
+                            Reason = 'Receipt identifies a live same-repo Vite process, but no listening socket proves destructive ownership; automatic termination is forbidden.'
                         }
                     }
                 } catch {}
@@ -386,7 +392,7 @@ function Get-NodeExecutable {
 
 function Open-EscapeHatchBrowser {
     if ($env:ESCAPEHATCH_NO_BROWSER -eq '1') { return }
-    Start-Process $Url | Out-Null
+    Start-Process $AppUrl | Out-Null
 }
 
 function Show-LogTail {
@@ -465,7 +471,58 @@ function Start-ColdRuntime {
         shutdownToken = $shutdownToken
         startedAtUtc = $startedAtUtc
     }
-    Write-RuntimeReceipt -Path $Paths.Receipt -Receipt $receipt
+    try {
+        Write-RuntimeReceipt -Path $Paths.Receipt -Receipt $receipt
+    } catch {
+        $receiptWriteError = $_.Exception.Message
+        $cleanupDeadline = (Get-Date).AddSeconds($StartTimeoutSeconds)
+        $cleaned = $false
+        while ((Get-Date) -lt $cleanupDeadline) {
+            $process.Refresh()
+            if ($process.HasExited) {
+                $cleaned = $true
+                break
+            }
+
+            $health = Get-RuntimeIdentity
+            $healthMatchesSpawn = (
+                $null -ne $health -and
+                [string](Get-ObjectPropertyValue -Object $health -Name 'app') -eq 'EscapeHatch' -and
+                [int](Get-ObjectPropertyValue -Object $health -Name 'protocol') -eq $RuntimeProtocol -and
+                [string](Get-ObjectPropertyValue -Object $health -Name 'instanceId') -eq $instanceId -and
+                [string](Get-ObjectPropertyValue -Object $health -Name 'repoFingerprint') -eq $Fingerprint -and
+                [int](Get-ObjectPropertyValue -Object $health -Name 'pid') -eq [int]$process.Id
+            )
+
+            if ($healthMatchesSpawn) {
+                $headers = @{
+                    'x-escapehatch-runtime-protocol' = [string]$RuntimeProtocol
+                    'x-escapehatch-instance-id' = $instanceId
+                    'x-escapehatch-shutdown-token' = $shutdownToken
+                }
+                try {
+                    Invoke-RestMethod -Method Post -Uri "$Url/__escapehatch/shutdown" -Headers $headers -TimeoutSec 3 -ErrorAction Stop | Out-Null
+                } catch {}
+                if (Wait-ForOwnedExit -ProcessId $process.Id -TimeoutSeconds $StopTimeoutSeconds) {
+                    $cleaned = $true
+                    break
+                }
+            }
+
+            if (Test-ExactOwnershipNow -ProcessId $process.Id -ExpectedStartTimeUtc $processStart) {
+                Stop-ProvenOwnedProcess -ProcessId $process.Id -ExpectedStartTimeUtc $processStart
+                $cleaned = $true
+                break
+            }
+
+            Start-Sleep -Milliseconds 250
+        }
+
+        if (-not $cleaned) {
+            throw "Runtime receipt persistence failed and PID $($process.Id) could not be safely re-proven for cleanup; no destructive action was taken. Receipt error: $receiptWriteError"
+        }
+        throw "Runtime receipt persistence failed after spawn; the spawned runtime was safely stopped. Receipt error: $receiptWriteError"
+    }
 
     $deadline = (Get-Date).AddSeconds($StartTimeoutSeconds)
     $ready = $false
@@ -506,7 +563,7 @@ function Start-ColdRuntime {
 
     Write-Host 'ESCAPEHATCH_STATE=OWNED_HEALTHY' -ForegroundColor Green
     Write-Host "PID=$($process.Id)"
-    Write-Host "URL=$Url"
+    Write-Host "URL=$AppUrl"
     Open-EscapeHatchBrowser
 }
 
@@ -521,7 +578,7 @@ function Invoke-StartAction {
         'OWNED_HEALTHY' {
             Write-Host 'EscapeHatch is already running and verified.' -ForegroundColor Cyan
             Write-Host "PID=$($observation.Process.Pid)"
-            Write-Host "URL=$Url"
+            Write-Host "URL=$AppUrl"
             Open-EscapeHatchBrowser
             return
         }
@@ -529,7 +586,7 @@ function Invoke-StartAction {
             Remove-RuntimeReceipt -Path $Paths.Receipt
             Write-Host 'EscapeHatch healthy orphan verified; reusing it without reconstructing its missing shutdown secret.' -ForegroundColor Yellow
             Write-Host "PID=$($observation.Process.Pid)"
-            Write-Host "URL=$Url"
+            Write-Host "URL=$AppUrl"
             Open-EscapeHatchBrowser
             return
         }
@@ -633,7 +690,7 @@ function Invoke-StatusAction {
     $observation = Get-RuntimeObservation -Fingerprint $Fingerprint -ReceiptPath $Paths.Receipt
     Write-Host "ESCAPEHATCH_STATE=$($observation.State)"
     Write-Host "PORT=$Port"
-    Write-Host "URL=$Url"
+    Write-Host "URL=$AppUrl"
     if ($null -ne $observation.Listener -and $observation.Listener.Present -and $null -ne $observation.Listener.Pid) {
         Write-Host "PID=$($observation.Listener.Pid)"
     }

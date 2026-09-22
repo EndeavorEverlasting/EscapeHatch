@@ -465,6 +465,11 @@ export function createRuntimeControlPlugin(): Plugin {
     Assert-Equal ([int]$shutdownResponse.StatusCode) 202 'authorized shutdown HTTP status'
     Assert-True (-not ([string]$shutdownResponse.Content).Contains($token)) 'shutdown response must not expose shutdown token'
     Wait-ForNoListener
+    if (Test-Path -LiteralPath $LogDir) {
+        $postShutdownLogText = @(Get-ChildItem -LiteralPath $LogDir -Filter '*.log' -File -ErrorAction SilentlyContinue |
+            ForEach-Object { Get-Content -LiteralPath $_.FullName -Raw -ErrorAction SilentlyContinue }) -join [Environment]::NewLine
+        Assert-True (-not $postShutdownLogText.Contains($token)) 'runtime logs must not contain shutdown token after shutdown output is flushed'
+    }
     Invoke-Manager -Action Stop | Out-Null
 
     Assert-Equal $caseCount 14 'all required lifecycle regression cases must execute'

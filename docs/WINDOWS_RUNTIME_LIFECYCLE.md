@@ -6,7 +6,7 @@ The visible launchers are deliberately thin. Process identity, receipts, locking
 
 - **Start / open:** double-click `Launch-EscapeHatch.cmd`.
 - **Close:** double-click `Close-EscapeHatch.cmd`. Closing an already-stopped instance is a successful no-op.
-- **Status:** double-click `Status-EscapeHatch.cmd`. It reports the lifecycle state without requiring you to inspect PowerShell jobs, Node PIDs, or Vite.
+- **Status:** double-click `Status-EscapeHatch.cmd`. It reports the lifecycle state and keeps the desktop window open until you dismiss it. For scripts/terminal automation, call `Status-EscapeHatch.ps1` directly so there is no interactive pause.
 - **Restart (advanced):** run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\windows\EscapeHatch-Runtime.ps1 -Action Restart`.
 
 The PowerShell siblings are equivalent entry points for users who prefer PowerShell.
@@ -43,4 +43,4 @@ The browser application never receives the shutdown token. There is intentionall
 
 If `Status-EscapeHatch.cmd` reports `FOREIGN_CONFLICT`, or Start/Close reports that the listener is unproven and was left untouched, inspect the reported process information. The lifecycle manager will not terminate an unproven listener. Do not use broad commands such as `taskkill /IM node.exe` or `Get-Process node | Stop-Process`.
 
-If Vite dependencies are missing, install the artifact dependencies under `artifacts\escape-hatch` before retrying the launcher. Lifecycle validation in CI uses the same managed runtime path and permanently checks that a foreign listener survives untouched.
+If Vite dependencies are missing, install the artifact dependencies under `artifacts\escape-hatch` before retrying the launcher. The dedicated Windows lifecycle/fault-injection CI suite is owned by EH-R3 and must be integrated before CI process-safety proof is claimed.

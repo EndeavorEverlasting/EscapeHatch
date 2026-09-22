@@ -225,7 +225,9 @@ function Assert-ScriptParses {
     $errors = $null
     [System.Management.Automation.Language.Parser]::ParseFile($Path, [ref]$tokens, [ref]$errors) | Out-Null
     if ($errors.Count -gt 0) {
-        $detail = $errors | ForEach-Object Message | Out-String
+        $detail = $errors | ForEach-Object {
+            "{0}:{1}:{2}: {3}" -f $_.Extent.File, $_.Extent.StartLineNumber, $_.Extent.StartColumnNumber, $_.Message
+        } | Out-String
         throw ("PowerShell parse errors in {0}: {1}" -f $Path, $detail)
     }
 }

@@ -148,7 +148,7 @@ function Get-ListenerObservation {
     try {
         $listeners = @(Get-NetTCPConnection -State Listen -ErrorAction Stop | Where-Object { [int]$_.LocalPort -eq $Port })
     } catch {
-        throw "Unable to query authoritative TCP listener state for port $Port: $($_.Exception.Message)"
+        throw ("Unable to query authoritative TCP listener state for port {0}: {1}" -f $Port, $_.Exception.Message)
     }
 
     if ($listeners.Count -eq 0) {

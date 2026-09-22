@@ -1,0 +1,292 @@
+{
+  "schema_version": "prompt-parallel-dispatch/v1",
+  "run_id": "escapehatch-runtime-lifecycle-20260921",
+  "repository": "EndeavorEverlasting/EscapeHatch",
+  "plan_owner": "docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md",
+  "base_ref": {
+    "local_path": "C:\\Users\\pa_rperez26\\OneDrive - Northwell Health\\OG Laptop Backup\\Desktop\\dev\\EscapeHatch",
+    "local_branch": "main",
+    "local_launcher_head": "5effcd293bdf4ded725a4ca28908b8b986b359ec",
+    "provider_default_branch": "main",
+    "provider_default_head": "0824535b9dc1341def885a79a098d297df770ac8",
+    "provider_integration_branch": "integration/replit-donor-b01f628-20260921",
+    "provider_plan_head": "a72ad024faed7549a47cf6127ef377f20a5b3486",
+    "freshness": "PROVIDER_REFRESHED_LOCAL_LAUNCHER_COMMIT_NOT_PROVIDER_RESOLVABLE"
+  },
+  "graph": {
+    "expression": "EH-R0 -> { EH-R1 || EH-R2 } -> { EH-R3 || EH-R4 } -> EH-R5",
+    "max_width": 2,
+    "parallel_disposition": "REQUIRED_AFTER_EH-R0"
+  },
+  "canonical_target": "Outputs/prompt-parallel-dispatch/manifest.json",
+  "status": "BLOCKED",
+  "blockers": [
+    "The provider integration floor does not contain harness/contracts/prompt-parallel-dispatch.v1.json.",
+    "The provider integration floor does not contain scripts/prompt_parallel_dispatch.py.",
+    "The exact local launcher commit 5effcd293bdf4ded725a4ca28908b8b986b359ec is not provider-resolvable yet."
+  ],
+  "autonomy_gap": "Recover the canonical dispatch schema/runner from the actual execution floor if they exist there, and publish the exact launcher commit before implementation dispatch. Until then this file is a durable blocked transport payload, not dispatch proof.",
+  "lanes": [
+    {
+      "lane_id": "EH-R0",
+      "wave": 0,
+      "mission": "Define and validate the local runtime lifecycle contract: runtime identity, receipt schema, ownership classification, shutdown authorization, kill policy, and synthetic positive/negative fixtures.",
+      "dependencies": [
+        "exact launcher commit 5effcd293bdf4ded725a4ca28908b8b986b359ec available on execution floor"
+      ],
+      "owned_mutation_surfaces": [
+        "contracts/local-runtime-lifecycle.v1.json",
+        "fixtures/local-runtime-lifecycle.v1.example.json",
+        "scripts/validate_local_runtime_lifecycle.py",
+        "required canonical artifact/harness registry and map entries",
+        "focused synthetic fixtures"
+      ],
+      "forbidden_surfaces": [
+        "Vite runtime implementation",
+        "Windows launcher behavior implementation",
+        "application/career domain semantics",
+        "browser extension packaging"
+      ],
+      "posture": "single writer",
+      "adapter": {
+        "kind": "local_repo_agent_or_provider_writer",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-R0",
+          "plan": "docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "versioned lifecycle contract",
+        "negative foreign-listener and PID-reuse fixtures",
+        "positive owned-runtime fixtures",
+        "deterministic validator"
+      ],
+      "validation": [
+        "python scripts/validate_local_runtime_lifecycle.py",
+        "python scripts/validate_harness.py",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-R5",
+      "status": "BLOCKED"
+    },
+    {
+      "lane_id": "EH-R1",
+      "wave": 1,
+      "mission": "Implement the Vite runtime identity endpoint and token-authenticated graceful shutdown control plane against the pinned EH-R0 contract.",
+      "dependencies": ["EH-R0"],
+      "owned_mutation_surfaces": [
+        "artifacts/escape-hatch/vite.config.ts",
+        "artifacts/escape-hatch runtime-control module",
+        "runtime-control focused tests"
+      ],
+      "forbidden_surfaces": [
+        "Windows lifecycle manager",
+        "root launcher wrappers",
+        "career/application domain behavior"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-R1",
+          "plan": "docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "GET /__escapehatch/runtime",
+        "POST /__escapehatch/shutdown",
+        "loopback/token/privacy regression tests"
+      ],
+      "validation": [
+        "runtime-control focused tests",
+        "npm --prefix artifacts/escape-hatch run typecheck",
+        "npm --prefix artifacts/escape-hatch run build",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-R5",
+      "status": "WAITING"
+    },
+    {
+      "lane_id": "EH-R2",
+      "wave": 1,
+      "mission": "Implement the canonical Windows lifecycle manager with lock, receipt, start/reuse/adopt/stop/restart/status state machine and fail-closed foreign-port behavior.",
+      "dependencies": ["EH-R0", "exact local launcher commit published"],
+      "owned_mutation_surfaces": [
+        "scripts/windows/EscapeHatch-Runtime.ps1",
+        "Launch-EscapeHatch.ps1 refactor to delegate to lifecycle manager",
+        "launcher-focused helpers"
+      ],
+      "forbidden_surfaces": [
+        "Vite control-plane implementation",
+        "web application UI/domain behavior",
+        "unconditional port-owner termination"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_windows_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-R2",
+          "plan": "docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "canonical lifecycle PowerShell manager",
+        "atomic local receipt handling",
+        "state-classification diagnostics",
+        "no Start-Job ownership dependency"
+      ],
+      "validation": [
+        "PowerShell syntax/static checks",
+        "synthetic ownership classification tests",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-R5",
+      "status": "WAITING"
+    },
+    {
+      "lane_id": "EH-R3",
+      "wave": 2,
+      "mission": "Create the Windows lifecycle fault-injection and regression floor, including the permanent foreign-listener non-kill case.",
+      "dependencies": ["EH-R1", "EH-R2"],
+      "owned_mutation_surfaces": [
+        "Windows lifecycle test scripts",
+        "Windows CI lifecycle job/workflow wiring",
+        "synthetic fault fixtures"
+      ],
+      "forbidden_surfaces": [
+        "runtime production implementation except minimal testability seams approved by convergence owner",
+        "user-facing launcher docs/wrappers owned by EH-R4"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "ci_windows_runner_and_local_repo_agent",
+        "rung": 4
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-R3",
+          "plan": "docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "cold/reuse/stop/restart regression suite",
+        "foreign-listener survives test",
+        "PID-reuse non-kill test",
+        "crash/stale-receipt recovery tests"
+      ],
+      "validation": [
+        "Windows hosted lifecycle suite",
+        "repository harness validation",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-R5",
+      "status": "WAITING"
+    },
+    {
+      "lane_id": "EH-R4",
+      "wave": 2,
+      "mission": "Add the friendly Close EscapeHatch user surface and concise status/runbook UX as thin adapters over the lifecycle manager.",
+      "dependencies": ["EH-R2"],
+      "owned_mutation_surfaces": [
+        "Close-EscapeHatch.ps1",
+        "Close-EscapeHatch.cmd",
+        "launcher usage/runbook documentation",
+        "optional status presentation"
+      ],
+      "forbidden_surfaces": [
+        "duplicate lifecycle logic",
+        "web-page Quit button",
+        "browser extension packaging"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_windows_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-R4",
+          "plan": "docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "one-click Close EscapeHatch adapter",
+        "idempotent already-stopped UX",
+        "friendly foreign-conflict/status output"
+      ],
+      "validation": [
+        "wrapper invocation tests",
+        "PowerShell/CMD exit-code propagation",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-R5",
+      "status": "WAITING"
+    },
+    {
+      "lane_id": "EH-R5",
+      "wave": 3,
+      "mission": "Converge lifecycle implementation, rerun exact-head validation, execute workstation acceptance, classify the release change, and integrate through the repository promotion contract.",
+      "dependencies": ["EH-R3", "EH-R4"],
+      "owned_mutation_surfaces": [
+        "integration conflict resolution",
+        "release/version surfaces after reviewed classification",
+        "canonical plan closeout",
+        "promotion evidence"
+      ],
+      "forbidden_surfaces": [
+        "unrelated product features",
+        "browser packaging expansion",
+        "weakening lifecycle ownership checks"
+      ],
+      "posture": "single convergence owner",
+      "adapter": {
+        "kind": "local_convergence_owner_plus_provider",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "converge_validate_integrate",
+        "arguments": {
+          "sprint": "EH-R5",
+          "plan": "docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "integrated lifecycle candidate",
+        "Windows workstation acceptance receipt",
+        "release classification/change record",
+        "default-branch containment proof"
+      ],
+      "validation": [
+        "lifecycle contract validator",
+        "Windows lifecycle suite",
+        "Vite typecheck/build",
+        "repository harness",
+        "git diff --check",
+        "workstation start-reuse-close-restart proof",
+        "post-integration containment verification"
+      ],
+      "convergence_owner": "EscapeHatch mainline promotion owner",
+      "status": "WAITING"
+    }
+  ]
+}

@@ -123,6 +123,10 @@ jobs:
         shell: pwsh
         run: pnpm --dir artifacts/escape-hatch run test:runtime-control
 
+      - name: Typecheck EscapeHatch artifact
+        shell: pwsh
+        run: pnpm --dir artifacts/escape-hatch run typecheck
+
       - name: Build Vite artifact
         shell: pwsh
         run: pnpm --dir artifacts/escape-hatch run build

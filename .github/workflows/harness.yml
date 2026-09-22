@@ -95,3 +95,42 @@ jobs:
           }
           Write-Host "WINDOWS_REPO_ROOT=PASS"
           Write-Host "DEV_ROOT=$actual"
+
+  windows-lifecycle:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.16.0"
+
+      - name: Set up pnpm
+        shell: pwsh
+        run: |
+          corepack enable
+          corepack prepare pnpm@10 --activate
+          pnpm --version
+
+      - name: Install EscapeHatch artifact dependencies
+        shell: pwsh
+        run: pnpm --dir artifacts/escape-hatch install
+
+      - name: Test runtime control plane
+        shell: pwsh
+        run: pnpm --dir artifacts/escape-hatch run test:runtime-control
+
+      - name: Typecheck EscapeHatch artifact
+        shell: pwsh
+        run: pnpm --dir artifacts/escape-hatch run typecheck
+
+      - name: Build Vite artifact
+        shell: pwsh
+        run: pnpm --dir artifacts/escape-hatch run build
+
+      - name: Test Windows runtime lifecycle
+        shell: pwsh
+        run: ./tests/windows/Test-EscapeHatch-Runtime.ps1

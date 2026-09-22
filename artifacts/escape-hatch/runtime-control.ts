@@ -142,26 +142,36 @@ export function handleRuntimeControlRequest(
   return true;
 }
 
+export function createShutdownGate(shutdown: () => void): () => void {
+  let requested = false;
+  return () => {
+    if (requested) return;
+    requested = true;
+    shutdown();
+  };
+}
+
 export function createRuntimeControlPlugin(options: RuntimeControlOptions = {}): Plugin {
   const runtime = readManagedRuntime(options.env);
   return {
     name: 'escapehatch-runtime-control',
     configureServer(server) {
       if (!runtime) return;
+      const requestShutdown = createShutdownGate(() => {
+        setTimeout(() => {
+          void Promise.resolve(options.shutdown ? options.shutdown(server) : server.close())
+            .then(() => {
+              if (!options.shutdown) process.exit(0);
+            })
+            .catch((error: unknown) => {
+              const message = error instanceof Error ? error.message : String(error);
+              console.error(`EscapeHatch graceful shutdown failed: ${message}`);
+              process.exitCode = 1;
+            });
+        }, 0);
+      });
       server.middlewares.use((req, res, next) => {
-        const handled = handleRuntimeControlRequest(req, res, runtime, () => {
-          setTimeout(() => {
-            void Promise.resolve(options.shutdown ? options.shutdown(server) : server.close())
-              .then(() => {
-                if (!options.shutdown) process.exit(0);
-              })
-              .catch((error: unknown) => {
-                const message = error instanceof Error ? error.message : String(error);
-                console.error(`EscapeHatch graceful shutdown failed: ${message}`);
-                process.exitCode = 1;
-              });
-          }, 0);
-        });
+        const handled = handleRuntimeControlRequest(req, res, runtime, requestShutdown);
         if (!handled) next();
       });
     },

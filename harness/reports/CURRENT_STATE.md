@@ -121,6 +121,7 @@ python scripts/validate_application_companion.py
 python scripts/validate_resume_presentation.py
 python scripts/validate_harness.py
 python scripts/validate_career_state.py
+python scripts/validate_local_runtime_lifecycle.py
 python tests/test_product_version.py
 python tests/test_repository_promotion.py
 python tests/test_study_guidance_export.py

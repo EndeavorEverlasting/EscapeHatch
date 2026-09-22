@@ -66,6 +66,9 @@ This file is the canonical registry for durable EscapeHatch artifacts. A plausib
 | Study-guidance exporter | `scripts/export_study_guidance.py` | tracked cross-repo adapter | export user-owned career-state guidance | `python tests/test_study_guidance_export.py` |
 | Study-guidance export tests | `tests/test_study_guidance_export.py` | tracked behavior test | exercise canonical synthetic fixture | `python tests/test_study_guidance_export.py` |
 | Career-state CI | `.github/workflows/career-state.yml` | tracked validation workflow | product-contract changes | GitHub Actions |
+| Local runtime lifecycle contract | `contracts/local-runtime-lifecycle.v1.json` | tracked versioned runtime contract | update identity/state/kill/privacy rules; never add real tokens or local paths | `python scripts/validate_local_runtime_lifecycle.py` |
+| Local runtime lifecycle example fixture | `fixtures/local-runtime-lifecycle.v1.example.json` | tracked synthetic ownership fixture | exercise healthy/adoptable/unhealthy plus foreign/stale/mismatch negatives without real processes | `python scripts/validate_local_runtime_lifecycle.py` |
+| Local runtime lifecycle validator | `scripts/validate_local_runtime_lifecycle.py` | tracked contract validator | update fail-closed lifecycle identity/kill-policy checks | `python scripts/validate_local_runtime_lifecycle.py` |
 
 ## User-owned local artifacts
 

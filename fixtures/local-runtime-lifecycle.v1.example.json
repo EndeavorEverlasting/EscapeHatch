@@ -1,0 +1,218 @@
+{
+  "schema": "escapehatch-local-runtime-lifecycle-fixture/v1",
+  "contract": "escapehatch-local-runtime-lifecycle/v1",
+  "synthetic_only": true,
+  "repo_fingerprint": "764366f68d1a64f72d90a7b91462f7d056dc9ea1e807a4a6f7e1e2b0d9df9a10",
+  "other_repo_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "host": "127.0.0.1",
+  "port": 21031,
+  "cases": [
+    {
+      "id": "positive-matching-healthy-runtime",
+      "kind": "positive",
+      "expect_state": "OWNED_HEALTHY",
+      "expect_start": "reuse_and_open_browser",
+      "expect_stop": "authenticated_graceful_shutdown",
+      "expect_kill": "forbidden_use_graceful_path_first",
+      "listener": { "present": true, "pid": 4242 },
+      "health": {
+        "app": "EscapeHatch",
+        "protocol": 1,
+        "instanceId": "inst-healthy-001",
+        "repoFingerprint": "764366f68d1a64f72d90a7b91462f7d056dc9ea1e807a4a6f7e1e2b0d9df9a10",
+        "pid": 4242,
+        "startedAtUtc": "2026-09-22T12:00:00Z"
+      },
+      "receipt": {
+        "schema": "escapehatch-local-runtime/v1",
+        "instanceId": "inst-healthy-001",
+        "repoFingerprint": "764366f68d1a64f72d90a7b91462f7d056dc9ea1e807a4a6f7e1e2b0d9df9a10",
+        "pid": 4242,
+        "processStartTimeUtc": "2026-09-22T12:00:00Z",
+        "host": "127.0.0.1",
+        "port": 21031,
+        "runtimeProtocol": 1,
+        "shutdownToken": "synthetic-token-healthy",
+        "startedAtUtc": "2026-09-22T12:00:00Z"
+      },
+      "os_process": {
+        "pid": 4242,
+        "startUtc": "2026-09-22T12:00:00Z",
+        "commandLine": "node artifacts/escape-hatch/node_modules/vite/bin/vite.js"
+      },
+      "socket_owner_pid": 4242
+    },
+    {
+      "id": "positive-adoptable-same-repo-no-receipt",
+      "kind": "positive",
+      "expect_state": "OWNED_ADOPTABLE",
+      "expect_start": "reconstruct_receipt_then_reuse",
+      "expect_stop": "adopt_receipt_then_graceful_shutdown",
+      "expect_kill": "forbidden_until_unhealthy_classification",
+      "listener": { "present": true, "pid": 5151 },
+      "health": {
+        "app": "EscapeHatch",
+        "protocol": 1,
+        "instanceId": "inst-adopt-002",
+        "repoFingerprint": "764366f68d1a64f72d90a7b91462f7d056dc9ea1e807a4a6f7e1e2b0d9df9a10",
+        "pid": 5151,
+        "startedAtUtc": "2026-09-22T12:05:00Z"
+      },
+      "receipt": null,
+      "os_process": {
+        "pid": 5151,
+        "startUtc": "2026-09-22T12:05:00Z",
+        "commandLine": "node C:\\repo\\artifacts\\escape-hatch\\node_modules\\vite\\bin\\vite.js --config vite.config.ts"
+      },
+      "socket_owner_pid": 5151
+    },
+    {
+      "id": "positive-owned-unhealthy-same-repo-vite",
+      "kind": "positive",
+      "expect_state": "OWNED_UNHEALTHY",
+      "expect_start": "reprove_ownership_immediately_then_stop_then_cold_start",
+      "expect_stop": "reprove_ownership_immediately_then_bounded_termination",
+      "expect_kill": "allowed_only_after_immediate_ownership_reproof",
+      "listener": { "present": true, "pid": 6161 },
+      "health": null,
+      "receipt": null,
+      "os_process": {
+        "pid": 6161,
+        "startUtc": "2026-09-22T12:10:00Z",
+        "commandLine": "node C:\\repo\\artifacts\\escape-hatch\\node_modules\\vite\\bin\\vite.js --port 21031"
+      },
+      "socket_owner_pid": 6161,
+      "unhealthy": true
+    },
+    {
+      "id": "negative-foreign-listener-never-killable",
+      "kind": "negative",
+      "expect_state": "FOREIGN_CONFLICT",
+      "expect_start": "fail_closed_nonzero",
+      "expect_stop": "report_conflict_nonzero",
+      "expect_kill": "forbidden",
+      "listener": { "present": true, "pid": 9999 },
+      "health": null,
+      "receipt": null,
+      "os_process": {
+        "pid": 9999,
+        "startUtc": "2026-09-22T09:00:00Z",
+        "commandLine": "C:\\Program Files\\Unrelated\\unrelated.exe --serve"
+      },
+      "socket_owner_pid": 9999
+    },
+    {
+      "id": "negative-receipt-pid-reused",
+      "kind": "negative",
+      "expect_state": "STALE_RECEIPT",
+      "expect_start": "never_act_on_receipt_pid_then_reclassify_listener",
+      "expect_stop": "never_act_on_receipt_pid_then_reclassify_listener",
+      "expect_kill": "forbidden_from_receipt_identity",
+      "listener": { "present": false, "pid": null },
+      "health": null,
+      "receipt": {
+        "schema": "escapehatch-local-runtime/v1",
+        "instanceId": "inst-stale-003",
+        "repoFingerprint": "764366f68d1a64f72d90a7b91462f7d056dc9ea1e807a4a6f7e1e2b0d9df9a10",
+        "pid": 1234,
+        "processStartTimeUtc": "2026-09-22T08:00:00Z",
+        "host": "127.0.0.1",
+        "port": 21031,
+        "runtimeProtocol": 1,
+        "shutdownToken": "synthetic-token-stale",
+        "startedAtUtc": "2026-09-22T08:00:00Z"
+      },
+      "os_process": {
+        "pid": 1234,
+        "startUtc": "2026-09-22T11:30:00Z",
+        "commandLine": "C:\\Windows\\System32\\some-other.exe"
+      },
+      "socket_owner_pid": null,
+      "pid_reused": true
+    },
+    {
+      "id": "negative-mismatched-instance-id",
+      "kind": "negative",
+      "expect_state": "STALE_RECEIPT",
+      "expect_start": "never_act_on_receipt_pid_then_reclassify_listener",
+      "expect_stop": "never_act_on_receipt_pid_then_reclassify_listener",
+      "expect_kill": "forbidden_from_receipt_identity",
+      "listener": { "present": true, "pid": 7171 },
+      "health": {
+        "app": "EscapeHatch",
+        "protocol": 1,
+        "instanceId": "inst-runtime-004",
+        "repoFingerprint": "764366f68d1a64f72d90a7b91462f7d056dc9ea1e807a4a6f7e1e2b0d9df9a10",
+        "pid": 7171,
+        "startedAtUtc": "2026-09-22T12:15:00Z"
+      },
+      "receipt": {
+        "schema": "escapehatch-local-runtime/v1",
+        "instanceId": "inst-other-004",
+        "repoFingerprint": "764366f68d1a64f72d90a7b91462f7d056dc9ea1e807a4a6f7e1e2b0d9df9a10",
+        "pid": 7171,
+        "processStartTimeUtc": "2026-09-22T12:15:00Z",
+        "host": "127.0.0.1",
+        "port": 21031,
+        "runtimeProtocol": 1,
+        "shutdownToken": "synthetic-token-mismatch",
+        "startedAtUtc": "2026-09-22T12:15:00Z"
+      },
+      "os_process": {
+        "pid": 7171,
+        "startUtc": "2026-09-22T12:15:00Z",
+        "commandLine": "node artifacts/escape-hatch/node_modules/vite/bin/vite.js"
+      },
+      "socket_owner_pid": 7171,
+      "instance_id_mismatch": true
+    },
+    {
+      "id": "negative-mismatched-repo-fingerprint",
+      "kind": "negative",
+      "expect_state": "FOREIGN_CONFLICT",
+      "expect_start": "fail_closed_nonzero",
+      "expect_stop": "report_conflict_nonzero",
+      "expect_kill": "forbidden",
+      "listener": { "present": true, "pid": 8181 },
+      "health": {
+        "app": "EscapeHatch",
+        "protocol": 1,
+        "instanceId": "inst-other-repo-005",
+        "repoFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "pid": 8181,
+        "startedAtUtc": "2026-09-22T12:20:00Z"
+      },
+      "receipt": null,
+      "os_process": {
+        "pid": 8181,
+        "startUtc": "2026-09-22T12:20:00Z",
+        "commandLine": "node D:\\other-checkout\\artifacts\\escape-hatch\\node_modules\\vite\\bin\\vite.js"
+      },
+      "socket_owner_pid": 8181
+    },
+    {
+      "id": "negative-stale-receipt-no-process",
+      "kind": "negative",
+      "expect_state": "STALE_RECEIPT",
+      "expect_start": "never_act_on_receipt_pid_then_reclassify_listener",
+      "expect_stop": "never_act_on_receipt_pid_then_reclassify_listener",
+      "expect_kill": "forbidden_from_receipt_identity",
+      "listener": { "present": false, "pid": null },
+      "health": null,
+      "receipt": {
+        "schema": "escapehatch-local-runtime/v1",
+        "instanceId": "inst-gone-006",
+        "repoFingerprint": "764366f68d1a64f72d90a7b91462f7d056dc9ea1e807a4a6f7e1e2b0d9df9a10",
+        "pid": 4321,
+        "processStartTimeUtc": "2026-09-22T07:00:00Z",
+        "host": "127.0.0.1",
+        "port": 21031,
+        "runtimeProtocol": 1,
+        "shutdownToken": "synthetic-token-gone",
+        "startedAtUtc": "2026-09-22T07:00:00Z"
+      },
+      "os_process": null,
+      "socket_owner_pid": null
+    }
+  ]
+}

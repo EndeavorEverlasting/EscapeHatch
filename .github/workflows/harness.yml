@@ -51,11 +51,14 @@ jobs:
       - name: Validate career-state contract
         run: python scripts/validate_career_state.py
 
+      - name: Validate local runtime lifecycle
+        run: python scripts/validate_local_runtime_lifecycle.py
+
       - name: Test Study Syndicate export
         run: python tests/test_study_guidance_export.py
 
       - name: Compile harness validators
-        run: python -m py_compile scripts/validate_governance.py scripts/validate_product_version.py scripts/product_version.py scripts/validate_application_harness.py scripts/validate_application_companion.py scripts/validate_resume_presentation.py scripts/validate_harness.py scripts/validate_career_state.py scripts/validate_repository_promotion.py scripts/promotion_guard.py scripts/export_study_guidance.py tests/test_product_version.py tests/test_repository_promotion.py tests/test_study_guidance_export.py
+        run: python -m py_compile scripts/validate_governance.py scripts/validate_product_version.py scripts/product_version.py scripts/validate_application_harness.py scripts/validate_application_companion.py scripts/validate_resume_presentation.py scripts/validate_harness.py scripts/validate_career_state.py scripts/validate_local_runtime_lifecycle.py scripts/validate_repository_promotion.py scripts/promotion_guard.py scripts/export_study_guidance.py tests/test_product_version.py tests/test_repository_promotion.py tests/test_study_guidance_export.py
 
       - name: Check whitespace
         shell: bash

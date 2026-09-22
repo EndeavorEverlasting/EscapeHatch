@@ -21,6 +21,9 @@
     "application_preference_cache": "harness/contracts/application-preference-cache.v1.json",
     "application_form_workflow": "harness/workflows/APPLICATION_FORM_INTAKE.md",
     "resume_presentation_contract": "contracts/resume-presentation.v1.json",
+    "local_runtime_lifecycle_contract": "contracts/local-runtime-lifecycle.v1.json",
+    "local_runtime_lifecycle_fixture": "fixtures/local-runtime-lifecycle.v1.example.json",
+    "local_runtime_lifecycle_validator": "scripts/validate_local_runtime_lifecycle.py",
     "pre_commit_hook": ".githooks/pre-commit",
     "pre_push_hook": ".githooks/pre-push",
     "scoped_skill": "skills/harness-operations/SKILL.md",
@@ -39,6 +42,7 @@
     "python scripts/validate_resume_presentation.py",
     "python scripts/validate_harness.py",
     "python scripts/validate_career_state.py",
+    "python scripts/validate_local_runtime_lifecycle.py",
     "git diff --check"
   ],
   "artifact_registry": "ARTIFACT_REGISTRY.md"

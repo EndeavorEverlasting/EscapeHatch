@@ -1,0 +1,171 @@
+{
+  "schema": "escapehatch-local-runtime-lifecycle/v1",
+  "version": 1,
+  "mission": "Make EscapeHatch local runtime identity, ownership classification, kill policy, control protocol, and local-state privacy deterministic before Windows lifecycle implementation.",
+  "governing_invariant": "PORT OCCUPANCY IS EVIDENCE, NOT PROCESS IDENTITY.",
+  "invariants": [
+    "port_occupancy_is_evidence_not_identity",
+    "never_kill_unknown_listener",
+    "terminate_only_after_positive_ownership_reproof",
+    "powershell_job_is_not_runtime_identity",
+    "single_canonical_lifecycle_manager",
+    "graceful_shutdown_preferred",
+    "forced_process_tree_is_bounded_fallback",
+    "runtime_receipts_and_tokens_never_tracked",
+    "browser_never_receives_shutdown_secret",
+    "lifecycle_operations_serialized_per_repo_identity",
+    "destructive_decision_rechecks_authoritative_state"
+  ],
+  "identity": {
+    "repo_fingerprint_algorithm": "sha256(lowercase(normalized_absolute_repo_root))",
+    "repo_fingerprint_windows_compare": "case_insensitive_before_hash",
+    "instance_id": "cryptographically_random_per_start",
+    "shutdown_token": "cryptographically_random_per_start",
+    "receipt_schema": "escapehatch-local-runtime/v1",
+    "receipt_fields": [
+      "schema",
+      "instanceId",
+      "repoFingerprint",
+      "pid",
+      "processStartTimeUtc",
+      "host",
+      "port",
+      "runtimeProtocol",
+      "shutdownToken",
+      "startedAtUtc"
+    ],
+    "receipt_location": "%LOCALAPPDATA%\\EscapeHatch\\runtime\\<repoFingerprint>\\runtime.json",
+    "receipt_write": "atomic_after_successful_spawn_only",
+    "receipt_tracking": "forbidden",
+    "log_location": "%LOCALAPPDATA%\\EscapeHatch\\logs\\<repoFingerprint>\\",
+    "lifecycle_lock": "Local\\EscapeHatch.Runtime.<repoFingerprint>",
+    "lock_scope": "start_stop_restart_status_mutation"
+  },
+  "control_plane": {
+    "identity_endpoint": "GET /__escapehatch/runtime",
+    "identity_response_fields": [
+      "app",
+      "protocol",
+      "instanceId",
+      "repoFingerprint",
+      "pid",
+      "startedAtUtc"
+    ],
+    "identity_app": "EscapeHatch",
+    "identity_protocol": 1,
+    "loopback_only": true,
+    "permissive_cors": "forbidden",
+    "raw_repo_path_in_response": "forbidden",
+    "shutdown_endpoint": "POST /__escapehatch/shutdown",
+    "shutdown_auth": "per_instance_token_custom_header",
+    "shutdown_token_in_logs_or_bodies": "forbidden",
+    "shutdown_respond_before_close": true,
+    "shutdown_requires_matching_instance_id": true,
+    "shutdown_requires_matching_protocol": true
+  },
+  "states": {
+    "STOPPED": {
+      "definition": "No listener and no live valid receipt.",
+      "start": "may_cold_start",
+      "stop": "idempotent_success",
+      "kill_listener": "forbidden_no_listener"
+    },
+    "OWNED_HEALTHY": {
+      "definition": "Runtime identity endpoint, receipt, OS process, and socket owner all agree.",
+      "required_agreement": [
+        "receipt_instance_id_equals_health_instance_id",
+        "receipt_repo_fingerprint_equals_health_repo_fingerprint_equals_current",
+        "receipt_pid_equals_health_pid",
+        "os_process_exists",
+        "os_process_start_time_matches_receipt",
+        "reported_pid_owns_configured_listening_socket"
+      ],
+      "start": "reuse_and_open_browser",
+      "stop": "authenticated_graceful_shutdown",
+      "kill_listener": "forbidden_use_graceful_path_first"
+    },
+    "OWNED_ADOPTABLE": {
+      "definition": "Healthy EscapeHatch runtime with matching repo fingerprint but missing or stale receipt.",
+      "required_agreement": [
+        "runtime_endpoint_identifies_escapehatch_protocol",
+        "repo_fingerprint_matches_current_checkout",
+        "reported_pid_owns_configured_listening_socket",
+        "os_command_line_consistent_with_escapehatch_vite_runtime"
+      ],
+      "start": "reconstruct_receipt_then_reuse",
+      "stop": "adopt_receipt_then_graceful_shutdown",
+      "kill_listener": "forbidden_until_unhealthy_classification"
+    },
+    "OWNED_UNHEALTHY": {
+      "definition": "Listener is an owned EscapeHatch process that is unhealthy or orphaned.",
+      "positive_ownership_requires": [
+        "socket_owner_pid",
+        "current_process_start_time",
+        "command_line_resolves_to_escapehatch_vite_entrypoint_under_same_repo_root_or_equally_strong_repository_native_signal"
+      ],
+      "start": "reprove_ownership_immediately_then_stop_then_cold_start",
+      "stop": "reprove_ownership_immediately_then_bounded_termination",
+      "kill_listener": "allowed_only_after_immediate_ownership_reproof"
+    },
+    "FOREIGN_CONFLICT": {
+      "definition": "Port 21031 owned by an unrelated or unproven process.",
+      "start": "fail_closed_nonzero",
+      "stop": "report_conflict_nonzero",
+      "kill_listener": "forbidden",
+      "required_behavior": [
+        "do_not_kill",
+        "show_pid_and_process_name_when_safely_available",
+        "explain_unproven_ownership",
+        "exit_nonzero",
+        "offer_diagnostic_status_command"
+      ]
+    },
+    "STALE_RECEIPT": {
+      "definition": "Receipt points at a reused PID or mismatched process.",
+      "start": "never_act_on_receipt_pid_then_reclassify_listener",
+      "stop": "never_act_on_receipt_pid_then_reclassify_listener",
+      "kill_listener": "forbidden_from_receipt_identity",
+      "required_behavior": [
+        "never_act_on_receipt_pid",
+        "remove_or_replace_stale_receipt_only_after_proving_it_does_not_identify_current_runtime",
+        "return_to_listener_classification"
+      ]
+    }
+  },
+  "kill_policy": {
+    "default": "never_kill_unproven_listener",
+    "port_number_alone_sufficient": false,
+    "receipt_pid_alone_sufficient": false,
+    "powershell_job_alone_sufficient": false,
+    "allowed_only_when": "ownership_reproved_immediately_before_action",
+    "ownership_signals": [
+      "socket_owner_pid",
+      "process_start_time_match",
+      "command_line_repository_native_identity",
+      "runtime_identity_endpoint_match_when_available"
+    ],
+    "forced_process_tree": "bounded_final_fallback_for_still_owned_process_only",
+    "broad_process_name_kill": "forbidden",
+    "unconditional_port_owner_kill": "forbidden"
+  },
+  "privacy": {
+    "shutdown_token_in_repository": "forbidden",
+    "shutdown_token_in_ci_logs": "forbidden",
+    "shutdown_token_in_http_response_body": "forbidden",
+    "raw_repo_path_in_control_plane": "forbidden",
+    "runtime_receipt_committed": "forbidden",
+    "career_or_profile_data_in_runtime_logs": "forbidden",
+    "fixture_tokens": "synthetic_only"
+  },
+  "implementation_targets": {
+    "canonical_manager": "scripts/windows/EscapeHatch-Runtime.ps1",
+    "manager_actions": ["Start", "Stop", "Restart", "Status"],
+    "launcher_delegation": "Launch-EscapeHatch.ps1 delegates to Start",
+    "cmd_adapter": "Launch-EscapeHatch.cmd remains thin adapter",
+    "close_adapters": ["Close-EscapeHatch.ps1", "Close-EscapeHatch.cmd"],
+    "ownership_mechanism": "os_process_pid_not_powershell_job",
+    "vite_identity_owner_lane": "EH-R1",
+    "windows_manager_owner_lane": "EH-R2"
+  },
+  "proof_ceiling": "repository contract/validator proof; no Windows runtime claim"
+}

@@ -26,6 +26,9 @@ EscapeHatch has canonical governance, an operational harness, a portable career-
 | `scripts/validate_career_state.py` | Deterministic career-state/reference-graph validator. |
 | `scripts/validate_application_companion.py` | Fail-closed validator for companion privacy, delivery, progress, portability, and sync boundaries. |
 | `scripts/validate_resume_presentation.py` | Fail-closed validator for resume typography/layout/ATS-conservative structure/output/QA rules. |
+| `contracts/local-runtime-lifecycle.v1.json` | Versioned local runtime identity, ownership-state, kill-policy, control-plane, and privacy contract. |
+| `fixtures/local-runtime-lifecycle.v1.example.json` | Synthetic positive/negative ownership fixtures for lifecycle classification. |
+| `scripts/validate_local_runtime_lifecycle.py` | Deterministic lifecycle contract/fixture validator with negative self-tests. |
 | `scripts/export_study_guidance.py` | Cross-repo StudySyndicate guidance exporter. |
 | `harness/manifest.v1.json` | Machine-readable harness component map and validation order. |
 | `harness/CODEBASE_MAP.md` | This repository map. |
@@ -151,6 +154,16 @@ Promotion is provider-agnostic at the contract and bound to one concrete host ad
 The repository stores presentation rules, not the user's real resume. The registered floor preserves a single-column ATS-conservative structure, Trebuchet MS + Arial hierarchy, restrained navy/slate palette, minimum body-text size, DOCX + text-preserving PDF outputs, and rendered-page QA. Master and tailored content remain private/user-owned. A style-changing request may override the presentation contract only when the user explicitly approves the change; a generic agent default must not silently flatten the resume back to plain formatting.
 
 The contract does not prove universal ATS compatibility. A specific resume is visually proven only after the actual DOCX is rendered and every page inspected, the PDF is checked for extractable text, and current projections are checked for contact/content consistency.
+
+## Local runtime lifecycle entry points
+
+- Lifecycle contract: `contracts/local-runtime-lifecycle.v1.json`
+- Synthetic fixtures: `fixtures/local-runtime-lifecycle.v1.example.json`
+- Validator: `scripts/validate_local_runtime_lifecycle.py`
+- Planning owner: `docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md`
+- Canonical manager target (EH-R2): `scripts/windows/EscapeHatch-Runtime.ps1`
+
+Port occupancy is evidence, not process identity. FOREIGN_CONFLICT never kills an unproven listener. STALE_RECEIPT never acts on a receipt PID. Runtime receipts and shutdown tokens are user-local and never tracked. EH-R0 owns this contract floor; EH-R1 owns the Vite identity/control plane; EH-R2 owns the Windows lifecycle manager.
 
 ## Configuration and contracts
 

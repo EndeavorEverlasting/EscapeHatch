@@ -1,6 +1,6 @@
 # EscapeHatch Windows Runtime Lifecycle Plan
 
-Status: TRACKED PLAN — implementation not started by this planning sprint.
+Status: TRACKED PLAN — EH-R0 contract floor implemented; EH-R1/R2 implementation not started.
 
 Canonical planning owner for this work: `docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md`.
 
@@ -8,10 +8,11 @@ Canonical planning owner for this work: `docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md`
 
 - Provider repository: `EndeavorEverlasting/EscapeHatch`.
 - Provider default branch: `main@0824535b9dc1341def885a79a098d297df770ac8`.
-- Current prepared integration owner: `integration/replit-donor-b01f628-20260921@99f7f310ed72eead614fa0c180a1bff88bf25c33`.
-- Operator-local launcher implementation is reported at `main@5effcd293bdf4ded725a4ca28908b8b986b359ec`; that exact commit is not yet provider-resolvable.
+- Current prepared integration owner: `integration/replit-donor-b01f628-20260921` after local launcher convergence (includes exact launcher commit content formerly at `5effcd293bdf4ded725a4ca28908b8b986b359ec` plus the overnight spaces/node-shim fix).
+- Operator-local launcher implementation was recovered onto the integration floor via cherry-pick convergence; EH-R2 no longer waits on a provider-resolvable `5effcd2` object.
+- EH-R0 owns `contracts/local-runtime-lifecycle.v1.json`, `fixtures/local-runtime-lifecycle.v1.example.json`, and `scripts/validate_local_runtime_lifecycle.py`.
 - The prepared provider branch contains the donor web cockpit and the original root workspace package contract that the local launcher commit modifies.
-- Current `artifacts/escape-hatch/vite.config.ts` binds Vite to an explicit host/port with `strictPort: true`, but it has no runtime identity, control-plane health response, or graceful shutdown API.
+- Current `artifacts/escape-hatch/vite.config.ts` binds Vite to an explicit host/port with `strictPort: true`, but it has no runtime identity, control-plane health response, or graceful shutdown API (EH-R1 not started).
 - Existing repository governance requires product/runtime behavior to live in application/scripts/contracts rather than prompt-only workflow.
 - Prior launcher/distribution planning defined EH-L2 as install-like Windows start/reuse/stop behavior with health diagnostics.
 - New operator runtime evidence shows manual stale-port cleanup and PowerShell job creation during recovery. That is sufficient to treat “find an existing instance / recover stale listeners / stop cleanly” as a first-class runtime-lifecycle problem rather than another one-off port-kill snippet.
@@ -523,4 +524,6 @@ Do not rename it to `manifest.json` or claim dispatch proof until the canonical 
 
 ## First executable transition
 
-Before implementation, recover/publish the exact local launcher commit `5effcd293bdf4ded725a4ca28908b8b986b359ec` onto the current integration floor, then execute EH-R0 against that refreshed exact head. EH-R2 must not reconstruct the launcher from chat prose.
+DONE on the convergence floor: the exact local launcher commit content (`5effcd293bdf4ded725a4ca28908b8b986b359ec`) plus the overnight spaces/node-shim fix were cherry-picked onto `integration/replit-donor-b01f628-20260921`, and EH-R0 (`contracts/local-runtime-lifecycle.v1.json`, `fixtures/local-runtime-lifecycle.v1.example.json`, `scripts/validate_local_runtime_lifecycle.py`) was executed against that refreshed exact head. EH-R2 must not reconstruct the launcher from chat prose.
+
+Next unproven lanes: EH-R1 (Vite identity + graceful shutdown) and, after EH-R0 acceptance, EH-R2 (Windows lifecycle manager) may proceed in parallel per the dependency graph.

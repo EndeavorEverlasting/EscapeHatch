@@ -110,6 +110,10 @@ def validate_contract(contract: dict) -> None:
         "receipt write policy mismatch",
     )
     require(
+        identity.get("receipt_reconstruction_without_shutdown_token") == "forbidden",
+        "receipt reconstruction without shutdown token must be forbidden",
+    )
+    require(
         isinstance(identity.get("lifecycle_lock"), str)
         and "repoFingerprint" in identity["lifecycle_lock"],
         "lifecycle lock key missing",
@@ -126,6 +130,10 @@ def validate_contract(contract: dict) -> None:
     require(
         control.get("shutdown_token_in_logs_or_bodies") == "forbidden",
         "shutdown token leak must be forbidden",
+    )
+    require(
+        control.get("shutdown_token_recovery_endpoint") == "forbidden",
+        "shutdown token recovery endpoint must be forbidden",
     )
     require(control.get("shutdown_respond_before_close") is True, "shutdown must respond before close")
     require(
@@ -184,8 +192,26 @@ def validate_contract(contract: dict) -> None:
 
     adoptable = states.get("OWNED_ADOPTABLE", {})
     require(
-        adoptable.get("start") == "reconstruct_receipt_then_reuse",
-        "OWNED_ADOPTABLE start must reconstruct receipt",
+        adoptable.get("start") == "reuse_without_receipt_and_report_adopted",
+        "OWNED_ADOPTABLE start must safely reuse without reconstructing a secret-bearing receipt",
+    )
+    require(
+        adoptable.get("stop") == "reprove_ownership_then_bounded_termination",
+        "OWNED_ADOPTABLE stop must reprove ownership before bounded termination",
+    )
+    require(
+        adoptable.get("kill_listener") == "allowed_only_after_immediate_ownership_reproof",
+        "OWNED_ADOPTABLE kill must require immediate ownership reproof",
+    )
+    adoptable_behavior = set(adoptable.get("required_behavior", []))
+    require(
+        {
+            "never_reconstruct_missing_shutdown_token",
+            "never_add_shutdown_token_recovery_endpoint",
+            "reuse_is_safe_without_receipt_when_identity_and_process_ownership_agree",
+            "stop_without_token_requires_immediate_positive_ownership_reproof",
+        }.issubset(adoptable_behavior),
+        "OWNED_ADOPTABLE recovery behavior incomplete",
     )
 
     unhealthy = states.get("OWNED_UNHEALTHY", {})
@@ -389,6 +415,14 @@ def self_tests(contract: dict, fixture: dict) -> int:
 
     c = copy.deepcopy(contract)
     c["control_plane"]["shutdown_token_in_logs_or_bodies"] = "allowed"
+    candidates.append((c, copy.deepcopy(fixture)))
+
+    c = copy.deepcopy(contract)
+    c["control_plane"]["shutdown_token_recovery_endpoint"] = "POST /__escapehatch/recover-token"
+    candidates.append((c, copy.deepcopy(fixture)))
+
+    c = copy.deepcopy(contract)
+    c["identity"]["receipt_reconstruction_without_shutdown_token"] = "allowed"
     candidates.append((c, copy.deepcopy(fixture)))
 
     c = copy.deepcopy(contract)

@@ -39,7 +39,8 @@
     "receipt_tracking": "forbidden",
     "log_location": "%LOCALAPPDATA%\\EscapeHatch\\logs\\<repoFingerprint>\\",
     "lifecycle_lock": "Local\\EscapeHatch.Runtime.<repoFingerprint>",
-    "lock_scope": "start_stop_restart_status_mutation"
+    "lock_scope": "start_stop_restart_status_mutation",
+    "receipt_reconstruction_without_shutdown_token": "forbidden"
   },
   "control_plane": {
     "identity_endpoint": "GET /__escapehatch/runtime",
@@ -61,7 +62,8 @@
     "shutdown_token_in_logs_or_bodies": "forbidden",
     "shutdown_respond_before_close": true,
     "shutdown_requires_matching_instance_id": true,
-    "shutdown_requires_matching_protocol": true
+    "shutdown_requires_matching_protocol": true,
+    "shutdown_token_recovery_endpoint": "forbidden"
   },
   "states": {
     "STOPPED": {
@@ -85,16 +87,22 @@
       "kill_listener": "forbidden_use_graceful_path_first"
     },
     "OWNED_ADOPTABLE": {
-      "definition": "Healthy EscapeHatch runtime with matching repo fingerprint but missing or stale receipt.",
+      "definition": "Healthy EscapeHatch runtime with matching repo fingerprint but missing or stale receipt; the per-instance shutdown token is intentionally unrecoverable.",
       "required_agreement": [
         "runtime_endpoint_identifies_escapehatch_protocol",
         "repo_fingerprint_matches_current_checkout",
         "reported_pid_owns_configured_listening_socket",
         "os_command_line_consistent_with_escapehatch_vite_runtime"
       ],
-      "start": "reconstruct_receipt_then_reuse",
-      "stop": "adopt_receipt_then_graceful_shutdown",
-      "kill_listener": "forbidden_until_unhealthy_classification"
+      "start": "reuse_without_receipt_and_report_adopted",
+      "stop": "reprove_ownership_then_bounded_termination",
+      "kill_listener": "allowed_only_after_immediate_ownership_reproof",
+      "required_behavior": [
+        "never_reconstruct_missing_shutdown_token",
+        "never_add_shutdown_token_recovery_endpoint",
+        "reuse_is_safe_without_receipt_when_identity_and_process_ownership_agree",
+        "stop_without_token_requires_immediate_positive_ownership_reproof"
+      ]
     },
     "OWNED_UNHEALTHY": {
       "definition": "Listener is an owned EscapeHatch process that is unhealthy or orphaned.",
@@ -159,10 +167,18 @@
   },
   "implementation_targets": {
     "canonical_manager": "scripts/windows/EscapeHatch-Runtime.ps1",
-    "manager_actions": ["Start", "Stop", "Restart", "Status"],
+    "manager_actions": [
+      "Start",
+      "Stop",
+      "Restart",
+      "Status"
+    ],
     "launcher_delegation": "Launch-EscapeHatch.ps1 delegates to Start",
     "cmd_adapter": "Launch-EscapeHatch.cmd remains thin adapter",
-    "close_adapters": ["Close-EscapeHatch.ps1", "Close-EscapeHatch.cmd"],
+    "close_adapters": [
+      "Close-EscapeHatch.ps1",
+      "Close-EscapeHatch.cmd"
+    ],
     "ownership_mechanism": "os_process_pid_not_powershell_job",
     "vite_identity_owner_lane": "EH-R1",
     "windows_manager_owner_lane": "EH-R2"

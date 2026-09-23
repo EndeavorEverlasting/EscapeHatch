@@ -20,8 +20,8 @@
 
   async function setSecret(value, options) {
     if (typeof value !== "string" || !value) throw new Error("Secret must be a non-empty string.");
-    if (options && options.state && options.state !== "ACCOUNT_CREATION") {
-      throw new Error("Secret may only be set in ACCOUNT_CREATION state.");
+    if (!options || options.state !== "ACCOUNT_CREATION") {
+      throw new Error("Secret storage requires explicit ACCOUNT_CREATION state.");
     }
     if (hasChromeSessionStorage()) {
       await globalThis.chrome.storage.session.set({ [SESSION_SECRET_KEY]: value });

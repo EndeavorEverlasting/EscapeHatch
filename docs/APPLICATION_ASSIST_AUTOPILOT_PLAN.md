@@ -734,3 +734,36 @@ That run-scoped manifest is durable orchestration evidence, but **does not satis
 - **PROOF CEILING:** durable planning/provider evidence only.
 - **INTEGRATION STATE:** planning PR only; product/runtime integration branch remains unchanged by this planning pass.
 - **NEXT ACTION:** operator explicitly authorizes `EH-A0 + EH-Q0`; only then may the execution owner dispatch the two contract floors in parallel.
+
+
+## 17. Live Wave 1 faithfulness gate
+
+**Checkpoint date:** 2026-09-23
+**Provider floor inspected:** `b884b42fb95b633b2d97a87be5dee30a311e19dc`
+**Purpose:** prevent Wave 2 convergence from promoting structurally present but contract-incomplete Wave 1 work.
+
+Wave 0 remains accepted: EH-A0 `d1c9416dafa36ad3d63c87c7d143f642e25c45dd` and EH-Q0 `c7c108b82eceb2bb4b499068d69aedb4312ec842` are ancestors of this provider floor.
+
+### Mandatory pre-A5 repairs
+
+- **EH-A1 @ `db141b43b8c73666b882f6084d7b1541ac8791f7` — PARTIAL.** The branch implements page classification, Progression Plan construction, progression gating, loop checks, and transition checks, but it does not implement/reach a navigation adapter from the application-assist runtime. A5 must not treat A1 as complete until a gated execution seam exists and tests prove that only `AUTO_ADVANCE_SAFE` can dispatch exactly one intermediate action while terminal/manual controls remain unreachable.
+- **EH-A2 @ `b1a384ff32463f0641a9733f25119b67c5e2da54` — REPAIR REQUIRED.** `Sync from EscapeHatch` rejects browser-internal pages but otherwise reads EscapeHatch-shaped localStorage keys from any readable active page. The sync source must be positively constrained to the local/loopback EscapeHatch cockpit and must verify cockpit identity before importing profile state.
+- **EH-A3 @ `ffd2b7c9771cb2147553f75917ff34776340454b` — REPAIR REQUIRED.** Temporary credential generation falls back to `Math.random()` when cryptographic randomness is unavailable, and both password generation and secret storage allow a missing state. The contract requires fail-closed cryptographic randomness and explicit `ACCOUNT_CREATION` authority for both generation and session-secret writes.
+- **EH-A4 @ `943bfd1f68ef89c828c7e45fbdb2c4ed5323ce90` — PARTIAL.** The adversarial suite validates fixture self-consistency against the contract but does not execute the A1/A3 production modules. Before A5 convergence proof is accepted, the deterministic regression floor must execute the converged progression/account implementation against the adversarial cases or otherwise bind those fixtures to the behavioral tests so fixture claims cannot pass while runtime behavior regresses.
+
+### Wave 1 branches with no contradiction found in this checkpoint
+
+- **EH-U1 @ `1daf2118e5cc4b692dbf8121663cd30eeb6456f3` — STATICALLY CONSISTENT / RUNTIME UNPROVEN.** New-module-first ownership remains collision-safe; A5 still owns shared runtime wiring.
+- **EH-Q1 @ `2b8139b303e4135d5a65a30220c5e6a8f727a302` — STATICALLY CONSISTENT / PROVIDER RUNTIME UNPROVEN.** Provider-agnostic reconciliation and synthetic positive/negative fixtures are present; live provider behavior remains outside this proof ceiling.
+
+### A5 convergence hold
+
+Creating an A5 worktree/branch early is not itself a contract violation, but **A5 mutation/integration proof must not begin from the assumption that the six Wave 1 heads are accepted**. The convergence owner must:
+
+1. consume the repaired A1/A2/A3/A4 heads rather than the original incomplete heads;
+2. prove each required Wave 1 head is contained in the convergence candidate;
+3. rerun combined application-assist, career-state/companion, adversarial, and patch-hygiene checks on the exact candidate;
+4. preserve the final-submit/manual-only boundary;
+5. only then promote EH-A5 from `WAITING_WAVE_1`.
+
+This checkpoint strengthens proof interpretation only; it does not widen product authority or authorize automatic final submission.

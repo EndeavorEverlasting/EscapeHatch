@@ -562,13 +562,23 @@ export function applyAcceptedResumeImport(imported: ResumeImport, accepted: Revi
   };
 }
 
-export function applyDeterministicResumeImport(imported: ResumeImport, profile: AssistProfile) {
+export function applyDeterministicResumeImport(
+  imported: ResumeImport,
+  profile: AssistProfile,
+  authoritativeContact: AssistProfile['contact'] = profile.contact,
+) {
   const accepted = getDeterministicResumeProposals(imported);
   const contactPatch = getAcceptedResumeContactPatch(accepted);
-  const projected = applyAcceptedResumeImport(imported, accepted, profile);
+  const canonicalContact = { ...profile.contact };
+  for (const field of assistContactFields) {
+    const authoritative = authoritativeContact[field];
+    if (authoritative) canonicalContact[field] = authoritative;
+  }
+  const canonicalProfile = { ...profile, contact: canonicalContact };
+  const projected = applyAcceptedResumeImport(imported, accepted, canonicalProfile);
   const mergedContact = { ...projected.contact };
   for (const field of assistContactFields) {
-    const existing = profile.contact[field];
+    const existing = canonicalProfile.contact[field];
     if (existing && mergedContact[field] !== existing) mergedContact[field] = existing;
   }
   const uniqueById = <T extends { id: string }>(items: T[]) =>

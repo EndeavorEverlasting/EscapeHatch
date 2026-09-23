@@ -247,7 +247,13 @@
     const clean = sanitizeProfile(acceptOnlyKnownProfileKeys(profile));
     const base = existing && typeof existing === "object" && existing.preferences && typeof existing.preferences === "object" ? existing.preferences : {};
     const next = {};
-    for (const k in base) if (Object.prototype.hasOwnProperty.call(base, k)) next[k] = base[k];
+    const identityQuestionIds = new Set(Object.values(PROFILE_TO_QUESTION));
+    for (const k in base) {
+      if (!Object.prototype.hasOwnProperty.call(base, k)) continue;
+      const prior = base[k];
+      if (identityQuestionIds.has(k) && prior && prior.scope === "profile_preference") continue;
+      next[k] = prior;
+    }
     for (const key of PROFILE_KEYS) {
       if (!clean[key]) continue;
       next[PROFILE_TO_QUESTION[key]] = { scope: "profile_preference", value: clean[key] };

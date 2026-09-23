@@ -11,6 +11,7 @@
   const SYMBOLS = "!@#$%^&*_-+=<>?";
   const ALL = LOWER + UPPER + DIGITS + SYMBOLS;
   const MIN_LENGTH = 20;
+  const MAX_LENGTH = 128;
 
   function getRandomValuesBuffer(length) {
     const buf = new Uint32Array(length);
@@ -59,7 +60,15 @@
     if (!options || options.state !== "ACCOUNT_CREATION") {
       throw new Error("Temporary password generation requires explicit ACCOUNT_CREATION state.");
     }
-    const length = typeof options.length === "number" ? Math.max(MIN_LENGTH, Math.floor(options.length)) : MIN_LENGTH;
+    let length = MIN_LENGTH;
+    if (options.length !== undefined) {
+      if (typeof options.length !== "number" || !Number.isFinite(options.length)) {
+        throw new Error("Temporary password length must be a finite number.");
+      }
+      const requested = Math.floor(options.length);
+      if (requested > MAX_LENGTH) throw new Error(`Temporary password length must not exceed ${MAX_LENGTH}.`);
+      length = Math.max(MIN_LENGTH, requested);
+    }
     const rnd = getRandomValuesBuffer(length + 16);
     const chars = [];
     chars.push(randomChar(LOWER, rnd[0]));
@@ -101,6 +110,7 @@
 
   return Object.freeze({
     MIN_LENGTH,
+    MAX_LENGTH,
     CHARSETS: Object.freeze({ LOWER, UPPER, DIGITS, SYMBOLS, ALL }),
     generateTemporaryPassword,
     generateUsername,

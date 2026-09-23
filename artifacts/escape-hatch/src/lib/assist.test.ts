@@ -89,6 +89,18 @@ test('resume text maps representable sections into reviewable proposals without 
 });
 
 test('deterministic resume intake auto-projects explicit facts, preserves conflicts, and is idempotent', () => {
+  const named = parseResumeText([
+    'Dr. Alex “Lex” Example',
+    'Metro City, NY | alex@example.test',
+  ].join('\n'), 'named.txt');
+  assert.equal(named.profilePatch.name_prefix, 'Dr');
+  assert.equal(named.profilePatch.first_name, 'Alex');
+  assert.equal(named.profilePatch.last_name, 'Example');
+  assert.equal(named.profilePatch.preferred_name, 'Lex');
+  const namedProjected = applyDeterministicResumeImport(named, emptyAssistProfile(emptyProfile));
+  assert.equal(namedProjected.profile.contact.name_prefix, 'Dr');
+  assert.equal(namedProjected.profile.contact.preferred_name, 'Lex');
+
   const imported = parseResumeText([
     'Alex Example',
     '123 Main Street, Metro City, NY 10001, United States | alex@example.test | (555) 010-0101',

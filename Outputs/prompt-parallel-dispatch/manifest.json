@@ -1,0 +1,360 @@
+{
+  "schema_version": "prompt-parallel-dispatch/v1",
+  "run_id": "escapehatch-application-assist-autopilot-20260923",
+  "repository": "EndeavorEverlasting/EscapeHatch",
+  "plan_owner": "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md",
+  "authorization": {
+    "disposition": "PLANNING_ONLY",
+    "implementation_dispatch_performed": false,
+    "reason": "Operator requested a durable plan/handoff from live-run defects, not runtime implementation in this pass."
+  },
+  "base_ref": {
+    "historical_local_path": "C:\\Users\\pa_rperez26\\OneDrive - Northwell Health\\OG Laptop Backup\\Desktop\\dev\\EscapeHatch",
+    "provider_default_branch": "main",
+    "provider_default_head": "0824535b9dc1341def885a79a098d297df770ac8",
+    "provider_integration_branch": "integration/replit-donor-b01f628-20260921",
+    "provider_integration_head": "be4a4c41403d700285084f941f2725a95a9877b5",
+    "planning_branch": "plan/application-assist-autopilot-20260923",
+    "freshness": "PROVIDER_REFRESHED_2026-09-23"
+  },
+  "graph": {
+    "expression": "EH-A0 -> { EH-A1 || EH-A2 || EH-A3 || EH-A4 } -> EH-A5 -> EH-A6",
+    "max_width": 4,
+    "parallel_disposition": "REQUIRED_AFTER_EH_A0"
+  },
+  "status": "PLANNED_NOT_DISPATCHED_VALIDATION_BLOCKED",
+  "blockers": [
+    "The refreshed integration floor does not contain harness/contracts/prompt-parallel-dispatch.v1.json.",
+    "The refreshed integration floor does not contain scripts/prompt_parallel_dispatch.py.",
+    "Planning disposition does not authorize implementation dispatch."
+  ],
+  "autonomy_gap": "After EH-A0 is authorized, the local repository agent should consume this manifest directly. Canonical manifest validation/receipt proof requires the missing dispatch schema/runner to be supplied by its harness owner or reconciled from a later floor.",
+  "convergence_owner": "EH-A5",
+  "lanes": [
+    {
+      "lane_id": "EH-A0",
+      "wave": 0,
+      "mission": "Replace the global no-Next/Continue policy with a typed Progression Plan contract, define account-flow states and secret-handling invariants, and retain a hard final-submit/attestation boundary.",
+      "dependencies": [
+        "provider integration floor contains this plan"
+      ],
+      "owned_mutation_surfaces": [
+        "contracts/application-assist-session.v1.json",
+        "docs/APPLICATION_ASSIST_SESSION.md",
+        "focused contract validators/tests",
+        "new progression/account-flow contract only if separation is required"
+      ],
+      "forbidden_surfaces": [
+        "DOM/navigation production implementation",
+        "generated or real credentials",
+        "broad host permissions",
+        "final-submit automation",
+        "Windows runtime lifecycle"
+      ],
+      "posture": "single writer",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-A0",
+          "plan": "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "machine-defined AUTO_ADVANCE_SAFE/REVIEW_REQUIRED states",
+        "typed account bootstrap states",
+        "final-submit negative fixtures",
+        "contract validator coverage"
+      ],
+      "validation": [
+        "python tests/test_application_assist_session_contract.py",
+        "python scripts/validate_application_harness.py",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-A5",
+      "status": "WAITING_AUTHORIZATION"
+    },
+    {
+      "lane_id": "EH-A1",
+      "wave": 1,
+      "mission": "Implement safe intermediate page progression through a canonical Progression Plan and live progression gate.",
+      "dependencies": [
+        "EH-A0"
+      ],
+      "owned_mutation_surfaces": [
+        "new progression module under browser/application-assist",
+        "focused progression runtime adapter",
+        "progression synthetic tests"
+      ],
+      "forbidden_surfaces": [
+        "profile sync architecture",
+        "credential generation",
+        "final-submit automation",
+        "unrelated cockpit redesign"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-A1",
+          "plan": "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "page archetype classifier",
+        "Progression Plan builder/gate",
+        "loop guard",
+        "mismatch diagnostics"
+      ],
+      "validation": [
+        "focused progression tests",
+        "node tests/test_application_assist_session.mjs",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-A5",
+      "status": "WAITING_EH_A0"
+    },
+    {
+      "lane_id": "EH-A2",
+      "wave": 1,
+      "mission": "Eliminate local-agent/manual-file dependence for identity bootstrap and establish coherent source/build/user-state/recovery path ownership.",
+      "dependencies": [
+        "EH-A0"
+      ],
+      "owned_mutation_surfaces": [
+        "cockpit-to-extension explicit profile sync seam",
+        "profile validation/projection adapter",
+        "application-assist output-path documentation and registry entries",
+        "recovery import/export compatibility"
+      ],
+      "forbidden_surfaces": [
+        "page progression implementation",
+        "password generation",
+        "final submission",
+        "unrelated source-tree moves"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-A2",
+          "plan": "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "one-action profile sync path",
+        "no-agent email bootstrap proof",
+        "canonical generated output root",
+        "legacy recovery compatibility"
+      ],
+      "validation": [
+        "profile sync contract/unit tests",
+        "browser-local persistence tests",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-A5",
+      "status": "WAITING_EH_A0"
+    },
+    {
+      "lane_id": "EH-A3",
+      "wave": 1,
+      "mission": "Implement deterministic email-probe/login/create-account routing with temporary credential generation and session-scoped secret handling.",
+      "dependencies": [
+        "EH-A0"
+      ],
+      "owned_mutation_surfaces": [
+        "account-flow state machine module",
+        "temporary credential generator",
+        "session-secret adapter",
+        "account-page classifier",
+        "sanitized account fixtures"
+      ],
+      "forbidden_surfaces": [
+        "general password autofill outside recognized account creation",
+        "secret persistence to Git/export/logs",
+        "CAPTCHA/MFA bypass",
+        "final application submission"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-A3",
+          "plan": "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "account bootstrap state machine",
+        "high-entropy temporary password generator",
+        "session-only secret storage",
+        "manual verification gates"
+      ],
+      "validation": [
+        "account-flow unit tests",
+        "secret non-disclosure tests",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-A5",
+      "status": "WAITING_EH_A0"
+    },
+    {
+      "lane_id": "EH-A4",
+      "wave": 1,
+      "mission": "Encode the live-run failures as permanent adversarial synthetic fixtures and CI regression gates.",
+      "dependencies": [
+        "EH-A0"
+      ],
+      "owned_mutation_surfaces": [
+        "new sanitized multi-page fixtures",
+        "new focused validation/test files",
+        "non-colliding CI test wiring"
+      ],
+      "forbidden_surfaces": [
+        "production application behavior except minimal testability seams approved by convergence owner",
+        "real profile values",
+        "generated credentials"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent_or_ci",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-A4",
+          "plan": "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "email-first/login/create-account fixture",
+        "safe intermediate progression fixture",
+        "mismatch/manual-gate fixtures",
+        "final-submit non-activation fixture",
+        "loop/user-edit preservation fixtures"
+      ],
+      "validation": [
+        "focused fixture tests",
+        "application-assist CI",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-A5",
+      "status": "WAITING_EH_A0"
+    },
+    {
+      "lane_id": "EH-A5",
+      "wave": 2,
+      "mission": "Converge profile bootstrap, account bootstrap, safe progression, and regression fixtures into one continuous extension/cockpit application workflow.",
+      "dependencies": [
+        "EH-A1",
+        "EH-A2",
+        "EH-A3",
+        "EH-A4"
+      ],
+      "owned_mutation_surfaces": [
+        "shared application-assist integration files",
+        "popup/cockpit status and controls",
+        "shared session-state convergence",
+        "collision resolution",
+        "combined tests"
+      ],
+      "forbidden_surfaces": [
+        "final-submit automation",
+        "Windows lifecycle redesign",
+        "broad permissions without explicit contract change"
+      ],
+      "posture": "single convergence owner",
+      "adapter": {
+        "kind": "local_convergence_owner",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "converge_validate_integrate",
+        "arguments": {
+          "sprint": "EH-A5",
+          "plan": "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "continuous synthetic application run",
+        "precise mismatch stop/resume UX",
+        "final-submit hard stop",
+        "combined regression evidence"
+      ],
+      "validation": [
+        "all focused lane tests",
+        "application-assist contract/runtime/browser tests",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-A5",
+      "status": "WAITING_WAVE_1"
+    },
+    {
+      "lane_id": "EH-A6",
+      "wave": 3,
+      "mission": "Execute controlled live browser acceptance, classify release impact, update durable documentation, and promote through repository policy.",
+      "dependencies": [
+        "EH-A5"
+      ],
+      "owned_mutation_surfaces": [
+        "sanitized acceptance receipt",
+        "support/compatibility docs",
+        "release/version classification",
+        "promotion evidence"
+      ],
+      "forbidden_surfaces": [
+        "credential/profile leakage",
+        "unobserved universal ATS compatibility claims",
+        "automatic final submission"
+      ],
+      "posture": "single closeout owner",
+      "adapter": {
+        "kind": "local_browser_acceptance_plus_provider",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "validate_release_promote",
+        "arguments": {
+          "sprint": "EH-A6",
+          "plan": "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "observed browser acceptance evidence",
+        "documented compatibility ceiling",
+        "release classification",
+        "default-branch containment proof when authorized"
+      ],
+      "validation": [
+        "workstation observed flow",
+        "repository product-version validator",
+        "repository promotion validator",
+        "post-integration containment proof"
+      ],
+      "convergence_owner": "repository promotion owner",
+      "status": "WAITING_EH_A5"
+    }
+  ]
+}

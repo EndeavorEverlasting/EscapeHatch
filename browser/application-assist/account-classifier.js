@@ -103,8 +103,17 @@
   function classifyAccountPage(descriptor) {
     if (!descriptor || typeof descriptor !== "object") return ARCHETYPES.UNKNOWN;
     if (hasCaptcha(descriptor)) return ARCHETYPES.CAPTCHA_REQUIRED;
-    if (hasMfa(descriptor) && descriptorHasField(descriptor, isVerificationField)) return ARCHETYPES.MFA_REQUIRED;
+    if (hasMfa(descriptor)) return ARCHETYPES.MFA_REQUIRED;
     if (hasAuthMismatch(descriptor)) return ARCHETYPES.AUTH_MISMATCH;
+    const duplicateSignals = descriptor.signals && typeof descriptor.signals === "object" ? descriptor.signals : descriptor;
+    const duplicateText = normalize(descriptor.errorText || descriptor.text || "");
+    if (
+      duplicateSignals.duplicateAccountDetected === true ||
+      duplicateSignals.accountExistsConflict === true ||
+      duplicateText.includes("already exists") ||
+      duplicateText.includes("duplicate account") ||
+      duplicateText.includes("account already")
+    ) return ARCHETYPES.REVIEW_REQUIRED;
     if (descriptorHasField(descriptor, isVerificationField)) return ARCHETYPES.VERIFICATION_REQUIRED;
 
     if (hasCreateChoiceSignals(descriptor)) return ARCHETYPES.CREATE_ACCOUNT_CHOICE;
@@ -125,11 +134,12 @@
     if (hasEmail && hasPassword && !hasConfirmPassword && !hasUsername) {
       const buttons = Array.isArray(descriptor.buttons) ? descriptor.buttons.map((b) => normalize(b.text || b.label || b)) : [];
       const text = normalize(descriptor.text || "");
-      if (buttons.some((b) => b.includes("sign in") || b.includes("log in")) || text.includes("sign in") || text.includes("log in")) {
-        return ARCHETYPES.EXISTING_ACCOUNT_LOGIN;
-      }
-      if (hasConfirmPassword || hasUsername) return ARCHETYPES.ACCOUNT_CREATION;
-      return ARCHETYPES.EXISTING_ACCOUNT_LOGIN;
+      const joined = [text].concat(buttons).join(" ");
+      const loginSignal = joined.includes("sign in") || joined.includes("log in") || joined.includes("current password");
+      const creationSignal = joined.includes("create account") || joined.includes("create your account") || joined.includes("sign up") || joined.includes("register");
+      if (loginSignal && !creationSignal) return ARCHETYPES.EXISTING_ACCOUNT_LOGIN;
+      if (creationSignal && !loginSignal) return ARCHETYPES.ACCOUNT_CREATION;
+      return ARCHETYPES.UNKNOWN;
     }
     if ((hasPassword && hasConfirmPassword) || (hasEmail && hasPassword && (hasConfirmPassword || hasUsername))) {
       return ARCHETYPES.ACCOUNT_CREATION;

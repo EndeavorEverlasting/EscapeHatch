@@ -206,6 +206,9 @@ assert.equal(classifier.classifyAccountPage({ mfaDetected: true, fields: [], tex
 assert.equal(classifier.classifyAccountPage({ fields: [{ type: "email", label: "Email" }, { type: "password", label: "Password" }], buttons: [{ text: "Create Account" }], text: "Create your account" }), "ACCOUNT_CREATION");
 assert.equal(classifier.classifyAccountPage({ fields: [{ type: "email", label: "Email" }, { type: "password", label: "Password" }], buttons: [], text: "Enter credentials" }), "UNKNOWN");
 assert.equal(classifier.classifyAccountPage({ fields: [{ type: "email", label: "Email" }, { type: "password", label: "Password" }], text: "An account already exists", signals: { accountExistsConflict: true } }), "REVIEW_REQUIRED");
+assert.equal(classifier.classifyAccountPage({ fields: [{ type: "text", label: "Postal Code", name: "postal_code" }], text: "Job application" }), "APPLICATION_FORM", "postal code must not be treated as verification");
+assert.equal(classifier.classifyAccountPage({ fields: [{ type: "email", label: "Email" }, { type: "password", label: "Password" }], text: "Sign in to your account", errorText: "Invalid credentials" }), "AUTH_MISMATCH", "errorText must not be hidden by ordinary page text");
+assert.equal(accountFlow.detectDuplicateAccount({ signals: { accountExistsConflict: true } }), true, "nested fixture signals must trigger duplicate detection");
 
 // Classifier no broad permissions/fetch
 const classifierSrc = fs.readFileSync(new URL("../browser/application-assist/account-classifier.js", import.meta.url), "utf8");

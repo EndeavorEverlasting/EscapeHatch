@@ -78,7 +78,7 @@
         "git diff --check"
       ],
       "convergence_owner": "EH-A5",
-      "status": "WAITING_AUTHORIZATION"
+      "status": "INTEGRATED"
     },
     {
       "lane_id": "EH-Q0",
@@ -126,7 +126,7 @@
         "git diff --check"
       ],
       "convergence_owner": "EH-Q2",
-      "status": "WAITING_AUTHORIZATION"
+      "status": "INTEGRATED"
     },
     {
       "lane_id": "EH-A1",
@@ -171,7 +171,7 @@
         "git diff --check"
       ],
       "convergence_owner": "EH-A5",
-      "status": "WAITING_EH_A0"
+      "status": "FAITHFULNESS_REPAIR_REQUIRED"
     },
     {
       "lane_id": "EH-A2",
@@ -217,7 +217,7 @@
         "git diff --check"
       ],
       "convergence_owner": "EH-A5",
-      "status": "WAITING_EH_A0"
+      "status": "FAITHFULNESS_REPAIR_REQUIRED"
     },
     {
       "lane_id": "EH-A3",
@@ -264,7 +264,7 @@
         "git diff --check"
       ],
       "convergence_owner": "EH-A5",
-      "status": "WAITING_EH_A0"
+      "status": "FAITHFULNESS_REPAIR_REQUIRED"
     },
     {
       "lane_id": "EH-A4",
@@ -309,7 +309,7 @@
         "git diff --check"
       ],
       "convergence_owner": "EH-A5",
-      "status": "WAITING_EH_A0"
+      "status": "FAITHFULNESS_REPAIR_REQUIRED"
     },
     {
       "lane_id": "EH-U1",
@@ -366,7 +366,7 @@
         "git diff --check"
       ],
       "convergence_owner": "EH-A5",
-      "status": "WAITING_EH_A0",
+      "status": "IMPLEMENTED_STATIC_REVIEW_PENDING_CONVERGENCE",
       "research_evidence": [
         "OpenHands/OpenHands conversation-name-with-status + app-title execution-state patterns",
         "assistant-ui/assistant-ui runtime-driven Loading/StatusBar primitives",
@@ -421,7 +421,7 @@
         "git diff --check"
       ],
       "convergence_owner": "EH-Q2",
-      "status": "WAITING_EH_Q0"
+      "status": "IMPLEMENTED_STATIC_REVIEW_PENDING_CONVERGENCE"
     },
     {
       "lane_id": "EH-A5",
@@ -471,7 +471,7 @@
         "git diff --check"
       ],
       "convergence_owner": "EH-A5",
-      "status": "WAITING_WAVE_1"
+      "status": "BLOCKED_WAVE1_FAITHFULNESS_REPAIRS"
     },
     {
       "lane_id": "EH-Q2",
@@ -577,5 +577,21 @@
     "existing_owner": "docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md",
     "evidence_owner": "Outputs/prompt-parallel-dispatch/manifest.blocked.json",
     "run_scoped_manifest": "Outputs/prompt-parallel-dispatch/runs/escapehatch-application-assist-autopilot-20260923/manifest.json"
+  },
+  "faithfulness_checkpoint": {
+    "observed_at": "2026-09-23",
+    "provider_floor": "b884b42fb95b633b2d97a87be5dee30a311e19dc",
+    "a5_hold": true,
+    "required_repairs": {
+      "EH-A1": "navigation execution seam/reachability required before convergence",
+      "EH-A2": "positive loopback EscapeHatch cockpit identity required before profile read",
+      "EH-A3": "cryptographic randomness must fail closed and ACCOUNT_CREATION state must be mandatory",
+      "EH-A4": "adversarial fixtures must be behavior-bound to converged production modules"
+    },
+    "reviewed_no_contradiction": [
+      "EH-U1",
+      "EH-Q1"
+    ],
+    "proof_ceiling": "provider/static faithfulness review; independent local clone unavailable due sandbox DNS boundary"
   }
 }

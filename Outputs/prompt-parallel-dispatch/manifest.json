@@ -18,8 +18,8 @@
     "freshness": "PROVIDER_REFRESHED_2026-09-23"
   },
   "graph": {
-    "expression": "EH-A0 -> { EH-A1 || EH-A2 || EH-A3 || EH-A4 } -> EH-A5 -> EH-A6",
-    "max_width": 4,
+    "expression": "EH-A0 -> { EH-A1 || EH-A2 || EH-A3 || EH-A4 || EH-U1 } -> EH-A5 -> EH-A6",
+    "max_width": 5,
     "parallel_disposition": "REQUIRED_AFTER_EH_A0"
   },
   "status": "PLANNED_NOT_DISPATCHED_VALIDATION_BLOCKED",
@@ -260,6 +260,69 @@
       ],
       "convergence_owner": "EH-A5",
       "status": "WAITING_EH_A0"
+    },
+    {
+      "lane_id": "EH-U1",
+      "wave": 1,
+      "mission": "Make EscapeHatch's active participation ambiently visible through a compact truth-driven companion beacon, with distinct working/waiting states, progressive disclosure, phone-native behavior, and no intrusive popups.",
+      "dependencies": [
+        "EH-A0"
+      ],
+      "owned_mutation_surfaces": [
+        "contracts/application-assist-presence.v1.json",
+        "browser/application-assist/presence.js",
+        "optional browser/application-assist/presence.css",
+        "docs/APPLICATION_ASSIST_AMBIENT_COMPANION.md",
+        "fixtures/application-assist-presence-demo.html",
+        "tests/test_application_assist_presence_contract.py",
+        "tests/test_application_assist_presence.mjs",
+        "presence-only additions to contracts/application-assist-modality.v1.json when collision-free"
+      ],
+      "forbidden_surfaces": [
+        "independent application/progression/account state machine",
+        "final-submit automation",
+        "profile or credential display/persistence",
+        "telemetry/network additions",
+        "shared popup/content/cockpit integration while EH-A1/EH-A2/EH-A3 own overlapping files",
+        "Windows lifecycle"
+      ],
+      "posture": "isolated writer; new-module first",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-U1",
+          "plan": "docs/APPLICATION_ASSIST_AMBIENT_COMPANION_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "versioned presence projection contract",
+        "isolated Shadow DOM companion beacon",
+        "working/waiting/blocked/paused/completed semantics",
+        "quiet/dot-only/hidden-for-session preference",
+        "collision-aware anchor fallback",
+        "reduced-motion and phone-native proof",
+        "sanitized presence fixture matrix"
+      ],
+      "validation": [
+        "python tests/test_application_assist_presence_contract.py",
+        "node tests/test_application_assist_presence.mjs",
+        "existing application-assist modality/session tests",
+        "synthetic browser fixture proof",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-A5",
+      "status": "WAITING_EH_A0",
+      "research_evidence": [
+        "OpenHands/OpenHands conversation-name-with-status + app-title execution-state patterns",
+        "assistant-ui/assistant-ui runtime-driven Loading/StatusBar primitives",
+        "assistant-ui/tool-ui ProgressTracker progressive disclosure/receipt pattern",
+        "neochoon/agenthud working-vs-waiting ambient HUD pattern"
+      ]
     },
     {
       "lane_id": "EH-A5",

@@ -326,7 +326,7 @@ export function parseResumeText(text: string, fileName = 'Imported resume'): Res
   if (contactLocation.city && contactLocation.region) {
     profilePatch.city = contactLocation.city;
     profilePatch.region = contactLocation.region;
-    addProposal(proposals, 'contact', 'location', contactLocation.raw ?? `${contactLocation.city}, ${contactLocation.region}`, 'high', stamp(fileName, contactLocation.raw ?? `${contactLocation.city}, ${contactLocation.region}`, 1));
+    addProposal(proposals, 'contact', 'location', `${contactLocation.city}, ${contactLocation.region}`, 'high', stamp(fileName, contactLocation.raw ?? `${contactLocation.city}, ${contactLocation.region}`, 1));
   }
   for (const field of ['street_address', 'postal_code', 'country'] as const) {
     const value = contactLocation[field] ?? '';

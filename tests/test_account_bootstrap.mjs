@@ -113,8 +113,10 @@ assert.notEqual(pwd1, pwd2, "high entropy passwords should not be identical");
 const pwdDefault = credentialGen.generateTemporaryPassword({ state: "ACCOUNT_CREATION" });
 assert.ok(pwdDefault.length >= 20);
 
-assert.throws(() => credentialGen.generateTemporaryPassword({ state: "EMAIL_PROBE" }), /only in ACCOUNT_CREATION/);
-assert.throws(() => credentialGen.generateTemporaryPassword({ state: "APPLICATION_FORM" }), /only in ACCOUNT_CREATION/);
+assert.throws(() => credentialGen.generateTemporaryPassword({ state: "EMAIL_PROBE" }), /ACCOUNT_CREATION/);
+assert.throws(() => credentialGen.generateTemporaryPassword({ state: "APPLICATION_FORM" }), /ACCOUNT_CREATION/);
+assert.throws(() => credentialGen.generateTemporaryPassword(), /explicit ACCOUNT_CREATION/);
+assert.throws(() => credentialGen.generateTemporaryPassword({}), /explicit ACCOUNT_CREATION/);
 
 // Username generator only when site requires it
 assert.equal(credentialGen.generateUsername({ email: "alex@example.invalid", siteRequiresUsername: false }), null);
@@ -133,6 +135,7 @@ assert.equal(credSource.includes("fetch("), false);
 assert.equal(credSource.includes("localStorage"), false);
 assert.equal(credSource.includes("chrome.storage.local"), false);
 assert.ok(credSource.includes("crypto.getRandomValues"));
+assert.equal(credSource.includes("Math.random"), false, "credential generation must fail closed without cryptographic randomness");
 
 // --- Session secret ---
 const secretSrc = fs.readFileSync(new URL("../browser/application-assist/session-secret.js", import.meta.url), "utf8");
@@ -170,7 +173,9 @@ let asyncTests = (async () => {
   assert.ok(!JSON.stringify(diag).includes(tempPwd));
 
   // Generation outside ACCOUNT_CREATION must be blocked
-  await assert.rejects(() => sessionSecret.setSecret("test", { state: "EMAIL_PROBE" }), /only be set in ACCOUNT_CREATION/);
+  await assert.rejects(() => sessionSecret.setSecret("test", { state: "EMAIL_PROBE" }), /ACCOUNT_CREATION/);
+  await assert.rejects(() => sessionSecret.setSecret("test"), /explicit ACCOUNT_CREATION/);
+  await assert.rejects(() => sessionSecret.setSecret("test", {}), /explicit ACCOUNT_CREATION/);
 
   // Clear
   await sessionSecret.clearSecret();

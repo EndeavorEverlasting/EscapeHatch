@@ -1,0 +1,22 @@
+{
+  "schema_version": "escapehatch/account-bootstrap-fixture/v1",
+  "fixture_id": "verification-required",
+  "description": "Synthetic verification page requiring email code.",
+  "expected_archetype": "VERIFICATION_REQUIRED",
+  "expected_state": "VERIFICATION_REQUIRED",
+  "descriptor": {
+    "url": "https://example.invalid/account/verify",
+    "text": "Enter verification code sent to your email",
+    "fields": [
+      {
+        "type": "text",
+        "label": "Verification Code",
+        "name": "verification_code",
+        "value": "synthetic_verification_placeholder"
+      }
+    ],
+    "buttons": [{ "text": "Verify" }]
+  },
+  "secret_placeholder": "generated_password_placeholder",
+  "notes": "Manual verification gate; no auto-fill of secrets."
+}

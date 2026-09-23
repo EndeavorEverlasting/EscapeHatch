@@ -1,0 +1,15 @@
+{
+  "schema_version": "escapehatch/account-bootstrap-fixture/v1",
+  "fixture_id": "create-account-choice",
+  "description": "Synthetic choice page offering Create Account vs Sign In.",
+  "expected_archetype": "CREATE_ACCOUNT_CHOICE",
+  "expected_state": "CREATE_ACCOUNT_CHOICE",
+  "descriptor": {
+    "url": "https://example.invalid/account/choice",
+    "text": "Do you already have an account? Sign in or Create Account",
+    "fields": [],
+    "buttons": [{ "text": "Create Account" }, { "text": "Sign In" }]
+  },
+  "secret_placeholder": "generated_password_placeholder",
+  "notes": "Synthetic placeholders only."
+}

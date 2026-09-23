@@ -23,7 +23,11 @@
     "escape_dismisses_overlay_without_erasing_unrelated_session_state",
     "important_gestures_require_labeled_fallback"
   ],
-  "modes": ["mouse", "keyboard", "phone"],
+  "modes": [
+    "mouse",
+    "keyboard",
+    "phone"
+  ],
   "mode_detection": {
     "phone": [
       "pointer_coarse",
@@ -40,7 +44,10 @@
       "state_owner": "escapeHatch.applicationAssistSession.v1",
       "handler": "popup.startAssist",
       "mouse": "visible_primary_button",
-      "keyboard": ["s", "command:Start Assist"],
+      "keyboard": [
+        "s",
+        "command:Start Assist"
+      ],
       "phone": "command_sheet_row",
       "terminal_result": "session_active_bound_to_origin",
       "proof": "tests/test_application_assist_modality_contract.py + node modality harness"
@@ -51,7 +58,10 @@
       "state_owner": "session + Fill Plan pipeline",
       "handler": "popup.fillAllowedFields",
       "mouse": "visible_primary_button",
-      "keyboard": ["f", "command:Fill Allowed Fields"],
+      "keyboard": [
+        "f",
+        "command:Fill Allowed Fields"
+      ],
       "phone": "command_sheet_row",
       "terminal_result": "policy_gated_dom_writes_or_blocked_status",
       "proof": "shared semantic invoke + existing fill runtime tests"
@@ -62,7 +72,10 @@
       "state_owner": "session.status",
       "handler": "popup.pauseAssist",
       "mouse": "visible_button",
-      "keyboard": ["p", "command:Pause"],
+      "keyboard": [
+        "p",
+        "command:Pause"
+      ],
       "phone": "command_sheet_row",
       "terminal_result": "session_paused_blocks_writes"
     },
@@ -72,7 +85,10 @@
       "state_owner": "session.status",
       "handler": "popup.resumeAssist",
       "mouse": "visible_button",
-      "keyboard": ["r", "command:Resume"],
+      "keyboard": [
+        "r",
+        "command:Resume"
+      ],
       "phone": "command_sheet_row",
       "terminal_result": "session_active_same_origin"
     },
@@ -82,7 +98,11 @@
       "state_owner": "session.status=stopped",
       "handler": "popup.emergencyStop",
       "mouse": "visible_destructive_button",
-      "keyboard": ["shift+escape", "!", "command:Emergency Stop"],
+      "keyboard": [
+        "shift+escape",
+        "!",
+        "command:Emergency Stop"
+      ],
       "phone": "command_sheet_destructive_row",
       "terminal_result": "future_fills_cancelled_until_restart",
       "notes": "Bare Escape dismisses overlays only; it does not latch Emergency Stop."
@@ -93,7 +113,10 @@
       "state_owner": "session.fill_stack",
       "handler": "popup.undoLastFill",
       "mouse": "visible_button",
-      "keyboard": ["u", "command:Undo Last Fill"],
+      "keyboard": [
+        "u",
+        "command:Undo Last Fill"
+      ],
       "phone": "command_sheet_row",
       "terminal_result": "restore_untouched_escapehatch_values"
     },
@@ -103,7 +126,10 @@
       "state_owner": "session.confirmation + companion export",
       "handler": "popup.recordConfirmationEvidence",
       "mouse": "visible_button",
-      "keyboard": ["c", "command:Record Confirmation Evidence"],
+      "keyboard": [
+        "c",
+        "command:Record Confirmation Evidence"
+      ],
       "phone": "command_sheet_row",
       "terminal_result": "metadata_only_confirmation_recorded"
     },
@@ -113,7 +139,10 @@
       "state_owner": "escapeHatch.applicationAssistProfile.v1",
       "handler": "popup.saveProfile",
       "mouse": "visible_button_in_profile_panel",
-      "keyboard": ["command:Save Profile", "ctrl+enter_in_profile_panel"],
+      "keyboard": [
+        "command:Save Profile",
+        "ctrl+enter_in_profile_panel"
+      ],
       "phone": "profile_destination_action",
       "terminal_result": "browser_local_profile_persisted"
     },
@@ -123,7 +152,9 @@
       "state_owner": "profile storage",
       "handler": "popup.clearProfile",
       "mouse": "visible_button_in_profile_panel",
-      "keyboard": ["command:Clear Profile"],
+      "keyboard": [
+        "command:Clear Profile"
+      ],
       "phone": "profile_destination_action",
       "terminal_result": "local_profile_cleared"
     },
@@ -133,7 +164,9 @@
       "state_owner": "profile storage",
       "handler": "popup.exportProfile",
       "mouse": "visible_button_in_profile_panel",
-      "keyboard": ["command:Export Profile"],
+      "keyboard": [
+        "command:Export Profile"
+      ],
       "phone": "profile_destination_action",
       "terminal_result": "portable_json_download"
     },
@@ -143,9 +176,23 @@
       "state_owner": "profile storage",
       "handler": "popup.importProfile",
       "mouse": "visible_button_plus_file_picker",
-      "keyboard": ["command:Import Profile"],
+      "keyboard": [
+        "command:Import Profile"
+      ],
       "phone": "profile_destination_action",
       "terminal_result": "validated_local_import"
+    },
+    {
+      "id": "sync_from_cockpit",
+      "semantic_action": "sync_from_cockpit",
+      "state_owner": "escapeHatch.applicationAssistProfile.v1 + preference cache",
+      "handler": "popup.syncFromCockpit",
+      "mouse": "visible_button_in_profile_panel",
+      "keyboard": [
+        "command:Sync from EscapeHatch"
+      ],
+      "phone": "command_sheet_row",
+      "terminal_result": "validated_loopback_cockpit_profile_projected_to_browser_local_state"
     },
     {
       "id": "open_command_palette",
@@ -153,7 +200,11 @@
       "state_owner": "ui.overlay only",
       "handler": "modality.openCommandPalette",
       "mouse": "optional_button_Command",
-      "keyboard": ["/", "ctrl+k", "?"],
+      "keyboard": [
+        "/",
+        "ctrl+k",
+        "?"
+      ],
       "phone": "command_sheet_is_default_home",
       "terminal_result": "command_surface_visible_without_text_autofocus"
     },
@@ -163,7 +214,10 @@
       "state_owner": "ui.destination",
       "handler": "modality.openProfilePanel",
       "mouse": "always_visible_or_toggle",
-      "keyboard": ["g", "command:Edit Profile"],
+      "keyboard": [
+        "g",
+        "command:Edit Profile"
+      ],
       "phone": "structured_destination_Edit_profile",
       "terminal_result": "profile_fields_reachable_for_intentional_text_entry"
     },
@@ -173,7 +227,9 @@
       "state_owner": "ui.overlay only",
       "handler": "modality.dismissOverlay",
       "mouse": "click_dismiss_control",
-      "keyboard": ["escape"],
+      "keyboard": [
+        "escape"
+      ],
       "phone": "labeled_Close_or_Back",
       "terminal_result": "overlay_closed_session_preserved"
     }
@@ -182,11 +238,18 @@
     "mouse": {
       "primary": "visible_direct_controls",
       "enrichment": "hover_titles_may_show_shortcut_hints",
-      "forbidden_sole_path": ["hover_only_essential_action"]
+      "forbidden_sole_path": [
+        "hover_only_essential_action"
+      ]
     },
     "keyboard": {
-      "palette": ["/", "ctrl+k"],
-      "help": ["?"],
+      "palette": [
+        "/",
+        "ctrl+k"
+      ],
+      "help": [
+        "?"
+      ],
       "direct": {
         "s": "start_assist",
         "f": "fill_allowed",
@@ -207,7 +270,10 @@
     },
     "phone": {
       "home": "session_command_sheet",
-      "destinations": ["command_sheet", "profile_panel"],
+      "destinations": [
+        "command_sheet",
+        "profile_panel"
+      ],
       "rules": [
         "default_land_on_command_sheet_not_profile_form",
         "no_autofocus_on_text_inputs_at_open",

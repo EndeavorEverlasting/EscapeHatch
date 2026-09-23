@@ -189,6 +189,68 @@ async function importProfile(file) {
   setStatus(`Imported ${countProfileValues(profile)} profile fields locally.`);
 }
 
+async function syncFromCockpit() {
+  const syncApi = globalThis.EscapeHatchProfileSync;
+  if (!syncApi) throw new Error("Profile sync unavailable. Reload the extension.");
+  const tab = await activeTab();
+  const origin = tabOrigin(tab);
+  if (!syncApi.isTrustedCockpitUrl(tab.url || origin)) {
+    throw new Error("Open the local EscapeHatch cockpit before syncing. Profile sync only reads the loopback cockpit.");
+  }
+  let dump = null;
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => {
+        const keys = ["escape-hatch-profile", "escape-hatch-assist-profile", "escape-hatch-workspace", "escapeHatch.applicationAssistProfile.v1"];
+        const out = {};
+        for (const k of keys) {
+          try {
+            const v = localStorage.getItem(k);
+            if (v) out[k] = v;
+          } catch (_e) {}
+        }
+        return {
+          __escapehatch_cockpit__: document.title === "EscapeHatch" && Boolean(document.getElementById("root")),
+          values: out
+        };
+      }
+    });
+    dump = results && results[0] && results[0].result ? results[0].result : null;
+  } catch (_e) {
+    throw new Error("Sync failed: could not read the cockpit tab. Open the cockpit locally and try again.");
+  }
+  if (!dump || typeof dump !== "object" || dump.__escapehatch_cockpit__ !== true) {
+    throw new Error("The active loopback page is not the EscapeHatch cockpit. Profile state was not read.");
+  }
+  const cockpitValues = dump.values && typeof dump.values === "object" ? dump.values : null;
+  if (!cockpitValues || Object.keys(cockpitValues).length === 0) {
+    throw new Error("No EscapeHatch cockpit profile found in this tab. Open your cockpit, save your profile, then use Sync from EscapeHatch again. No file import needed.");
+  }
+  const profile = syncApi.parseCockpitDump(cockpitValues);
+  if (!profile) {
+    throw new Error("No validated profile in cockpit tab. Save a reviewed profile in the cockpit first.");
+  }
+  if (!syncApi.hasProfileValues(profile)) {
+    throw new Error("Cockpit profile has no usable values.");
+  }
+  const prefKey = syncApi.PREFERENCE_STORAGE_KEY || api.PREFERENCE_STORAGE_KEY;
+  const storedPref = await chrome.storage.local.get(prefKey);
+  const preferenceStore = syncApi.projectProfileToPreferenceStore(profile, storedPref[prefKey] || {});
+  await chrome.storage.local.set({
+    [PROFILE_KEY]: profile,
+    [prefKey]: preferenceStore,
+    [syncApi.PROFILE_STORAGE_KEY]: profile
+  });
+  writeForm(profile);
+  if (!profile.email) {
+    setStatus(`Synced ${syncApi.countProfileValues(profile)} field(s) from EscapeHatch cockpit — add an email in the cockpit to enable application fill without file import.`);
+  } else {
+    setStatus(`Synced ${syncApi.countProfileValues(profile)} field(s) from EscapeHatch cockpit. Email is now available without file archaeology.`);
+  }
+  return profile;
+}
+
 async function activeTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab || typeof tab.id !== "number") {
@@ -211,16 +273,19 @@ async function runPageCommand(command, profile, session, preferenceStore) {
   session = api.observeOrigin(session, origin);
   await saveSession(session);
 
+  const runtimeFiles = command === "advance"
+    ? ["assist-core.js", "progression.js", "navigation-adapter.js"]
+    : ["assist-core.js"];
   await chrome.scripting.executeScript({
     target: { tabId: tab.id },
-    files: ["assist-core.js"]
+    files: runtimeFiles
   });
   const injected = await chrome.scripting.executeScript({
     target: { tabId: tab.id },
     func: (payload) => {
       globalThis.__ESCAPEHATCH_ASSIST_COMMAND__ = payload;
     },
-    args: [{ type: command, profile, session, preferenceStore: preferenceStore || null }]
+    args: [{ type: command, profile, session, preferenceStore: preferenceStore || null, sessionStorageKey: SESSION_KEY }]
   });
   if (!injected) {
     throw new Error("Assist command injection failed.");
@@ -463,6 +528,7 @@ function bindSemanticHandlers() {
   modality.registerHandler("import_profile", () => {
     importFile.click();
   });
+  modality.registerHandler("sync_from_cockpit", () => syncFromCockpit());
   modality.registerHandler("open_command_palette", () => {
     openCommandPalette();
   });
@@ -496,7 +562,8 @@ function bindDirectControls() {
     ["openCommands", "open_command_palette"],
     ["save", "save_profile"],
     ["clear", "clear_profile"],
-    ["export", "export_profile"]
+    ["export", "export_profile"],
+    ["syncFromCockpit", "sync_from_cockpit"]
   ];
   for (const [elementId, actionId] of pairs) {
     const node = document.getElementById(elementId);

@@ -175,7 +175,10 @@ class ApplicationAssistSessionContractTests(unittest.TestCase):
         self.assertIn("escapehatch-application-assist-profile/v1", self.popup)
         self.assertIn('id="phone_authority"', self.html)
         self.assertIn("user_confirmed_primary", self.popup)
-        self.assertIn('files: ["assist-core.js"]', self.popup)
+        self.assertIn('const runtimeFiles = command === "advance"', self.popup)
+        self.assertIn('["assist-core.js", "progression.js", "navigation-adapter.js"]', self.popup)
+        self.assertIn(': ["assist-core.js"];', self.popup)
+        self.assertIn("files: runtimeFiles", self.popup)
         self.assertIn('files: ["content.js"]', self.popup)
 
     def test_phone_authority_popup_fails_closed_across_edits_and_imports(self) -> None:

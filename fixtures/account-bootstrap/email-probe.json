@@ -1,0 +1,24 @@
+{
+  "schema_version": "escapehatch/account-bootstrap-fixture/v1",
+  "fixture_id": "email-probe",
+  "description": "Synthetic email probe page with single email input, expects EMAIL_PROBE archetype.",
+  "expected_archetype": "EMAIL_PROBE",
+  "expected_state": "EMAIL_PROBE",
+  "descriptor": {
+    "url": "https://example.invalid/careers/apply",
+    "text": "Enter your email to continue",
+    "fields": [
+      {
+        "type": "email",
+        "label": "Email Address",
+        "autocomplete": "email",
+        "name": "email",
+        "id": "email",
+        "value": "synthetic_email_placeholder@example.invalid"
+      }
+    ],
+    "buttons": [{ "text": "Continue" }]
+  },
+  "secret_placeholder": "generated_password_placeholder",
+  "notes": "Uses synthetic placeholders only; no real credentials."
+}

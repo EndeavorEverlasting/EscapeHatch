@@ -19,6 +19,7 @@
     { id: "clear_profile", label: "Clear Profile", shortcuts: [], phoneHome: false, destructive: false },
     { id: "export_profile", label: "Export Profile", shortcuts: [], phoneHome: false, destructive: false },
     { id: "import_profile", label: "Import Profile", shortcuts: [], phoneHome: false, destructive: false },
+    { id: "sync_from_cockpit", label: "Sync from EscapeHatch", shortcuts: [], phoneHome: true, destructive: false },
     { id: "open_command_palette", label: "Open Command Palette", shortcuts: ["/", "ctrl+k", "?"], phoneHome: false, destructive: false },
     { id: "dismiss_overlay", label: "Dismiss Overlay", shortcuts: ["escape"], phoneHome: false, destructive: false }
   ];

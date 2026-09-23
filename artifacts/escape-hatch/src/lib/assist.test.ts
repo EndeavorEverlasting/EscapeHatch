@@ -135,6 +135,14 @@ test('deterministic resume intake auto-projects explicit facts, preserves confli
   assert.equal(first.contactPatch.phone_authority, undefined);
   assert.equal(first.profile.summary, 'Keep this explicit summary.');
 
+  const emptyAssist = emptyAssistProfile(emptyProfile);
+  const canonicalBaseContact = { ...emptyProfile, first_name: 'Canonical', last_name: 'Person', email: 'canonical@example.test' };
+  const reconciled = applyDeterministicResumeImport(imported, emptyAssist, canonicalBaseContact);
+  assert.equal(reconciled.profile.contact.first_name, 'Canonical');
+  assert.equal(reconciled.profile.contact.last_name, 'Person');
+  assert.equal(reconciled.profile.contact.email, 'canonical@example.test');
+  assert.equal(reconciled.profile.contact.city, 'Metro City');
+
   const second = applyDeterministicResumeImport(imported, first.profile);
   assert.equal(second.profile.projects.length, first.profile.projects.length);
   assert.equal(second.profile.experience.length, first.profile.experience.length);

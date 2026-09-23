@@ -104,11 +104,11 @@
 
   function detectDuplicateAccount(signals) {
     if (!signals || typeof signals !== "object") return false;
-    if (signals.duplicateAccountDetected === true) return true;
-    if (signals.accountExistsConflict === true) return true;
-    if (signals.errorMessage && /already exists|duplicate account|account already/i.test(String(signals.errorMessage))) {
-      return true;
-    }
+    const nested = signals.signals && typeof signals.signals === "object" ? signals.signals : null;
+    if (signals.duplicateAccountDetected === true || signals.accountExistsConflict === true) return true;
+    if (nested && (nested.duplicateAccountDetected === true || nested.accountExistsConflict === true)) return true;
+    const message = [signals.errorMessage || "", signals.errorText || "", signals.text || ""].join(" ");
+    if (/already exists|duplicate account|account already/i.test(String(message))) return true;
     return false;
   }
 

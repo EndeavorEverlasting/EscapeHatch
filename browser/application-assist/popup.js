@@ -210,7 +210,10 @@ async function syncFromCockpit() {
             if (v) out[k] = v;
           } catch (_e) {}
         }
-        return out;
+        return {
+          __escapehatch_cockpit__: document.title === "EscapeHatch" && Boolean(document.getElementById("root")),
+          values: out
+        };
       }
     });
     dump = results && results[0] && results[0].result ? results[0].result : null;

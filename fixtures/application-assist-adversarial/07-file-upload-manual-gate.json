@@ -1,0 +1,106 @@
+{
+  "schema": "escapehatch/application-assist-adversarial-fixture/v1",
+  "fixture_id": "07-file-upload-manual-gate",
+  "title": "File upload/manual gate -> REVIEW_REQUIRED (adversarial: file_upload_required)",
+  "description": "Sanitized page where a required file upload (Resume/CV) is unresolved. Progression must be REVIEW_REQUIRED with reason file_upload_required, not AUTO_ADVANCE_SAFE. Host https://careers.example.invalid/application/documents.",
+  "host": "https://careers.example.invalid",
+  "scenario": "file-upload-manual-gate",
+  "url": "https://careers.example.invalid/application/documents",
+  "page_archetype": "compensation-education-accommodation",
+  "session": {
+    "status": "active",
+    "origin": "https://careers.example.invalid"
+  },
+  "fields": [
+    {
+      "label": "Resume",
+      "type": "file",
+      "value": "",
+      "required": true,
+      "accept": ".pdf,.docx"
+    },
+    {
+      "label": "Cover Letter",
+      "type": "file",
+      "value": "",
+      "required": false
+    },
+    {
+      "label": "First Name",
+      "type": "text",
+      "value": "",
+      "required": false
+    }
+  ],
+  "fill_plan": {
+    "schema_version": "escapehatch-application-fill-plan/v1",
+    "items": [
+      {
+        "index": 2,
+        "profile_key": "first_name",
+        "question_id": "identity.first_name",
+        "value": "Alex",
+        "decision": "gate_allowed"
+      }
+    ],
+    "denied": [
+      {
+        "index": 0,
+        "profile_key": null,
+        "question_id": null,
+        "decision": "no_password_file_hidden_or_disallowed_types"
+      },
+      {
+        "index": 1,
+        "profile_key": null,
+        "question_id": null,
+        "decision": "no_password_file_hidden_or_disallowed_types"
+      }
+    ]
+  },
+  "progression_plan": {
+    "candidate_control": {
+      "label": "Next",
+      "kind": "intermediate",
+      "terminal": false,
+      "selector": "button.next",
+      "normalized": "next",
+      "uniquely_identified": true
+    },
+    "action_identity_stable": true,
+    "deterministic_fill_completed_and_stable_after_live_rescan": true,
+    "no_visible_validation_error_present": true,
+    "no_required_unknown_manual_review_control_unresolved": true,
+    "no_password_requested_outside_explicit_account_bootstrap_state": true,
+    "no_file_upload_captcha_mfa_otp_legal_compliance_attestation_demographic_gate_unresolved": false,
+    "advance_budget_loop_guard_not_exceeded": true,
+    "next_observed_page_transition_matches_permitted_state_transition": true,
+    "failed_gate": "no_file_upload_captcha_mfa_otp_legal_compliance_attestation_demographic_gate_unresolved",
+    "unresolved_gates": [
+      {
+        "kind": "file_upload_required",
+        "selector": "input[type=file][name=resume]",
+        "required": true,
+        "terminal_manual_reason": "file_upload_required"
+      }
+    ]
+  },
+  "expected_decision": "REVIEW_REQUIRED",
+  "expected_reason": "file_upload_required",
+  "all_gates_pass": false,
+  "failed_gate": "no_file_upload_captcha_mfa_otp_legal_compliance_attestation_demographic_gate_unresolved",
+  "terminal_forbidden_applies": true,
+  "terminal_manual_reason": "file_upload_required",
+  "reason_detail": "Required file upload (Resume) remains unresolved; file inputs are never auto-filled.",
+  "loop_guard": {
+    "advances_per_session": 1,
+    "advances_per_page": 1,
+    "require_page_transition": false,
+    "detect_repeated_page": false
+  },
+  "synthetic_data": {
+    "first_name": "Alex",
+    "email": "alex@example.invalid",
+    "resume_required": true
+  }
+}

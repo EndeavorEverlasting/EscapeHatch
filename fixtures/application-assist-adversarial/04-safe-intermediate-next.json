@@ -1,0 +1,106 @@
+{
+  "schema": "escapehatch/application-assist-adversarial-fixture/v1",
+  "fixture_id": "04-safe-intermediate-next",
+  "title": "Safe intermediate Next (AUTO_ADVANCE_SAFE) with all gates passing",
+  "description": "Sanitized intermediate application page where all progression allowed_when gates pass. Candidate control is uniquely identified as intermediate Next/Continue/Save & Continue, not terminal. Deterministic fill completed and stable after re-scan, no validation errors, no manual gates, budget not exceeded. Host https://careers.example.invalid/application/step2.",
+  "host": "https://careers.example.invalid",
+  "scenario": "safe-intermediate-next",
+  "url": "https://careers.example.invalid/application/step2",
+  "page_archetype": "employment-eligibility",
+  "session": {
+    "status": "active",
+    "origin": "https://careers.example.invalid"
+  },
+  "fields": [
+    {
+      "label": "Title",
+      "type": "select",
+      "value": "",
+      "options": [
+        {
+          "value": "",
+          "text": "Select a title"
+        },
+        {
+          "value": "Mr.",
+          "text": "Mr."
+        }
+      ],
+      "required": false
+    },
+    {
+      "label": "Are you legally authorized to work in the country?",
+      "type": "text",
+      "value": "",
+      "required": false
+    }
+  ],
+  "fill_plan": {
+    "schema_version": "escapehatch-application-fill-plan/v1",
+    "items": [
+      {
+        "index": 0,
+        "profile_key": "name_prefix",
+        "question_id": "identity.title",
+        "value": "Mr.",
+        "decision": "gate_allowed"
+      }
+    ],
+    "denied": [
+      {
+        "index": 1,
+        "profile_key": null,
+        "question_id": null,
+        "decision": "unknown_fields_stay_blank"
+      }
+    ]
+  },
+  "progression_plan": {
+    "candidate_control": {
+      "label": "Next",
+      "kind": "intermediate",
+      "terminal": false,
+      "selector": "button[data-testid=next]",
+      "normalized": "next",
+      "uniquely_identified": true
+    },
+    "all_allowed_when_gates": [
+      "session_is_active_and_not_emergency_stopped",
+      "current_page_archetype_is_recognized",
+      "candidate_control_uniquely_identified_as_intermediate_next_or_continue",
+      "candidate_is_not_submit_apply_finish_certify_sign_accept_attestation",
+      "deterministic_fill_completed_and_stable_after_live_rescan",
+      "no_visible_validation_error_present",
+      "no_required_unknown_manual_review_control_unresolved",
+      "no_password_requested_outside_explicit_account_bootstrap_state",
+      "no_file_upload_captcha_mfa_otp_legal_compliance_attestation_demographic_gate_unresolved",
+      "action_identity_unchanged_between_plan_construction_and_execution",
+      "advance_budget_loop_guard_not_exceeded",
+      "next_observed_page_transition_matches_permitted_state_transition"
+    ],
+    "action_identity_stable": true,
+    "deterministic_fill_completed_and_stable_after_live_rescan": true,
+    "no_visible_validation_error_present": true,
+    "no_required_unknown_manual_review_control_unresolved": true,
+    "no_password_requested_outside_explicit_account_bootstrap_state": true,
+    "no_file_upload_captcha_mfa_otp_legal_compliance_attestation_demographic_gate_unresolved": true,
+    "advance_budget_loop_guard_not_exceeded": true,
+    "next_observed_page_transition_matches_permitted_state_transition": true
+  },
+  "expected_decision": "AUTO_ADVANCE_SAFE",
+  "expected_reason": null,
+  "all_gates_pass": true,
+  "terminal_forbidden_applies": false,
+  "intermediate_policy": "AUTO_ADVANCE_SAFE",
+  "loop_guard": {
+    "advances_per_session": 3,
+    "advances_per_page": 1,
+    "require_page_transition": true,
+    "detect_repeated_page": false,
+    "budget_scope": "per_session_and_per_page"
+  },
+  "synthetic_data": {
+    "name_prefix": "Mr.",
+    "email": "alex@example.invalid"
+  }
+}

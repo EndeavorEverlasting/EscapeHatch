@@ -152,9 +152,9 @@ No duplicate extension copies should become alternate sources of truth.
 
 Graph:
 
-`EH-A0 -> { EH-A1 || EH-A2 || EH-A3 || EH-A4 } -> EH-A5 -> EH-A6`
+`EH-A0 -> { EH-A1 || EH-A2 || EH-A3 || EH-A4 || EH-U1 } -> EH-A5 -> EH-A6`
 
-Maximum meaningful width after the contract floor: **4**, subject to refreshed file-collision inspection.
+Maximum meaningful width after the contract floor: **5**, subject to refreshed file-collision inspection.
 
 ### EH-A0 — Progression & account-flow contract floor
 
@@ -298,6 +298,41 @@ Maximum meaningful width after the contract floor: **4**, subject to refreshed f
 12. user-edited field preserved across progression.
 
 **Proof ceiling:** deterministic repository/browser-harness proof.
+
+### EH-U1 — Ambient Companion Presence
+
+**Type:** UX polish + integration adapter  
+**Dependencies:** EH-A0  
+**Canonical detailed plan:** `docs/APPLICATION_ASSIST_AMBIENT_COMPANION_PLAN.md`  
+**Goal:** make EscapeHatch's active participation continuously legible without turning the product into an intrusive popup.
+
+**Owned scope**
+- versioned presence-state projection contract;
+- isolated in-page Shadow DOM companion beacon;
+- working/waiting/blocked/paused/completed visual semantics;
+- quiet/dot-only/hidden-for-session presentation preference;
+- phone-native and reduced-motion behavior;
+- dedicated synthetic presence fixtures/tests;
+- OSS-pattern-derived implementation guidance.
+
+**Forbidden scope**
+- independent workflow/page/account state machine;
+- final-submit authority;
+- profile or credential rendering;
+- network/telemetry work;
+- shared popup/content/App integration while A1/A2/A3 own overlapping files.
+
+**Required behavior**
+- compact ambient beacon on the work page;
+- pulse only for canonical working states;
+- `working` and `waiting on you` are distinct;
+- state changes may briefly widen the beacon but never auto-open a modal/details panel;
+- details open only on intentional click/tap/keyboard activation;
+- EscapeHatch must avoid common fixed chat/sticky-CTA regions using deterministic anchor fallback;
+- reduced-motion, keyboard, coarse-pointer, safe-area, and no-focus-theft rules are tested;
+- the presence layer projects canonical state and cannot invent progress.
+
+**Proof ceiling:** contract/module/synthetic-browser proof. Physical-phone ergonomics and live ATS layout compatibility remain EH-A6 observed proof.
 
 ### EH-A5 — Product convergence: one continuous application run
 
@@ -461,6 +496,7 @@ Planning output only; **no implementation lane is dispatched by this planning pa
    - **EH-A2 — Deterministic profile bootstrap + path hygiene**
    - **EH-A3 — Account bootstrap & temporary credential lifecycle**
    - **EH-A4 — Adversarial application-flow fixtures and validator floor**
+   - **EH-U1 — Ambient Companion Presence**
 3. **EH-A5 — Product convergence: one continuous application run**
 4. **EH-A6 — Live acceptance, release classification, and durable closeout**
 

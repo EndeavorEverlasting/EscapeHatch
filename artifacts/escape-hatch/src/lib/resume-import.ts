@@ -267,6 +267,37 @@ const addProposal = (proposals: ReviewedProposal[], section: ReviewedProposal['s
   proposals.push({ id: idFor(section, field, value), section, field, value: normalized, confidence, review: 'proposed', provenance: source });
 };
 
+type ParsedContactLocation = Pick<Partial<AssistProfile['contact']>, 'street_address' | 'city' | 'region' | 'postal_code' | 'country'>;
+
+function parseContactLocation(lines: string[]): ParsedContactLocation {
+  const firstHeading = lines.findIndex((line) => heading(line));
+  const contactLines = lines.slice(0, firstHeading >= 0 ? firstHeading : Math.min(lines.length, 10));
+  const candidates = contactLines
+    .map((line) => line.split(/\s*[|•·]\s*/)[0].trim())
+    .filter((line) => line.includes(',') && !/@|https?:\/\/|linkedin\.com/i.test(line));
+
+  for (const candidate of candidates) {
+    const parts = candidate.split(',').map(clean).filter(Boolean);
+    if (parts.length < 2) continue;
+    const hasStreet = /^\d{1,6}\s+\S+/.test(parts[0]);
+    const street_address = hasStreet ? parts.shift() ?? '' : '';
+    const city = parts.shift() ?? '';
+    if (!city || !parts.length) continue;
+
+    let country = '';
+    if (parts.length > 1 && /^(?:united states(?: of america)?|usa|u\.s\.a\.|us)$/i.test(parts[parts.length - 1])) {
+      country = parts.pop() ?? '';
+    }
+    const regionPostal = parts.join(', ').trim();
+    const regionPostalMatch = regionPostal.match(/^(.+?)(?:\s+(\d{5}(?:-\d{4})?))?$/);
+    const region = clean(regionPostalMatch?.[1] ?? '');
+    const postal_code = clean(regionPostalMatch?.[2] ?? '');
+    if (!region) continue;
+    return { street_address, city, region, postal_code, country };
+  }
+  return {};
+}
+
 export function parseResumeText(text: string, fileName = 'Imported resume'): ResumeImport {
   const lines = text.split(/\r?\n/).map((line) => line.replace(/\s+/g, ' ').trim()).filter(Boolean);
   const proposals: ReviewedProposal[] = [];
@@ -277,7 +308,7 @@ export function parseResumeText(text: string, fileName = 'Imported resume'): Res
   const linkedin = text.match(/https?:\/\/(?:www\.)?linkedin\.com\/[^\s|]+|linkedin\.com\/[^\s|]+/i)?.[0] ?? '';
   const urls = [...text.matchAll(/https?:\/\/[^\s|]+/gi)].map((match) => match[0].replace(/[),.;]+$/, ''));
   const name = lines[0] ?? '';
-  const locationLine = lines.find((line) => /\b(?:NY|CA|TX|New York|California|Texas)\b/i.test(line) && line.includes('|')) ?? '';
+  const contactLocation = parseContactLocation(lines);
   if (name && name.length < 80) {
     const parts = name.split(/\s+/);
     profilePatch.first_name = parts[0] ?? '';
@@ -292,11 +323,11 @@ export function parseResumeText(text: string, fileName = 'Imported resume'): Res
     addProposal(proposals, 'links', 'linkedin_url', url, 'high', stamp(fileName, linkedin, 1));
     profilePatch.linkedin_url = url;
   }
-  const locationParts = locationLine.split('|')[0].split(',').map(clean);
-  if (locationParts.length >= 2) {
-    profilePatch.city = locationParts[0];
-    profilePatch.region = locationParts[1];
-    addProposal(proposals, 'contact', 'location', locationLine, 'medium', stamp(fileName, locationLine, 1));
+  for (const field of ['street_address', 'city', 'region', 'postal_code', 'country'] as const) {
+    const value = contactLocation[field] ?? '';
+    if (!value) continue;
+    profilePatch[field] = value;
+    addProposal(proposals, 'contact', field, value, 'high', stamp(fileName, value, 1));
   }
   for (const url of urls.filter((item) => !item.includes('linkedin.com'))) {
     links.push({ label: new URL(url).hostname, url, provenance: stamp(fileName, url, 1) });
@@ -357,6 +388,12 @@ export function parseResumeText(text: string, fileName = 'Imported resume'): Res
   }
 
   return { fileName, text, proposals, projects, experience, education, profilePatch, links, summary, skills: [...new Set(skills)] };
+}
+
+export function getDeterministicResumeProposals(imported: ResumeImport): ReviewedProposal[] {
+  return imported.proposals
+    .filter((proposal) => proposal.confidence === 'high' || proposal.confidence === 'medium')
+    .map((proposal) => ({ ...proposal, review: 'accepted' as const }));
 }
 
 type AssistContact = AssistProfile['contact'];
@@ -505,17 +542,39 @@ export function applyAcceptedResumeImport(imported: ResumeImport, accepted: Revi
       provenance: proposal.provenance,
     };
   }).filter((item) => item.institution || item.credential || item.details);
+  const mergeById = <T extends { id: string }>(current: T[], incoming: T[]) => [
+    ...current,
+    ...incoming.filter((item) => !current.some((existing) => existing.id === item.id)),
+  ];
+  const mergeLinks = [
+    ...profile.links,
+    ...links.filter((item) => !profile.links.some((existing) => existing.url === item.url)),
+  ];
+  const mergedContact = { ...profile.contact };
+  for (const [field, value] of Object.entries(contactPatch) as [AssistContactField, string][]) {
+    if (!value) continue;
+    if (!mergedContact[field] || mergedContact[field] === value) mergedContact[field] = value;
+  }
   return {
     ...profile,
     updatedAt: new Date().toISOString(),
-    contact: { ...profile.contact, ...contactPatch },
-    links: [...profile.links, ...links],
-    summary: acceptedText('summary', 'professional_summary') ?? profile.summary,
+    contact: mergedContact,
+    links: mergeLinks,
+    summary: profile.summary || acceptedText('summary', 'professional_summary') || '',
     skills: [...new Set([...profile.skills, ...skills])],
-    projects: [...profile.projects, ...projects],
-    experience: [...profile.experience, ...experience],
-    education: [...profile.education, ...education],
-    proposals: approved,
+    projects: mergeById(profile.projects, projects),
+    experience: mergeById(profile.experience, experience),
+    education: mergeById(profile.education, education),
+    proposals: mergeById(profile.proposals, approved),
     approvedAt: new Date().toISOString(),
+  };
+}
+
+export function applyDeterministicResumeImport(imported: ResumeImport, profile: AssistProfile) {
+  const accepted = getDeterministicResumeProposals(imported);
+  return {
+    accepted,
+    contactPatch: getAcceptedResumeContactPatch(accepted),
+    profile: applyAcceptedResumeImport(imported, accepted, profile),
   };
 }

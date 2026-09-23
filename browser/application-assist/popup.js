@@ -194,8 +194,8 @@ async function syncFromCockpit() {
   if (!syncApi) throw new Error("Profile sync unavailable. Reload the extension.");
   const tab = await activeTab();
   const origin = tabOrigin(tab);
-  if (origin === "null" || origin.startsWith("chrome:") || origin.startsWith("edge:") || origin.startsWith("about:")) {
-    throw new Error("Open your EscapeHatch cockpit tab before syncing. The active tab is not a readable page.");
+  if (!syncApi.isTrustedCockpitUrl(tab.url || origin)) {
+    throw new Error("Open the local EscapeHatch cockpit before syncing. Profile sync only reads the loopback cockpit.");
   }
   let dump = null;
   try {
@@ -217,10 +217,14 @@ async function syncFromCockpit() {
   } catch (_e) {
     throw new Error("Sync failed: could not read the cockpit tab. Open the cockpit locally and try again.");
   }
-  if (!dump || typeof dump !== "object" || Object.keys(dump).length === 0) {
+  if (!dump || typeof dump !== "object" || dump.__escapehatch_cockpit__ !== true) {
+    throw new Error("The active loopback page is not the EscapeHatch cockpit. Profile state was not read.");
+  }
+  const cockpitValues = dump.values && typeof dump.values === "object" ? dump.values : null;
+  if (!cockpitValues || Object.keys(cockpitValues).length === 0) {
     throw new Error("No EscapeHatch cockpit profile found in this tab. Open your cockpit, save your profile, then use Sync from EscapeHatch again. No file import needed.");
   }
-  const profile = syncApi.parseCockpitDump(dump);
+  const profile = syncApi.parseCockpitDump(cockpitValues);
   if (!profile) {
     throw new Error("No validated profile in cockpit tab. Save a reviewed profile in the cockpit first.");
   }

@@ -1,0 +1,131 @@
+{
+  "schema": "escapehatch/application-assist-adversarial-fixture/v1",
+  "fixture_id": "10-final-review-submit-never-auto",
+  "title": "Final review page with Submit/Apply that must never auto-activate (negative fixture: final_submit)",
+  "description": "Sanitized FINAL REVIEW page where terminal controls Submit / Apply / Finish / Send / Certify / Attestation are present. No Progression Plan may auto-activate them. Must be REVIEW_REQUIRED terminal manual-only with never_auto_submit=true, require_operator_confirmation=true. Even though all deterministic fill is done and no validation errors, candidate_is_not_submit... gate fails. Host https://careers.example.invalid/application/review.",
+  "host": "https://careers.example.invalid",
+  "scenario": "final-review-submit-never-auto",
+  "url": "https://careers.example.invalid/application/review",
+  "page_archetype": "certification-navigation",
+  "session": {
+    "status": "active",
+    "origin": "https://careers.example.invalid"
+  },
+  "fields": [
+    {
+      "label": "First Name",
+      "type": "text",
+      "value": "Alex",
+      "required": false
+    },
+    {
+      "label": "I certify that this information is true and accurate",
+      "type": "checkbox",
+      "value": "",
+      "required": true,
+      "question_id": "attestation.truth_accuracy"
+    }
+  ],
+  "fill_plan": {
+    "schema_version": "escapehatch-application-fill-plan/v1",
+    "items": [],
+    "denied": [
+      {
+        "index": 0,
+        "profile_key": "first_name",
+        "question_id": "identity.first_name",
+        "decision": "preserve_existing_value"
+      },
+      {
+        "index": 1,
+        "profile_key": null,
+        "question_id": "attestation.truth_accuracy",
+        "decision": "attestation_manual_only"
+      }
+    ]
+  },
+  "progression_plan": {
+    "candidate_control": {
+      "label": "Submit Application",
+      "kind": "terminal",
+      "terminal": true,
+      "selector": "button.submit, button[type=submit]",
+      "normalized": "submit application",
+      "uniquely_identified": true,
+      "is_submit_apply_finish": true,
+      "terminal_forbidden": ["submit", "apply", "finish", "send", "certify", "sign", "accept", "attestation", "manual"]
+    },
+    "alternate_terminal_controls": [
+      {
+        "label": "Apply",
+        "normalized": "apply",
+        "terminal_forbidden": ["apply"]
+      },
+      {
+        "label": "Finish",
+        "normalized": "finish",
+        "terminal_forbidden": ["finish"]
+      },
+      {
+        "label": "Send",
+        "normalized": "send",
+        "terminal_forbidden": ["send"]
+      },
+      {
+        "label": "Certify & Submit",
+        "normalized": "certify submit",
+        "terminal_forbidden": ["certify", "submit"]
+      }
+    ],
+    "action_identity_stable": false,
+    "deterministic_fill_completed_and_stable_after_live_rescan": true,
+    "no_visible_validation_error_present": true,
+    "no_required_unknown_manual_review_control_unresolved": true,
+    "no_password_requested_outside_explicit_account_bootstrap_state": true,
+    "no_file_upload_captcha_mfa_otp_legal_compliance_attestation_demographic_gate_unresolved": false,
+    "advance_budget_loop_guard_not_exceeded": true,
+    "next_observed_page_transition_matches_permitted_state_transition": false,
+    "failed_gate": "candidate_is_not_submit_apply_finish_certify_sign_accept_attestation",
+    "failed_gate_detail": "candidate_is_not_submit_apply_finish_certify_sign_accept_attestation fails: candidate is Submit/Apply terminal",
+    "terminal_reasons": ["final_submit", "apply_action", "certification_required", "attestation_required", "manual_review_required"],
+    "all_allowed_when_gates": [
+      "session_is_active_and_not_emergency_stopped",
+      "current_page_archetype_is_recognized",
+      "candidate_control_uniquely_identified_as_intermediate_next_or_continue"
+    ],
+    "failed_allowed_when": [
+      "candidate_is_not_submit_apply_finish_certify_sign_accept_attestation",
+      "no_file_upload_captcha_mfa_otp_legal_compliance_attestation_demographic_gate_unresolved"
+    ]
+  },
+  "expected_decision": "REVIEW_REQUIRED",
+  "expected_reason": "final_submit",
+  "expected_reasons": ["final_submit", "apply_action", "attestation_required", "certification_required"],
+  "all_gates_pass": false,
+  "failed_gate": "candidate_is_not_submit_apply_finish_certify_sign_accept_attestation",
+  "terminal_forbidden_applies": true,
+  "never_auto_submit": true,
+  "require_operator_confirmation": true,
+  "attestation_manual_only": true,
+  "must_never_auto_activate": ["submit", "apply", "finish", "send", "certify", "attestation"],
+  "is_terminal": true,
+  "is_negative_fixture": true,
+  "loop_guard": {
+    "advances_per_session": 19,
+    "advances_per_page": 1,
+    "require_page_transition": true,
+    "detect_repeated_page": false
+  },
+  "final_submit_boundary": {
+    "never_auto_submit": true,
+    "manual_only_controls": ["submit", "apply", "finish", "send", "certify", "attestation", "captcha", "mfa", "unknown"],
+    "require_operator_confirmation": true,
+    "attestation_manual_only": true
+  },
+  "reason_detail": "Final review Submit/Apply is terminal forbidden; even with all other gates passing, progression must remain REVIEW_REQUIRED and never auto-activate Submit. Negative fixture proves Submit/Apply cannot be auto-advanced.",
+  "synthetic_data": {
+    "first_name": "Alex",
+    "email": "alex@example.invalid",
+    "attestation": "manual_only"
+  }
+}

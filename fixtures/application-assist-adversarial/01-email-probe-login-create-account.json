@@ -1,0 +1,267 @@
+{
+  "schema": "escapehatch/application-assist-adversarial-fixture/v1",
+  "fixture_id": "01-email-probe-login-create-account",
+  "title": "Email probe -> login -> create account (adversarial live-run: email-first routing)",
+  "description": "Sanitized multi-page flow: APPLICATION_ENTRY -> EMAIL_PROBE -> CREATE_ACCOUNT_CHOICE -> ACCOUNT_CREATION -> APPLICATION_FORM. Email treated as username, login branch fails, create-account path taken. Intermediate Next controls must be AUTO_ADVANCE_SAFE; no CAPTCHA/MFA at this stage. Synthetic host https://careers.example.invalid/*, no real employer data.",
+  "host": "https://careers.example.invalid",
+  "scenario": "email-probe-login-create-account",
+  "account_flow": {
+    "initial_state": "APPLICATION_ENTRY",
+    "sequence": [
+      {
+        "step": 1,
+        "state": "APPLICATION_ENTRY",
+        "url": "https://careers.example.invalid/jobs/apply/123",
+        "page_archetype": "application-entry",
+        "recognized": true,
+        "fill_plan": {
+          "schema_version": "escapehatch-application-fill-plan/v1",
+          "items": [],
+          "denied": []
+        },
+        "progression_plan": {
+          "candidate_control": {
+            "label": "Apply",
+            "kind": "intermediate",
+            "terminal": false,
+            "selector": "a.apply-link",
+            "normalized": "apply"
+          },
+          "action_identity_stable": true,
+          "deterministic_fill_completed_and_stable_after_live_rescan": true,
+          "no_visible_validation_error_present": true,
+          "no_required_unknown_manual_review_control_unresolved": true,
+          "no_password_requested_outside_explicit_account_bootstrap_state": true,
+          "no_file_upload_captcha_mfa_otp_legal_compliance_attestation_demographic_gate_unresolved": true,
+          "advance_budget_loop_guard_not_exceeded": true,
+          "next_observed_page_transition_matches_permitted_state_transition": true
+        },
+        "expected_decision": "AUTO_ADVANCE_SAFE",
+        "expected_reason": null,
+        "transition_to": "EMAIL_PROBE",
+        "allowed_transition": true
+      },
+      {
+        "step": 2,
+        "state": "EMAIL_PROBE",
+        "url": "https://careers.example.invalid/auth/email-probe",
+        "page_archetype": "email-probe",
+        "recognized": true,
+        "fields": [
+          {
+            "label": "Email Address",
+            "type": "email",
+            "value": "",
+            "required": true,
+            "autocomplete": "email"
+          }
+        ],
+        "fill_plan": {
+          "schema_version": "escapehatch-application-fill-plan/v1",
+          "items": [
+            {
+              "index": 0,
+              "profile_key": "email",
+              "question_id": "identity.email",
+              "value": "alex@example.invalid",
+              "decision": "gate_allowed"
+            }
+          ],
+          "denied": []
+        },
+        "progression_plan": {
+          "candidate_control": {
+            "label": "Continue",
+            "kind": "intermediate",
+            "terminal": false,
+            "selector": "button[type=submit]",
+            "normalized": "continue"
+          },
+          "action_identity_stable": true,
+          "deterministic_fill_completed_and_stable_after_live_rescan": true,
+          "no_visible_validation_error_present": true,
+          "no_required_unknown_manual_review_control_unresolved": true,
+          "no_password_requested_outside_explicit_account_bootstrap_state": true,
+          "no_file_upload_captcha_mfa_otp_legal_compliance_attestation_demographic_gate_unresolved": true,
+          "advance_budget_loop_guard_not_exceeded": true,
+          "next_observed_page_transition_matches_permitted_state_transition": true
+        },
+        "expected_decision": "AUTO_ADVANCE_SAFE",
+        "expected_reason": null,
+        "transition_to": "CREATE_ACCOUNT_CHOICE",
+        "allowed_transition": true
+      },
+      {
+        "step": 3,
+        "state": "CREATE_ACCOUNT_CHOICE",
+        "url": "https://careers.example.invalid/auth/create-or-login",
+        "page_archetype": "create-account-choice",
+        "recognized": true,
+        "fields": [
+          {
+            "label": "Create Account",
+            "type": "button",
+            "value": "",
+            "required": false
+          }
+        ],
+        "fill_plan": {
+          "schema_version": "escapehatch-application-fill-plan/v1",
+          "items": [],
+          "denied": [
+            {
+              "index": 0,
+              "profile_key": null,
+              "question_id": null,
+              "decision": "unknown_fields_stay_blank"
+            }
+          ]
+        },
+        "progression_plan": {
+          "candidate_control": {
+            "label": "Create Account",
+            "kind": "intermediate",
+            "terminal": false,
+            "selector": "button.create-account",
+            "normalized": "create account"
+          },
+          "action_identity_stable": true,
+          "deterministic_fill_completed_and_stable_after_live_rescan": true,
+          "no_visible_validation_error_present": true,
+          "no_required_unknown_manual_review_control_unresolved": true,
+          "no_password_requested_outside_explicit_account_bootstrap_state": true,
+          "no_file_upload_captcha_mfa_otp_legal_compliance_attestation_demographic_gate_unresolved": true,
+          "advance_budget_loop_guard_not_exceeded": true,
+          "next_observed_page_transition_matches_permitted_state_transition": true
+        },
+        "expected_decision": "AUTO_ADVANCE_SAFE",
+        "expected_reason": null,
+        "transition_to": "ACCOUNT_CREATION",
+        "allowed_transition": true
+      },
+      {
+        "step": 4,
+        "state": "ACCOUNT_CREATION",
+        "url": "https://careers.example.invalid/auth/create-account",
+        "page_archetype": "account-creation",
+        "recognized": true,
+        "fields": [
+          {
+            "label": "Email",
+            "type": "email",
+            "value": "",
+            "required": true
+          },
+          {
+            "label": "Password",
+            "type": "password",
+            "value": "",
+            "required": true
+          },
+          {
+            "label": "Confirm Password",
+            "type": "password",
+            "value": "",
+            "required": true
+          }
+        ],
+        "fill_plan": {
+          "schema_version": "escapehatch-application-fill-plan/v1",
+          "items": [
+            {
+              "index": 0,
+              "profile_key": "email",
+              "question_id": "identity.email",
+              "value": "alex@example.invalid",
+              "decision": "gate_allowed"
+            }
+          ],
+          "denied": [
+            {
+              "index": 1,
+              "profile_key": null,
+              "question_id": null,
+              "decision": "password_outside_account_creation_blocked_until_explicit_state"
+            }
+          ],
+          "secret_placeholder": {
+            "password": "TEMP_PLACEHOLDER_SYNTHETIC_0000",
+            "note": "synthetic placeholder only; never a real secret; session_scoped generation allowed only in ACCOUNT_CREATION"
+          }
+        },
+        "progression_plan": {
+          "candidate_control": {
+            "label": "Create Account",
+            "kind": "intermediate",
+            "terminal": false,
+            "selector": "button.create",
+            "normalized": "create account"
+          },
+          "action_identity_stable": true,
+          "deterministic_fill_completed_and_stable_after_live_rescan": true,
+          "no_visible_validation_error_present": true,
+          "no_required_unknown_manual_review_control_unresolved": true,
+          "no_password_requested_outside_explicit_account_bootstrap_state": true,
+          "no_file_upload_captcha_mfa_otp_legal_compliance_attestation_demographic_gate_unresolved": true,
+          "advance_budget_loop_guard_not_exceeded": true,
+          "next_observed_page_transition_matches_permitted_state_transition": true
+        },
+        "expected_decision": "AUTO_ADVANCE_SAFE",
+        "expected_reason": null,
+        "transition_to": "APPLICATION_FORM",
+        "allowed_transition": true
+      }
+    ]
+  },
+  "url": "https://careers.example.invalid/auth/email-probe",
+  "page_archetype": "email-probe",
+  "session": {
+    "status": "active",
+    "origin": "https://careers.example.invalid"
+  },
+  "fill_plan": {
+    "schema_version": "escapehatch-application-fill-plan/v1",
+    "items": [
+      {
+        "index": 0,
+        "profile_key": "email",
+        "question_id": "identity.email",
+        "value": "alex@example.invalid",
+        "decision": "gate_allowed"
+      }
+    ],
+    "denied": []
+  },
+  "progression_plan": {
+    "candidate_control": {
+      "label": "Continue",
+      "kind": "intermediate",
+      "terminal": false,
+      "selector": "button.continue",
+      "normalized": "continue"
+    },
+    "action_identity_stable": true,
+    "deterministic_fill_completed_and_stable_after_live_rescan": true,
+    "no_visible_validation_error_present": true,
+    "no_required_unknown_manual_review_control_unresolved": true,
+    "no_password_requested_outside_explicit_account_bootstrap_state": true,
+    "no_file_upload_captcha_mfa_otp_legal_compliance_attestation_demographic_gate_unresolved": true,
+    "advance_budget_loop_guard_not_exceeded": true,
+    "next_observed_page_transition_matches_permitted_state_transition": true
+  },
+  "expected_decision": "AUTO_ADVANCE_SAFE",
+  "expected_reason": null,
+  "all_gates_pass": true,
+  "terminal_forbidden_applies": false,
+  "loop_guard": {
+    "advances_per_session": 2,
+    "advances_per_page": 1,
+    "require_page_transition": true,
+    "detect_repeated_page": false
+  },
+  "synthetic_data": {
+    "email": "alex@example.invalid",
+    "first_name": "Alex",
+    "last_name": "Example"
+  }
+}

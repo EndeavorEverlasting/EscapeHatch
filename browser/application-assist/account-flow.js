@@ -83,16 +83,18 @@
   function transition(from, to, context) {
     if (!isValidState(from)) throw new Error(`Unknown account state: ${from}`);
     if (!isValidState(to)) throw new Error(`Unknown account state: ${to}`);
-    if (context && context.duplicateAccountDetected) {
-      if (to !== "REVIEW_REQUIRED") {
-        return "REVIEW_REQUIRED";
-      }
+    if (detectDuplicateAccount(context)) {
+      if (to !== "REVIEW_REQUIRED") return "REVIEW_REQUIRED";
     }
     if (context && context.captchaDetected && to !== "CAPTCHA_REQUIRED" && to !== "REVIEW_REQUIRED") {
       if (canTransition(from, "CAPTCHA_REQUIRED")) return "CAPTCHA_REQUIRED";
+      if (canTransition(from, "REVIEW_REQUIRED")) return "REVIEW_REQUIRED";
+      throw new Error(`CAPTCHA gate cannot be represented safely from state: ${from}`);
     }
     if (context && context.mfaDetected && to !== "MFA_REQUIRED" && to !== "REVIEW_REQUIRED") {
       if (canTransition(from, "MFA_REQUIRED")) return "MFA_REQUIRED";
+      if (canTransition(from, "REVIEW_REQUIRED")) return "REVIEW_REQUIRED";
+      throw new Error(`MFA gate cannot be represented safely from state: ${from}`);
     }
     if (!canTransition(from, to)) {
       throw new Error(`Transition not permitted: ${from} -> ${to}`);

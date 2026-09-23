@@ -59,9 +59,17 @@
   function isVerificationField(f) {
     const label = normalize(f.label);
     const name = normalize(f.name);
-    if (label.includes("verification") || label.includes("code") || label.includes("otp")) return true;
-    if (name.includes("otp") || name.includes("verification") || name.includes("mfa")) return true;
-    if (normalize(f.type) === "tel" && label.includes("code")) return true;
+    if (
+      label.includes("verification code") ||
+      label.includes("one time code") ||
+      label.includes("one-time code") ||
+      label.includes("security code") ||
+      label.includes("authenticator code") ||
+      label === "otp" ||
+      label.includes("otp code")
+    ) return true;
+    if (name.includes("otp") || name.includes("verification") || name.includes("mfa") || name.includes("authenticator")) return true;
+    if (normalize(f.type) === "tel" && (label.includes("verification") || label.includes("one time") || label.includes("otp"))) return true;
     return false;
   }
 
@@ -87,7 +95,7 @@
 
   function hasAuthMismatch(descriptor) {
     if (descriptor.authMismatch === true) return true;
-    const text = normalize(descriptor.text || descriptor.errorText || "");
+    const text = normalize([descriptor.text || "", descriptor.errorText || ""].join(" "));
     return text.includes("incorrect password") || text.includes("invalid credentials") || text.includes("authentication failed");
   }
 
@@ -106,7 +114,7 @@
     if (hasMfa(descriptor)) return ARCHETYPES.MFA_REQUIRED;
     if (hasAuthMismatch(descriptor)) return ARCHETYPES.AUTH_MISMATCH;
     const duplicateSignals = descriptor.signals && typeof descriptor.signals === "object" ? descriptor.signals : descriptor;
-    const duplicateText = normalize(descriptor.errorText || descriptor.text || "");
+    const duplicateText = normalize([descriptor.text || "", descriptor.errorText || ""].join(" "));
     if (
       duplicateSignals.duplicateAccountDetected === true ||
       duplicateSignals.accountExistsConflict === true ||

@@ -33,6 +33,31 @@
     };
   }
 
+  if (message.type === "advance") {
+    const progression = globalThis.EscapeHatchProgression;
+    const navigation = globalThis.EscapeHatchNavigationAdapter;
+    if (!progression || !navigation) {
+      return { status: "error", message: "progression runtime missing" };
+    }
+    if (session.status !== "active") {
+      return { status: "ok", action: "advance", decision: "REVIEW_REQUIRED", reason: "session_not_active", session };
+    }
+    const pageState = navigation.describeDocument(document);
+    const archetype = progression.classifyPageArchetype(pageState);
+    pageState.archetype = archetype;
+    const plan = progression.buildProgressionPlan(pageState, { stable: message.fillStable === true });
+    const liveState = navigation.buildLiveState(document, {
+      session,
+      archetype,
+      fillStable: message.fillStable === true,
+      accountBootstrapState: message.accountBootstrapState || null,
+      loopState: message.loopState || null,
+      pageId: message.pageId || null
+    });
+    const execution = navigation.executeGatedNavigation(plan, liveState, document, progression);
+    return { status: "ok", action: "advance", plan, execution, decision: execution.decision, reason: execution.reason, session };
+  }
+
   if (message.type === "fill") {
     if (session.status !== "active") {
       return {

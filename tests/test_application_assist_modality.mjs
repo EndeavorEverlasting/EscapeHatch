@@ -24,6 +24,7 @@ for (const id of [
   "clear_profile",
   "export_profile",
   "import_profile",
+  "sync_from_cockpit",
   "open_command_palette",
   "open_profile_panel",
   "dismiss_overlay"
@@ -53,6 +54,7 @@ const phoneHome = modality.phoneHomeActions().map((item) => item.id);
 assert.ok(phoneHome.includes("start_assist"));
 assert.ok(phoneHome.includes("fill_allowed"));
 assert.ok(phoneHome.includes("open_profile_panel"));
+assert.ok(phoneHome.includes("sync_from_cockpit"));
 assert.ok(!phoneHome.includes("save_profile"));
 
 assert.equal(
@@ -90,6 +92,8 @@ assert.equal(
 
 const filtered = modality.paletteActions("fill");
 assert.ok(filtered.some((item) => item.id === "fill_allowed"));
+const syncFiltered = modality.paletteActions("sync");
+assert.ok(syncFiltered.some((item) => item.id === "sync_from_cockpit"));
 
 console.log("MODALITY_HARNESS: PASS");
 console.log(`calls=${calls.length}`);

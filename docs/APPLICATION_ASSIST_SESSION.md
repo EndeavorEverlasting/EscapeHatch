@@ -130,6 +130,18 @@ normalized label/name/id/placeholder semantics. Select controls require an exact
 Canonical question IDs bind to `harness/contracts/application-form-taxonomy.v1.json` identity-contact
 questions. Unknown fields stay blank.
 
+## Profile bootstrap and path hygiene (EH-A2)
+
+EscapeHatch cockpit owns the canonical reviewed profile. The extension exposes a one-action **Sync from EscapeHatch** path (button `Sync from EscapeHatch`, `id="syncFromCockpit"` in `browser/application-assist/popup.html`).
+
+- The sync uses the existing `activeTab + scripting + storage` permission model to read a validated profile from the active local cockpit tab when possible — no broad host permissions, no page-runtime network requests, and no local agent in the normal startup path.
+- The active-tab bridge reads local cockpit state (keys such as `escape-hatch-profile`, `escape-hatch-assist-profile`, `escape-hatch-workspace`) via `chrome.scripting.executeScript`, validates with `acceptOnlyKnownProfileKeys` / `sanitizeProfile` (field-whitelisted, `phone_authority` whitelisted, `hasProfileValues` gated), and projects into the extension local store as `escapeHatch.applicationAssistProfile.v1` and `escapeHatch.applicationQuestionPreferences.v1` (`profile_preference` scope) via `projectProfileToPreferenceStore`.
+- A user with a reviewed cockpit profile can therefore make email (and other deterministic identity fields) available to the extension without locating secret directories or manually exporting/importing JSON — email is available without file archaeology or manual file import. Normal startup does not require a local agent; the agent remains a recovery/repair path only.
+- Recovery import/export remains usable: portable profile JSON stays capped at 64 KiB (`MAX_IMPORT_BYTES = 65536`), schema-checked against `escapehatch-application-assist-profile/v2` plus legacy `v1` and `escapehatch-application-autofill-profile/v1`, field-whitelisted via `acceptOnlyKnownProfileKeys`, never executed, legacy phone defaults to `unconfirmed`, and validated through `validateImportPayloadText` / `sanitizeProfile` in `browser/application-assist/profile-sync.js`. Exports use prefix `escapehatch-application-assist-profile` and download to the browser default (usually `Downloads`) rather than a build artifact directory.
+- Generated distributable extension/package artifacts have one canonical root: `Outputs/application-assist/` (registered in `ARTIFACT_REGISTRY.md`). Source remains `browser/application-assist/`, cockpit source is `artifacts/escape-hatch/`, user state is browser-local, and recovery exports are user-visible downloads — no duplicate extension copies become alternate sources of truth. New module `browser/application-assist/profile-sync.js` (exposed as `EscapeHatchProfileSync`) owns validation/projection and the active-tab read without adding progression, password generation, or final-submission behavior.
+
+Implementation reference: `browser/application-assist/profile-sync.js` (validation, projection, 64 KiB cap, legacy compatibility, `CANONICAL_OUTPUT_ROOT = "Outputs/application-assist/"`) and `browser/application-assist/popup.js` (`syncFromCockpit` via `activeTab` + `scripting` + `storage`).
+
 ## Hard safety boundary
 
 Application Assist does **not**:

@@ -8,7 +8,7 @@ import {
   parseSyncPayload,
   serializeSyncPayload,
 } from './assist-contract';
-import { applyAcceptedResumeImport, extractResumeText, parseResumeText, UNSUPPORTED_RESUME_PDF_MESSAGE } from './resume-import';
+import { applyAcceptedResumeImport, applyDeterministicResumeImport, extractResumeText, parseResumeText, UNSUPPORTED_RESUME_PDF_MESSAGE } from './resume-import';
 import { classifyQuestion } from './assist-policy';
 
 const provenance = { source: 'user' as const, label: 'test', capturedAt: '2026-09-20T00:00:00.000Z' };
@@ -86,6 +86,61 @@ test('resume text maps representable sections into reviewable proposals without 
   assert.equal(saved.contact.email, 'alex@example.test');
   assert.equal(saved.summary.includes('reliable tools'), true);
   assert.equal(profile.contact.email, '');
+});
+
+test('deterministic resume intake auto-projects explicit facts, preserves conflicts, and is idempotent', () => {
+  const imported = parseResumeText([
+    'Alex Example',
+    '123 Main Street, Metro City, NY 10001, United States | alex@example.test | (555) 010-0101',
+    'PROFESSIONAL SUMMARY',
+    'Resume-owned summary.',
+    'CORE STRENGTHS',
+    'TypeScript • Python',
+    'PROJECTS',
+    '• Atlas — Built a deterministic workflow.',
+    'PROFESSIONAL EXPERIENCE',
+    'Example Co — Product Engineer | 2024–Present',
+    'EDUCATION',
+    'Example University | B.S. Computer Science',
+  ].join('\n'), 'deterministic.txt');
+
+  assert.deepEqual(
+    {
+      street_address: imported.profilePatch.street_address,
+      city: imported.profilePatch.city,
+      region: imported.profilePatch.region,
+      postal_code: imported.profilePatch.postal_code,
+      country: imported.profilePatch.country,
+    },
+    {
+      street_address: '123 Main Street',
+      city: 'Metro City',
+      region: 'NY',
+      postal_code: '10001',
+      country: 'United States',
+    },
+  );
+
+  const existing = emptyAssistProfile({ ...emptyProfile, email: 'keep@example.test', phone_authority: 'user_confirmed_primary' });
+  existing.summary = 'Keep this explicit summary.';
+  const first = applyDeterministicResumeImport(imported, existing);
+  assert.ok(first.accepted.length > 5);
+  assert.ok(first.accepted.every((proposal) => proposal.review === 'accepted'));
+  assert.equal(first.profile.contact.email, 'keep@example.test');
+  assert.equal(first.profile.contact.street_address, '123 Main Street');
+  assert.equal(first.profile.contact.city, 'Metro City');
+  assert.equal(first.profile.contact.postal_code, '10001');
+  assert.equal(first.profile.contact.country, 'United States');
+  assert.equal(first.profile.contact.phone_authority, 'user_confirmed_primary');
+  assert.equal(first.contactPatch.phone_authority, undefined);
+  assert.equal(first.profile.summary, 'Keep this explicit summary.');
+
+  const second = applyDeterministicResumeImport(imported, first.profile);
+  assert.equal(second.profile.projects.length, first.profile.projects.length);
+  assert.equal(second.profile.experience.length, first.profile.experience.length);
+  assert.equal(second.profile.education.length, first.profile.education.length);
+  assert.equal(second.profile.links.length, first.profile.links.length);
+  assert.equal(second.profile.proposals.length, first.profile.proposals.length);
 });
 
 test('accepted resume edits drive every reviewed field while rejected contact data stays unchanged', () => {

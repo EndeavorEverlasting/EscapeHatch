@@ -267,7 +267,7 @@ const addProposal = (proposals: ReviewedProposal[], section: ReviewedProposal['s
   proposals.push({ id: idFor(section, field, value), section, field, value: normalized, confidence, review: 'proposed', provenance: source });
 };
 
-type ParsedContactLocation = Pick<Partial<AssistProfile['contact']>, 'street_address' | 'city' | 'region' | 'postal_code' | 'country'>;
+type ParsedContactLocation = Pick<Partial<AssistProfile['contact']>, 'street_address' | 'city' | 'region' | 'postal_code' | 'country'> & { raw?: string };
 
 function parseContactLocation(lines: string[]): ParsedContactLocation {
   const firstHeading = lines.findIndex((line) => heading(line));
@@ -293,7 +293,7 @@ function parseContactLocation(lines: string[]): ParsedContactLocation {
     const region = clean(regionPostalMatch?.[1] ?? '');
     const postal_code = clean(regionPostalMatch?.[2] ?? '');
     if (!region) continue;
-    return { street_address, city, region, postal_code, country };
+    return { raw: candidate, street_address, city, region, postal_code, country };
   }
   return {};
 }
@@ -323,7 +323,12 @@ export function parseResumeText(text: string, fileName = 'Imported resume'): Res
     addProposal(proposals, 'links', 'linkedin_url', url, 'high', stamp(fileName, linkedin, 1));
     profilePatch.linkedin_url = url;
   }
-  for (const field of ['street_address', 'city', 'region', 'postal_code', 'country'] as const) {
+  if (contactLocation.city && contactLocation.region) {
+    profilePatch.city = contactLocation.city;
+    profilePatch.region = contactLocation.region;
+    addProposal(proposals, 'contact', 'location', contactLocation.raw ?? `${contactLocation.city}, ${contactLocation.region}`, 'high', stamp(fileName, contactLocation.raw ?? `${contactLocation.city}, ${contactLocation.region}`, 1));
+  }
+  for (const field of ['street_address', 'postal_code', 'country'] as const) {
     const value = contactLocation[field] ?? '';
     if (!value) continue;
     profilePatch[field] = value;
@@ -542,39 +547,44 @@ export function applyAcceptedResumeImport(imported: ResumeImport, accepted: Revi
       provenance: proposal.provenance,
     };
   }).filter((item) => item.institution || item.credential || item.details);
-  const mergeById = <T extends { id: string }>(current: T[], incoming: T[]) => [
-    ...current,
-    ...incoming.filter((item) => !current.some((existing) => existing.id === item.id)),
-  ];
-  const mergeLinks = [
-    ...profile.links,
-    ...links.filter((item) => !profile.links.some((existing) => existing.url === item.url)),
-  ];
-  const mergedContact = { ...profile.contact };
-  for (const [field, value] of Object.entries(contactPatch) as [AssistContactField, string][]) {
-    if (!value) continue;
-    if (!mergedContact[field] || mergedContact[field] === value) mergedContact[field] = value;
-  }
   return {
     ...profile,
     updatedAt: new Date().toISOString(),
-    contact: mergedContact,
-    links: mergeLinks,
-    summary: profile.summary || acceptedText('summary', 'professional_summary') || '',
+    contact: { ...profile.contact, ...contactPatch },
+    links: [...profile.links, ...links],
+    summary: acceptedText('summary', 'professional_summary') ?? profile.summary,
     skills: [...new Set([...profile.skills, ...skills])],
-    projects: mergeById(profile.projects, projects),
-    experience: mergeById(profile.experience, experience),
-    education: mergeById(profile.education, education),
-    proposals: mergeById(profile.proposals, approved),
+    projects: [...profile.projects, ...projects],
+    experience: [...profile.experience, ...experience],
+    education: [...profile.education, ...education],
+    proposals: approved,
     approvedAt: new Date().toISOString(),
   };
 }
 
 export function applyDeterministicResumeImport(imported: ResumeImport, profile: AssistProfile) {
   const accepted = getDeterministicResumeProposals(imported);
+  const contactPatch = getAcceptedResumeContactPatch(accepted);
+  const projected = applyAcceptedResumeImport(imported, accepted, profile);
+  const mergedContact = { ...projected.contact };
+  for (const field of assistContactFields) {
+    const existing = profile.contact[field];
+    if (existing && mergedContact[field] !== existing) mergedContact[field] = existing;
+  }
+  const uniqueById = <T extends { id: string }>(items: T[]) =>
+    items.filter((item, index) => items.findIndex((candidate) => candidate.id === item.id) === index);
   return {
     accepted,
-    contactPatch: getAcceptedResumeContactPatch(accepted),
-    profile: applyAcceptedResumeImport(imported, accepted, profile),
+    contactPatch,
+    profile: {
+      ...projected,
+      contact: mergedContact,
+      links: projected.links.filter((item, index) => projected.links.findIndex((candidate) => candidate.url === item.url) === index),
+      summary: profile.summary || projected.summary,
+      projects: uniqueById(projected.projects),
+      experience: uniqueById(projected.experience),
+      education: uniqueById(projected.education),
+      proposals: uniqueById(projected.proposals),
+    },
   };
 }

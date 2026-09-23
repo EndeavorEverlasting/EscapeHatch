@@ -102,7 +102,7 @@
     if (!plan || !plan.action || plan.candidateCount !== 1 || !isIntermediateLabel(plan.action.label)) return { decision:"REVIEW_REQUIRED", reason: plan ? plan.reason || "candidate_not_unique" : "candidate_not_found", failedGate:"candidate_control_uniquely_identified_as_intermediate_next_or_continue", diagnostics:"candidateCount="+String(plan?plan.candidateCount:0) };
     if (plan.isTerminal || isTerminalLabel(plan.action.label)) return { decision:"REVIEW_REQUIRED", reason:"terminal_forbidden", failedGate:"candidate_is_not_submit_apply_finish_certify_sign_accept_attestation", diagnostics:String(plan.action.label) };
     const fillStable = live.fillStable !== undefined ? live.fillStable : live.deterministicFillStable !== undefined ? live.deterministicFillStable : live.fillState && typeof live.fillState.stable === "boolean" ? live.fillState.stable : null;
-    if (fillStable === false) return { decision:"REVIEW_REQUIRED", reason:"fill_not_stable", failedGate:"deterministic_fill_completed_and_stable_after_live_rescan", diagnostics:"fillStable=false" };
+    if (fillStable !== true) return { decision:"REVIEW_REQUIRED", reason:"fill_not_stable", failedGate:"deterministic_fill_completed_and_stable_after_live_rescan", diagnostics:"fillStable must be explicitly true after live re-scan" };
     const hasValidationError = live.hasValidationError === true || live.hasVisibleValidationError === true || (Array.isArray(live.validationErrors) && live.validationErrors.length>0) || (Array.isArray(live.validationMessages) && live.validationMessages.length>0);
     if (hasValidationError) return { decision:"REVIEW_REQUIRED", reason:"validation_error_present", failedGate:"no_visible_validation_error_present", diagnostics:"validation error present" };
     const unresolved = Array.isArray(live.unresolvedRequiredFields) ? live.unresolvedRequiredFields : Array.isArray(live.requiredUnknownFields) ? live.requiredUnknownFields : null;
@@ -111,8 +111,8 @@
     const hasPasswordOutside = live.hasPasswordOutsideBootstrap===true || live.hasPassword===true;
     const bootstrapState = live.accountBootstrapState || live.bootstrapState || live.state || null;
     if (hasPasswordOutside) {
-      const isAllowed = ["account-creation"].includes(archetype) && (!bootstrapState || ["ACCOUNT_CREATION"].includes(bootstrapState));
-      if (!isAllowed && !["ACCOUNT_CREATION"].includes(bootstrapState)) return { decision:"REVIEW_REQUIRED", reason:"password_outside_account_bootstrap", failedGate:"no_password_requested_outside_explicit_account_bootstrap_state", diagnostics:"password outside "+String(archetype)+"/"+String(bootstrapState) };
+      const isAllowed = archetype === "account-creation" && bootstrapState === "ACCOUNT_CREATION";
+      if (!isAllowed) return { decision:"REVIEW_REQUIRED", reason:"password_outside_account_bootstrap", failedGate:"no_password_requested_outside_explicit_account_bootstrap_state", diagnostics:"password requires explicit account-creation/ACCOUNT_CREATION, found "+String(archetype)+"/"+String(bootstrapState) };
     }
     if (live.hasPasswordOutsideBootstrap===true && archetype!=="account-creation" && bootstrapState!=="ACCOUNT_CREATION") return { decision:"REVIEW_REQUIRED", reason:"password_outside_account_bootstrap", failedGate:"no_password_requested_outside_explicit_account_bootstrap_state", diagnostics:"password gate" };
     if (live.hasFileUpload===true) return { decision:"REVIEW_REQUIRED", reason:"file_upload_required", failedGate:"no_file_upload_captcha_mfa_otp_legal_compliance_attestation_demographic_gate_unresolved", diagnostics:"file upload" };

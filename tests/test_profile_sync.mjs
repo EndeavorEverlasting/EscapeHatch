@@ -16,6 +16,18 @@ function readText(p) {
 }
 
 // 1. Module surface: small, no progression/password/final-submit, no network
+
+assert.equal(sync.isTrustedCockpitUrl("http://127.0.0.1:21031/"), true);
+assert.equal(sync.isTrustedCockpitUrl("http://localhost:21031/profile"), true);
+assert.equal(sync.isTrustedCockpitUrl("http://[::1]:21031/"), true);
+assert.equal(sync.isTrustedCockpitUrl("https://jobs.example.invalid/"), false);
+assert.equal(sync.isTrustedCockpitUrl("https://example.com/"), false);
+assert.equal(sync.isTrustedCockpitUrl("chrome://extensions"), false);
+
+const popupSource = fs.readFileSync(new URL("../browser/application-assist/popup.js", import.meta.url), "utf8");
+assert.ok(popupSource.includes("isTrustedCockpitUrl"), "popup must restrict sync to trusted loopback cockpit URL");
+assert.ok(popupSource.includes("__escapehatch_cockpit__"), "popup must verify cockpit document identity before importing localStorage");
+
 assert.equal(typeof sync.sanitizeProfile, "function", "sanitizeProfile must exist");
 assert.equal(typeof sync.acceptOnlyKnownProfileKeys, "function");
 assert.equal(typeof sync.hasProfileValues, "function");

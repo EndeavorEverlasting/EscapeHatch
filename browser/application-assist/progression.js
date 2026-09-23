@@ -94,6 +94,40 @@
     if (!allowed) return { matches:false, reason:"prev_archetype_not_in_permitted_map" };
     return { matches:allowed.includes(nextPageId), reason: allowed.includes(nextPageId) ? "transition_matches_permitted" : "transition_not_permitted" };
   }
+  const PERMITTED_ARCHETYPE_TRANSITIONS = Object.freeze({
+    "email-probe": Object.freeze(["existing-account-login","create-account-choice","account-creation","verification-required","identity-contact","application-form"]),
+    "existing-account-login": Object.freeze(["verification-required","identity-contact","intermediate-form","application-form"]),
+    "create-account-choice": Object.freeze(["account-creation","existing-account-login"]),
+    "account-creation": Object.freeze(["verification-required","identity-contact","intermediate-form","application-form"]),
+    "verification-required": Object.freeze(["identity-contact","intermediate-form","application-form"]),
+    "identity-contact": Object.freeze(["identity-contact","intermediate-form","application-form"]),
+    "intermediate-form": Object.freeze(["identity-contact","intermediate-form","application-form"]),
+    "application-form": Object.freeze(["identity-contact","intermediate-form","application-form"])
+  });
+  function recordAdvance(loopState, pageId, metadata) {
+    const prior = loopState && typeof loopState === "object" ? loopState : createLoopGuard();
+    const samePage = prior.lastPageId === pageId;
+    const next = {
+      advancesThisSession: Number(prior.advancesThisSession || 0) + 1,
+      advancesThisPage: samePage ? Number(prior.advancesThisPage || 0) + 1 : 1,
+      lastPageId: pageId || null,
+      history: Array.isArray(prior.history) ? prior.history.slice(-19) : []
+    };
+    next.history.push(Object.assign({ pageId: pageId || null }, metadata || {}));
+    return next;
+  }
+  function expectedArchetypesAfter(archetype) {
+    const values = PERMITTED_ARCHETYPE_TRANSITIONS[archetype];
+    return values ? values.slice() : [];
+  }
+  function validatePendingTransition(pending, currentPageId, currentArchetype) {
+    if (!pending) return { matches:true, reason:"no_pending_transition" };
+    if (!currentPageId || !currentArchetype) return { matches:false, reason:"transition_observation_incomplete" };
+    if (pending.fromPageId === currentPageId) return { matches:false, reason:"repeated_page_without_transition" };
+    const allowed = Array.isArray(pending.expectedArchetypes) ? pending.expectedArchetypes : [];
+    if (!allowed.includes(currentArchetype)) return { matches:false, reason:"transition_not_permitted" };
+    return { matches:true, reason:"transition_matches_permitted" };
+  }
   function progressionGate(plan, livePageState) {
     const live = livePageState || {}; const session = live.session || (plan && plan.session) || null;
     const archetype = live.archetype || (plan && plan.archetype) || "REVIEW_REQUIRED";
@@ -133,6 +167,7 @@
     if (typeof advancesThisPage==="number" && advancesThisPage>=LOOP_GUARD.maxAdvancesPerPage) return { decision:"REVIEW_REQUIRED", reason:"loop_guard_page_budget_exceeded", failedGate:"advance_budget_loop_guard_not_exceeded", diagnostics:String(advancesThisPage) };
     const loopCheck = checkLoopGuard(live.loopState, live.pageId || live.currentPageId);
     if (!loopCheck.allowed) return { decision:"REVIEW_REQUIRED", reason:loopCheck.reason, failedGate:"advance_budget_loop_guard_not_exceeded", diagnostics:loopCheck.reason };
+    if (live.transitionObserverReady !== true) return { decision:"REVIEW_REQUIRED", reason:"transition_observer_not_ready", failedGate:"post_dispatch_transition_observation_is_armed", diagnostics:"safe progression requires durable post-dispatch transition observation" };
     const transitionMismatch = live.transitionMismatch===true || live.nextObservedPageTransitionMatchesPermittedStateTransition===false;
     if (transitionMismatch) return { decision:"REVIEW_REQUIRED", reason:"transition_mismatch", failedGate:"next_observed_page_transition_matches_permitted_state_transition", diagnostics:"transition mismatch" };
     if (live.observedTransition && live.observedTransition.matchesPermitted===false) return { decision:"REVIEW_REQUIRED", reason:"transition_mismatch", failedGate:"next_observed_page_transition_matches_permitted_state_transition", diagnostics:live.observedTransition.reason||"mismatch" };
@@ -143,6 +178,8 @@
     DECISIONS:DECISIONS, RECOGNIZED_ARCHETYPES:RECOGNIZED_ARCHETYPES, TERMINAL_KEYWORDS:TERMINAL_KEYWORDS, LOOP_GUARD:LOOP_GUARD,
     normalizeSignal:normalizeSignal, isTerminalLabel:isTerminalLabel, isIntermediateLabel:isIntermediateLabel,
     classifyPageArchetype:classifyPageArchetype, buildProgressionPlan:buildProgressionPlan, progressionGate:progressionGate,
-    createLoopGuard:createLoopGuard, checkLoopGuard:checkLoopGuard, observeTransition:observeTransition
+    createLoopGuard:createLoopGuard, checkLoopGuard:checkLoopGuard, observeTransition:observeTransition,
+    PERMITTED_ARCHETYPE_TRANSITIONS:PERMITTED_ARCHETYPE_TRANSITIONS, recordAdvance:recordAdvance,
+    expectedArchetypesAfter:expectedArchetypesAfter, validatePendingTransition:validatePendingTransition
   });
 });

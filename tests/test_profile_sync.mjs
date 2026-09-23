@@ -24,6 +24,18 @@ assert.equal(sync.isTrustedCockpitUrl("https://jobs.example.invalid/"), false);
 assert.equal(sync.isTrustedCockpitUrl("https://example.com/"), false);
 assert.equal(sync.isTrustedCockpitUrl("chrome://extensions"), false);
 
+const noncanonicalCockpit = sync.parseCockpitDump({
+  "escape-hatch-profile": JSON.stringify({
+    first_name: "Synthetic",
+    email: "synthetic@example.invalid",
+    phone: "+1 555 010 0101",
+    phone_authority: "mobile"
+  })
+});
+assert.ok(noncanonicalCockpit, "noncanonical cockpit phone labels must not discard the profile");
+assert.equal(noncanonicalCockpit.email, "synthetic@example.invalid");
+assert.equal(noncanonicalCockpit.phone_authority, "unconfirmed", "noncanonical cockpit phone labels must fail closed to unconfirmed");
+
 const popupSource = fs.readFileSync(new URL("../browser/application-assist/popup.js", import.meta.url), "utf8");
 assert.ok(popupSource.includes("isTrustedCockpitUrl"), "popup must restrict sync to trusted loopback cockpit URL");
 assert.ok(popupSource.includes("__escapehatch_cockpit__"), "popup must verify cockpit document identity before importing localStorage");

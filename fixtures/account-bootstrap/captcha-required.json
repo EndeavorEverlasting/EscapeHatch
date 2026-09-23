@@ -1,0 +1,25 @@
+{
+  "schema_version": "escapehatch/account-bootstrap-fixture/v1",
+  "fixture_id": "captcha-required",
+  "description": "Synthetic CAPTCHA gate that must block progression.",
+  "expected_archetype": "CAPTCHA_REQUIRED",
+  "expected_state": "CAPTCHA_REQUIRED",
+  "descriptor": {
+    "url": "https://example.invalid/account/create",
+    "text": "Please complete the CAPTCHA to continue",
+    "fields": [
+      {
+        "type": "text",
+        "label": "CAPTCHA",
+        "name": "captcha",
+        "value": "synthetic_captcha_placeholder"
+      }
+    ],
+    "buttons": [{ "text": "Continue" }],
+    "captchaDetected": true,
+    "hasCaptcha": true
+  },
+  "expected_terminal_state": "REVIEW_REQUIRED",
+  "secret_placeholder": "generated_password_placeholder",
+  "notes": "CAPTCHA is manual gate; must not auto-advance."
+}

@@ -226,11 +226,13 @@
       <label>Country <input id="country" autocomplete="country-name"></label>
     </div>
     <div class="actions" style="margin-top: 10px;">
+      <button id="syncFromCockpit" type="button" data-action="sync_from_cockpit">Sync from EscapeHatch</button>
       <button id="save" type="button" data-action="save_profile">Save Profile</button>
       <button id="clear" type="button" data-action="clear_profile">Clear Profile</button>
       <button id="export" type="button" data-action="export_profile">Export Profile</button>
       <button id="import" type="button" data-action="import_profile">Import Profile</button>
     </div>
+    <p class="privacy" style="font-size: 11px; margin-top: 6px;">One-action cockpit sync uses activeTab + scripting + storage to read a validated profile from your open EscapeHatch cockpit tab when possible — no file shuttling and no local agent in the normal path. Recovery import/export remains available (capped 64 KiB, schema-checked). Generated distributable artifacts belong under <code>Outputs/application-assist/</code>.</p>
   </section>
 
   <input id="importFile" type="file" accept="application/json,.json">
@@ -238,6 +240,7 @@
   <p class="privacy">User-owned browser-local state. Writes go through a canonical Fill Plan and policy gate. Phone is withheld unless explicitly marked as the primary career number you control. Never auto-submits, never clicks Next/Continue, never attests.</p>
   <script src="assist-core.js"></script>
   <script src="modality.js"></script>
+  <script src="profile-sync.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

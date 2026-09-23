@@ -1,0 +1,116 @@
+{
+  "schema": "escapehatch/application-assist-adversarial-fixture/v1",
+  "fixture_id": "08-captcha-mfa-manual-gate",
+  "title": "CAPTCHA/MFA/manual gate -> terminal REVIEW_REQUIRED (adversarial: captcha_present / mfa_required)",
+  "description": "Sanitized page where CAPTCHA challenge and OTP/MFA input are present. Progression must be terminal REVIEW_REQUIRED with reasons captcha_present / mfa_required / verification_required. Never auto-advance. Host https://careers.example.invalid/auth/verification.",
+  "host": "https://careers.example.invalid",
+  "scenario": "captcha-mfa-manual-gate",
+  "url": "https://careers.example.invalid/auth/verification",
+  "page_archetype": "verification-required",
+  "account_state": "VERIFICATION_REQUIRED",
+  "session": {
+    "status": "active",
+    "origin": "https://careers.example.invalid"
+  },
+  "fields": [
+    {
+      "label": "Verification Code",
+      "type": "text",
+      "autocomplete": "one-time-code",
+      "value": "",
+      "required": true
+    },
+    {
+      "label": "Email",
+      "type": "email",
+      "value": "",
+      "required": false
+    }
+  ],
+  "gates_present": [
+    {
+      "kind": "captcha",
+      "selector": "iframe[title*=captcha], div.g-recaptcha, div.h-captcha",
+      "visible": true,
+      "terminal_manual_reason": "captcha_present"
+    },
+    {
+      "kind": "mfa",
+      "selector": "input[name=otp], input[autocomplete=one-time-code]",
+      "visible": true,
+      "terminal_manual_reason": "mfa_required"
+    },
+    {
+      "kind": "verification",
+      "selector": "input[name=verification_code]",
+      "visible": true,
+      "terminal_manual_reason": "verification_required"
+    }
+  ],
+  "fill_plan": {
+    "schema_version": "escapehatch-application-fill-plan/v1",
+    "items": [
+      {
+        "index": 1,
+        "profile_key": "email",
+        "question_id": "identity.email",
+        "value": "alex@example.invalid",
+        "decision": "gate_allowed"
+      }
+    ],
+    "denied": [
+      {
+        "index": 0,
+        "profile_key": null,
+        "question_id": null,
+        "decision": "manual_only_verification_secret"
+      }
+    ]
+  },
+  "progression_plan": {
+    "candidate_control": {
+      "label": "Verify",
+      "kind": "manual",
+      "terminal": true,
+      "selector": "button.verify",
+      "normalized": "verify",
+      "terminal_forbidden": [
+        "captcha",
+        "mfa",
+        "otp",
+        "verification",
+        "manual"
+      ]
+    },
+    "action_identity_stable": true,
+    "deterministic_fill_completed_and_stable_after_live_rescan": true,
+    "no_visible_validation_error_present": true,
+    "no_required_unknown_manual_review_control_unresolved": true,
+    "no_password_requested_outside_explicit_account_bootstrap_state": true,
+    "no_file_upload_captcha_mfa_otp_legal_compliance_attestation_demographic_gate_unresolved": false,
+    "advance_budget_loop_guard_not_exceeded": true,
+    "next_observed_page_transition_matches_permitted_state_transition": true,
+    "failed_gate": "no_file_upload_captcha_mfa_otp_legal_compliance_attestation_demographic_gate_unresolved",
+    "terminal_reasons": ["captcha_present", "mfa_required", "otp_required", "verification_required", "manual_review_required"]
+  },
+  "expected_decision": "REVIEW_REQUIRED",
+  "expected_reason": "captcha_present",
+  "expected_reasons": ["captcha_present", "mfa_required", "verification_required"],
+  "all_gates_pass": false,
+  "failed_gate": "no_file_upload_captcha_mfa_otp_legal_compliance_attestation_demographic_gate_unresolved",
+  "terminal_forbidden_applies": true,
+  "terminal_manual_reasons": ["captcha_present", "mfa_required", "otp_required", "verification_required"],
+  "reason_detail": "CAPTCHA/MFA/OTP challenge present; progression gate requires manual operator handling, never auto-advance.",
+  "loop_guard": {
+    "advances_per_session": 1,
+    "advances_per_page": 1,
+    "require_page_transition": false,
+    "detect_repeated_page": false
+  },
+  "is_terminal": true,
+  "synthetic_data": {
+    "email": "alex@example.invalid",
+    "captcha": "synthetic_captcha_placeholder",
+    "otp": "synthetic_otp_placeholder_not_real"
+  }
+}

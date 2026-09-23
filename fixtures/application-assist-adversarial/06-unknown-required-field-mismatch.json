@@ -1,0 +1,129 @@
+{
+  "schema": "escapehatch/application-assist-adversarial-fixture/v1",
+  "fixture_id": "06-unknown-required-field-mismatch",
+  "title": "Unknown required field mismatch -> REVIEW_REQUIRED (adversarial: unknown_required_field)",
+  "description": "Sanitized page where a required unknown/manual-review control remains unresolved (e.g., work-authorization or custom questionnaire). Progression must stop as REVIEW_REQUIRED with reason unknown_control / manual_review_required. Host https://careers.example.invalid/application/questionnaire.",
+  "host": "https://careers.example.invalid",
+  "scenario": "unknown-required-field-mismatch",
+  "url": "https://careers.example.invalid/application/questionnaire",
+  "page_archetype": "employment-eligibility",
+  "session": {
+    "status": "active",
+    "origin": "https://careers.example.invalid"
+  },
+  "fields": [
+    {
+      "label": "First Name",
+      "type": "text",
+      "value": "",
+      "required": true,
+      "question_id": "identity.first_name"
+    },
+    {
+      "label": "Are you legally authorized to work in the United States?",
+      "type": "select",
+      "value": "",
+      "required": true,
+      "question_id": "employment.work_authorization_proof",
+      "options": [
+        {
+          "value": "",
+          "text": "Select"
+        },
+        {
+          "value": "Yes",
+          "text": "Yes"
+        },
+        {
+          "value": "No",
+          "text": "No"
+        }
+      ],
+      "unknown": true
+    },
+    {
+      "label": "Why do you want this job? *",
+      "type": "text",
+      "value": "",
+      "required": true,
+      "question_id": "unknown.custom_essay_01",
+      "unknown": true
+    }
+  ],
+  "fill_plan": {
+    "schema_version": "escapehatch-application-fill-plan/v1",
+    "items": [
+      {
+        "index": 0,
+        "profile_key": "first_name",
+        "question_id": "identity.first_name",
+        "value": "Alex",
+        "decision": "gate_allowed"
+      }
+    ],
+    "denied": [
+      {
+        "index": 1,
+        "profile_key": null,
+        "question_id": "employment.work_authorization_proof",
+        "decision": "unknown_fields_stay_blank"
+      },
+      {
+        "index": 2,
+        "profile_key": null,
+        "question_id": "unknown.custom_essay_01",
+        "decision": "unknown_fields_stay_blank"
+      }
+    ]
+  },
+  "progression_plan": {
+    "candidate_control": {
+      "label": "Next",
+      "kind": "intermediate",
+      "terminal": false,
+      "selector": "button.next",
+      "normalized": "next",
+      "uniquely_identified": true
+    },
+    "action_identity_stable": true,
+    "deterministic_fill_completed_and_stable_after_live_rescan": true,
+    "no_visible_validation_error_present": true,
+    "no_required_unknown_manual_review_control_unresolved": false,
+    "no_password_requested_outside_explicit_account_bootstrap_state": true,
+    "no_file_upload_captcha_mfa_otp_legal_compliance_attestation_demographic_gate_unresolved": true,
+    "advance_budget_loop_guard_not_exceeded": true,
+    "next_observed_page_transition_matches_permitted_state_transition": true,
+    "failed_gate": "no_required_unknown_manual_review_control_unresolved",
+    "unresolved_controls": [
+      {
+        "index": 1,
+        "question_id": "employment.work_authorization_proof",
+        "reason": "unknown_control",
+        "required": true
+      },
+      {
+        "index": 2,
+        "question_id": "unknown.custom_essay_01",
+        "reason": "unknown_control",
+        "required": true
+      }
+    ]
+  },
+  "expected_decision": "REVIEW_REQUIRED",
+  "expected_reason": "unknown_control",
+  "all_gates_pass": false,
+  "failed_gate": "no_required_unknown_manual_review_control_unresolved",
+  "terminal_forbidden_applies": false,
+  "reason_detail": "Required unknown/manual-review controls remain unresolved; taxonomy_automation_policy prevents auto-advance.",
+  "loop_guard": {
+    "advances_per_session": 1,
+    "advances_per_page": 1,
+    "require_page_transition": false,
+    "detect_repeated_page": false
+  },
+  "synthetic_data": {
+    "first_name": "Alex",
+    "email": "alex@example.invalid",
+    "unresolved": "unknown_fields_stay_blank"
+  }
+}

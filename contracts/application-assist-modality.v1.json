@@ -176,6 +176,49 @@
       "keyboard": ["escape"],
       "phone": "labeled_Close_or_Back",
       "terminal_result": "overlay_closed_session_preserved"
+    },
+    {
+      "id": "open_companion_details",
+      "semantic_action": "open_companion_details",
+      "state_owner": "ui.companion only",
+      "handler": "presence.openCompanionDetails",
+      "mouse": "click_companion_beacon",
+      "keyboard": ["enter_on_beacon", "space_on_beacon"],
+      "phone": "tap_companion_beacon",
+      "terminal_result": "companion_details_visible_without_session_mutation",
+      "notes": "Presence-only UI state; does not start, pause, advance, or submit. Handler is presence.js Shadow DOM binder."
+    },
+    {
+      "id": "dismiss_companion_details",
+      "semantic_action": "dismiss_companion_details",
+      "state_owner": "ui.companion only",
+      "handler": "presence.dismissCompanionDetails",
+      "mouse": "click_outside_or_escape",
+      "keyboard": ["escape"],
+      "phone": "labeled_Close_or_Back",
+      "terminal_result": "companion_details_hidden_session_preserved"
+    },
+    {
+      "id": "set_companion_presentation",
+      "semantic_action": "set_companion_presentation",
+      "state_owner": "ui.companion only",
+      "handler": "presence.setCompanionPresentation",
+      "mouse": "click_presentation_control_in_details",
+      "keyboard": ["enter_on_presentation_control"],
+      "phone": "tap_presentation_control",
+      "terminal_result": "presentation_preference_persisted_quiet_dot_only_hidden_for_session",
+      "allowed_values": ["quiet", "dot_only", "hidden_for_session"]
+    },
+    {
+      "id": "set_companion_side",
+      "semantic_action": "set_companion_side",
+      "state_owner": "ui.companion only",
+      "handler": "presence.setCompanionSide",
+      "mouse": "click_side_control_in_details",
+      "keyboard": ["enter_on_side_control"],
+      "phone": "tap_side_control",
+      "terminal_result": "side_preference_persisted_left_right",
+      "allowed_values": ["left", "right"]
     }
   ],
   "grammars": {

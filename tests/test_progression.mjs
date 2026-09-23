@@ -35,6 +35,7 @@ function safeLiveState(overrides = {}) {
     hasDemographicGate: false,
     advancesThisSession: 0,
     advancesThisPage: 0,
+    transitionObserverReady: true,
     ...overrides
   };
 }

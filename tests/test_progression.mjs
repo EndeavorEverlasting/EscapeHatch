@@ -134,6 +134,8 @@ assert.equal(prog.isTerminalLabel("Continue"), false);
 
 // Gate 5: fill stable
 let g5Plan = prog.buildProgressionPlan({ archetype: "identity-contact", controls: [{ label: "Next" }] });
+let g5Missing = prog.progressionGate(g5Plan, safeLiveState({ fillStable: undefined, controls: [{ label: "Next" }], archetype: "identity-contact" }));
+assert.equal(g5Missing.decision, "REVIEW_REQUIRED", "fill stability must be explicitly proven");
 let g5Fail = prog.progressionGate(g5Plan, safeLiveState({ fillStable: false, controls: [{ label: "Next" }], archetype: "identity-contact" }));
 assert.equal(g5Fail.decision, "REVIEW_REQUIRED");
 assert.equal(g5Fail.failedGate, "deterministic_fill_completed_and_stable_after_live_rescan");
@@ -161,6 +163,8 @@ assert.equal(g8Fail.decision, "REVIEW_REQUIRED");
 assert.equal(g8Fail.failedGate, "no_password_requested_outside_explicit_account_bootstrap_state");
 // allowed password in account-creation
 let g8PassPlan = prog.buildProgressionPlan({ archetype: "account-creation", controls: [{ label: "Continue" }] });
+let g8NoState = prog.progressionGate(g8PassPlan, safeLiveState({ hasPassword: true, archetype: "account-creation", accountBootstrapState: null }));
+assert.equal(g8NoState.decision, "REVIEW_REQUIRED", "password progression requires explicit ACCOUNT_CREATION state");
 let g8Pass = prog.progressionGate(g8PassPlan, safeLiveState({ hasPassword: true, archetype: "account-creation", accountBootstrapState: "ACCOUNT_CREATION" }));
 assert.equal(g8Pass.decision, "AUTO_ADVANCE_SAFE");
 

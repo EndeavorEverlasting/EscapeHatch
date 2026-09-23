@@ -1,0 +1,52 @@
+{
+  "description": "Channel-routing negative cases: invalid channel, missing evidence, auth failure, adapter unavailable. Synthetic.",
+  "cases": [
+    {
+      "label": "invalid_channel_carrier_pigeon",
+      "application": {"id": "app-invalid-channel", "opportunity_id": "opp-live-high", "resume_id": "resume-live-high", "status": "draft", "submitted_at": null, "execution": {"state": "READY_TO_APPLY", "channel": "carrier_pigeon", "last_transition_at": "2026-09-10T05:00:00-04:00"}},
+      "context": {},
+      "expected_route": "BLOCKED",
+      "expected_reason": "invalid_channel"
+    },
+    {
+      "label": "missing_evidence_for_submitted",
+      "application": {"id": "app-missing-ev", "opportunity_id": "opp-live-high", "resume_id": "resume-live-high", "status": "draft", "submitted_at": null, "execution": {"state": "FILLED", "channel": "web_form", "last_transition_at": "2026-09-10T05:00:00-04:00"}},
+      "target": "SUBMITTED",
+      "evidence": null,
+      "provider_snapshot": {"observed_at": "2026-09-10T07:00:00-04:00", "provider_id": "synthetic-provider", "read_back": true, "opportunities": [], "applications": []},
+      "expected_to": "FILLED",
+      "expected_reason": "SUBMITTED_requires_qualifying_evidence"
+    },
+    {
+      "label": "auth_failure_web_blocked",
+      "application": {"id": "app-auth-web", "opportunity_id": "opp-live-high", "resume_id": "resume-live-high", "status": "draft", "submitted_at": null, "execution": {"state": "READY_TO_APPLY", "channel": "web_form", "last_transition_at": "2026-09-10T05:00:00-04:00"}},
+      "context": {"providerAuthorized": false},
+      "expected_route": "BLOCKED",
+      "expected_target": "BLOCKED"
+    },
+    {
+      "label": "auth_failure_email_awaiting",
+      "application": {"id": "app-auth-email", "opportunity_id": "opp-live-high", "resume_id": "resume-live-high", "status": "draft", "submitted_at": null, "execution": {"state": "FILLED", "channel": "email", "last_transition_at": "2026-09-10T05:00:00-04:00"}},
+      "context": {"providerAuthorized": false, "mailSent": false},
+      "expected_route": "AWAITING_OPERATOR",
+      "expected_target": "AWAITING_OPERATOR"
+    },
+    {
+      "label": "external_provider_adapter_unavailable",
+      "application": {"id": "app-external", "opportunity_id": "opp-live-high", "resume_id": "resume-live-high", "status": "draft", "submitted_at": null, "execution": {"state": "READY_TO_APPLY", "channel": "external_provider", "last_transition_at": "2026-09-10T05:00:00-04:00"}},
+      "context": {"adapterAvailable": false, "providerAuthorized": true},
+      "expected_route": "BLOCKED",
+      "expected_target": "BLOCKED"
+    },
+    {
+      "label": "email_draft_not_sent_blocked_from_submitted",
+      "application": {"id": "app-email-draft", "opportunity_id": "opp-live-high", "resume_id": "resume-live-high", "status": "draft", "submitted_at": null, "execution": {"state": "FILLED", "channel": "email", "last_transition_at": "2026-09-10T05:00:00-04:00"}},
+      "target": "SUBMITTED",
+      "evidence": {"id": "ev-draft", "kind": "note", "observed_at": "2026-09-10T07:00:00-04:00", "artifact": {"owner": "user", "kind": "relative_path", "locator": "evidence/app-email-draft/draft.txt"}},
+      "context": {"mailSent": false, "operatorConfirmed": false},
+      "expected_to": "FILLED",
+      "expected_reason": "draft_email_requires_sent_confirmation"
+    }
+  ],
+  "provider_snapshot_template": {"observed_at": "2026-09-10T07:00:00-04:00", "provider_id": "synthetic-provider", "read_back": true, "opportunities": [], "applications": []}
+}

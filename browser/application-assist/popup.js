@@ -273,16 +273,19 @@ async function runPageCommand(command, profile, session, preferenceStore) {
   session = api.observeOrigin(session, origin);
   await saveSession(session);
 
+  const runtimeFiles = command === "advance"
+    ? ["assist-core.js", "progression.js", "navigation-adapter.js"]
+    : ["assist-core.js"];
   await chrome.scripting.executeScript({
     target: { tabId: tab.id },
-    files: ["assist-core.js"]
+    files: runtimeFiles
   });
   const injected = await chrome.scripting.executeScript({
     target: { tabId: tab.id },
     func: (payload) => {
       globalThis.__ESCAPEHATCH_ASSIST_COMMAND__ = payload;
     },
-    args: [{ type: command, profile, session, preferenceStore: preferenceStore || null }]
+    args: [{ type: command, profile, session, preferenceStore: preferenceStore || null, sessionStorageKey: SESSION_KEY }]
   });
   if (!injected) {
     throw new Error("Assist command injection failed.");

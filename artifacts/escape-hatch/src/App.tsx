@@ -1072,7 +1072,7 @@ function AssistPage({
       try {
         const text = file.type === 'text/plain' || file.name.endsWith('.txt') ? String(reader.result) : await extractResumeText(file);
         const imported = parseResumeText(text, file.name);
-        const deterministic = applyDeterministicResumeImport(imported, assistProfile);
+        const deterministic = applyDeterministicResumeImport(imported, assistProfile, profile);
         const conflicts = Object.entries(deterministic.contactPatch).filter(([field, value]) => {
           const existing = profile[field as keyof Profile];
           return Boolean(existing && value && existing !== value);

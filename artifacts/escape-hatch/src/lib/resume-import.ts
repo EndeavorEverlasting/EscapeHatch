@@ -269,6 +269,31 @@ const addProposal = (proposals: ReviewedProposal[], section: ReviewedProposal['s
 
 type ParsedContactLocation = Pick<Partial<AssistProfile['contact']>, 'street_address' | 'city' | 'region' | 'postal_code' | 'country'> & { raw?: string };
 
+function parseResumeName(value: string) {
+  let remaining = clean(value);
+  let name_prefix = '';
+  const prefixMatch = remaining.match(/^(Mr|Mrs|Ms|Mx|Dr|Prof)\.?\s+/i);
+  if (prefixMatch) {
+    name_prefix = prefixMatch[1];
+    remaining = remaining.slice(prefixMatch[0].length).trim();
+  }
+
+  let preferred_name = '';
+  const preferredMatch = remaining.match(/(?:\(([^()]{1,40})\)|["“]([^"”]{1,40})["”])/);
+  if (preferredMatch) {
+    preferred_name = clean(preferredMatch[1] ?? preferredMatch[2] ?? '');
+    remaining = clean(remaining.replace(preferredMatch[0], ' '));
+  }
+
+  const parts = remaining.split(/\s+/).filter(Boolean);
+  return {
+    name_prefix,
+    first_name: parts[0] ?? '',
+    last_name: parts.slice(1).join(' '),
+    preferred_name,
+  };
+}
+
 function parseContactLocation(lines: string[]): ParsedContactLocation {
   const firstHeading = lines.findIndex((line) => heading(line));
   const contactLines = lines.slice(0, firstHeading >= 0 ? firstHeading : Math.min(lines.length, 10));
@@ -310,10 +335,14 @@ export function parseResumeText(text: string, fileName = 'Imported resume'): Res
   const name = lines[0] ?? '';
   const contactLocation = parseContactLocation(lines);
   if (name && name.length < 80) {
-    const parts = name.split(/\s+/);
-    profilePatch.first_name = parts[0] ?? '';
-    profilePatch.last_name = parts.slice(1).join(' ');
-    addProposal(proposals, 'contact', 'name', name, 'high', stamp(fileName, name, 1));
+    const parsedName = parseResumeName(name);
+    profilePatch.first_name = parsedName.first_name;
+    profilePatch.last_name = parsedName.last_name;
+    profilePatch.name_prefix = parsedName.name_prefix;
+    profilePatch.preferred_name = parsedName.preferred_name;
+    addProposal(proposals, 'contact', 'name', [parsedName.first_name, parsedName.last_name].filter(Boolean).join(' '), 'high', stamp(fileName, name, 1));
+    if (parsedName.name_prefix) addProposal(proposals, 'contact', 'name_prefix', parsedName.name_prefix, 'high', stamp(fileName, name, 1));
+    if (parsedName.preferred_name) addProposal(proposals, 'contact', 'preferred_name', parsedName.preferred_name, 'high', stamp(fileName, name, 1));
   }
   if (email) { profilePatch.email = email; addProposal(proposals, 'contact', 'email', email, 'high', stamp(fileName, email, 1)); }
   if (phone) { profilePatch.phone = phone; addProposal(proposals, 'contact', 'phone', phone, 'high', stamp(fileName, phone, 1)); }

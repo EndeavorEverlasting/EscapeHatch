@@ -228,7 +228,7 @@ test('keeps a multi-page application review-only through popup reopen', async ({
     const context = await browserType.launchPersistentContext(userDataDirectory, {
       baseURL,
       headless: true,
-      executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH ?? '/repl/tools/bin/chromium',
+      ...(process.env.PLAYWRIGHT_CHROMIUM_PATH ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH } : {}),
       args: [
         '--no-sandbox',
         '--disable-dev-shm-usage',

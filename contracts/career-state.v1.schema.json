@@ -50,6 +50,29 @@
         "career_objective": {"$ref": "#/$defs/careerObjective"}
       }
     },
+    "opportunityVerification": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "verified_at"],
+      "properties": {
+        "state": {"enum": ["SNAPSHOT", "LIVE_VERIFIED", "STALE", "CLOSED", "BLOCKED", "UNKNOWN"]},
+        "verified_at": {"type": "string", "format": "date-time"},
+        "detail": {"type": "string", "minLength": 1},
+        "source": {"type": "string", "minLength": 1}
+      }
+    },
+    "applicationExecution": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "channel", "last_transition_at"],
+      "properties": {
+        "state": {"enum": ["READY_TO_APPLY", "FILLED", "AWAITING_OPERATOR", "BLOCKED", "SUBMITTED"]},
+        "channel": {"enum": ["web_form", "email", "external_provider"]},
+        "last_transition_at": {"type": "string", "format": "date-time"},
+        "evidence_id": {"type": "string", "minLength": 1},
+        "block_reason": {"type": "string", "minLength": 1},
+        "awaiting_reason": {"type": "string", "minLength": 1},
+        "detail": {"type": "string", "minLength": 1}
+      }
+    },
     "opportunity": {
       "type": "object", "additionalProperties": false,
       "required": ["id", "title", "organization", "status", "source"],
@@ -65,7 +88,8 @@
         "source": {"$ref": "#/$defs/artifactRef"},
         "apply_link": {"$ref": "#/$defs/artifactRef"},
         "posting_snapshot": {"$ref": "#/$defs/artifactRef"},
-        "captured_at": {"type": "string", "format": "date-time"}
+        "captured_at": {"type": "string", "format": "date-time"},
+        "verification": {"$ref": "#/$defs/opportunityVerification"}
       }
     },
     "resume": {
@@ -88,7 +112,8 @@
         "resume_id": {"type": "string", "minLength": 1},
         "status": {"enum": ["draft", "submitted", "screen", "interview", "offer", "rejected", "withdrawn", "closed"]},
         "submitted_at": {"type": ["string", "null"], "format": "date-time"},
-        "external_reference": {"type": ["string", "null"]}
+        "external_reference": {"type": ["string", "null"]},
+        "execution": {"$ref": "#/$defs/applicationExecution"}
       }
     },
     "guidanceConcept": {

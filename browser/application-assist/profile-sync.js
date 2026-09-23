@@ -133,6 +133,18 @@
     return bytesOf(text) <= MAX_IMPORT_BYTES;
   }
 
+
+  function isTrustedCockpitUrl(value) {
+    try {
+      const url = new URL(String(value || ""));
+      if (url.protocol !== "http:" && url.protocol !== "https:") return false;
+      const host = String(url.hostname || "").toLowerCase();
+      return host === "127.0.0.1" || host === "localhost" || host === "::1" || host === "[::1]";
+    } catch (_e) {
+      return false;
+    }
+  }
+
   // Cockpit storage extraction helpers.
   // dump is a plain object mapping storage key -> raw string value (as stored in localStorage)
   // Returns array of candidate raw profile objects (unvalidated)
@@ -289,6 +301,7 @@
     validateRecoveryExportText: validateRecoveryExportText,
     isValidSyncSize: isValidSyncSize,
     bytesOf: bytesOf,
+    isTrustedCockpitUrl: isTrustedCockpitUrl,
     extractCandidatesFromDump: extractCandidatesFromDump,
     parseCockpitDump: parseCockpitDump,
     selectBestCockpitProfile: selectBestCockpitProfile,

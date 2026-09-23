@@ -1,0 +1,25 @@
+{
+  "schema_version": "escapehatch/account-bootstrap-fixture/v1",
+  "fixture_id": "mfa-required",
+  "description": "Synthetic MFA gate that must block progression.",
+  "expected_archetype": "MFA_REQUIRED",
+  "expected_state": "MFA_REQUIRED",
+  "descriptor": {
+    "url": "https://example.invalid/login",
+    "text": "Two-factor authentication required. Enter code from authenticator app.",
+    "fields": [
+      {
+        "type": "text",
+        "label": "Authenticator Code",
+        "name": "mfa_code",
+        "value": "synthetic_mfa_placeholder"
+      }
+    ],
+    "buttons": [{ "text": "Verify" }],
+    "mfaDetected": true,
+    "hasMfa": true
+  },
+  "expected_terminal_state": "REVIEW_REQUIRED",
+  "secret_placeholder": "generated_password_placeholder",
+  "notes": "MFA is manual gate; must not bypass."
+}

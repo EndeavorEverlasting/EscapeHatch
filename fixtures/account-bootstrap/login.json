@@ -1,0 +1,30 @@
+{
+  "schema_version": "escapehatch/account-bootstrap-fixture/v1",
+  "fixture_id": "existing-account-login",
+  "description": "Synthetic login page with email and password fields.",
+  "expected_archetype": "EXISTING_ACCOUNT_LOGIN",
+  "expected_state": "EXISTING_ACCOUNT_LOGIN",
+  "descriptor": {
+    "url": "https://example.invalid/login",
+    "text": "Sign in to your account",
+    "fields": [
+      {
+        "type": "email",
+        "label": "Email",
+        "autocomplete": "email",
+        "name": "email",
+        "value": "synthetic_email_placeholder@example.invalid"
+      },
+      {
+        "type": "password",
+        "label": "Password",
+        "autocomplete": "current-password",
+        "name": "password",
+        "value": "generated_password_placeholder"
+      }
+    ],
+    "buttons": [{ "text": "Sign In" }]
+  },
+  "secret_placeholder": "generated_password_placeholder",
+  "notes": "Synthetic placeholders only."
+}

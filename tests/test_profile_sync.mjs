@@ -27,6 +27,7 @@ assert.equal(sync.isTrustedCockpitUrl("chrome://extensions"), false);
 const popupSource = fs.readFileSync(new URL("../browser/application-assist/popup.js", import.meta.url), "utf8");
 assert.ok(popupSource.includes("isTrustedCockpitUrl"), "popup must restrict sync to trusted loopback cockpit URL");
 assert.ok(popupSource.includes("__escapehatch_cockpit__"), "popup must verify cockpit document identity before importing localStorage");
+assert.ok(popupSource.includes("values: out"), "cockpit injection must return the nested values shape consumed by syncFromCockpit");
 
 assert.equal(typeof sync.sanitizeProfile, "function", "sanitizeProfile must exist");
 assert.equal(typeof sync.acceptOnlyKnownProfileKeys, "function");
@@ -43,6 +44,24 @@ assert.equal(sync.CANONICAL_OUTPUT_ROOT, "Outputs/application-assist/");
 assert.equal(sync.RECOVERY_EXPORT_PREFIX, "escapehatch-application-assist-profile");
 assert.equal(sync.PROFILE_STORAGE_KEY, "escapeHatch.applicationAssistProfile.v1");
 assert.equal(sync.PREFERENCE_STORAGE_KEY, "escapeHatch.applicationQuestionPreferences.v1");
+
+const stalePreferenceStore = {
+  schema_version: "escapehatch-application-question-preferences/v1",
+  preferences: {
+    "identity.email": { scope: "profile_preference", value: "stale@example.invalid" },
+    "identity.phone": { scope: "profile_preference", value: "+1 555 111 2222" },
+    "custom.question": { scope: "session_confirmation", value: "keep-me" }
+  }
+};
+const clearedProjection = sync.projectProfileToPreferenceStore(
+  { first_name: "Synthetic", phone_authority: "unconfirmed" },
+  stalePreferenceStore
+);
+assert.equal(clearedProjection.preferences["identity.email"], undefined, "cleared cockpit email must remove stale profile preference");
+assert.equal(clearedProjection.preferences["identity.phone"], undefined, "cleared cockpit phone must remove stale profile preference");
+assert.deepEqual(clearedProjection.preferences["custom.question"], { scope: "session_confirmation", value: "keep-me" }, "non-profile preference scopes must survive projection");
+assert.equal(clearedProjection.preferences["identity.first_name"].value, "Synthetic");
+
 assert.equal(sync.EXPORT_SCHEMA, "escapehatch-application-assist-profile/v2");
 assert.deepEqual(sync.LEGACY_SCHEMAS, [
   "escapehatch-application-assist-profile/v2",

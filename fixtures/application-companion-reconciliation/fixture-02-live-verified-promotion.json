@@ -1,0 +1,121 @@
+{
+  "description": "Live posting verification can promote freshness to LIVE_VERIFIED. SNAPSHOT provider LIVE_VERIFIED should become LIVE_VERIFIED and queue_active true.",
+  "career_state": {
+    "schema_version": "escapehatch-career-state/v1",
+    "state_id": "state-fixture",
+    "revision": 4,
+    "updated_at": "2026-09-10T05:22:00-04:00",
+    "profile": {
+      "id": "profile-primary",
+      "headline": "IT operations professional building toward agentic software engineering",
+      "skills": [
+        "IT operations",
+        "Python automation"
+      ],
+      "source_artifacts": [],
+      "career_objective": {
+        "target_lane": "Agentic software development",
+        "target_roles": [
+          "AI Automation Engineer"
+        ],
+        "lead_capabilities": [
+          "Repository automation"
+        ],
+        "proof_artifacts": [
+          {
+            "owner": "user",
+            "kind": "uri",
+            "locator": "https://example.invalid/portfolio"
+          }
+        ]
+      }
+    },
+    "opportunities": [
+      {
+        "id": "opp-fixture-001",
+        "title": "AI Automation Engineer",
+        "organization": "Example Employer",
+        "status": "targeted",
+        "priority": "high",
+        "fit_score": 90,
+        "requirements_gaps": [],
+        "next_action": "Apply",
+        "source": {
+          "owner": "external",
+          "kind": "uri",
+          "locator": "https://example.invalid/jobs/001"
+        },
+        "apply_link": {
+          "owner": "external",
+          "kind": "uri",
+          "locator": "https://example.invalid/apply/001"
+        },
+        "posting_snapshot": {
+          "owner": "user",
+          "kind": "relative_path",
+          "locator": "opportunities/opp-fixture-001/posting.txt"
+        },
+        "captured_at": "2026-09-10T04:45:00-04:00",
+        "verification": {
+          "state": "SNAPSHOT",
+          "verified_at": "2026-09-10T04:50:00-04:00",
+          "detail": "Initial SNAPSHOT",
+          "source": "https://example.invalid/jobs/001"
+        }
+      }
+    ],
+    "resumes": [
+      {
+        "id": "resume-fixture-001",
+        "profile_id": "profile-primary",
+        "opportunity_id": "opp-fixture-001",
+        "artifact": {
+          "owner": "user",
+          "kind": "relative_path",
+          "locator": "resumes/example.pdf"
+        },
+        "created_at": "2026-09-10T04:50:00-04:00"
+      }
+    ],
+    "applications": [
+      {
+        "id": "app-fixture-001",
+        "opportunity_id": "opp-fixture-001",
+        "resume_id": "resume-fixture-001",
+        "status": "draft",
+        "submitted_at": null,
+        "external_reference": null,
+        "execution": {
+          "state": "AWAITING_OPERATOR",
+          "channel": "web_form",
+          "last_transition_at": "2026-09-10T05:00:00-04:00",
+          "detail": "App AWAITING_OPERATOR via web_form",
+          "awaiting_reason": "initial_snapshot"
+        }
+      }
+    ],
+    "evidence": [],
+    "study_guidance": []
+  },
+  "provider_snapshot": {
+    "observed_at": "2026-09-10T07:00:00-04:00",
+    "provider_id": "synthetic-provider",
+    "read_back": true,
+    "opportunities": [
+      {
+        "opportunity_id": "opp-fixture-001",
+        "verification": {
+          "state": "LIVE_VERIFIED",
+          "verified_at": "2026-09-10T06:00:00-04:00",
+          "detail": "Live posting re-observed; apply entry available.",
+          "source": "https://example.invalid/jobs/001"
+        }
+      }
+    ],
+    "applications": []
+  },
+  "expected": {
+    "freshness_should_become": "LIVE_VERIFIED",
+    "queue_active": true
+  }
+}

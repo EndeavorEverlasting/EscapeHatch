@@ -1,0 +1,152 @@
+{
+  "description": "Reconciliation is idempotent and preserves conflicts rather than silently overwriting stronger evidence. Divergent local vs provider evidence should flag conflict_preserved and second run identical.",
+  "career_state": {
+    "schema_version": "escapehatch-career-state/v1",
+    "state_id": "state-fixture",
+    "revision": 4,
+    "updated_at": "2026-09-10T05:22:00-04:00",
+    "profile": {
+      "id": "profile-primary",
+      "headline": "IT operations professional building toward agentic software engineering",
+      "skills": [
+        "IT operations",
+        "Python automation"
+      ],
+      "source_artifacts": [],
+      "career_objective": {
+        "target_lane": "Agentic software development",
+        "target_roles": [
+          "AI Automation Engineer"
+        ],
+        "lead_capabilities": [
+          "Repository automation"
+        ],
+        "proof_artifacts": [
+          {
+            "owner": "user",
+            "kind": "uri",
+            "locator": "https://example.invalid/portfolio"
+          }
+        ]
+      }
+    },
+    "opportunities": [
+      {
+        "id": "opp-fixture-001",
+        "title": "AI Automation Engineer",
+        "organization": "Example Employer",
+        "status": "targeted",
+        "priority": "high",
+        "fit_score": 90,
+        "requirements_gaps": [],
+        "next_action": "Apply",
+        "source": {
+          "owner": "external",
+          "kind": "uri",
+          "locator": "https://example.invalid/jobs/001"
+        },
+        "apply_link": {
+          "owner": "external",
+          "kind": "uri",
+          "locator": "https://example.invalid/apply/001"
+        },
+        "posting_snapshot": {
+          "owner": "user",
+          "kind": "relative_path",
+          "locator": "opportunities/opp-fixture-001/posting.txt"
+        },
+        "captured_at": "2026-09-10T04:45:00-04:00",
+        "verification": {
+          "state": "LIVE_VERIFIED",
+          "verified_at": "2026-09-10T04:50:00-04:00",
+          "detail": "Initial LIVE_VERIFIED",
+          "source": "https://example.invalid/jobs/001"
+        }
+      }
+    ],
+    "resumes": [
+      {
+        "id": "resume-fixture-001",
+        "profile_id": "profile-primary",
+        "opportunity_id": "opp-fixture-001",
+        "artifact": {
+          "owner": "user",
+          "kind": "relative_path",
+          "locator": "resumes/example.pdf"
+        },
+        "created_at": "2026-09-10T04:50:00-04:00"
+      }
+    ],
+    "applications": [
+      {
+        "id": "app-fixture-001",
+        "opportunity_id": "opp-fixture-001",
+        "resume_id": "resume-fixture-001",
+        "status": "draft",
+        "submitted_at": null,
+        "external_reference": null,
+        "execution": {
+          "state": "FILLED",
+          "channel": "web_form",
+          "last_transition_at": "2026-09-10T05:00:00-04:00",
+          "detail": "App FILLED via web_form",
+          "evidence_id": "ev-local-007"
+        }
+      }
+    ],
+    "evidence": [
+      {
+        "id": "ev-local-007",
+        "application_id": "app-fixture-001",
+        "kind": "correspondence",
+        "artifact": {
+          "owner": "user",
+          "kind": "relative_path",
+          "locator": "evidence/app-fixture-001/ev-fixture-001.txt"
+        },
+        "observed_at": "2026-09-10T05:00:00-04:00"
+      }
+    ],
+    "study_guidance": []
+  },
+  "provider_snapshot": {
+    "observed_at": "2026-09-10T07:00:00-04:00",
+    "provider_id": "synthetic-provider",
+    "read_back": true,
+    "opportunities": [
+      {
+        "opportunity_id": "opp-fixture-001",
+        "verification": {
+          "state": "LIVE_VERIFIED",
+          "verified_at": "2026-09-10T06:00:00-04:00",
+          "source": "https://example.invalid/jobs/001"
+        }
+      }
+    ],
+    "applications": [
+      {
+        "application_id": "app-fixture-001",
+        "execution": {
+          "state": "SUBMITTED",
+          "channel": "web_form",
+          "last_transition_at": "2026-09-10T07:00:00-04:00"
+        },
+        "evidence": [
+          {
+            "id": "ev-provider-007",
+            "kind": "submission_receipt",
+            "observed_at": "2026-09-10T07:00:00-04:00"
+          }
+        ],
+        "auth": {
+          "authorized": true
+        }
+      }
+    ]
+  },
+  "expected": {
+    "conflict_preserved": true,
+    "idempotent": true,
+    "stronger_evidence": "provider"
+  }
+}

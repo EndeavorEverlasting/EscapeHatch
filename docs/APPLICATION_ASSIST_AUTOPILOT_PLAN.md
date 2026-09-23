@@ -1,10 +1,12 @@
 # EscapeHatch Application Assist Autopilot Plan
 
-**Canonical plan owner:** `docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md`  
-**Plan date:** 2026-09-23  
-**Planning floor:** `integration/replit-donor-b01f628-20260921@be4a4c41403d700285084f941f2725a95a9877b5`  
-**Planning branch:** `plan/application-assist-autopilot-20260923`  
+**Canonical plan owner:** `docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md`
+**Plan date:** 2026-09-23
+**Planning floor:** `integration/replit-donor-b01f628-20260921@be4a4c41403d700285084f941f2725a95a9877b5`
+**Planning branch:** `plan/application-assist-autopilot-20260923`
 **Disposition:** planning / handoff durability only; no product-runtime implementation is authorized by this planning pass.
+**Run-scoped dispatch manifest:** `Outputs/prompt-parallel-dispatch/runs/escapehatch-application-assist-autopilot-20260923/manifest.json`
+**Generic dispatch target:** reserved by the active Windows lifecycle graph; this plan does not rebind it.
 
 ## 1. Execution frame
 
@@ -12,6 +14,7 @@
 - **Historical primary local path:** `C:\Users\pa_rperez26\OneDrive - Northwell Health\OG Laptop Backup\Desktop\dev\EscapeHatch`; local agent must revalidate before mutation.
 - **Current provider default:** `main@0824535b9dc1341def885a79a098d297df770ac8`
 - **Current provider integration floor:** `integration/replit-donor-b01f628-20260921@be4a4c41403d700285084f941f2725a95a9877b5`, 48 commits ahead / 0 behind `main`.
+- **Review reconciliation:** `be4a4c41403d700285084f941f2725a95a9877b5` is 21 commits ahead of `da6d2e40f348d7e7f59fb9ba998b54a9fa663656` with no commits behind; the later `be4a4c` floor is intentional.
 - **Recent center of gravity:** Replit donor convergence plus Windows local-runtime lifecycle. PRs #18-#21 are merged into the integration branch.
 - **Application-assist owner surfaces already present:** `contracts/application-assist-session.v1.json`, `browser/application-assist/*`, `docs/APPLICATION_ASSIST_SESSION.md`, application taxonomy/preference contracts, assist tests/workflow.
 - **Plan collision to avoid:** the existing Windows lifecycle plan remains separately owned; this plan must not rewrite lifecycle/process-control semantics.
@@ -26,8 +29,12 @@ The 2026-09-23 job-application run exposed five product failures that must be tr
 3. **Email-first / login / create-account routing missing:** a common flow is email probe -> login page -> create-account choice -> account creation -> application. This must be an expected state machine, not an exceptional workflow.
 4. **Profile/email bootstrap is operationally broken:** deterministic identity data such as email required manual export/import/path discovery and effectively required a local agent. A normal user must not need an agent or file-system archaeology to populate known profile fields.
 5. **Path/output hygiene is fragmented:** source extension location, generated extension/distribution output, profile import/export recovery files, and other EscapeHatch outputs do not present one coherent ownership model or discoverable layout.
+6. **Tracker truth and exported snapshots are different authorities:** a local spreadsheet/export can support continuity but cannot prove that the canonical external tracker was updated. The run required provider-side read-back before a synchronization claim was valid.
+7. **Posting freshness is an execution state:** a queued opportunity must be reverified against its live source before application effort is spent. Stale/closed opportunities must be removed from the active queue without consuming fill/application effort.
+8. **Application progress needs typed evidence states:** `READY_TO_APPLY`, `FILLED`, `AWAITING_OPERATOR`, `BLOCKED`, and `SUBMITTED` are materially different states. Field population or a live posting must never be promoted to submission.
+9. **Application channel authorization can fail independently:** a role can remain live while an email/provider channel is unavailable or unauthorized. That transition must preserve `AWAITING_OPERATOR`/ `BLOCKED` rather than silently claiming send/submission success.
 
-These five incidents are the primary product acceptance input for this plan.
+These nine incidents are the primary product acceptance input for this plan. They are recorded generically; real employer records, profile values, application answers, and provider credentials remain outside this public repository.
 
 ## 3. Product-policy revision
 
@@ -148,17 +155,63 @@ Canonical ownership target:
 
 No duplicate extension copies should become alternate sources of truth.
 
+
+## 6A. Batch application queue and evidence model
+
+The current career-state contract is behind the observed application workflow. It can represent broad opportunity/application lifecycle states, but it cannot express the execution/freshness distinctions needed by Batch Apply without overloading existing fields.
+
+### Ownership rule
+
+- Career queue, freshness, application transition, and submission evidence semantics belong in the career-state/application-companion product contracts and application code.
+- Browser page classification, fill, progression, and account bootstrap remain owned by Application Assist.
+- Google Drive, mail, ATS, and other providers are adapters. They do not become the canonical domain model.
+- Prompt/skill text may guide execution but must never be the only implementation of these state transitions.
+
+### Required semantic states
+
+Preserve existing backward-compatible lifecycle fields and add an explicit execution/freshness layer rather than reinterpreting old values.
+
+**Opportunity verification semantics**
+- `SNAPSHOT` — historical/imported evidence only;
+- `LIVE_VERIFIED` — live source re-observed at a recorded time;
+- `STALE` — prior source evidence is no longer fresh enough for active use;
+- `CLOSED` — source proves applications are no longer accepted;
+- `BLOCKED` / `UNKNOWN` — freshness cannot currently be established.
+
+**Application execution semantics**
+- `READY_TO_APPLY` — posting is live and application entry is available;
+- `FILLED` — deterministic fields were populated, but no submission evidence exists;
+- `AWAITING_OPERATOR` — manual answer/upload/verification/attestation/final-submit/send action is required;
+- `BLOCKED` — an exact runtime/provider dependency prevents safe progress;
+- `SUBMITTED` — qualifying on-page, sent-mail, provider, or explicitly operator-confirmed evidence exists.
+
+### No-promotion invariants
+
+- `FILLED != SUBMITTED`.
+- `LIVE_VERIFIED != SUBMITTED`.
+- A local/exported tracker mutation != provider synchronization.
+- Mail composition/draft != sent application.
+- Provider authentication failure cannot produce a stronger application state.
+- Submission state requires both a timestamp/reference and qualifying evidence bound to the same application.
+- Stale/closed verification removes an item from active Batch Apply routing without deleting historical evidence.
+
+### Channel model
+
+Batch Apply must route through a typed application channel such as `web_form`, `email`, or `external_provider`. Each channel owns its own confirmation evidence while sharing the same no-promotion rules.
+
 ## 7. Dependency graph and bounded sprints
 
 Graph:
 
-`EH-A0 -> { EH-A1 || EH-A2 || EH-A3 || EH-A4 || EH-U1 } -> EH-A5 -> EH-A6`
+`EH-A0 -> { EH-A1 || EH-A2 || EH-A3 || EH-A4 || EH-U1 } -> EH-A5`
+`EH-Q0 -> EH-Q1`
+`{ EH-A5 + EH-Q1 } -> EH-Q2 -> EH-A6`
 
-Maximum meaningful width after the contract floor: **5**, subject to refreshed file-collision inspection.
+Immediately after explicit implementation authorization, graph width is **2**: EH-A0 and EH-Q0 own independent contract floors. Maximum meaningful width later is **6** (EH-A1/A2/A3/A4/U1 plus EH-Q1), subject to refreshed file-collision inspection.
 
 ### EH-A0 — Progression & account-flow contract floor
 
-**Type:** harness spine + application contract  
+**Type:** harness spine + application contract
 **Goal:** convert the live-run corrections into typed contracts before implementation.
 
 **Owned scope**
@@ -187,8 +240,8 @@ Maximum meaningful width after the contract floor: **5**, subject to refreshed f
 
 ### EH-A1 — Safe intermediate progression engine
 
-**Type:** conventional application logic  
-**Dependencies:** EH-A0  
+**Type:** conventional application logic
+**Dependencies:** EH-A0
 **Goal:** implement typed page classification and Progression Plan execution.
 
 **Owned scope**
@@ -215,8 +268,8 @@ Maximum meaningful width after the contract floor: **5**, subject to refreshed f
 
 ### EH-A2 — Deterministic profile bootstrap + path hygiene
 
-**Type:** integration seam + cleanup  
-**Dependencies:** EH-A0  
+**Type:** integration seam + cleanup
+**Dependencies:** EH-A0
 **Goal:** remove local-agent/file-shuttling dependency for known identity fields and establish one coherent artifact/output ownership model.
 
 **Owned scope**
@@ -243,8 +296,8 @@ Maximum meaningful width after the contract floor: **5**, subject to refreshed f
 
 ### EH-A3 — Account bootstrap & temporary credential lifecycle
 
-**Type:** conventional application logic + security boundary  
-**Dependencies:** EH-A0  
+**Type:** conventional application logic + security boundary
+**Dependencies:** EH-A0
 **Goal:** make email-probe/login/create-account flows first-class and deterministic.
 
 **Owned scope**
@@ -274,8 +327,8 @@ Maximum meaningful width after the contract floor: **5**, subject to refreshed f
 
 ### EH-A4 — Adversarial application-flow fixtures and validator floor
 
-**Type:** validation  
-**Dependencies:** EH-A0  
+**Type:** validation
+**Dependencies:** EH-A0
 **Goal:** encode the exact live failures as permanent regression cases before convergence.
 
 **Owned scope**
@@ -299,11 +352,80 @@ Maximum meaningful width after the contract floor: **5**, subject to refreshed f
 
 **Proof ceiling:** deterministic repository/browser-harness proof.
 
+
+### EH-Q0 — Career-state queue & evidence contract floor
+
+**Type:** conventional application logic contract + validation
+**Dependencies:** explicit implementation authorization
+**Goal:** make Batch Apply freshness and application transitions first-class without weakening the existing no-promotion evidence model.
+
+**Owned scope**
+- `contracts/career-state.v1.schema.json`
+- `fixtures/career-state.v1.example.json`
+- `scripts/validate_career_state.py`
+- focused synthetic negative/positive fixtures or tests if repository convention requires them
+- this canonical plan status
+
+**Forbidden scope**
+- real employer records, profile/contact values, application answers, or private tracker exports
+- browser DOM/navigation implementation
+- provider-specific Google Drive or mail implementation
+- final-submit automation
+
+**Acceptance**
+- backward-compatible explicit opportunity freshness/verification semantics;
+- explicit application execution semantics for ready/filled/awaiting-operator/blocked/submitted;
+- typed application channel without embedding provider-specific behavior in the state model;
+- submission promotion requires qualifying evidence bound to the application;
+- negative fixtures reject filled-without-submission-proof and provider-blocked-to-submitted promotion.
+
+**Validation**
+- `python scripts/validate_career_state.py`
+- focused career-state negative/positive cases
+- `git diff --check`
+
+**Proof ceiling:** repository schema/validator proof; no live provider synchronization claim.
+
+### EH-Q1 — External tracker/provider reconciliation adapter
+
+**Type:** integration seam + conventional application logic
+**Dependencies:** EH-Q0
+**Goal:** reconcile queue freshness and application progress with external provider state without treating exports, local edits, drafts, or authentication failures as stronger proof.
+
+**Owned scope**
+- `contracts/application-companion.v1.json` provider-agnostic reconciliation semantics
+- smallest existing companion/sync adapter surface identified after refreshed code inspection
+- sanitized reconciliation fixtures/tests
+- relevant application-companion workflow/documentation
+- no provider credential or real job data
+
+**Forbidden scope**
+- Application Assist DOM/progression implementation
+- provider secrets/tokens or real tracker contents
+- provider-specific domain states that duplicate career-state authority
+- auto-submit/attestation
+
+**Acceptance**
+- provider read-back is required before claiming provider synchronization;
+- live posting verification can promote freshness to `LIVE_VERIFIED`; stale/closed evidence deactivates queue execution without erasing history;
+- local/export mutations remain typed as local evidence until reconciled;
+- provider authorization failure produces `BLOCKED` or `AWAITING_OPERATOR`, never `SUBMITTED`;
+- email/draft paths require sent/outbox/provider confirmation or operator-confirmed evidence before submission promotion;
+- reconciliation is idempotent and preserves conflicts rather than silently overwriting stronger evidence.
+
+**Validation**
+- application-companion validator/tests
+- synthetic provider reconciliation positive/negative cases
+- career-state validator
+- `git diff --check`
+
+**Proof ceiling:** repository + synthetic adapter proof. Live Google Drive/mail/provider proof requires separately authorized connected-provider execution.
+
 ### EH-U1 — Ambient Companion Presence
 
-**Type:** UX polish + integration adapter  
-**Dependencies:** EH-A0  
-**Canonical detailed plan:** `docs/APPLICATION_ASSIST_AMBIENT_COMPANION_PLAN.md`  
+**Type:** UX polish + integration adapter
+**Dependencies:** EH-A0
+**Canonical detailed plan:** `docs/APPLICATION_ASSIST_AMBIENT_COMPANION_PLAN.md`
 **Goal:** make EscapeHatch's active participation continuously legible without turning the product into an intrusive popup.
 
 **Owned scope**
@@ -336,9 +458,9 @@ Maximum meaningful width after the contract floor: **5**, subject to refreshed f
 
 ### EH-A5 — Product convergence: one continuous application run
 
-**Type:** integration seam + UI  
-**Dependencies:** EH-A1, EH-A2, EH-A3, EH-A4  
-**Goal:** integrate progression, profile bootstrap, and account bootstrap into one coherent extension/cockpit experience.
+**Type:** integration seam + UI
+**Dependencies:** EH-A1, EH-A2, EH-A3, EH-A4, EH-U1
+**Goal:** integrate progression, profile bootstrap, account bootstrap, and ambient presence into one coherent extension/cockpit experience.
 
 **Owned scope**
 - shared session state integration
@@ -361,10 +483,50 @@ Maximum meaningful width after the contract floor: **5**, subject to refreshed f
 
 **Proof ceiling:** integrated synthetic/browser proof plus local unpacked-extension observation.
 
+
+### EH-Q2 — Batch application coordinator & evidence close loop
+
+**Type:** integration seam + runtime orchestration
+**Dependencies:** EH-A5, EH-Q1
+**Goal:** coordinate one prioritized application at a time across web-form/email/external-provider channels while preserving freshness, manual gates, and submission evidence.
+
+**Owned scope**
+- smallest existing application-companion/batch orchestration surface selected after refreshed code inspection
+- queue item selection and channel routing
+- transition receipts/status projection
+- reconciliation hooks into career-state/application-companion
+- combined sanitized tests and fixtures
+- status/control integration needed for a continuous Batch Apply run
+
+**Forbidden scope**
+- scraping unrelated job boards
+- real application data in Git/logs/fixtures
+- bypassing CAPTCHA/MFA/legal/EEO/attestation/manual upload gates
+- automatic final submission
+- inventing provider success when auth/send/read-back is unavailable
+
+**Required behavior**
+- select one dependency-ready queue item according to existing priority policy;
+- reverify freshness before fill/application effort;
+- immediately retire stale/closed items from active routing while preserving evidence;
+- route web forms through the converged Application Assist session;
+- route email/external channels through authorized adapters or stop as `AWAITING_OPERATOR`/`BLOCKED`;
+- distinguish `FILLED`, `AWAITING_OPERATOR`, and `SUBMITTED`;
+- after each evidence-changing transition, persist/reconcile the smallest safe receipt and require qualifying confirmation before submission promotion;
+- never let a provider failure or local tracker mutation masquerade as cloud/provider completion.
+
+**Validation**
+- combined career-state + companion + Application Assist tests
+- synthetic multi-item batch with live/stale/blocked/manual/submitted paths
+- channel-routing negative cases
+- `git diff --check`
+
+**Proof ceiling:** integrated synthetic/browser/provider-adapter proof; no universal ATS or provider claim.
+
 ### EH-A6 — Live acceptance, release classification, and durable closeout
 
-**Type:** runtime proof + docs/reporting + release hygiene  
-**Dependencies:** EH-A5  
+**Type:** runtime proof + docs/reporting + release hygiene
+**Dependencies:** EH-A5
 **Goal:** prove the workflow under controlled live use, document compatibility limits, and promote through repository policy.
 
 **Owned scope**
@@ -432,11 +594,33 @@ No separate agent-trigger registry is currently evidenced as the canonical owner
 
 Trigger conditions, inputs, outputs, and negative cases must be deterministic and tested.
 
+
+### Batch Apply capability/trigger factoring
+
+Do not create a new skill merely to hold domain logic. Keep the existing application-form mapping skill for reusable mapping guidance. Implement behavior in contracts/application code first; introduce a new skill only when a repeatable human/agent workflow remains after those owners exist.
+
+Planned reusable capabilities:
+- `verify_posting_freshness` — input opportunity source + prior freshness; output typed verification evidence/state.
+- `reconcile_application_queue` — input canonical career-state + provider snapshot; output conflict-preserving reconciliation result.
+- `route_application_channel` — input application channel + authorization availability; output bounded web/email/external execution route or manual/block reason.
+- `record_application_transition` — input prior state + qualifying evidence; output a no-promotion-validated transition receipt.
+
+Planned deterministic triggers:
+- `queue_item_selected` -> freshness verification before application work.
+- `posting_live_verified` -> permit `READY_TO_APPLY` only when application entry is available.
+- `posting_stale_or_closed` -> deactivate active routing while preserving history.
+- `provider_auth_blocked` -> `BLOCKED` / `AWAITING_OPERATOR`; never submit.
+- `form_filled` -> `FILLED`; never submit.
+- `operator_gate_reached` -> `AWAITING_OPERATOR`.
+- `submission_confirmation_observed` -> submission transition only after evidence validation.
+
+Each capability/trigger must define typed inputs/outputs, preconditions, guardrails, canonical owner, tests, and proof ceiling in EH-Q0/Q1/Q2. Prompts are routing/help surfaces, not the implementation.
+
 ## 10. Application-logic factoring
 
-- **Domain services:** profile validation/projection, account credential generation, progression decisioning.
-- **State machines:** assist session; account bootstrap; page progression.
-- **Adapters:** DOM descriptor adapter; navigation adapter; cockpit-to-extension profile sync; browser session-secret store.
+- **Domain services:** profile validation/projection, account credential generation, progression decisioning, opportunity freshness verification, application transition validation, queue reconciliation, channel routing.
+- **State machines:** assist session; account bootstrap; page progression; opportunity freshness; batch-application execution/evidence.
+- **Adapters:** DOM descriptor adapter; navigation adapter; cockpit-to-extension profile sync; browser session-secret store; external tracker/mail/provider reconciliation adapters behind provider-agnostic contracts.
 - **Persistence:** existing user-owned profile/preferences; session-only generated secret state; no Git persistence for live values.
 - **UI:** extension popup / modality adapter; cockpit sync/status surface; mismatch/final-review status.
 - **Launchers:** existing Windows lifecycle remains separate.
@@ -447,13 +631,13 @@ Trigger conditions, inputs, outputs, and negative cases must be deterministic an
 
 Each implementation lane should run its focused checks first, then convergence runs:
 
-1. progression/account contract validators;
-2. existing application harness validator;
+1. progression/account contract validators and career-state queue/evidence validator;
+2. existing application harness + application companion validators;
 3. assist session contract tests;
 4. assist runtime tests;
 5. new progression/account synthetic tests;
-6. browser fixture tests;
-7. application-assist CI;
+6. browser fixture tests + synthetic queue/provider reconciliation tests;
+7. application-assist and career-state/companion CI;
 8. `git diff --check`;
 9. local unpacked-extension observed flow;
 10. controlled live ATS observation;
@@ -471,60 +655,82 @@ These are permanent product regressions if they recur:
 - a generated temporary credential appears in Git, export JSON, logs, screenshots, or receipts;
 - EscapeHatch auto-activates final Submit/Apply/certification;
 - unknown required controls are silently ignored while progressing;
-- source/build/user-state/recovery paths become ambiguous enough that the user must discover them manually.
+- source/build/user-state/recovery paths become ambiguous enough that the user must discover them manually;
+- a local/export tracker edit is reported as provider synchronization without provider read-back;
+- a stale/closed opportunity remains in the active Batch Apply queue after authoritative closure evidence;
+- `FILLED` or `READY_TO_APPLY` is reported as `SUBMITTED` without qualifying evidence;
+- an email/provider authorization failure is promoted to sent/submitted state;
+- real employer/application/profile data appears in tracked batch fixtures or plan artifacts.
 
 ## 13. Contract horizon
 
 | Contract | Owner | Current status | Next transition |
 | --- | --- | --- | --- |
-| User-experience intent | this plan | PROVEN from live-run corrections | bind into EH-A0 machine contract |
+| User-experience intent | this plan | PROVEN from live-run corrections | bind into EH-A0/EH-Q0 machine contracts |
 | Application-assist contract | `contracts/application-assist-session.v1.json` | STALE relative to desired behavior | EH-A0 revises intermediate-navigation policy while retaining final-submit boundary |
+| Career queue/evidence contract | `contracts/career-state.v1.schema.json` | PARTIAL; lacks observed execution/freshness states | EH-Q0 |
 | Application runtime | `browser/application-assist/*` | IMPLEMENTED for manual progression only | EH-A1/A3 then EH-A5 |
 | Profile bridge | cockpit + extension adapters | UNPROVEN / operationally failed live run | EH-A2 |
-| Validation regression floor | tests/fixtures/workflow | PARTIAL | EH-A4 then combined EH-A5 |
-| Live browser acceptance | operator workstation | REQUIRED SUCCESSOR WORK | EH-A6 |
-| Mainline integration | repository promotion owner | REQUIRED SUCCESSOR WORK | after exact-candidate validation |
+| External tracker/provider reconciliation | application companion + provider adapters | PARTIAL; provider-agnostic sync boundary exists, Batch Apply reconciliation unimplemented | EH-Q1 |
+| Batch coordinator | application orchestration owner | UNPROVEN | EH-Q2 after EH-A5 + EH-Q1 |
+| Validation regression floor | tests/fixtures/workflows | PARTIAL | EH-A4 + EH-Q0/Q1 then combined EH-Q2 |
+| Live browser/provider acceptance | operator workstation / authorized provider | REQUIRED SUCCESSOR WORK | EH-A6 |
+| Mainline/integration promotion | repository promotion owner | REQUIRED SUCCESSOR WORK | after exact-candidate validation |
 | Universal ATS compatibility | no owner can prove universally | NOT APPLICABLE as a completion claim | document observed compatibility only |
 
 ## 14. Launch order
 
 Planning output only; **no implementation lane is dispatched by this planning pass**.
 
-1. **EH-A0 — Progression & account-flow contract floor**
-2. Parallel group after EH-A0:
-   - **EH-A1 — Safe intermediate progression engine**
-   - **EH-A2 — Deterministic profile bootstrap + path hygiene**
-   - **EH-A3 — Account bootstrap & temporary credential lifecycle**
-   - **EH-A4 — Adversarial application-flow fixtures and validator floor**
-   - **EH-U1 — Ambient Companion Presence**
-3. **EH-A5 — Product convergence: one continuous application run**
-4. **EH-A6 — Live acceptance, release classification, and durable closeout**
+After explicit implementation authorization:
+
+1. **Parallel Wave 0 — contract floors**
+   - **EH-A0 — Progression & account-flow contract floor**
+   - **EH-Q0 — Career-state queue & evidence contract floor**
+2. **Parallel Wave 1 — browser/product lanes after their owning floor**
+   - after EH-A0: **EH-A1**, **EH-A2**, **EH-A3**, **EH-A4**, **EH-U1**
+   - after EH-Q0: **EH-Q1 — External tracker/provider reconciliation adapter**
+3. **EH-A5 — Product convergence: one continuous application run** after A1/A2/A3/A4/U1.
+4. **EH-Q2 — Batch application coordinator & evidence close loop** after A5 + Q1.
+5. **EH-A6 — Live acceptance, release classification, and durable closeout** after Q2.
+
+Parallel execution is **REQUIRED AFTER AUTHORIZATION** because Wave 0 has two meaningful non-conflicting contract owners. The planning pass does not pretend that lane enumeration is dispatch proof.
 
 ## 15. First executable continuation
 
-**Owner:** local repository agent acting as EH-A0.  
-**Dependency:** refreshed local checkout must contain `be4a4c41403d700285084f941f2725a95a9877b5` or a later integration head that still contains this plan after reconciliation.
+**Current authorization gate:** product/runtime implementation is not authorized by this planning pass.
 
-First action:
+**NEXT ACTION — operator approval:** explicitly authorize the implementation floor, for example: `EXECUTE EH-A0 + EH-Q0`.
+
+Only after that gate succeeds, the execution owner must resolve the current checkout portably rather than assuming the historical OneDrive path:
 
 ```powershell
-Set-Location 'C:\Users\pa_rperez26\OneDrive - Northwell Health\OG Laptop Backup\Desktop\dev\EscapeHatch'
+$repo = & pwsh -NoProfile -File scripts/resolve_repo.ps1 -ResolveOnly
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+Set-Location -LiteralPath $repo
 git fetch --all --prune --tags
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 git status --short --branch
-git branch --show-current
-git rev-parse HEAD
 git merge-base --is-ancestor be4a4c41403d700285084f941f2725a95a9877b5 origin/integration/replit-donor-b01f628-20260921
-git show origin/plan/application-assist-autopilot-20260923:docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 ```
 
-Then the agent should create an isolated EH-A0 worktree/branch from the refreshed integration floor, revise the contract/tests only, validate, and return to the dependency graph. It must not begin EH-A1/A2/A3/A4 before EH-A0's contract floor is integrated or otherwise pinned as the shared base.
+The authorized executor then creates isolated writers for EH-A0 and EH-Q0 from the refreshed integration floor and dispatches them concurrently through the first safe evidenced adapter rung. It must not start their dependent lanes until the corresponding contract floor is integrated/pinned.
+
+### Dispatch artifact collision
+
+The repository's active Windows lifecycle graph already reserves `Outputs/prompt-parallel-dispatch/manifest.json` as its canonical target. This plan therefore stores its machine-readable graph at:
+
+`Outputs/prompt-parallel-dispatch/runs/escapehatch-application-assist-autopilot-20260923/manifest.json`
+
+That run-scoped manifest is durable orchestration evidence, but **does not satisfy canonical dispatch validation/receipt proof** while `harness/contracts/prompt-parallel-dispatch.v1.json` and `scripts/prompt_parallel_dispatch.py` remain absent and the generic target remains owned by the lifecycle graph. Do not rebind the generic path from this application-assist planning lane.
 
 ## 16. Closeout state of this planning pass
 
-- **COMPLETED / PROVEN:** five live-run failures captured; current provider floor refreshed; current manual-navigation contract inspected; collision surfaces identified; successor dependency graph defined.
-- **REMAINING GAPS:** no product implementation has been performed; no live ATS proof has been claimed.
-- **RISKS:** account credentials and navigation are sensitive surfaces; both require narrow typed gates and negative fixtures.
-- **BLOCKERS:** canonical `prompt-parallel-dispatch` schema/runner are absent from the current integration floor, so dispatch-manifest validation/receipt proof cannot be claimed here.
+- **COMPLETED / PROVEN:** live-run browser/account/profile/path defects plus Batch Apply tracker/freshness/evidence/channel defects captured; provider floor reconciled; queue/evidence ownership assigned to career-state/application-companion rather than prompts; dependency graph and collision ownership updated.
+- **REMAINING GAPS:** no product implementation has been performed; no canonical dispatch validation/receipt exists; no live ATS/provider proof has been promoted.
+- **RISKS:** account credentials, browser navigation, tracker reconciliation, and submission evidence are sensitive surfaces; all require typed gates and negative fixtures. The repository is public, so real application/profile/provider data must remain external.
+- **BLOCKERS:** implementation awaits explicit operator authorization; canonical dispatch schema/runner are absent; the generic dispatch target is reserved by the active Windows lifecycle graph.
 - **PROOF CEILING:** durable planning/provider evidence only.
-- **INTEGRATION STATE:** plan branch only; runtime integration branch remains unchanged by this planning pass.
-- **NEXT ACTION:** EH-A0 contract-floor implementation by the local repository agent after refreshed checkout/reconciliation.
+- **INTEGRATION STATE:** planning PR only; product/runtime integration branch remains unchanged by this planning pass.
+- **NEXT ACTION:** operator explicitly authorizes `EH-A0 + EH-Q0`; only then may the execution owner dispatch the two contract floors in parallel.

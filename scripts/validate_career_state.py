@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+from datetime import datetime
 from pathlib import Path
 
 R = Path(__file__).resolve().parents[1]
@@ -25,6 +26,11 @@ LEGACY_REQUIRED = (
     "evidence",
 )
 TOP_ALLOWED = LEGACY_REQUIRED + ("study_guidance",)
+
+VERIFICATION_STATES = {"SNAPSHOT", "LIVE_VERIFIED", "STALE", "CLOSED", "BLOCKED", "UNKNOWN"}
+EXECUTION_STATES = {"READY_TO_APPLY", "FILLED", "AWAITING_OPERATOR", "BLOCKED", "SUBMITTED"}
+CHANNELS = {"web_form", "email", "external_provider"}
+QUALIFYING_EVIDENCE_KINDS = {"submission_receipt", "confirmation", "correspondence"}
 
 
 class ContractError(ValueError):
@@ -51,6 +57,18 @@ def require_keys(obj, required, allowed, where):
         raise ContractError(f"{where} missing: {', '.join(missing)}")
     if extra:
         raise ContractError(f"{where} unknown fields: {', '.join(extra)}")
+
+
+def _is_datetime(value: str) -> bool:
+    if not isinstance(value, str) or not value:
+        return False
+    try:
+        # Handle Zulu time
+        v = value.replace("Z", "+00:00") if value.endswith("Z") else value
+        datetime.fromisoformat(v)
+        return True
+    except Exception:
+        return False
 
 
 def artifact(value, where):
@@ -87,6 +105,35 @@ def uniq(items, name):
     if len(ids) != len(set(ids)):
         raise ContractError(f"{name} ids must be unique")
     return set(ids)
+
+
+def validate_verification(value, where):
+    require_keys(value, ("state", "verified_at"), ("state", "verified_at", "detail", "source"), where)
+    if value["state"] not in VERIFICATION_STATES:
+        raise ContractError(f"{where}.state invalid: {value['state']}")
+    if not isinstance(value["verified_at"], str) or not _is_datetime(value["verified_at"]):
+        raise ContractError(f"{where}.verified_at must be date-time")
+    for key in ("detail", "source"):
+        if key in value and (not isinstance(value[key], str) or not value[key]):
+            raise ContractError(f"{where}.{key} must be a non-empty string")
+
+
+def validate_execution(value, where):
+    require_keys(
+        value,
+        ("state", "channel", "last_transition_at"),
+        ("state", "channel", "last_transition_at", "evidence_id", "block_reason", "awaiting_reason", "detail"),
+        where,
+    )
+    if value["state"] not in EXECUTION_STATES:
+        raise ContractError(f"{where}.state invalid: {value['state']}")
+    if value["channel"] not in CHANNELS:
+        raise ContractError(f"{where}.channel invalid: {value['channel']}")
+    if not isinstance(value["last_transition_at"], str) or not _is_datetime(value["last_transition_at"]):
+        raise ContractError(f"{where}.last_transition_at must be date-time")
+    for key in ("evidence_id", "block_reason", "awaiting_reason", "detail"):
+        if key in value and (not isinstance(value[key], str) or not value[key]):
+            raise ContractError(f"{where}.{key} must be a non-empty string")
 
 
 def validate_guidance(record, where, opportunity_ids, applications):
@@ -238,7 +285,7 @@ def validate(state):
         where = f"opportunities[{index}]"
         allowed = (
             "id", "title", "organization", "status", "priority", "fit_score", "requirements_gaps",
-            "next_action", "source", "apply_link", "posting_snapshot", "captured_at",
+            "next_action", "source", "apply_link", "posting_snapshot", "captured_at", "verification",
         )
         require_keys(opportunity, ("id", "title", "organization", "status", "source"), allowed, where)
         artifact(opportunity["source"], f"{where}.source")
@@ -263,6 +310,8 @@ def validate(state):
                 raise ContractError(f"{where}.apply_link must be uri")
         if "posting_snapshot" in opportunity:
             artifact(opportunity["posting_snapshot"], f"{where}.posting_snapshot")
+        if "verification" in opportunity:
+            validate_verification(opportunity["verification"], f"{where}.verification")
 
     for index, resume in enumerate(state["resumes"]):
         where = f"resumes[{index}]"
@@ -278,15 +327,18 @@ def validate(state):
         require_keys(
             application,
             ("id", "opportunity_id", "resume_id", "status", "submitted_at"),
-            ("id", "opportunity_id", "resume_id", "status", "submitted_at", "external_reference"),
+            ("id", "opportunity_id", "resume_id", "status", "submitted_at", "external_reference", "execution"),
             where,
         )
         if application["opportunity_id"] not in opportunity_ids:
             raise ContractError(f"{where}.opportunity_id dangling")
         if application["resume_id"] not in resume_ids:
             raise ContractError(f"{where}.resume_id dangling")
+        if "execution" in application:
+            validate_execution(application["execution"], f"{where}.execution")
 
     applications = {item["id"]: item for item in state["applications"]}
+    opportunities_by_id = {item["id"]: item for item in state["opportunities"]}
     for index, guidance_record in enumerate(guidance_items):
         validate_guidance(guidance_record, f"study_guidance[{index}]", opportunity_ids, applications)
 
@@ -308,12 +360,80 @@ def validate(state):
         if evidence["application_id"] not in application_ids:
             raise ContractError(f"{where}.application_id dangling")
         artifact(evidence["artifact"], f"{where}.artifact")
+        if not isinstance(evidence["observed_at"], str) or not _is_datetime(evidence["observed_at"]):
+            raise ContractError(f"{where}.observed_at must be date-time")
+
+    # Batch Apply freshness / execution invariants
+    evidence_by_id = {e["id"]: e for e in state["evidence"]}
+    evidence_by_app: dict[str, list] = {}
+    for ev in state["evidence"]:
+        evidence_by_app.setdefault(ev["application_id"], []).append(ev)
+
+    for index, application in enumerate(state["applications"]):
+        where = f"applications[{index}]"
+        execution = application.get("execution")
+        if execution is None:
+            continue
+        opp = opportunities_by_id.get(application["opportunity_id"])
+        verification = opp.get("verification") if opp else None
+        v_state = verification.get("state") if verification else None
+        e_state = execution["state"]
+        # Active routing guards: READY_TO_APPLY and FILLED require LIVE_VERIFIED (freshness before effort)
+        if e_state in {"READY_TO_APPLY", "FILLED"}:
+            if verification is not None and v_state != "LIVE_VERIFIED":
+                raise ContractError(f"{where}.execution {e_state} requires opportunity verification LIVE_VERIFIED but found {v_state}")
+        # General active queue blocking: stale/closed removes from active Batch Apply routing without deleting history
+        if e_state in {"READY_TO_APPLY", "FILLED"} and verification is not None and v_state in {"STALE", "CLOSED"}:
+            raise ContractError(f"{where}.execution {e_state} blocked: opportunity verification {v_state} removes item from active Batch Apply routing")
+        # BLOCKED verification cannot promote to SUBMITTED (provider auth failure)
+        if e_state == "SUBMITTED" and verification is not None and v_state == "BLOCKED":
+            raise ContractError(f"{where}.execution SUBMITTED not allowed when opportunity verification is BLOCKED")
+        # SUBMITTED requires qualifying evidence
+        if e_state == "SUBMITTED":
+            app_evidences = evidence_by_app.get(application["id"], [])
+            qualifying = [e for e in app_evidences if e["kind"] in QUALIFYING_EVIDENCE_KINDS]
+            if not qualifying:
+                raise ContractError(f"{where}.execution SUBMITTED requires qualifying evidence (submission_receipt/confirmation/correspondence) bound to same application")
+            eid = execution.get("evidence_id")
+            if eid is not None:
+                if eid not in evidence_by_id:
+                    raise ContractError(f"{where}.execution.evidence_id dangling: {eid}")
+                ev = evidence_by_id[eid]
+                if ev["application_id"] != application["id"]:
+                    raise ContractError(f"{where}.execution.evidence_id must reference evidence bound to same application")
+                if ev["kind"] not in QUALIFYING_EVIDENCE_KINDS:
+                    raise ContractError(f"{where}.execution.evidence_id must reference qualifying evidence kind, found {ev['kind']}")
+                # Draft check: note is not qualifying already covers draft/composed email != sent
+            # Require timestamp+reference: execution last_transition_at already validated, but also need application submitted_at and external_reference or evidence
+            if application.get("submitted_at") is None:
+                raise ContractError(f"{where}.execution SUBMITTED requires application.submitted_at timestamp")
+            if not _is_datetime(application["submitted_at"]):
+                raise ContractError(f"{where}.submitted_at must be date-time when execution SUBMITTED")
+            # Ensure SUBMITTED not derived from LIVE_VERIFIED alone: covered by requiring qualifying evidence above
+            # Additional channel-specific: email channel draft check already via qualifying kind
+
+    # Count verification / execution stats for reporting
+    verification_states: dict[str, int] = {}
+    for opp in state["opportunities"]:
+        v = opp.get("verification")
+        if v:
+            verification_states[v["state"]] = verification_states.get(v["state"], 0) + 1
+    execution_states: dict[str, int] = {}
+    channels: dict[str, int] = {}
+    for app in state["applications"]:
+        e = app.get("execution")
+        if e:
+            execution_states[e["state"]] = execution_states.get(e["state"], 0) + 1
+            channels[e["channel"]] = channels.get(e["channel"], 0) + 1
 
     return {
         "opportunities": len(opportunity_ids),
         "applications": len(application_ids),
         "guidance": len(guidance_ids),
         "career_objective": objective is not None,
+        "verification_states": verification_states,
+        "execution_states": execution_states,
+        "channels": channels,
     }
 
 
@@ -341,6 +461,125 @@ def self_tests(good):
     item["study_guidance"][0]["opportunity_id"] = "opp-other"
     negatives.append(item)
 
+    # --- EH-Q0 new negative fixtures: freshness / execution / channel / no-promotion ---
+    # 1. FILLED without submission proof cannot become SUBMITTED (no qualifying evidence)
+    item = json.loads(json.dumps(good))
+    item["applications"][0]["execution"]["state"] = "SUBMITTED"
+    item["applications"][0]["status"] = "submitted"
+    item["applications"][0]["submitted_at"] = "2026-09-10T05:20:00-04:00"
+    # app-example has no evidence, so SUBMITTED should fail
+    negatives.append(item)
+
+    # 2. LIVE_VERIFIED cannot be SUBMITTED without qualifying evidence (same as above but explicit)
+    item = json.loads(json.dumps(good))
+    item["applications"][0]["execution"]["state"] = "SUBMITTED"
+    item["applications"][0]["status"] = "submitted"
+    item["applications"][0]["submitted_at"] = "2026-09-10T05:21:00-04:00"
+    # keep verification LIVE_VERIFIED, no evidence for app-example
+    negatives.append(item)
+
+    # 3. STALE verification still marked READY_TO_APPLY (active routing should be blocked)
+    item = json.loads(json.dumps(good))
+    item["opportunities"][0]["verification"]["state"] = "STALE"
+    # app-example remains READY_TO_APPLY -> should fail
+    negatives.append(item)
+
+    # 4. CLOSED verification with FILLED execution (stale/closed removes from active routing)
+    item = json.loads(json.dumps(good))
+    item["opportunities"][1]["verification"]["state"] = "CLOSED"
+    item["applications"][1]["execution"]["state"] = "FILLED"
+    item["applications"][1]["execution"]["channel"] = "web_form"
+    item["applications"][1]["status"] = "draft"
+    item["applications"][1]["submitted_at"] = None
+    # remove evidence requirement for FILLED, but should fail due to CLOSED+FILLED
+    negatives.append(item)
+
+    # 5. Provider auth failure (BLOCKED verification) cannot become SUBMITTED
+    item = json.loads(json.dumps(good))
+    item["opportunities"][0]["verification"]["state"] = "BLOCKED"
+    item["opportunities"][0]["verification"]["detail"] = "Provider auth blocked"
+    item["applications"][0]["execution"]["state"] = "SUBMITTED"
+    item["applications"][0]["status"] = "submitted"
+    item["applications"][0]["submitted_at"] = "2026-09-10T05:22:00-04:00"
+    # even with evidence for other app, app-example has no qualifying evidence -> fails; but we add evidence to try to cheat
+    item["evidence"].append({
+        "id": "ev-blocked-fake",
+        "application_id": "app-example",
+        "kind": "submission_receipt",
+        "artifact": {"owner": "user", "kind": "relative_path", "locator": "evidence/app-example/fake.json"},
+        "observed_at": "2026-09-10T05:22:00-04:00"
+    })
+    negatives.append(item)
+
+    # 6. Draft/composed email != sent: email channel SUBMITTED with note (draft) not qualifying
+    item = json.loads(json.dumps(good))
+    # change the email evidence kind to note (draft) -> SUBMITTED should fail because note is not qualifying
+    item["evidence"][0]["kind"] = "note"
+    negatives.append(item)
+
+    # 7. Missing verification timestamp (verified_at required)
+    item = json.loads(json.dumps(good))
+    item["opportunities"][0]["verification"].pop("verified_at")
+    negatives.append(item)
+
+    # 8. Invalid channel
+    item = json.loads(json.dumps(good))
+    item["applications"][0]["execution"]["channel"] = "carrier_pigeon"
+    negatives.append(item)
+
+    # 9. CLOSED verification with READY_TO_APPLY (should be blocked)
+    item = json.loads(json.dumps(good))
+    item["opportunities"][0]["verification"]["state"] = "CLOSED"
+    negatives.append(item)
+
+    # 10. Invalid verified_at format
+    item = json.loads(json.dumps(good))
+    item["opportunities"][0]["verification"]["verified_at"] = "not-a-datetime"
+    negatives.append(item)
+
+    # 11. Execution evidence_id dangling
+    item = json.loads(json.dumps(good))
+    item["applications"][1]["execution"]["evidence_id"] = "missing-evidence-id"
+    negatives.append(item)
+
+    # 12. Execution evidence_id references non-qualifying kind (note)
+    item = json.loads(json.dumps(good))
+    item["evidence"].append({
+        "id": "ev-note-draft",
+        "application_id": "app-example-email",
+        "kind": "note",
+        "artifact": {"owner": "user", "kind": "relative_path", "locator": "evidence/app-example-email/draft.txt"},
+        "observed_at": "2026-09-10T05:10:00-04:00"
+    })
+    item["applications"][1]["execution"]["evidence_id"] = "ev-note-draft"
+    negatives.append(item)
+
+    # 13. Execution SUBMITTED requires submitted_at timestamp (local tracker mutation != provider sync)
+    item = json.loads(json.dumps(good))
+    # app-email is SUBMITTED with evidence, but clear submitted_at -> should fail
+    item["applications"][1]["submitted_at"] = None
+    negatives.append(item)
+
+    # 14. UNKNOWN verification cannot be READY_TO_APPLY
+    item = json.loads(json.dumps(good))
+    item["opportunities"][0]["verification"]["state"] = "UNKNOWN"
+    negatives.append(item)
+
+    # 15. Invalid verification state
+    item = json.loads(json.dumps(good))
+    item["opportunities"][0]["verification"]["state"] = "INVALID_STATE"
+    negatives.append(item)
+
+    # 16. Invalid execution state
+    item = json.loads(json.dumps(good))
+    item["applications"][0]["execution"]["state"] = "INVALID_EXEC"
+    negatives.append(item)
+
+    # 17. Missing execution required fields (channel)
+    item = json.loads(json.dumps(good))
+    item["applications"][0]["execution"].pop("channel")
+    negatives.append(item)
+
     for number, candidate in enumerate(negatives, 1):
         try:
             validate(candidate)
@@ -355,6 +594,27 @@ def self_tests(good):
     legacy_without_objective = json.loads(json.dumps(good))
     legacy_without_objective["profile"].pop("career_objective")
     validate(legacy_without_objective)
+
+    # Legacy without new freshness/execution fields must still PASS (backward compat)
+    legacy_without_verification = json.loads(json.dumps(good))
+    for opp in legacy_without_verification["opportunities"]:
+        opp.pop("verification", None)
+    for app in legacy_without_verification["applications"]:
+        app.pop("execution", None)
+    # Keep evidence but need to adjust application status for SUBMITTED legacy? The email app has execution SUBMITTED; removing execution leaves status submitted with evidence, which is fine.
+    validate(legacy_without_verification)
+
+    legacy_without_evidence_for_submitted = json.loads(json.dumps(legacy_without_verification))
+    # Also test that legacy file without any verification/execution still validates
+    # Already covered, but ensure the original minimal legacy without study_guidance and without verification passes
+    minimal_legacy = json.loads(json.dumps(good))
+    minimal_legacy.pop("study_guidance")
+    for opp in minimal_legacy["opportunities"]:
+        opp.pop("verification", None)
+    for app in minimal_legacy["applications"]:
+        app.pop("execution", None)
+    validate(minimal_legacy)
+
     return len(negatives)
 
 
@@ -372,6 +632,29 @@ def main():
             raise ContractError("profile schema must expose the optional career_objective extension")
         if "career_objective" in profile_schema.get("required", []):
             raise ContractError("career-state v1 career_objective must remain backward-compatible")
+        # EH-Q0: verification and execution extensions must be optional (backward-compatible)
+        opportunity_schema = schema.get("$defs", {}).get("opportunity", {})
+        if "verification" not in opportunity_schema.get("properties", {}):
+            raise ContractError("schema must expose the optional opportunity.verification extension")
+        if "verification" in opportunity_schema.get("required", []):
+            raise ContractError("career-state v1 opportunity.verification must remain backward-compatible")
+        verification_def = schema.get("$defs", {}).get("opportunityVerification", {})
+        if not verification_def or set(verification_def.get("properties", {}).get("state", {}).get("enum", [])) != VERIFICATION_STATES:
+            raise ContractError("opportunityVerification state enum mismatch")
+        if "verified_at" not in verification_def.get("required", []):
+            raise ContractError("opportunityVerification must require verified_at")
+        application_schema = schema.get("$defs", {}).get("application", {})
+        if "execution" not in application_schema.get("properties", {}):
+            raise ContractError("schema must expose the optional application.execution extension")
+        if "execution" in application_schema.get("required", []):
+            raise ContractError("career-state v1 application.execution must remain backward-compatible")
+        execution_def = schema.get("$defs", {}).get("applicationExecution", {})
+        if not execution_def or set(execution_def.get("properties", {}).get("state", {}).get("enum", [])) != EXECUTION_STATES:
+            raise ContractError("applicationExecution state enum mismatch")
+        if set(execution_def.get("properties", {}).get("channel", {}).get("enum", [])) != CHANNELS:
+            raise ContractError("applicationExecution channel enum mismatch")
+        if "last_transition_at" not in execution_def.get("required", []):
+            raise ContractError("applicationExecution must require last_transition_at")
         state = load(FIXTURE)
         counts = validate(state)
         negative_count = self_tests(state)
@@ -383,8 +666,12 @@ def main():
     print(f"fixture={FIXTURE.relative_to(R)}")
     print(f"career_objective={'PASS' if counts['career_objective'] else 'ABSENT'}")
     print(f"guidance_records={counts['guidance']}")
+    print(f"verification_states={counts.get('verification_states', {})}")
+    print(f"execution_states={counts.get('execution_states', {})}")
+    print(f"channels={counts.get('channels', {})}")
     print("legacy_v1_without_guidance=PASS")
     print("legacy_v1_without_career_objective=PASS")
+    print("legacy_v1_without_verification_execution=PASS")
     print(f"negative_fixtures={negative_count}")
     return 0
 

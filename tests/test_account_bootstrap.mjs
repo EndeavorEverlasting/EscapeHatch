@@ -63,6 +63,9 @@ assert.equal(accountFlow.detectDuplicateAccount({ errorMessage: "An account alre
 assert.equal(accountFlow.detectDuplicateAccount({ accountExistsConflict: true }), true);
 assert.equal(accountFlow.detectDuplicateAccount({}), false);
 assert.equal(accountFlow.transition("EMAIL_PROBE", "ACCOUNT_CREATION", { duplicateAccountDetected: true }), "REVIEW_REQUIRED");
+assert.equal(accountFlow.transition("EMAIL_PROBE", "ACCOUNT_CREATION", { accountExistsConflict: true }), "REVIEW_REQUIRED");
+assert.equal(accountFlow.transition("CREATE_ACCOUNT_CHOICE", "ACCOUNT_CREATION", { captchaDetected: true }), "REVIEW_REQUIRED");
+assert.equal(accountFlow.transition("CREATE_ACCOUNT_CHOICE", "ACCOUNT_CREATION", { mfaDetected: true }), "REVIEW_REQUIRED");
 assert.equal(accountFlow.decideNextState("EMAIL_PROBE", { duplicateAccountDetected: true }), "REVIEW_REQUIRED");
 assert.equal(accountFlow.decideNextState("ACCOUNT_CREATION", { duplicateAccountDetected: true }), "REVIEW_REQUIRED");
 
@@ -117,6 +120,9 @@ assert.throws(() => credentialGen.generateTemporaryPassword({ state: "EMAIL_PROB
 assert.throws(() => credentialGen.generateTemporaryPassword({ state: "APPLICATION_FORM" }), /ACCOUNT_CREATION/);
 assert.throws(() => credentialGen.generateTemporaryPassword(), /explicit ACCOUNT_CREATION/);
 assert.throws(() => credentialGen.generateTemporaryPassword({}), /explicit ACCOUNT_CREATION/);
+assert.throws(() => credentialGen.generateTemporaryPassword({ state: "ACCOUNT_CREATION", length: Number.NaN }), /finite number/);
+assert.throws(() => credentialGen.generateTemporaryPassword({ state: "ACCOUNT_CREATION", length: Number.POSITIVE_INFINITY }), /finite number/);
+assert.throws(() => credentialGen.generateTemporaryPassword({ state: "ACCOUNT_CREATION", length: credentialGen.MAX_LENGTH + 1 }), /must not exceed/);
 
 // Username generator only when site requires it
 assert.equal(credentialGen.generateUsername({ email: "alex@example.invalid", siteRequiresUsername: false }), null);
@@ -196,6 +202,10 @@ assert.equal(classifier.classifyAccountPage({ fields: [{ label: "CAPTCHA" }], te
 assert.equal(classifier.classifyAccountPage({ mfaDetected: true, fields: [{ type: "text", label: "Authenticator Code", name: "mfa_code" }], text: "two-factor" }), "MFA_REQUIRED");
 assert.equal(classifier.classifyAccountPage({ fields: [{ type: "text", label: "Authenticator Code" }, { type: "text", label: "MFA Code" }], mfaDetected: true }), "MFA_REQUIRED");
 assert.equal(classifier.classifyAccountPage({ fields: [{ type: "email", label: "Email" }, { type: "password", label: "Password" }], text: "incorrect password", errorText: "Incorrect password" }), "AUTH_MISMATCH");
+assert.equal(classifier.classifyAccountPage({ mfaDetected: true, fields: [], text: "Authenticator approval required" }), "MFA_REQUIRED");
+assert.equal(classifier.classifyAccountPage({ fields: [{ type: "email", label: "Email" }, { type: "password", label: "Password" }], buttons: [{ text: "Create Account" }], text: "Create your account" }), "ACCOUNT_CREATION");
+assert.equal(classifier.classifyAccountPage({ fields: [{ type: "email", label: "Email" }, { type: "password", label: "Password" }], buttons: [], text: "Enter credentials" }), "UNKNOWN");
+assert.equal(classifier.classifyAccountPage({ fields: [{ type: "email", label: "Email" }, { type: "password", label: "Password" }], text: "An account already exists", signals: { accountExistsConflict: true } }), "REVIEW_REQUIRED");
 
 // Classifier no broad permissions/fetch
 const classifierSrc = fs.readFileSync(new URL("../browser/application-assist/account-classifier.js", import.meta.url), "utf8");
@@ -231,6 +241,14 @@ for (const name of fixtures) {
   assert.equal(raw.includes("CheeksMcClappeth"), false, `${name} leak`);
   // Ensure synthetic placeholders present
   assert.ok(raw.includes("synthetic") || raw.includes("placeholder"), `${name} must contain synthetic placeholder`);
+  const actualArchetype = classifier.classifyAccountPage(data.descriptor || {});
+  assert.equal(actualArchetype, data.expected_archetype, `${name} fixture expected_archetype mismatch`);
+  assert.ok(accountFlow.STATES.includes(data.expected_state), `${name} expected_state must be a canonical account-flow state`);
+  assert.equal(data.expected_state, data.expected_archetype, `${name} expected_state/archetype drift`);
+  if (data.expected_terminal_state) {
+    assert.ok(accountFlow.isTerminalManualState(data.expected_terminal_state), `${name} expected terminal state must be manual`);
+    assert.equal(accountFlow.transition(data.expected_state, data.expected_terminal_state), data.expected_terminal_state, `${name} terminal transition mismatch`);
+  }
   // Ensure fixture does not contain fetch/click etc? not needed
   // Check secret_handling invariants when present
   if (data.secret_handling) {

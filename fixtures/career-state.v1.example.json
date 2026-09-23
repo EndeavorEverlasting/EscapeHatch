@@ -32,7 +32,33 @@
       "source": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/jobs/123"},
       "apply_link": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/apply/123"},
       "posting_snapshot": {"owner": "user", "kind": "relative_path", "locator": "opportunities/opp-example/posting.txt"},
-      "captured_at": "2026-09-10T04:45:00-04:00"
+      "captured_at": "2026-09-10T04:45:00-04:00",
+      "verification": {
+        "state": "LIVE_VERIFIED",
+        "verified_at": "2026-09-10T04:50:00-04:00",
+        "source": "https://example.invalid/jobs/123",
+        "detail": "Live posting re-observed; apply entry available."
+      }
+    },
+    {
+      "id": "opp-example-email",
+      "title": "Applied AI Engineer",
+      "organization": "Example Employer Two",
+      "status": "targeted",
+      "priority": "medium",
+      "fit_score": 88,
+      "requirements_gaps": [],
+      "next_action": "Route through email channel.",
+      "source": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/jobs/124"},
+      "apply_link": {"owner": "external", "kind": "uri", "locator": "mailto:hiring@example.invalid"},
+      "posting_snapshot": {"owner": "user", "kind": "relative_path", "locator": "opportunities/opp-example-email/posting.txt"},
+      "captured_at": "2026-09-10T04:46:00-04:00",
+      "verification": {
+        "state": "LIVE_VERIFIED",
+        "verified_at": "2026-09-10T04:51:00-04:00",
+        "source": "https://example.invalid/jobs/124",
+        "detail": "Email apply channel verified live."
+      }
     }
   ],
   "resumes": [
@@ -42,6 +68,13 @@
       "opportunity_id": "opp-example",
       "artifact": {"owner": "user", "kind": "relative_path", "locator": "resumes/example-ai-automation-engineer.pdf"},
       "created_at": "2026-09-10T04:50:00-04:00"
+    },
+    {
+      "id": "resume-example-email-v1",
+      "profile_id": "profile-primary",
+      "opportunity_id": "opp-example-email",
+      "artifact": {"owner": "user", "kind": "relative_path", "locator": "resumes/example-applied-ai-engineer.pdf"},
+      "created_at": "2026-09-10T04:52:00-04:00"
     }
   ],
   "applications": [
@@ -51,7 +84,28 @@
       "resume_id": "resume-example-v1",
       "status": "draft",
       "submitted_at": null,
-      "external_reference": null
+      "external_reference": null,
+      "execution": {
+        "state": "READY_TO_APPLY",
+        "channel": "web_form",
+        "last_transition_at": "2026-09-10T05:00:00-04:00",
+        "detail": "Posting LIVE_VERIFIED; routed for Batch Apply."
+      }
+    },
+    {
+      "id": "app-example-email",
+      "opportunity_id": "opp-example-email",
+      "resume_id": "resume-example-email-v1",
+      "status": "submitted",
+      "submitted_at": "2026-09-10T05:10:00-04:00",
+      "external_reference": "msg-20260910-example-email",
+      "execution": {
+        "state": "SUBMITTED",
+        "channel": "email",
+        "last_transition_at": "2026-09-10T05:10:00-04:00",
+        "evidence_id": "ev-example-email-001",
+        "detail": "Email application sent; provider confirmation observed."
+      }
     }
   ],
   "study_guidance": [
@@ -81,5 +135,13 @@
       "created_at": "2026-09-10T05:00:00-04:00"
     }
   ],
-  "evidence": []
+  "evidence": [
+    {
+      "id": "ev-example-email-001",
+      "application_id": "app-example-email",
+      "kind": "correspondence",
+      "artifact": {"owner": "user", "kind": "relative_path", "locator": "evidence/app-example-email/sent-confirmation.txt"},
+      "observed_at": "2026-09-10T05:10:00-04:00"
+    }
+  ]
 }

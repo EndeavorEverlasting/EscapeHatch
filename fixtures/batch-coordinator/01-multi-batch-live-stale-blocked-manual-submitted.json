@@ -1,0 +1,152 @@
+{
+  "description": "Synthetic multi-item batch covering live/stale/blocked/manual/submitted paths for EH-Q2. All data is example.invalid synthetic.",
+  "career_state": {
+    "schema_version": "escapehatch-career-state/v1",
+    "state_id": "state-batch-multi-01",
+    "revision": 5,
+    "updated_at": "2026-09-10T05:22:00-04:00",
+    "profile": {
+      "id": "profile-primary",
+      "headline": "Synthetic candidate",
+      "skills": ["Python automation"],
+      "source_artifacts": [],
+      "career_objective": {
+        "target_lane": "Agentic software development",
+        "target_roles": ["AI Automation Engineer"],
+        "lead_capabilities": ["Repository automation"],
+        "proof_artifacts": [{"owner": "user", "kind": "uri", "locator": "https://example.invalid/portfolio"}]
+      }
+    },
+    "opportunities": [
+      {
+        "id": "opp-live-high",
+        "title": "AI Automation Engineer",
+        "organization": "Example Employer",
+        "status": "targeted",
+        "priority": "high",
+        "fit_score": 95,
+        "requirements_gaps": [],
+        "next_action": "Apply",
+        "source": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/jobs/001"},
+        "apply_link": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/apply/001"},
+        "posting_snapshot": {"owner": "user", "kind": "relative_path", "locator": "opportunities/opp-live-high/posting.txt"},
+        "captured_at": "2026-09-10T04:45:00-04:00",
+        "verification": {"state": "LIVE_VERIFIED", "verified_at": "2026-09-10T04:50:00-04:00", "detail": "Live posting re-observed", "source": "https://example.invalid/jobs/001"}
+      },
+      {
+        "id": "opp-live-medium",
+        "title": "Applied AI Engineer",
+        "organization": "Example Employer Two",
+        "status": "targeted",
+        "priority": "medium",
+        "fit_score": 80,
+        "requirements_gaps": [],
+        "next_action": "Fill",
+        "source": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/jobs/002"},
+        "apply_link": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/apply/002"},
+        "posting_snapshot": {"owner": "user", "kind": "relative_path", "locator": "opportunities/opp-live-medium/posting.txt"},
+        "captured_at": "2026-09-10T04:46:00-04:00",
+        "verification": {"state": "LIVE_VERIFIED", "verified_at": "2026-09-10T04:51:00-04:00", "detail": "Live verified", "source": "https://example.invalid/jobs/002"}
+      },
+      {
+        "id": "opp-stale-high",
+        "title": "Stale Role",
+        "organization": "Example Employer Stale",
+        "status": "targeted",
+        "priority": "high",
+        "fit_score": 92,
+        "requirements_gaps": [],
+        "next_action": "Retire",
+        "source": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/jobs/003"},
+        "apply_link": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/apply/003"},
+        "posting_snapshot": {"owner": "user", "kind": "relative_path", "locator": "opportunities/opp-stale-high/posting.txt"},
+        "captured_at": "2026-08-01T04:45:00-04:00",
+        "verification": {"state": "STALE", "verified_at": "2026-09-09T04:50:00-04:00", "detail": "Provider reports STALE", "source": "https://example.invalid/jobs/003"}
+      },
+      {
+        "id": "opp-closed-low",
+        "title": "Closed Role",
+        "organization": "Example Employer Closed",
+        "status": "closed",
+        "priority": "low",
+        "fit_score": 60,
+        "requirements_gaps": [],
+        "next_action": "Retire",
+        "source": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/jobs/004"},
+        "apply_link": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/apply/004"},
+        "posting_snapshot": {"owner": "user", "kind": "relative_path", "locator": "opportunities/opp-closed-low/posting.txt"},
+        "captured_at": "2026-08-01T04:45:00-04:00",
+        "verification": {"state": "CLOSED", "verified_at": "2026-09-09T04:50:00-04:00", "detail": "Provider reports CLOSED", "source": "https://example.invalid/jobs/004"}
+      },
+      {
+        "id": "opp-blocked-medium",
+        "title": "Blocked Provider Role",
+        "organization": "Example Employer Blocked",
+        "status": "targeted",
+        "priority": "medium",
+        "fit_score": 75,
+        "requirements_gaps": [],
+        "next_action": "Check auth",
+        "source": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/jobs/005"},
+        "apply_link": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/apply/005"},
+        "posting_snapshot": {"owner": "user", "kind": "relative_path", "locator": "opportunities/opp-blocked-medium/posting.txt"},
+        "captured_at": "2026-09-10T04:45:00-04:00",
+        "verification": {"state": "BLOCKED", "verified_at": "2026-09-10T04:55:00-04:00", "detail": "Provider authorization blocked", "source": "https://example.invalid/jobs/005"}
+      },
+      {
+        "id": "opp-manual-high",
+        "title": "Manual Gate Role",
+        "organization": "Example Employer Manual",
+        "status": "targeted",
+        "priority": "high",
+        "fit_score": 88,
+        "requirements_gaps": [],
+        "next_action": "Await operator",
+        "source": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/jobs/006"},
+        "apply_link": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/apply/006"},
+        "posting_snapshot": {"owner": "user", "kind": "relative_path", "locator": "opportunities/opp-manual-high/posting.txt"},
+        "captured_at": "2026-09-10T04:45:00-04:00",
+        "verification": {"state": "LIVE_VERIFIED", "verified_at": "2026-09-10T04:52:00-04:00", "detail": "Live with manual gate", "source": "https://example.invalid/jobs/006"}
+      }
+    ],
+    "resumes": [
+      {"id": "resume-live-high", "profile_id": "profile-primary", "opportunity_id": "opp-live-high", "artifact": {"owner": "user", "kind": "relative_path", "locator": "resumes/live-high.pdf"}, "created_at": "2026-09-10T04:50:00-04:00"},
+      {"id": "resume-live-medium", "profile_id": "profile-primary", "opportunity_id": "opp-live-medium", "artifact": {"owner": "user", "kind": "relative_path", "locator": "resumes/live-medium.pdf"}, "created_at": "2026-09-10T04:50:00-04:00"},
+      {"id": "resume-stale-high", "profile_id": "profile-primary", "opportunity_id": "opp-stale-high", "artifact": {"owner": "user", "kind": "relative_path", "locator": "resumes/stale-high.pdf"}, "created_at": "2026-09-10T04:50:00-04:00"},
+      {"id": "resume-closed-low", "profile_id": "profile-primary", "opportunity_id": "opp-closed-low", "artifact": {"owner": "user", "kind": "relative_path", "locator": "resumes/closed-low.pdf"}, "created_at": "2026-09-10T04:50:00-04:00"},
+      {"id": "resume-blocked-medium", "profile_id": "profile-primary", "opportunity_id": "opp-blocked-medium", "artifact": {"owner": "user", "kind": "relative_path", "locator": "resumes/blocked-medium.pdf"}, "created_at": "2026-09-10T04:50:00-04:00"},
+      {"id": "resume-manual-high", "profile_id": "profile-primary", "opportunity_id": "opp-manual-high", "artifact": {"owner": "user", "kind": "relative_path", "locator": "resumes/manual-high.pdf"}, "created_at": "2026-09-10T04:50:00-04:00"}
+    ],
+    "applications": [
+      {"id": "app-live-high", "opportunity_id": "opp-live-high", "resume_id": "resume-live-high", "status": "draft", "submitted_at": null, "external_reference": null, "execution": {"state": "READY_TO_APPLY", "channel": "web_form", "last_transition_at": "2026-09-10T05:00:00-04:00"}},
+      {"id": "app-live-medium", "opportunity_id": "opp-live-medium", "resume_id": "resume-live-medium", "status": "draft", "submitted_at": null, "external_reference": null, "execution": {"state": "FILLED", "channel": "web_form", "last_transition_at": "2026-09-10T05:00:00-04:00"}},
+      {"id": "app-stale-high", "opportunity_id": "opp-stale-high", "resume_id": "resume-stale-high", "status": "draft", "submitted_at": null, "external_reference": null, "execution": {"state": "READY_TO_APPLY", "channel": "web_form", "last_transition_at": "2026-09-10T05:00:00-04:00"}},
+      {"id": "app-closed-low", "opportunity_id": "opp-closed-low", "resume_id": "resume-closed-low", "status": "draft", "submitted_at": null, "external_reference": null, "execution": {"state": "READY_TO_APPLY", "channel": "email", "last_transition_at": "2026-09-10T05:00:00-04:00"}},
+      {"id": "app-blocked-medium", "opportunity_id": "opp-blocked-medium", "resume_id": "resume-blocked-medium", "status": "draft", "submitted_at": null, "external_reference": null, "execution": {"state": "AWAITING_OPERATOR", "channel": "external_provider", "last_transition_at": "2026-09-10T05:00:00-04:00", "awaiting_reason": "provider_authorization_failure"}},
+      {"id": "app-manual-high", "opportunity_id": "opp-manual-high", "resume_id": "resume-manual-high", "status": "draft", "submitted_at": null, "external_reference": null, "execution": {"state": "FILLED", "channel": "web_form", "last_transition_at": "2026-09-10T05:00:00-04:00"}}
+    ],
+    "evidence": [],
+    "study_guidance": []
+  },
+  "provider_snapshot": {
+    "observed_at": "2026-09-10T07:00:00-04:00",
+    "provider_id": "synthetic-provider",
+    "read_back": true,
+    "opportunities": [
+      {"opportunity_id": "opp-live-high", "verification": {"state": "LIVE_VERIFIED", "verified_at": "2026-09-10T06:00:00-04:00", "source": "https://example.invalid/jobs/001"}},
+      {"opportunity_id": "opp-live-medium", "verification": {"state": "LIVE_VERIFIED", "verified_at": "2026-09-10T06:00:00-04:00", "source": "https://example.invalid/jobs/002"}},
+      {"opportunity_id": "opp-stale-high", "verification": {"state": "STALE", "verified_at": "2026-09-10T06:00:00-04:00", "source": "https://example.invalid/jobs/003"}},
+      {"opportunity_id": "opp-closed-low", "verification": {"state": "CLOSED", "verified_at": "2026-09-10T06:00:00-04:00", "source": "https://example.invalid/jobs/004"}},
+      {"opportunity_id": "opp-blocked-medium", "verification": {"state": "BLOCKED", "verified_at": "2026-09-10T06:00:00-04:00", "source": "https://example.invalid/jobs/005"}},
+      {"opportunity_id": "opp-manual-high", "verification": {"state": "LIVE_VERIFIED", "verified_at": "2026-09-10T06:00:00-04:00", "source": "https://example.invalid/jobs/006"}}
+    ],
+    "applications": []
+  },
+  "expected": {
+    "selected_application_id": "app-live-high",
+    "reason": "high priority LIVE_VERIFIED READY_TO_APPLY selected first; stale/closed/blocked retired without history deletion",
+    "stale_should_retire": true,
+    "history_preserved": true,
+    "filings": "web_form via progression AUTO_ADVANCE_SAFE => FILLED, manual gate => AWAITING_OPERATOR"
+  }
+}

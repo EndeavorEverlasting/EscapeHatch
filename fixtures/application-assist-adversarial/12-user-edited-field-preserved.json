@@ -1,0 +1,203 @@
+{
+  "schema": "escapehatch/application-assist-adversarial-fixture/v1",
+  "fixture_id": "12-user-edited-field-preserved",
+  "title": "User-edited field preserved across progression (adversarial: preserve_existing_and_user_edited_values)",
+  "description": "Sanitized page where user edited a field after EscapeHatch fill (e.g., City changed from 'Example City' to 'User Edited City'). Fill Plan and DOM writer must preserve user-edited values via preserve_existing_and_user_edited_values and undo must leave edited values in place. Progression may still be AUTO_ADVANCE_SAFE after re-scan, but field must not be overwritten. Host https://careers.example.invalid/application/address.",
+  "host": "https://careers.example.invalid",
+  "scenario": "user-edited-field-preserved",
+  "url": "https://careers.example.invalid/application/address",
+  "page_archetype": "identity-contact",
+  "session": {
+    "status": "active",
+    "origin": "https://careers.example.invalid"
+  },
+  "fields_before_edit": [
+    {
+      "label": "First Name",
+      "type": "text",
+      "value": "",
+      "required": true,
+      "index": 0
+    },
+    {
+      "label": "City / Municipality",
+      "type": "text",
+      "value": "",
+      "required": true,
+      "index": 1
+    },
+    {
+      "label": "State / Province",
+      "type": "text",
+      "value": "",
+      "required": true,
+      "index": 2
+    }
+  ],
+  "fields_after_fill": [
+    {
+      "label": "First Name",
+      "type": "text",
+      "value": "Alex",
+      "required": true,
+      "index": 0,
+      "origin": "escapehatch_inserted"
+    },
+    {
+      "label": "City / Municipality",
+      "type": "text",
+      "value": "Example City",
+      "required": true,
+      "index": 1,
+      "origin": "escapehatch_inserted"
+    },
+    {
+      "label": "State / Province",
+      "type": "text",
+      "value": "NY",
+      "required": true,
+      "index": 2,
+      "origin": "escapehatch_inserted"
+    }
+  ],
+  "fields_after_user_edit": [
+    {
+      "label": "First Name",
+      "type": "text",
+      "value": "Alex",
+      "required": true,
+      "index": 0,
+      "origin": "escapehatch_inserted",
+      "user_edited": false
+    },
+    {
+      "label": "City / Municipality",
+      "type": "text",
+      "value": "User Edited City",
+      "required": true,
+      "index": 1,
+      "origin": "user_edited_after_fill",
+      "user_edited": true
+    },
+    {
+      "label": "State / Province",
+      "type": "text",
+      "value": "NY",
+      "required": true,
+      "index": 2,
+      "origin": "escapehatch_inserted",
+      "user_edited": false
+    }
+  ],
+  "fill_plan": {
+    "schema_version": "escapehatch-application-fill-plan/v1",
+    "items": [
+      {
+        "index": 0,
+        "profile_key": "first_name",
+        "question_id": "identity.first_name",
+        "value": "Alex",
+        "decision": "gate_allowed"
+      },
+      {
+        "index": 1,
+        "profile_key": "city",
+        "question_id": "identity.city",
+        "value": "Example City",
+        "decision": "gate_allowed"
+      },
+      {
+        "index": 2,
+        "profile_key": "region",
+        "question_id": "identity.region",
+        "value": "NY",
+        "decision": "gate_allowed"
+      }
+    ],
+    "denied": [],
+    "re_gate_after_user_edit": {
+      "index_1_city": {
+        "profile_key": "city",
+        "proposed": "Example City",
+        "current_value": "User Edited City",
+        "decision": "preserve_existing_value",
+        "reason": "preserve_existing_and_user_edited_values",
+        "should_overwrite": false,
+        "preserved": true
+      }
+    }
+  },
+  "progression_plan": {
+    "candidate_control": {
+      "label": "Next",
+      "kind": "intermediate",
+      "terminal": false,
+      "selector": "button.next",
+      "normalized": "next",
+      "uniquely_identified": true
+    },
+    "action_identity_stable": true,
+    "deterministic_fill_completed_and_stable_after_live_rescan": true,
+    "no_visible_validation_error_present": true,
+    "no_required_unknown_manual_review_control_unresolved": true,
+    "no_password_requested_outside_explicit_account_bootstrap_state": true,
+    "no_file_upload_captcha_mfa_otp_legal_compliance_attestation_demographic_gate_unresolved": true,
+    "advance_budget_loop_guard_not_exceeded": true,
+    "next_observed_page_transition_matches_permitted_state_transition": true
+  },
+  "expected_decision": "AUTO_ADVANCE_SAFE",
+  "expected_reason": null,
+  "all_gates_pass": true,
+  "terminal_forbidden_applies": false,
+  "user_edited_field_preserved": true,
+  "assertions": {
+    "city_field_preserved": true,
+    "city_written_value": "Example City",
+    "city_current_value_after_edit": "User Edited City",
+    "should_not_overwrite": true,
+    "undo_should_leave_edited_value": true,
+    "preserve_existing_and_user_edited_values": true,
+    "re_gate_decision": "preserve_existing_value"
+  },
+  "undo_assertion": {
+    "writes": [
+      {
+        "index": 0,
+        "profile_key": "first_name",
+        "previous_value": "",
+        "written_value": "Alex"
+      },
+      {
+        "index": 1,
+        "profile_key": "city",
+        "previous_value": "",
+        "written_value": "Example City"
+      },
+      {
+        "index": 2,
+        "profile_key": "region",
+        "previous_value": "",
+        "written_value": "NY"
+      }
+    ],
+    "after_user_edit_undo": {
+      "undone": 2,
+      "skipped": 1,
+      "city_skipped": true,
+      "city_value_stays": "User Edited City"
+    }
+  },
+  "loop_guard": {
+    "advances_per_session": 1,
+    "advances_per_page": 1,
+    "require_page_transition": true,
+    "detect_repeated_page": false
+  },
+  "synthetic_data": {
+    "first_name": "Alex",
+    "city_before": "Example City",
+    "city_after_user_edit": "User Edited City",
+    "region": "NY",
+    "email": "alex@example.invalid"
+  }
+}

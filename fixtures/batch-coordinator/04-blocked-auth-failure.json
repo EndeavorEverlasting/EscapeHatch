@@ -1,0 +1,43 @@
+{
+  "description": "Provider authorization failure produces BLOCKED or AWAITING_OPERATOR, never SUBMITTED. Synthetic.",
+  "career_state": {
+    "schema_version": "escapehatch-career-state/v1",
+    "state_id": "state-batch-blocked",
+    "revision": 4,
+    "updated_at": "2026-09-10T05:00:00-04:00",
+    "profile": {"id": "profile-primary", "headline": "Synthetic", "skills": ["Testing"], "source_artifacts": [], "career_objective": {"target_lane": "Agentic", "target_roles": ["AI Engineer"], "lead_capabilities": ["Testing"], "proof_artifacts": [{"owner": "user", "kind": "uri", "locator": "https://example.invalid/portfolio"}]}},
+    "opportunities": [
+      {"id": "opp-blocked-web", "title": "Blocked Web", "organization": "Example Employer", "status": "targeted", "priority": "high", "fit_score": 90, "requirements_gaps": [], "next_action": "Check auth", "source": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/jobs/030"}, "apply_link": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/apply/030"}, "posting_snapshot": {"owner": "user", "kind": "relative_path", "locator": "opportunities/opp-blocked-web/posting.txt"}, "captured_at": "2026-09-10T04:45:00-04:00", "verification": {"state": "LIVE_VERIFIED", "verified_at": "2026-09-10T04:50:00-04:00", "detail": "Live", "source": "https://example.invalid/jobs/030"}},
+      {"id": "opp-blocked-email", "title": "Blocked Email", "organization": "Example Employer Two", "status": "targeted", "priority": "medium", "fit_score": 80, "requirements_gaps": [], "next_action": "Check auth", "source": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/jobs/031"}, "apply_link": {"owner": "external", "kind": "uri", "locator": "mailto:hiring@example.invalid"}, "posting_snapshot": {"owner": "user", "kind": "relative_path", "locator": "opportunities/opp-blocked-email/posting.txt"}, "captured_at": "2026-09-10T04:45:00-04:00", "verification": {"state": "LIVE_VERIFIED", "verified_at": "2026-09-10T04:50:00-04:00", "detail": "Live email", "source": "https://example.invalid/jobs/031"}}
+    ],
+    "resumes": [
+      {"id": "resume-blocked-web", "profile_id": "profile-primary", "opportunity_id": "opp-blocked-web", "artifact": {"owner": "user", "kind": "relative_path", "locator": "resumes/blocked-web.pdf"}, "created_at": "2026-09-10T04:50:00-04:00"},
+      {"id": "resume-blocked-email", "profile_id": "profile-primary", "opportunity_id": "opp-blocked-email", "artifact": {"owner": "user", "kind": "relative_path", "locator": "resumes/blocked-email.pdf"}, "created_at": "2026-09-10T04:50:00-04:00"}
+    ],
+    "applications": [
+      {"id": "app-blocked-web", "opportunity_id": "opp-blocked-web", "resume_id": "resume-blocked-web", "status": "draft", "submitted_at": null, "external_reference": null, "execution": {"state": "READY_TO_APPLY", "channel": "web_form", "last_transition_at": "2026-09-10T05:00:00-04:00"}},
+      {"id": "app-blocked-email", "opportunity_id": "opp-blocked-email", "resume_id": "resume-blocked-email", "status": "draft", "submitted_at": null, "external_reference": null, "execution": {"state": "FILLED", "channel": "email", "last_transition_at": "2026-09-10T05:00:00-04:00"}}
+    ],
+    "evidence": [],
+    "study_guidance": []
+  },
+  "provider_snapshot": {
+    "observed_at": "2026-09-10T07:00:00-04:00",
+    "provider_id": "synthetic-provider",
+    "read_back": true,
+    "opportunities": [],
+    "applications": [
+      {"application_id": "app-blocked-web", "auth": {"authorized": false, "reason": "provider_authorization_failure"}, "execution": {"state": "READY_TO_APPLY", "channel": "web_form", "last_transition_at": "2026-09-10T07:00:00-04:00"}},
+      {"application_id": "app-blocked-email", "auth": {"authorized": false, "channel": "email", "reason": "email_provider_auth_blocked"}, "execution": {"state": "FILLED", "channel": "email", "last_transition_at": "2026-09-10T07:00:00-04:00"}}
+    ]
+  },
+  "channel_context_web": {"providerAuthorized": false},
+  "channel_context_email": {"providerAuthorized": false, "mailSent": false},
+  "expected": {
+    "web_target": "BLOCKED",
+    "email_target": "AWAITING_OPERATOR",
+    "never_submitted": true,
+    "web_reason_contains": "BLOCKED",
+    "email_reason_contains": "AWAITING_OPERATOR"
+  }
+}

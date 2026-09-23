@@ -1,0 +1,148 @@
+{
+  "schema": "escapehatch/application-assist-adversarial-fixture/v1",
+  "fixture_id": "03-deterministic-identity-page",
+  "title": "Deterministic identity page (adversarial: profile bootstrap must not need agent)",
+  "description": "Sanitized identity-contact page with deterministic fields that must fill via canonical Fill Plan without manual file shuttling. Host https://careers.example.invalid/application/personal, synthetic data alex@example.invalid.",
+  "host": "https://careers.example.invalid",
+  "scenario": "deterministic-identity-page",
+  "url": "https://careers.example.invalid/application/personal",
+  "page_archetype": "identity-contact",
+  "account_state": "APPLICATION_FORM",
+  "session": {
+    "status": "active",
+    "origin": "https://careers.example.invalid"
+  },
+  "fields": [
+    {
+      "label": "First Name",
+      "type": "text",
+      "autocomplete": "given-name",
+      "value": "",
+      "required": true
+    },
+    {
+      "label": "Last Name",
+      "type": "text",
+      "autocomplete": "family-name",
+      "value": "",
+      "required": true
+    },
+    {
+      "label": "Email",
+      "type": "email",
+      "autocomplete": "email",
+      "value": "",
+      "required": true
+    },
+    {
+      "label": "Phone Number",
+      "type": "tel",
+      "autocomplete": "tel",
+      "value": "",
+      "required": false
+    },
+    {
+      "label": "City / Municipality",
+      "type": "text",
+      "autocomplete": "address-level2",
+      "value": "",
+      "required": true
+    },
+    {
+      "label": "State / Province",
+      "type": "text",
+      "autocomplete": "address-level1",
+      "value": "",
+      "required": true
+    }
+  ],
+  "fill_plan": {
+    "schema_version": "escapehatch-application-fill-plan/v1",
+    "items": [
+      {
+        "index": 0,
+        "profile_key": "first_name",
+        "question_id": "identity.first_name",
+        "value": "Alex",
+        "decision": "gate_allowed"
+      },
+      {
+        "index": 1,
+        "profile_key": "last_name",
+        "question_id": "identity.last_name",
+        "value": "Example",
+        "decision": "gate_allowed"
+      },
+      {
+        "index": 2,
+        "profile_key": "email",
+        "question_id": "identity.email",
+        "value": "alex@example.invalid",
+        "decision": "gate_allowed"
+      },
+      {
+        "index": 3,
+        "profile_key": "phone",
+        "question_id": "identity.phone",
+        "value": "+1 555 010 0142",
+        "decision": "gate_allowed"
+      },
+      {
+        "index": 4,
+        "profile_key": "city",
+        "question_id": "identity.city",
+        "value": "Example City",
+        "decision": "gate_allowed"
+      },
+      {
+        "index": 5,
+        "profile_key": "region",
+        "question_id": "identity.region",
+        "value": "NY",
+        "decision": "gate_allowed"
+      }
+    ],
+    "denied": []
+  },
+  "progression_plan": {
+    "candidate_control": {
+      "label": "Continue",
+      "kind": "intermediate",
+      "terminal": false,
+      "selector": "button.continue",
+      "normalized": "continue"
+    },
+    "action_identity_stable": true,
+    "deterministic_fill_completed_and_stable_after_live_rescan": true,
+    "no_visible_validation_error_present": true,
+    "no_required_unknown_manual_review_control_unresolved": true,
+    "no_password_requested_outside_explicit_account_bootstrap_state": true,
+    "no_file_upload_captcha_mfa_otp_legal_compliance_attestation_demographic_gate_unresolved": true,
+    "advance_budget_loop_guard_not_exceeded": true,
+    "next_observed_page_transition_matches_permitted_state_transition": true
+  },
+  "expected_decision": "AUTO_ADVANCE_SAFE",
+  "expected_reason": null,
+  "all_gates_pass": true,
+  "terminal_forbidden_applies": false,
+  "loop_guard": {
+    "advances_per_session": 1,
+    "advances_per_page": 1,
+    "require_page_transition": true,
+    "detect_repeated_page": false
+  },
+  "profile_bootstrap_assertion": {
+    "no_agent_required": true,
+    "fill_via_canonical_plan": true,
+    "phone_requires_user_confirmed_primary": "user_confirmed_primary"
+  },
+  "synthetic_data": {
+    "first_name": "Alex",
+    "last_name": "Example",
+    "email": "alex@example.invalid",
+    "phone": "+1 555 010 0142",
+    "phone_authority": "user_confirmed_primary",
+    "city": "Example City",
+    "region": "NY"
+  }
+}

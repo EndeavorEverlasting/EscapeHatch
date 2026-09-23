@@ -1,0 +1,50 @@
+{
+  "schema_version": "escapehatch/account-bootstrap-fixture/v1",
+  "fixture_id": "account-creation",
+  "description": "Synthetic account creation with email, password, confirm, username generated if required.",
+  "expected_archetype": "ACCOUNT_CREATION",
+  "expected_state": "ACCOUNT_CREATION",
+  "descriptor": {
+    "url": "https://example.invalid/account/create",
+    "text": "Create your account",
+    "fields": [
+      {
+        "type": "email",
+        "label": "Email",
+        "autocomplete": "email",
+        "name": "email",
+        "value": "synthetic_email_placeholder@example.invalid"
+      },
+      {
+        "type": "text",
+        "label": "Username",
+        "name": "username",
+        "value": "username_placeholder"
+      },
+      {
+        "type": "password",
+        "label": "Password",
+        "autocomplete": "new-password",
+        "name": "password",
+        "value": "generated_password_placeholder"
+      },
+      {
+        "type": "password",
+        "label": "Confirm Password",
+        "autocomplete": "new-password",
+        "name": "confirm_password",
+        "value": "generated_password_placeholder"
+      }
+    ],
+    "buttons": [{ "text": "Create Account" }]
+  },
+  "secret_handling": {
+    "persistence": "session_scoped",
+    "generation_allowed_only_in": "ACCOUNT_CREATION",
+    "never_commit": true,
+    "never_log": true,
+    "never_export": true
+  },
+  "secret_placeholder": "generated_password_placeholder",
+  "notes": "Generated secrets are session_scoped; fixtures use synthetic placeholders only."
+}

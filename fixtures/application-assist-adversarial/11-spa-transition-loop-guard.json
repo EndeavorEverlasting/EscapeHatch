@@ -1,0 +1,91 @@
+{
+  "schema": "escapehatch/application-assist-adversarial-fixture/v1",
+  "fixture_id": "11-spa-transition-loop-guard",
+  "title": "SPA transition / repeated-page loop guard (adversarial: advance_budget_loop_guard_not_exceeded)",
+  "description": "Sanitized SPA page where repeated auto-advance would loop without page transition. Loop guard must trigger: max_advances_per_session=20 or max_advances_per_page=3 exceeded, require_page_transition true, detect_repeated_page true. Progression must be REVIEW_REQUIRED with reason advance_budget_loop_guard_not_exceeded / loop_guard_exceeded / repeated_page. Host https://careers.example.invalid/application/step2.",
+  "host": "https://careers.example.invalid",
+  "scenario": "spa-transition-loop-guard",
+  "url": "https://careers.example.invalid/application/step2",
+  "page_archetype": "identity-contact",
+  "session": {
+    "status": "active",
+    "origin": "https://careers.example.invalid"
+  },
+  "fields": [
+    {
+      "label": "First Name",
+      "type": "text",
+      "value": "",
+      "required": false
+    }
+  ],
+  "fill_plan": {
+    "schema_version": "escapehatch-application-fill-plan/v1",
+    "items": [
+      {
+        "index": 0,
+        "profile_key": "first_name",
+        "question_id": "identity.first_name",
+        "value": "Alex",
+        "decision": "gate_allowed"
+      }
+    ],
+    "denied": []
+  },
+  "progression_plan": {
+    "candidate_control": {
+      "label": "Next",
+      "kind": "intermediate",
+      "terminal": false,
+      "selector": "button.next",
+      "normalized": "next",
+      "uniquely_identified": true
+    },
+    "action_identity_stable": true,
+    "deterministic_fill_completed_and_stable_after_live_rescan": true,
+    "no_visible_validation_error_present": true,
+    "no_required_unknown_manual_review_control_unresolved": true,
+    "no_password_requested_outside_explicit_account_bootstrap_state": true,
+    "no_file_upload_captcha_mfa_otp_legal_compliance_attestation_demographic_gate_unresolved": true,
+    "advance_budget_loop_guard_not_exceeded": false,
+    "next_observed_page_transition_matches_permitted_state_transition": false,
+    "failed_gate": "advance_budget_loop_guard_not_exceeded",
+    "loop_guard_detail": {
+      "max_advances_per_session": 20,
+      "max_advances_per_page": 3,
+      "current_advances_per_session": 20,
+      "current_advances_per_page": 3,
+      "require_page_transition": true,
+      "detect_repeated_page": true,
+      "repeated_page_detected": true,
+      "page_transition_observed": false,
+      "spa_no_transition": true,
+      "budget_exceeded": true
+    }
+  },
+  "expected_decision": "REVIEW_REQUIRED",
+  "expected_reason": "advance_budget_loop_guard_not_exceeded",
+  "expected_reasons": ["advance_budget_loop_guard_not_exceeded", "loop_guard_exceeded", "repeated_page"],
+  "all_gates_pass": false,
+  "failed_gate": "advance_budget_loop_guard_not_exceeded",
+  "terminal_forbidden_applies": false,
+  "is_loop_guard_fixture": true,
+  "loop_guard": {
+    "max_advances_per_session": 20,
+    "max_advances_per_page": 3,
+    "current_advances_per_session": 20,
+    "current_advances_per_page": 3,
+    "require_page_transition": true,
+    "detect_repeated_page": true,
+    "repeated_page_detected": true,
+    "page_transition_observed": false,
+    "budget_scope": "per_session_and_per_page",
+    "exceeded": true
+  },
+  "reason_detail": "SPA repeated-page loop would otherwise auto-advance infinitely; loop guard requires observed page transition and budget ceiling.",
+  "synthetic_data": {
+    "first_name": "Alex",
+    "email": "alex@example.invalid",
+    "page_transition": "none_observed_spa"
+  }
+}

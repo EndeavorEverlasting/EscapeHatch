@@ -207,10 +207,11 @@
     for (const raw of candidates) {
       try {
         const filtered = acceptOnlyKnownProfileKeys(raw);
-        // Preserve phone_authority if present in raw and valid, else unconfirmed will be used
-        if (typeof raw.phone_authority === "string" && raw.phone_authority) {
+        // Cockpit labels such as "mobile" are not contact-authority proof.
+        // Normalize any noncanonical value to the fail-closed extension default.
+        if (typeof raw.phone_authority === "string" && PHONE_AUTHORITY_VALUES.includes(raw.phone_authority)) {
           filtered.phone_authority = raw.phone_authority;
-        } else if (!filtered.phone_authority) {
+        } else {
           filtered.phone_authority = "unconfirmed";
         }
         const clean = sanitizeProfile(filtered);

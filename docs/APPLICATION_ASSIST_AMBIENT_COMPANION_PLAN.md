@@ -1,11 +1,11 @@
 # EscapeHatch Ambient Companion Presence Plan
 
-**Sprint:** EH-U1 — Ambient Companion Presence  
-**Canonical plan owner:** `docs/APPLICATION_ASSIST_AMBIENT_COMPANION_PLAN.md`  
-**Parent plan:** `docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md`  
-**Plan date:** 2026-09-23  
-**Provider planning branch:** `plan/application-assist-autopilot-20260923`  
-**Execution dependency:** EH-A0 contract floor  
+**Sprint:** EH-U1 — Ambient Companion Presence
+**Canonical plan owner:** `docs/APPLICATION_ASSIST_AMBIENT_COMPANION_PLAN.md`
+**Parent plan:** `docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md`
+**Plan date:** 2026-09-23
+**Provider planning branch:** `plan/application-assist-autopilot-20260923`
+**Execution dependency:** EH-A0 contract floor
 **Disposition of this document:** detailed implementation plan and handoff; no runtime behavior is changed merely by this plan.
 
 ## 1. Product problem
@@ -61,7 +61,7 @@ Observed pattern:
 - the browser title can carry an additional lightweight state signal;
 - active automation uses pulse only for the running state, rather than animating everything.
 
-**Adopt:** compact truthful state, on-demand disclosure, active-only animation.  
+**Adopt:** compact truthful state, on-demand disclosure, active-only animation.
 **Do not adopt literally:** modifying employer-page titles or copying OpenHands iconography.
 
 ### 3.2 assistant-ui — state-driven loading/status primitives

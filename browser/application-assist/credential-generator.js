@@ -13,22 +13,22 @@
   const MIN_LENGTH = 20;
 
   function getRandomValuesBuffer(length) {
+    const buf = new Uint32Array(length);
     if (typeof globalThis !== "undefined" && globalThis.crypto && typeof globalThis.crypto.getRandomValues === "function") {
-      const buf = new Uint32Array(length);
       globalThis.crypto.getRandomValues(buf);
       return buf;
     }
     if (typeof require === "function") {
       try {
         const cryptoNode = require("node:crypto");
-        const buf = new Uint32Array(length);
-        cryptoNode.getRandomValues(buf);
-        return buf;
+        const webcrypto = cryptoNode && cryptoNode.webcrypto;
+        if (webcrypto && typeof webcrypto.getRandomValues === "function") {
+          webcrypto.getRandomValues(buf);
+          return buf;
+        }
       } catch (_e) {}
     }
-    const buf = new Uint32Array(length);
-    for (let i = 0; i < length; i += 1) buf[i] = Math.floor(Math.random() * 4294967296);
-    return buf;
+    throw new Error("Cryptographically secure randomness is unavailable; refusing temporary credential generation.");
   }
 
   function randomChar(charset, rand) {
@@ -56,10 +56,10 @@
   }
 
   function generateTemporaryPassword(options) {
-    const length = options && typeof options.length === "number" ? Math.max(MIN_LENGTH, Math.floor(options.length)) : MIN_LENGTH;
-    if (options && options.state && options.state !== "ACCOUNT_CREATION") {
-      throw new Error("Temporary password generation allowed only in ACCOUNT_CREATION state.");
+    if (!options || options.state !== "ACCOUNT_CREATION") {
+      throw new Error("Temporary password generation requires explicit ACCOUNT_CREATION state.");
     }
+    const length = typeof options.length === "number" ? Math.max(MIN_LENGTH, Math.floor(options.length)) : MIN_LENGTH;
     const rnd = getRandomValuesBuffer(length + 16);
     const chars = [];
     chars.push(randomChar(LOWER, rnd[0]));
@@ -72,7 +72,7 @@
     shuffleArray(chars, rnd);
     let result = chars.join("");
     if (!isStrongPassword(result)) {
-      result = generateTemporaryPassword({ length });
+      result = generateTemporaryPassword({ state: "ACCOUNT_CREATION", length });
     }
     return result;
   }

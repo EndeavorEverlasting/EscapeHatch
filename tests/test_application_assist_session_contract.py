@@ -33,15 +33,119 @@ class ApplicationAssistSessionContractTests(unittest.TestCase):
             self.contract["architecture"]["invariant"],
             "no_dom_write_may_bypass_canonical_fill_plan",
         )
+        # Progression extension must exist and original pipeline stays sealed
+        self.assertIn("pipeline_extension", self.contract["architecture"])
+        self.assertEqual(self.contract["architecture"]["pipeline_extension"]["gate"], "progression_gate")
+        self.assertIn("progression_plan", self.contract["architecture"]["pipeline_extension"]["full_pipeline"])
         forbidden = set(self.contract["policy_gate"]["forbidden_actions"])
         self.assertIn("auto_submit", forbidden)
-        self.assertIn("click_next_or_continue", forbidden)
+        self.assertNotIn("click_next_or_continue", forbidden, "intermediate navigation is now gated via Progression Plan, not globally forbidden")
         self.assertIn("auto_attestation", forbidden)
+        self.assertIn("broad_host_permissions", forbidden)
+        self.assertIn("page_runtime_network_requests", forbidden)
         self.assertEqual(self.contract["session"]["cross_origin_transition"], "pause")
         self.assertTrue(self.contract["session"]["stop_cancels_future_writes"])
         self.assertIn("phone_requires_explicit_user_confirmed_primary_contact_authority", self.contract["policy_gate"]["rules"])
         self.assertEqual(self.contract["contact_authority"]["default"], "unconfirmed")
         self.assertEqual(self.contract["contact_authority"]["fill_requires"], "user_confirmed_primary")
+        # Progression and account_bootstrap must be present for EH-A0 floor
+        self.assertIn("progression", self.contract)
+        self.assertIn("account_bootstrap", self.contract)
+
+    def test_progression_gate_machine_defined(self) -> None:
+        progression = self.contract.get("progression")
+        self.assertIsInstance(progression, dict, "progression contract missing")
+        # Decisions / states must contain AUTO_ADVANCE_SAFE and REVIEW_REQUIRED (versioned enums)
+        decisions = set(progression.get("decisions", []) + progression.get("states", []) + progression.get("decision_enum", []))
+        self.assertIn("AUTO_ADVANCE_SAFE", decisions)
+        self.assertIn("REVIEW_REQUIRED", decisions)
+        # terminal_forbidden must include submit/apply/certify/captcha/mfa/unknown
+        terminal = [str(x).lower() for x in progression.get("terminal_forbidden", [])]
+        for required in ["submit", "apply", "certify", "captcha", "mfa", "unknown"]:
+            self.assertIn(required, terminal, f"terminal_forbidden must include {required}")
+        # Also check manual reasons include expected
+        manual_reasons = [str(x).lower() for x in progression.get("terminal_manual_reasons", [])]
+        for required in ["final_submit", "captcha_present", "mfa_required"]:
+            self.assertTrue(any(required in r for r in manual_reasons), f"terminal_manual_reasons must include {required}")
+        # allowed_when gates must be >=8 and include core gates
+        allowed = progression.get("allowed_when") or progression.get("intermediate_policy", {}).get("allowed_when") or []
+        self.assertIsInstance(allowed, list)
+        self.assertGreaterEqual(len(allowed), 8, "allowed_when must have >=8 machine gates")
+        # Check that at least these gates are represented
+        allowed_text = " ".join(allowed).lower()
+        for gate_fragment in ["session_is_active", "page_archetype", "candidate_control", "candidate_is_not_submit", "deterministic_fill", "validation_error", "unknown_manual"]:
+            self.assertIn(gate_fragment, allowed_text)
+        # Also check intermediate_policy allowed_when_gates length
+        inter = progression.get("intermediate_policy", {}).get("allowed_when", [])
+        self.assertGreaterEqual(len(inter), 8)
+        # loop_guard and final_submit_boundary must exist
+        self.assertIn("loop_guard", progression)
+        self.assertIn("final_submit_boundary", progression)
+        self.assertTrue(progression["final_submit_boundary"].get("never_auto_submit") is True)
+        self.assertTrue(progression["loop_guard"].get("require_page_transition") is True)
+
+    def test_account_bootstrap_states_and_secret_handling(self) -> None:
+        account = self.contract.get("account_bootstrap")
+        self.assertIsInstance(account, dict, "account_bootstrap contract missing")
+        states = set(account.get("states", []))
+        for required in [
+            "APPLICATION_ENTRY",
+            "EMAIL_PROBE",
+            "EXISTING_ACCOUNT_LOGIN",
+            "CREATE_ACCOUNT_CHOICE",
+            "ACCOUNT_CREATION",
+            "VERIFICATION_REQUIRED",
+            "APPLICATION_FORM",
+            "AUTH_MISMATCH",
+            "CAPTCHA_REQUIRED",
+            "MFA_REQUIRED",
+            "REVIEW_REQUIRED",
+        ]:
+            self.assertIn(required, states, f"account_bootstrap.states must include {required}")
+        self.assertEqual(account.get("version"), 1)
+        self.assertEqual(account.get("initial_state"), "APPLICATION_ENTRY")
+        # terminal manual states
+        terminal_manual = set(account.get("terminal_manual_states", []))
+        for required in ["AUTH_MISMATCH", "CAPTCHA_REQUIRED", "MFA_REQUIRED", "REVIEW_REQUIRED"]:
+            self.assertIn(required, terminal_manual)
+        # secret handling invariants
+        secret = account.get("secret_handling")
+        self.assertIsInstance(secret, dict)
+        self.assertTrue(secret.get("never_commit") is True, "secret_handling.never_commit must be true")
+        self.assertTrue(secret.get("never_log") is True or secret.get("never_log_secret") is True)
+        self.assertTrue(secret.get("never_export") is True or secret.get("never_export_secret") is True)
+        persistence = secret.get("persistence") or secret.get("storage")
+        self.assertEqual(persistence, "session_scoped", "secret persistence must be session_scoped")
+        self.assertEqual(secret.get("generation_allowed_only_in"), "ACCOUNT_CREATION")
+        self.assertIn("ACCOUNT_CREATION", secret.get("generation_states", []))
+        self.assertEqual(secret.get("fixtures"), "synthetic_placeholders_only")
+
+    def test_page_runtime_never_automates_final_submit(self) -> None:
+        combined = self.content + "\n" + self.core
+        # Page runtime must never auto-submit or bypass network
+        for forbidden in (
+            ".submit(",
+            ".requestSubmit(",
+            "fetch(",
+            "XMLHttpRequest",
+            "WebSocket",
+            "chrome.tabs",
+        ):
+            self.assertNotIn(forbidden, combined, f"page runtime must not contain {forbidden}")
+        # Progression gate markers must be present in contract/docs (and ideally runtime comment)
+        contract_text = json.dumps(self.contract)
+        combined_markers = contract_text + "\n" + self.docs
+        # Core may not yet implement click progression; contract/docs must carry the gate proof
+        for marker in ("Progression Plan", "progression_gate", "AUTO_ADVANCE_SAFE", "REVIEW_REQUIRED", "terminal_forbidden"):
+            self.assertTrue(
+                marker in combined_markers or marker in combined,
+                f"progression gate marker missing: {marker}",
+            )
+        # Negative fixture: terminal_forbidden must prevent auto-advance of critical controls
+        progression = self.contract.get("progression", {})
+        terminal = [str(x).lower() for x in progression.get("terminal_forbidden", [])]
+        for blocked in ["submit", "apply", "certify", "attestation", "captcha", "mfa", "unknown"]:
+            self.assertIn(blocked, terminal, f"terminal_forbidden must block {blocked} auto-advance")
 
     def test_manifest_permissions_are_minimal(self) -> None:
         self.assertEqual(self.manifest["manifest_version"], 3)
@@ -140,6 +244,17 @@ class ApplicationAssistSessionContractTests(unittest.TestCase):
             "canonical Fill Plan",
             "user_confirmed_primary",
             "Load unpacked",
+        ):
+            self.assertIn(marker, self.docs)
+        # Also ensure progression and account docs are present
+        for marker in (
+            "Progression Plan",
+            "AUTO_ADVANCE_SAFE",
+            "REVIEW_REQUIRED",
+            "APPLICATION_ENTRY",
+            "ACCOUNT_CREATION",
+            "session_scoped",
+            "never_commit",
         ):
             self.assertIn(marker, self.docs)
 

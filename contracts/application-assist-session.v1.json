@@ -1,7 +1,7 @@
 {
   "schema": "escapehatch/application-assist-session/v1",
   "version": 1,
-  "mission": "Persistent same-application assist session that fills only deterministic allowed identity/contact fields through a canonical Fill Plan, while the operator navigates and submits manually.",
+  "mission": "Persistent same-application assist session that fills deterministic allowed identity/contact fields through a canonical Fill Plan, may advance safe intermediate pages via a gated Progression Plan and navigation adapter, and handles account-bootstrap states with session-scoped secret invariants, while final submission, attestation, CAPTCHA and MFA remain manual.",
   "architecture": {
     "pipeline": [
       "user_owned_state",
@@ -9,7 +9,24 @@
       "policy_gate",
       "dom_writer"
     ],
-    "invariant": "no_dom_write_may_bypass_canonical_fill_plan"
+    "invariant": "no_dom_write_may_bypass_canonical_fill_plan",
+    "pipeline_extension": {
+      "progression": "navigation_adapter_gated_by_progression_plan",
+      "order": "after_dom_writer",
+      "gate": "progression_gate",
+      "invariant": "no_navigation_may_bypass_progression_plan",
+      "full_pipeline": [
+        "user_owned_state",
+        "canonical_fill_plan",
+        "policy_gate",
+        "dom_writer",
+        "progression_plan",
+        "progression_gate",
+        "navigation_adapter"
+      ],
+      "note": "Original fill pipeline stays sealed; progression is a gated navigation_adapter after dom_writer verified by the Progression Plan."
+    },
+    "extended_pipeline_documentation": "user-owned state -> page classification -> Fill Plan -> field policy gate -> DOM writer -> Progression Plan -> progression policy gate -> navigation adapter. No navigation may bypass the Progression Plan."
   },
   "surfaces": {
     "browser_extension": {
@@ -99,11 +116,249 @@
     ],
     "forbidden_actions": [
       "auto_submit",
-      "click_next_or_continue",
       "auto_attestation",
       "broad_host_permissions",
       "page_runtime_network_requests"
     ]
+  },
+  "progression": {
+    "schema_version": "escapehatch/application-progression/v1",
+    "version": 1,
+    "decisions": [
+      "AUTO_ADVANCE_SAFE",
+      "REVIEW_REQUIRED"
+    ],
+    "states": [
+      "AUTO_ADVANCE_SAFE",
+      "REVIEW_REQUIRED"
+    ],
+    "decision_enum": [
+      "AUTO_ADVANCE_SAFE",
+      "REVIEW_REQUIRED"
+    ],
+    "terminal_forbidden": [
+      "submit",
+      "apply",
+      "finish",
+      "send",
+      "certify",
+      "sign",
+      "accept",
+      "attestation",
+      "captcha",
+      "mfa",
+      "otp",
+      "verification",
+      "unknown",
+      "manual"
+    ],
+    "terminal_manual_reasons": [
+      "final_submit",
+      "apply_action",
+      "certification_required",
+      "attestation_required",
+      "legal_compliance_pending",
+      "captcha_present",
+      "mfa_required",
+      "otp_required",
+      "verification_required",
+      "file_upload_required",
+      "unknown_control",
+      "ambiguous_progression",
+      "validation_error_present",
+      "manual_review_required",
+      "password_outside_account_creation",
+      "demographic_decision_required"
+    ],
+    "intermediate_policy": {
+      "allowed_when": [
+        "session_is_active_and_not_emergency_stopped",
+        "current_page_archetype_is_recognized",
+        "candidate_control_uniquely_identified_as_intermediate_next_or_continue",
+        "candidate_is_not_submit_apply_finish_certify_sign_accept_attestation",
+        "deterministic_fill_completed_and_stable_after_live_rescan",
+        "no_visible_validation_error_present",
+        "no_required_unknown_manual_review_control_unresolved",
+        "no_password_requested_outside_explicit_account_bootstrap_state",
+        "no_file_upload_captcha_mfa_otp_legal_compliance_attestation_demographic_gate_unresolved",
+        "action_identity_unchanged_between_plan_construction_and_execution",
+        "advance_budget_loop_guard_not_exceeded",
+        "next_observed_page_transition_matches_permitted_state_transition"
+      ],
+      "allowed_when_gates": [
+        "session_is_active_and_not_emergency_stopped",
+        "current_page_archetype_is_recognized",
+        "candidate_control_uniquely_identified_as_intermediate_next_or_continue",
+        "candidate_is_not_submit_apply_finish_certify_sign_accept_attestation",
+        "deterministic_fill_completed_and_stable_after_live_rescan",
+        "no_visible_validation_error_present",
+        "no_required_unknown_manual_review_control_unresolved",
+        "no_password_requested_outside_explicit_account_bootstrap_state",
+        "no_file_upload_captcha_mfa_otp_legal_compliance_attestation_demographic_gate_unresolved",
+        "action_identity_unchanged_between_plan_construction_and_execution",
+        "advance_budget_loop_guard_not_exceeded",
+        "next_observed_page_transition_matches_permitted_state_transition"
+      ],
+      "required_stability": "fill_stable_after_rescan"
+    },
+    "allowed_when": [
+      "session_is_active_and_not_emergency_stopped",
+      "current_page_archetype_is_recognized",
+      "candidate_control_uniquely_identified_as_intermediate_next_or_continue",
+      "candidate_is_not_submit_apply_finish_certify_sign_accept_attestation",
+      "deterministic_fill_completed_and_stable_after_live_rescan",
+      "no_visible_validation_error_present",
+      "no_required_unknown_manual_review_control_unresolved",
+      "no_password_requested_outside_explicit_account_bootstrap_state",
+      "no_file_upload_captcha_mfa_otp_legal_compliance_attestation_demographic_gate_unresolved",
+      "action_identity_unchanged_between_plan_construction_and_execution",
+      "advance_budget_loop_guard_not_exceeded",
+      "next_observed_page_transition_matches_permitted_state_transition"
+    ],
+    "allowed_when_gates": [
+      "session_is_active_and_not_emergency_stopped",
+      "current_page_archetype_is_recognized",
+      "candidate_control_uniquely_identified_as_intermediate_next_or_continue",
+      "candidate_is_not_submit_apply_finish_certify_sign_accept_attestation",
+      "deterministic_fill_completed_and_stable_after_live_rescan",
+      "no_visible_validation_error_present",
+      "no_required_unknown_manual_review_control_unresolved",
+      "no_password_requested_outside_explicit_account_bootstrap_state",
+      "no_file_upload_captcha_mfa_otp_legal_compliance_attestation_demographic_gate_unresolved",
+      "action_identity_unchanged_between_plan_construction_and_execution",
+      "advance_budget_loop_guard_not_exceeded",
+      "next_observed_page_transition_matches_permitted_state_transition"
+    ],
+    "loop_guard": {
+      "max_advances_per_session": 20,
+      "max_advances_per_page": 3,
+      "require_page_transition": true,
+      "detect_repeated_page": true,
+      "budget_scope": "per_session_and_per_page",
+      "description": "Prevents repeated auto-advance loops; requires observed page transition and budget ceiling."
+    },
+    "final_submit_boundary": {
+      "never_auto_submit": true,
+      "manual_only_controls": [
+        "submit",
+        "apply",
+        "finish",
+        "send",
+        "certify",
+        "attestation",
+        "captcha",
+        "mfa",
+        "unknown"
+      ],
+      "require_operator_confirmation": true,
+      "attestation_manual_only": true,
+      "description": "Final Apply/Submit/Finish/Send and certification/attestation remain manual-only; no Progression Plan may advance them."
+    },
+    "pipeline_extension": {
+      "after": "dom_writer",
+      "adapter": "navigation_adapter",
+      "gate": "progression_gate",
+      "invariant": "no_navigation_may_bypass_progression_plan"
+    }
+  },
+  "account_bootstrap": {
+    "schema_version": "escapehatch/application-account-bootstrap/v1",
+    "version": 1,
+    "states": [
+      "APPLICATION_ENTRY",
+      "EMAIL_PROBE",
+      "EXISTING_ACCOUNT_LOGIN",
+      "CREATE_ACCOUNT_CHOICE",
+      "ACCOUNT_CREATION",
+      "VERIFICATION_REQUIRED",
+      "APPLICATION_FORM",
+      "AUTH_MISMATCH",
+      "CAPTCHA_REQUIRED",
+      "MFA_REQUIRED",
+      "REVIEW_REQUIRED"
+    ],
+    "initial_state": "APPLICATION_ENTRY",
+    "terminal_manual_states": [
+      "AUTH_MISMATCH",
+      "CAPTCHA_REQUIRED",
+      "MFA_REQUIRED",
+      "REVIEW_REQUIRED"
+    ],
+    "transitions": {
+      "APPLICATION_ENTRY": [
+        "EMAIL_PROBE"
+      ],
+      "EMAIL_PROBE": [
+        "EXISTING_ACCOUNT_LOGIN",
+        "CREATE_ACCOUNT_CHOICE",
+        "ACCOUNT_CREATION",
+        "CAPTCHA_REQUIRED",
+        "REVIEW_REQUIRED"
+      ],
+      "EXISTING_ACCOUNT_LOGIN": [
+        "APPLICATION_FORM",
+        "VERIFICATION_REQUIRED",
+        "AUTH_MISMATCH",
+        "CAPTCHA_REQUIRED",
+        "MFA_REQUIRED",
+        "REVIEW_REQUIRED"
+      ],
+      "CREATE_ACCOUNT_CHOICE": [
+        "ACCOUNT_CREATION",
+        "EXISTING_ACCOUNT_LOGIN",
+        "REVIEW_REQUIRED"
+      ],
+      "ACCOUNT_CREATION": [
+        "VERIFICATION_REQUIRED",
+        "APPLICATION_FORM",
+        "CAPTCHA_REQUIRED",
+        "REVIEW_REQUIRED"
+      ],
+      "VERIFICATION_REQUIRED": [
+        "APPLICATION_FORM",
+        "MFA_REQUIRED",
+        "CAPTCHA_REQUIRED",
+        "REVIEW_REQUIRED"
+      ],
+      "APPLICATION_FORM": [
+        "APPLICATION_FORM",
+        "REVIEW_REQUIRED",
+        "CAPTCHA_REQUIRED",
+        "MFA_REQUIRED",
+        "AUTH_MISMATCH"
+      ],
+      "AUTH_MISMATCH": [
+        "REVIEW_REQUIRED"
+      ],
+      "CAPTCHA_REQUIRED": [
+        "REVIEW_REQUIRED"
+      ],
+      "MFA_REQUIRED": [
+        "REVIEW_REQUIRED"
+      ],
+      "REVIEW_REQUIRED": [
+        "REVIEW_REQUIRED"
+      ]
+    },
+    "secret_handling": {
+      "generation_allowed_only_in": "ACCOUNT_CREATION",
+      "generation_states": [
+        "ACCOUNT_CREATION"
+      ],
+      "persistence": "session_scoped",
+      "storage": "session_scoped",
+      "never_commit": true,
+      "never_log": true,
+      "never_export": true,
+      "never_commit_secret": true,
+      "never_log_secret": true,
+      "never_export_secret": true,
+      "fixtures": "synthetic_placeholders_only",
+      "fixture_placeholders": "synthetic_non_secret_placeholders_only",
+      "reveal": "user_visible_copy_action_only",
+      "handoff": "explicit_change_save_after_creation",
+      "note": "Generated temporary credentials live only in browser session storage, never in Git, logs, exports, telemetry, or progress receipts; fixtures use synthetic placeholders."
+    }
   },
   "undo": {
     "scope": "last_fill_batch",

@@ -615,7 +615,6 @@ function ProfilePage({
   const importData = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    const generation = ++resumeImportGenerationRef.current;
     const reader = new FileReader();
     reader.onload = () => {
       const result = parseProfileExportText(String(reader.result));
@@ -1073,6 +1072,7 @@ function AssistPage({
   const importResume = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    const generation = ++resumeImportGenerationRef.current;
     const reader = new FileReader();
     reader.onload = async () => {
       try {

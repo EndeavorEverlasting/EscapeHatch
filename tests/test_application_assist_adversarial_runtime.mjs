@@ -20,7 +20,10 @@ function runtimeDecision(data, overrides = {}) {
     fields,
     controls: [{ label }]
   };
-  const archetype = progression.classifyPageArchetype(descriptor);
+  const hintedArchetype = String(data.page_archetype || "").toLowerCase();
+  const archetype = progression.RECOGNIZED_ARCHETYPES.includes(hintedArchetype)
+    ? hintedArchetype
+    : progression.classifyPageArchetype(descriptor);
   const plan = progression.buildProgressionPlan(
     { archetype, controls: [{ label }] },
     { stable: data.progression_plan?.deterministic_fill_completed_and_stable_after_live_rescan === true }

@@ -1,13 +1,13 @@
 # EH-A6 Sanitized Acceptance Receipt — Batch Apply Wave + Presence + Progression
 
-**Lane:** EH-A6 — Live acceptance, release classification, and durable closeout  
-**Plan owner:** `docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md` Section EH-A6 + manifest lane `EH-A6`  
-**Original branch:** `feat/eh-a6-20260923@d3767a6b43f1f192897dfca6adfe157cb53d500c`  
-**Recovery branch:** `recovery/eh-crash-align-20260924` / PR #29  
-**Repaired integration floor:** `e5cc7b5a7204e318e243f91d4badda46f6489253`  
-**Recovery candidate at reconstruction:** `61cea014518ee56f3c7fd4ccb0d9de8ebec7b82f`  
-**Date:** 2026-09-23; recovery reconciliation 2026-09-24  
-**Worktree:** local isolated worktree; machine-local path intentionally omitted  
+**Lane:** EH-A6 — Live acceptance, release classification, and durable closeout
+**Plan owner:** `docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md` Section EH-A6 + manifest lane `EH-A6`
+**Original branch:** `feat/eh-a6-20260923@d3767a6b43f1f192897dfca6adfe157cb53d500c`
+**Recovery branch:** `recovery/eh-crash-align-20260924` / PR #29
+**Repaired integration floor:** `e5cc7b5a7204e318e243f91d4badda46f6489253`
+**Recovery candidate at reconstruction:** `61cea014518ee56f3c7fd4ccb0d9de8ebec7b82f`
+**Date:** 2026-09-23; recovery reconciliation 2026-09-24
+**Worktree:** local isolated worktree; machine-local path intentionally omitted
 **Disposition:** sanitized repository proof only — no profile values, credentials, PII, or live ATS data.
 
 ---

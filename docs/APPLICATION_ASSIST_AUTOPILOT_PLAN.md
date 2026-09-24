@@ -771,9 +771,9 @@ This checkpoint strengthens proof interpretation only; it does not widen product
 
 ## 18. OpenCode crash recovery convergence
 
-**Recovery date:** 2026-09-24  
-**Remote repaired floor:** `integration/replit-donor-b01f628-20260921@e5cc7b5a7204e318e243f91d4badda46f6489253`  
-**Pushed pre-crash wave head:** `feat/eh-a6-20260923@d3767a6b43f1f192897dfca6adfe157cb53d500c`  
+**Recovery date:** 2026-09-24
+**Remote repaired floor:** `integration/replit-donor-b01f628-20260921@e5cc7b5a7204e318e243f91d4badda46f6489253`
+**Pushed pre-crash wave head:** `feat/eh-a6-20260923@d3767a6b43f1f192897dfca6adfe157cb53d500c`
 **Recovery candidate:** `recovery/eh-crash-align-20260924@61cea014518ee56f3c7fd4ccb0d9de8ebec7b82f` / PR #29.
 
 The local OpenCode/Bun process terminated after Wave 2-4 work had been committed/pushed but while local convergence repairs were still being validated. Recovery therefore treats the local checkout as separately owned/unknown and reconstructs only from durable provider evidence plus the captured crash transcript.

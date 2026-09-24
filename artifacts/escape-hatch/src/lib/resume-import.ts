@@ -267,6 +267,65 @@ const addProposal = (proposals: ReviewedProposal[], section: ReviewedProposal['s
   proposals.push({ id: idFor(section, field, value), section, field, value: normalized, confidence, review: 'proposed', provenance: source });
 };
 
+type ParsedContactLocation = Pick<Partial<AssistProfile['contact']>, 'street_address' | 'city' | 'region' | 'postal_code' | 'country'> & { raw?: string };
+
+function parseResumeName(value: string) {
+  let remaining = clean(value);
+  let name_prefix = '';
+  const prefixMatch = remaining.match(/^(Mr|Mrs|Ms|Mx|Dr|Prof)\.?\s+/i);
+  if (prefixMatch) {
+    name_prefix = prefixMatch[1];
+    remaining = remaining.slice(prefixMatch[0].length).trim();
+  }
+
+  let preferred_name = '';
+  const preferredMatch = remaining.match(/(?:\(([^()]{1,40})\)|["“]([^"”]{1,40})["”])/);
+  if (preferredMatch) {
+    preferred_name = clean(preferredMatch[1] ?? preferredMatch[2] ?? '');
+    remaining = clean(remaining.replace(preferredMatch[0], ' '));
+  }
+
+  const parts = remaining.split(/\s+/).filter(Boolean);
+  return {
+    name_prefix,
+    first_name: parts[0] ?? '',
+    last_name: parts.slice(1).join(' '),
+    preferred_name,
+  };
+}
+
+const explicitCountry = /^(?:united states(?: of america)?|usa|u\.s\.a\.|us|canada|united kingdom|uk|mexico|india|germany|france|spain|italy|australia|new zealand|ireland)$/i;
+
+function parseContactLocation(lines: string[]): ParsedContactLocation {
+  const firstHeading = lines.findIndex((line) => heading(line));
+  const contactLines = lines.slice(0, firstHeading >= 0 ? firstHeading : Math.min(lines.length, 10));
+  const candidates = contactLines
+    .map((line) => line.split(/\s*[|•·]\s*/)[0].trim())
+    .filter((line) => line.includes(',') && !/@|https?:\/\/|linkedin\.com/i.test(line));
+
+  for (const candidate of candidates) {
+    const parts = candidate.split(',').map(clean).filter(Boolean);
+    if (parts.length < 2) continue;
+    const hasStreet = /^\d{1,6}\s+\S+/.test(parts[0]);
+    const street_address = hasStreet ? parts.shift() ?? '' : '';
+    const city = parts.shift() ?? '';
+    if (!city || !parts.length) continue;
+
+    let country = '';
+    if (parts.length > 1 && explicitCountry.test(parts[parts.length - 1])) {
+      country = parts.pop() ?? '';
+    }
+    const regionPostal = parts.join(', ').trim();
+    const regionPostalMatch = regionPostal.match(/^(.+?)(?:\s+([A-Z]\d[A-Z]\s?\d[A-Z]\d|\d{5}(?:-\d{4})?))?$/i);
+    const region = clean(regionPostalMatch?.[1] ?? '');
+    const postal_code = clean(regionPostalMatch?.[2] ?? '');
+    const regionLooksStructured = /^[A-Z]{2,3}$/i.test(region);
+    if (!region || (!hasStreet && !country && !postal_code && !regionLooksStructured)) continue;
+    return { raw: candidate, street_address, city, region, postal_code, country };
+  }
+  return {};
+}
+
 export function parseResumeText(text: string, fileName = 'Imported resume'): ResumeImport {
   const lines = text.split(/\r?\n/).map((line) => line.replace(/\s+/g, ' ').trim()).filter(Boolean);
   const proposals: ReviewedProposal[] = [];
@@ -277,12 +336,16 @@ export function parseResumeText(text: string, fileName = 'Imported resume'): Res
   const linkedin = text.match(/https?:\/\/(?:www\.)?linkedin\.com\/[^\s|]+|linkedin\.com\/[^\s|]+/i)?.[0] ?? '';
   const urls = [...text.matchAll(/https?:\/\/[^\s|]+/gi)].map((match) => match[0].replace(/[),.;]+$/, ''));
   const name = lines[0] ?? '';
-  const locationLine = lines.find((line) => /\b(?:NY|CA|TX|New York|California|Texas)\b/i.test(line) && line.includes('|')) ?? '';
+  const contactLocation = parseContactLocation(lines);
   if (name && name.length < 80) {
-    const parts = name.split(/\s+/);
-    profilePatch.first_name = parts[0] ?? '';
-    profilePatch.last_name = parts.slice(1).join(' ');
-    addProposal(proposals, 'contact', 'name', name, 'high', stamp(fileName, name, 1));
+    const parsedName = parseResumeName(name);
+    profilePatch.first_name = parsedName.first_name;
+    profilePatch.last_name = parsedName.last_name;
+    profilePatch.name_prefix = parsedName.name_prefix;
+    profilePatch.preferred_name = parsedName.preferred_name;
+    addProposal(proposals, 'contact', 'name', [parsedName.first_name, parsedName.last_name].filter(Boolean).join(' '), 'high', stamp(fileName, name, 1));
+    if (parsedName.name_prefix) addProposal(proposals, 'contact', 'name_prefix', parsedName.name_prefix, 'high', stamp(fileName, name, 1));
+    if (parsedName.preferred_name) addProposal(proposals, 'contact', 'preferred_name', parsedName.preferred_name, 'high', stamp(fileName, name, 1));
   }
   if (email) { profilePatch.email = email; addProposal(proposals, 'contact', 'email', email, 'high', stamp(fileName, email, 1)); }
   if (phone) { profilePatch.phone = phone; addProposal(proposals, 'contact', 'phone', phone, 'high', stamp(fileName, phone, 1)); }
@@ -292,11 +355,16 @@ export function parseResumeText(text: string, fileName = 'Imported resume'): Res
     addProposal(proposals, 'links', 'linkedin_url', url, 'high', stamp(fileName, linkedin, 1));
     profilePatch.linkedin_url = url;
   }
-  const locationParts = locationLine.split('|')[0].split(',').map(clean);
-  if (locationParts.length >= 2) {
-    profilePatch.city = locationParts[0];
-    profilePatch.region = locationParts[1];
-    addProposal(proposals, 'contact', 'location', locationLine, 'medium', stamp(fileName, locationLine, 1));
+  if (contactLocation.city && contactLocation.region) {
+    profilePatch.city = contactLocation.city;
+    profilePatch.region = contactLocation.region;
+    addProposal(proposals, 'contact', 'location', `${contactLocation.city}, ${contactLocation.region}`, 'high', stamp(fileName, contactLocation.raw ?? `${contactLocation.city}, ${contactLocation.region}`, 1));
+  }
+  for (const field of ['street_address', 'postal_code', 'country'] as const) {
+    const value = contactLocation[field] ?? '';
+    if (!value) continue;
+    profilePatch[field] = value;
+    addProposal(proposals, 'contact', field, value, 'high', stamp(fileName, value, 1));
   }
   for (const url of urls.filter((item) => !item.includes('linkedin.com'))) {
     links.push({ label: new URL(url).hostname, url, provenance: stamp(fileName, url, 1) });
@@ -307,7 +375,7 @@ export function parseResumeText(text: string, fileName = 'Imported resume'): Res
   const summary = summaryLines.join(' ');
   addProposal(proposals, 'summary', 'professional_summary', summary, summary ? 'high' : 'low', stamp(fileName, summary, 1));
   const skills = (sectionText(lines, /^(core strengths|skills)$/i).join(' • ').split(/[•·|]/).map(clean).filter((item) => item.length > 1));
-  [...new Set(skills)].forEach((skill) => addProposal(proposals, 'skills', 'skill', skill, 'medium', stamp(fileName, skill, 1)));
+  [...new Set(skills)].forEach((skill) => addProposal(proposals, 'skills', 'skill', skill, 'high', stamp(fileName, skill, 1)));
 
   const projectLines = sectionText(lines, /^(selected software\b.*|projects)$/i);
   const projects: AssistProject[] = [];
@@ -316,7 +384,7 @@ export function parseResumeText(text: string, fileName = 'Imported resume'): Res
     const [namePart, ...descriptionParts] = content.split(/\s+[—-]\s+/);
     const url = urls.find((item) => content.includes(item)) ?? '';
     projects.push({ id: idFor('project', namePart, content), name: clean(namePart), url, description: clean(descriptionParts.join(' — ') || content), provenance: stamp(fileName, content, 1) });
-    addProposal(proposals, 'projects', 'project', content, 'medium', stamp(fileName, content, 1));
+    addProposal(proposals, 'projects', 'project', content, /\s+[—-]\s+/.test(content) ? 'high' : 'medium', stamp(fileName, content, 1));
   }
 
   const experienceLines = sectionText(lines, /^(professional experience|experience)$/i);
@@ -328,7 +396,7 @@ export function parseResumeText(text: string, fileName = 'Imported resume'): Res
     const [head, dates = ''] = line.split(/\s+\|\s+/);
     const [company = '', title = ''] = head.split(/\s+[—-]\s+/);
     current = { id: idFor('experience', company, line), company: clean(company), title: clean(title), dates: clean(dates), location: '', bullets: [], provenance: stamp(fileName, line, 1) };
-    addProposal(proposals, 'experience', 'role', line, 'medium', stamp(fileName, line, 1));
+    addProposal(proposals, 'experience', 'role', line, /\s+[—-]\s+/.test(head) && Boolean(dates) ? 'high' : 'medium', stamp(fileName, line, 1));
   }
   if (current) experience.push(current);
 
@@ -352,11 +420,17 @@ export function parseResumeText(text: string, fileName = 'Imported resume'): Res
       const value = block.join('\n');
       const source = stamp(fileName, value, 2);
       education.push({ id: idFor('education', institution, value), institution: clean(institution), credential: clean(rest.join(' | ')), dates: '', details: block.slice(1).map(clean).join(' '), provenance: source });
-      addProposal(proposals, 'education', 'education', value, 'medium', source);
+      addProposal(proposals, 'education', 'education', value, first.includes('|') ? 'high' : 'medium', source);
     }
   }
 
   return { fileName, text, proposals, projects, experience, education, profilePatch, links, summary, skills: [...new Set(skills)] };
+}
+
+export function getDeterministicResumeProposals(imported: ResumeImport): ReviewedProposal[] {
+  return imported.proposals
+    .filter((proposal) => proposal.confidence === 'high')
+    .map((proposal) => ({ ...proposal, review: 'accepted' as const }));
 }
 
 type AssistContact = AssistProfile['contact'];
@@ -517,5 +591,42 @@ export function applyAcceptedResumeImport(imported: ResumeImport, accepted: Revi
     education: [...profile.education, ...education],
     proposals: approved,
     approvedAt: new Date().toISOString(),
+  };
+}
+
+export function applyDeterministicResumeImport(
+  imported: ResumeImport,
+  profile: AssistProfile,
+  authoritativeContact: AssistProfile['contact'] = profile.contact,
+) {
+  const accepted = getDeterministicResumeProposals(imported);
+  const contactPatch = getAcceptedResumeContactPatch(accepted);
+  const canonicalContact = { ...profile.contact };
+  for (const field of assistContactFields) {
+    const authoritative = authoritativeContact[field];
+    if (authoritative) canonicalContact[field] = authoritative;
+  }
+  const canonicalProfile = { ...profile, contact: canonicalContact };
+  const projected = applyAcceptedResumeImport(imported, accepted, canonicalProfile);
+  const mergedContact = { ...projected.contact };
+  for (const field of assistContactFields) {
+    const existing = canonicalProfile.contact[field];
+    if (existing && mergedContact[field] !== existing) mergedContact[field] = existing;
+  }
+  const uniqueById = <T extends { id: string }>(items: T[]) =>
+    items.filter((item, index) => items.findIndex((candidate) => candidate.id === item.id) === index);
+  return {
+    accepted,
+    contactPatch,
+    profile: {
+      ...projected,
+      contact: mergedContact,
+      links: projected.links.filter((item, index) => projected.links.findIndex((candidate) => candidate.url === item.url) === index),
+      summary: profile.summary || projected.summary,
+      projects: uniqueById(projected.projects),
+      experience: uniqueById(projected.experience),
+      education: uniqueById(projected.education),
+      proposals: uniqueById(projected.proposals),
+    },
   };
 }

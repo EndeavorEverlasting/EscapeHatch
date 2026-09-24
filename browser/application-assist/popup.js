@@ -3,6 +3,7 @@
 const PROFILE_KEY = "escapeHatch.applicationAssistProfile.v1";
 const LEGACY_PROFILE_KEY = "escapeHatch.applicationAutofillProfile.v1";
 const SESSION_KEY = "escapeHatch.applicationAssistSession.v1";
+const PRESENCE_PREF_KEY = "escapeHatch.applicationAssistPresencePreference.v1";
 const EXPORT_SCHEMA = "escapehatch-application-assist-profile/v2";
 const LEGACY_ASSIST_EXPORT_SCHEMA = "escapehatch-application-assist-profile/v1";
 const LEGACY_EXPORT_SCHEMA = "escapehatch-application-autofill-profile/v1";
@@ -267,11 +268,125 @@ function tabOrigin(tab) {
   }
 }
 
+async function projectPresenceOnPage(tabId, session, event) {
+  if (typeof tabId !== "number" || !session || typeof session !== "object") return false;
+  try {
+    const stored = await chrome.storage.local.get(PRESENCE_PREF_KEY);
+    const saved = stored[PRESENCE_PREF_KEY];
+    const preferences =
+      saved && saved.session_id === session.session_id
+        ? {
+            presentationPreference: saved.presentationPreference || "quiet",
+            sidePreference: saved.sidePreference || "right"
+          }
+        : { presentationPreference: "quiet", sidePreference: "right" };
+
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ["assist-core.js", "presence.js"]
+    });
+    const result = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: async (payload) => {
+        const presence = globalThis.EscapeHatchPresence;
+        const assist = globalThis.EscapeHatchAssist;
+        if (!presence || !assist) return { mounted: false, reason: "presence_runtime_missing" };
+
+        const runtime =
+          globalThis.__ESCAPEHATCH_PRESENCE_RUNTIME__ ||
+          (globalThis.__ESCAPEHATCH_PRESENCE_RUNTIME__ = {});
+        runtime.session = payload.session;
+        runtime.event = payload.event || { type: "ready" };
+        runtime.preferences = payload.preferences || {
+          presentationPreference: "quiet",
+          sidePreference: "right"
+        };
+
+        const render = () => {
+          const canonical = Object.assign({}, runtime.session, runtime.preferences);
+          const snapshot = presence.projectPresence(canonical, runtime.event);
+          presence.updateBeacon(document, snapshot);
+          return snapshot;
+        };
+
+        const persistPreferences = async () => {
+          const value = Object.assign(
+            { session_id: runtime.session && runtime.session.session_id },
+            runtime.preferences
+          );
+          await chrome.storage.local.set({ [payload.preferenceKey]: value });
+        };
+
+        const host = presence.ensureHost(document);
+        render();
+        presence.bindBeaconInteractions(document, {
+          onControl: async (action) => {
+            const storedSession = await chrome.storage.local.get(payload.sessionKey);
+            const current = storedSession[payload.sessionKey] || runtime.session;
+            if (!current) return;
+            let next = current;
+            let nextEvent = runtime.event;
+            if (action === "pause") {
+              next = assist.pauseSession(current, "presence_pause");
+              nextEvent = { type: "paused" };
+            } else if (action === "resume") {
+              next = assist.resumeSession(current, location.origin);
+              nextEvent = { type: "ready" };
+            } else if (action === "stop") {
+              next = assist.stopSession(current);
+              nextEvent = { type: "stopped" };
+            } else {
+              return;
+            }
+            runtime.session = next;
+            runtime.event = nextEvent;
+            await chrome.storage.local.set({ [payload.sessionKey]: next });
+            render();
+          },
+          onSetPresentation: async (value) => {
+            if (!presence.PRESENTATION_VALUES.includes(value)) return;
+            runtime.preferences = Object.assign({}, runtime.preferences, {
+              presentationPreference: value
+            });
+            await persistPreferences();
+            render();
+          },
+          onSetSide: async (value) => {
+            if (!presence.SIDE_VALUES.includes(value)) return;
+            runtime.preferences = Object.assign({}, runtime.preferences, {
+              sidePreference: value
+            });
+            await persistPreferences();
+            render();
+          }
+        });
+        return { mounted: Boolean(host), state: render().state };
+      },
+      args: [{
+        session,
+        event: event || { type: "ready" },
+        preferences,
+        sessionKey: SESSION_KEY,
+        preferenceKey: PRESENCE_PREF_KEY
+      }]
+    });
+    return Boolean(result && result[0] && result[0].result && result[0].result.mounted);
+  } catch (_error) {
+    // Presence is a projection surface; failure must not block the canonical assist action.
+    return false;
+  }
+}
+
 async function runPageCommand(command, profile, session, preferenceStore) {
   const tab = await activeTab();
   const origin = tabOrigin(tab);
   session = api.observeOrigin(session, origin);
   await saveSession(session);
+  const workingEvent =
+    command === "advance" ? "working_advance" :
+    command === "fill" ? "working_fill" :
+    "observing";
+  await projectPresenceOnPage(tab.id, session, { type: workingEvent });
 
   const runtimeFiles = command === "advance"
     ? ["assist-core.js", "progression.js", "navigation-adapter.js"]
@@ -298,7 +413,14 @@ async function runPageCommand(command, profile, session, preferenceStore) {
   if (!result || result.status !== "ok") {
     throw new Error((result && result.message) || "Assist could not run on this page.");
   }
+  const presenceResultSession = result.session || session;
   if (result.session) await saveSession(result.session);
+  const completionEvent = result.skipped_reason
+    ? { type: "blocked", reasonCode: result.skipped_reason }
+    : result.decision === "REVIEW_REQUIRED"
+      ? { type: "waiting_user", reasonCode: result.reason || "manual_review_required" }
+      : { type: "step_complete" };
+  await projectPresenceOnPage(tab.id, presenceResultSession, completionEvent);
   return result;
 }
 
@@ -314,6 +436,14 @@ async function startAssist() {
     started_at: new Date().toISOString()
   });
   await saveSession(session);
+  await chrome.storage.local.set({
+    [PRESENCE_PREF_KEY]: {
+      session_id: session.session_id,
+      presentationPreference: "quiet",
+      sidePreference: "right"
+    }
+  });
+  await projectPresenceOnPage(tab.id, session, { type: "ready" });
   setStatus("Assist session started for this application origin. Navigate pages manually.");
 }
 
@@ -351,7 +481,10 @@ async function pauseAssist() {
     setStatus("No active assist session.");
     return;
   }
-  await saveSession(api.pauseSession(session, "user_pause"));
+  const next = api.pauseSession(session, "user_pause");
+  await saveSession(next);
+  const tab = await activeTab();
+  await projectPresenceOnPage(tab.id, next, { type: "paused" });
   setStatus("Assist paused. No DOM writes will run until Resume.");
 }
 
@@ -364,6 +497,7 @@ async function resumeAssist() {
   }
   const next = api.resumeSession(session, tabOrigin(tab));
   await saveSession(next);
+  await projectPresenceOnPage(tab.id, next, { type: "ready" });
   setStatus("Assist resumed on the same application origin.");
 }
 
@@ -373,7 +507,10 @@ async function emergencyStop() {
     setStatus("No assist session.");
     return;
   }
-  await saveSession(api.stopSession(session));
+  const next = api.stopSession(session);
+  await saveSession(next);
+  const tab = await activeTab();
+  await projectPresenceOnPage(tab.id, next, { type: "stopped" });
   setStatus("Emergency Stop latched. Future fills are cancelled until you Start Assist again.");
 }
 

@@ -48,6 +48,12 @@ const bc=await import("../artifacts/escape-hatch/src/lib/batch-coordinator.mjs")
   assert.equal(route2.targetState,"AWAITING_OPERATOR");
   const route3=bc.routeChannel(app, {progressionDecision:"AUTO_ADVANCE_SAFE", hasManualGate:true, providerAuthorized:true});
   assert.equal(route3.targetState,"AWAITING_OPERATOR");
+  const missingReferenceEv={kind:"submission_receipt",observed_at:"2026-09-10T07:00:00-04:00",artifact:{owner:"user",kind:"relative_path",locator:"evidence/app-submitted/missing-id.txt"}};
+  const missingReferenceSnap={observed_at:"2026-09-10T07:00:00-04:00",provider_id:"synthetic-provider",read_back:true,opportunities:[],applications:[{application_id:"app-submitted",execution:{state:"SUBMITTED",channel:"web_form",last_transition_at:"2026-09-10T07:00:00-04:00"},evidence:[{kind:"submission_receipt",observed_at:"2026-09-10T07:00:00-04:00"}]}]};
+  const missingReferenceRes=bc.recordTransition(cs,"app-submitted","SUBMITTED",missingReferenceEv,{providerSnapshot:missingReferenceSnap,providerAuthorized:true});
+  assert.notEqual(missingReferenceRes.receipt.to,"SUBMITTED");
+  assert.ok(missingReferenceRes.updatedState.evidence.every(e=>Boolean(e.id)));
+
   const emailData=loadFixture("08-email-draft-vs-sent.json");
   const appEmail=emailData.career_state.applications[0];
   const rEmail=bc.routeChannel(appEmail, {mailSent:false, operatorConfirmed:false, providerAuthorized:true});
@@ -125,6 +131,26 @@ const bc=await import("../artifacts/escape-hatch/src/lib/batch-coordinator.mjs")
   console.log("PASS mjs multi_batch");
 }
 
+// pre-route provider freshness reconciliation
+{
+  const data=loadFixture("02-live-web-form-routed.json");
+  const cs=JSON.parse(JSON.stringify(data.career_state));
+  const oppId=cs.opportunities[0].id;
+  const providerSnapshot={
+    observed_at:"2026-09-10T07:30:00-04:00",
+    provider_id:"synthetic-provider",
+    read_back:true,
+    opportunities:[{opportunity_id:oppId,verification:{state:"CLOSED",verified_at:"2026-09-10T07:30:00-04:00"},auth:{authorized:true}}],
+    applications:[]
+  };
+  const step=bc.coordinateStep(cs,providerSnapshot,{progressionDecision:"AUTO_ADVANCE_SAFE",providerAuthorized:true});
+  assert.equal(step.selected,null,"provider-closed item must retire before queue selection");
+  assert.equal(step.transition,null);
+  assert.equal(step.batchStatus.byVerification.CLOSED,1);
+  assert.equal(step.batchStatus.byExecution.BLOCKED,1);
+  console.log("PASS mjs pre_route_provider_freshness");
+}
+
 // 7 email draft vs sent
 {
   const data=loadFixture("08-email-draft-vs-sent.json");
@@ -138,6 +164,64 @@ const bc=await import("../artifacts/escape-hatch/src/lib/batch-coordinator.mjs")
     assert.equal(res.receipt.to,c.expected_to, c.label);
   }
   console.log("PASS mjs email_draft_sent");
+}
+
+// provider proof / evidence identity guards
+{
+  const data=loadFixture("06-submitted-with-confirmation.json");
+  const cs=data.career_state;
+  const localAttempt=data.promotion_attempts[3];
+  const localRes=bc.recordTransition(cs,"app-submitted",localAttempt.target,localAttempt.evidence,{providerSnapshot:localAttempt.provider_snapshot,providerAuthorized:true});
+  assert.equal(localRes.receipt.to,localAttempt.expected_to);
+  assert.equal(localRes.receipt.evidence_binding,localAttempt.expected_binding);
+  assert.match(localRes.receipt.reason,/provider_read_back/);
+
+  const qualifyingAttempt=data.promotion_attempts[2];
+  const restarted=JSON.parse(JSON.stringify(cs));
+  const durableEv=JSON.parse(JSON.stringify(qualifyingAttempt.evidence));
+  restarted.evidence.push({
+    id:durableEv.id,
+    application_id:"app-submitted",
+    kind:durableEv.kind,
+    artifact:durableEv.artifact,
+    observed_at:durableEv.observed_at
+  });
+  restarted.applications[0].execution.evidence_id=durableEv.id;
+  const restartRes=bc.recordTransition(restarted,"app-submitted","SUBMITTED",null,{providerSnapshot:qualifyingAttempt.provider_snapshot,providerAuthorized:true});
+  assert.equal(restartRes.receipt.to,"SUBMITTED");
+  assert.equal(restartRes.receipt.evidence_binding,"provider");
+  assert.equal(restartRes.receipt.reference,durableEv.id);
+  assert.equal(restartRes.updatedState.applications[0].execution.evidence_id,durableEv.id);
+
+  const reconciledRes=bc.recordTransition(cs,"app-submitted","FILLED",null,{providerSnapshot:qualifyingAttempt.provider_snapshot,providerAuthorized:true});
+  assert.ok(reconciledRes.reconciliation);
+  assert.equal(reconciledRes.updatedState.applications[0].execution.state,"SUBMITTED");
+  assert.ok(reconciledRes.updatedState.evidence.some(e=>e.id===durableEv.id));
+
+  for(const badTimestamp of ["","2026-09-10","2026-02-30T00:00:00Z"]){
+    const invalidEv={id:"ev-undated",kind:"submission_receipt",observed_at:badTimestamp,artifact:{owner:"user",kind:"relative_path",locator:"evidence/app-submitted/undated.txt"}};
+    const invalidSnap={observed_at:"2026-09-10T07:00:00-04:00",provider_id:"synthetic-provider",read_back:true,opportunities:[],applications:[{application_id:"app-submitted",execution:{state:"SUBMITTED",channel:"web_form",last_transition_at:"2026-09-10T07:00:00-04:00"},evidence:[{id:"ev-undated",kind:"submission_receipt",observed_at:badTimestamp}]}]};
+    const invalidRes=bc.recordTransition(cs,"app-submitted","SUBMITTED",invalidEv,{providerSnapshot:invalidSnap,providerAuthorized:true});
+    assert.notEqual(invalidRes.receipt.to,"SUBMITTED",`invalid timestamp promoted: ${badTimestamp}`);
+  }
+
+  const emailData=loadFixture("08-email-draft-vs-sent.json");
+  const sentCase=emailData.cases.find(c=>c.label==="sent_email_with_confirmation_allows_submitted");
+  const missingMail=bc.recordTransition(emailData.career_state,"app-email","SUBMITTED",sentCase.evidence,{providerSnapshot:sentCase.provider_snapshot,providerAuthorized:true});
+  assert.notEqual(missingMail.receipt.to,"SUBMITTED");
+  assert.match(missingMail.receipt.reason,/draft_email/);
+
+  const cross=JSON.parse(JSON.stringify(cs));
+  cross.evidence.push({id:"ev-cross-app",application_id:"app-submitted",kind:"submission_receipt",artifact:{owner:"user",kind:"relative_path",locator:"evidence/app-submitted/earlier.txt"},observed_at:"2026-09-10T06:55:00-04:00"});
+  cross.evidence.push({id:"ev-cross-app",application_id:"app-other",kind:"submission_receipt",artifact:{owner:"user",kind:"relative_path",locator:"evidence/app-other/receipt.txt"},observed_at:"2026-09-10T07:00:00-04:00"});
+  const crossEv={id:"ev-cross-app",kind:"submission_receipt",observed_at:"2026-09-10T07:00:00-04:00",artifact:{owner:"user",kind:"relative_path",locator:"evidence/app-submitted/receipt.txt"}};
+  const crossSnap={observed_at:"2026-09-10T07:00:00-04:00",provider_id:"synthetic-provider",read_back:true,opportunities:[],applications:[{application_id:"app-submitted",execution:{state:"SUBMITTED",channel:"web_form",last_transition_at:"2026-09-10T07:00:00-04:00"},evidence:[{id:"ev-cross-app",kind:"submission_receipt",observed_at:"2026-09-10T07:00:00-04:00"}]}]};
+  const crossRes=bc.recordTransition(cross,"app-submitted","SUBMITTED",crossEv,{providerSnapshot:crossSnap,providerAuthorized:true});
+  assert.notEqual(crossRes.receipt.to,"SUBMITTED");
+  assert.equal(crossRes.receipt.reason,"evidence_id_bound_to_other_application");
+  assert.equal(crossRes.receipt.conflict_preserved,true);
+  assert.notEqual(crossRes.updatedState.applications[0].execution.evidence_id,"ev-cross-app");
+  console.log("PASS mjs submission_proof_guards");
 }
 
 // synthetic check

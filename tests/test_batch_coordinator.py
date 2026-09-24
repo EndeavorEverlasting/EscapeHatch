@@ -253,6 +253,27 @@ def test_multi_item_batch_priority_and_status_projection():
     # ensure synthetic domain
     assert_no_leakage(cs2)
 
+def test_coordinate_reconciles_provider_freshness_before_routing():
+    data=load_fixture("02-live-web-form-routed.json")
+    cs=copy.deepcopy(data["career_state"])
+    opp_id=cs["opportunities"][0]["id"]
+    provider_snapshot={
+        "observed_at":"2026-09-10T07:30:00-04:00",
+        "provider_id":"synthetic-provider",
+        "read_back":True,
+        "opportunities":[{
+            "opportunity_id":opp_id,
+            "verification":{"state":"CLOSED","verified_at":"2026-09-10T07:30:00-04:00"},
+            "auth":{"authorized":True},
+        }],
+        "applications":[],
+    }
+    step=coordinate_step(cs, provider_snapshot, {"progressionDecision":"AUTO_ADVANCE_SAFE","providerAuthorized":True})
+    assert step["selected"] is None, "provider-closed item must retire before queue selection"
+    assert step["transition"] is None
+    assert step["batchStatus"]["byVerification"].get("CLOSED")==1
+    assert step["batchStatus"]["byExecution"].get("BLOCKED")==1
+
 def test_email_draft_vs_sent_and_operator_confirmed():
     data=load_fixture("08-email-draft-vs-sent.json")
     cs=data["career_state"]
@@ -272,6 +293,87 @@ def test_email_draft_vs_sent_and_operator_confirmed():
         assert res["receipt"]["to"]==case["expected_to"], f"{label}: expected {case['expected_to']}, got {res['receipt']['to']} reason {res['receipt']['reason']}"
         if "expected_binding" in case:
             assert res["receipt"]["evidence_binding"]==case["expected_binding"], f"{label}: binding mismatch got {res['receipt']['evidence_binding']}"
+
+def test_submission_proof_guards():
+    data=load_fixture("06-submitted-with-confirmation.json")
+    cs=data["career_state"]
+
+    # Durable local evidence without provider read-back is not provider-confirmed submission.
+    local_attempt=data["promotion_attempts"][3]
+    local_res=record_transition(cs, "app-submitted", local_attempt["target"], local_attempt["evidence"], {"providerSnapshot": local_attempt["provider_snapshot"], "providerAuthorized": True})
+    assert local_res["receipt"]["to"]==local_attempt["expected_to"]
+    assert local_res["receipt"]["evidence_binding"]==local_attempt["expected_binding"]
+    assert "provider_read_back" in local_res["receipt"]["reason"]
+
+    # Durable qualifying evidence survives restart: provider read-back can reconcile
+    # the already-persisted receipt even when the caller has no new evidence object.
+    qualifying_attempt=data["promotion_attempts"][2]
+    restarted=copy.deepcopy(cs)
+    durable_ev=copy.deepcopy(qualifying_attempt["evidence"])
+    restarted["evidence"].append({
+        "id":durable_ev["id"],
+        "application_id":"app-submitted",
+        "kind":durable_ev["kind"],
+        "artifact":durable_ev["artifact"],
+        "observed_at":durable_ev["observed_at"],
+    })
+    restarted["applications"][0]["execution"]["evidence_id"]=durable_ev["id"]
+    restart_res=record_transition(
+        restarted,
+        "app-submitted",
+        "SUBMITTED",
+        None,
+        {"providerSnapshot":qualifying_attempt["provider_snapshot"],"providerAuthorized":True},
+    )
+    assert restart_res["receipt"]["to"]=="SUBMITTED"
+    assert restart_res["receipt"]["evidence_binding"]=="provider"
+    assert restart_res["receipt"]["reference"]==durable_ev["id"]
+    assert restart_res["updatedState"]["applications"][0]["execution"]["evidence_id"]==durable_ev["id"]
+
+    # The coordinator must return the reconciled state, not just a reconciliation report.
+    reconciled_res=record_transition(
+        cs,
+        "app-submitted",
+        "FILLED",
+        None,
+        {"providerSnapshot":qualifying_attempt["provider_snapshot"],"providerAuthorized":True},
+    )
+    assert reconciled_res["reconciliation"] is not None
+    assert reconciled_res["updatedState"]["applications"][0]["execution"]["state"]=="SUBMITTED"
+    assert any(e["id"]==durable_ev["id"] for e in reconciled_res["updatedState"]["evidence"])
+
+    # Missing/date-only/impossible observed_at values never qualify even when echoed.
+    for bad_timestamp in ["", "2026-09-10", "2026-02-30T00:00:00Z"]:
+        invalid_ev={"id":"ev-undated","kind":"submission_receipt","observed_at":bad_timestamp,"artifact":{"owner":"user","kind":"relative_path","locator":"evidence/app-submitted/undated.txt"}}
+        invalid_snap={"observed_at":"2026-09-10T07:00:00-04:00","provider_id":"synthetic-provider","read_back":True,"opportunities":[],"applications":[{"application_id":"app-submitted","execution":{"state":"SUBMITTED","channel":"web_form","last_transition_at":"2026-09-10T07:00:00-04:00"},"evidence":[{"id":"ev-undated","kind":"submission_receipt","observed_at":bad_timestamp}]}]}
+        invalid_res=record_transition(cs, "app-submitted", "SUBMITTED", invalid_ev, {"providerSnapshot": invalid_snap, "providerAuthorized": True})
+        assert invalid_res["receipt"]["to"]!="SUBMITTED", f"invalid timestamp promoted: {bad_timestamp!r}"
+
+    # Qualifying kind/timestamp without a durable evidence reference is not proof.
+    missing_reference_ev={"kind":"submission_receipt","observed_at":"2026-09-10T07:00:00-04:00","artifact":{"owner":"user","kind":"relative_path","locator":"evidence/app-submitted/missing-id.txt"}}
+    missing_reference_snap={"observed_at":"2026-09-10T07:00:00-04:00","provider_id":"synthetic-provider","read_back":True,"opportunities":[],"applications":[{"application_id":"app-submitted","execution":{"state":"SUBMITTED","channel":"web_form","last_transition_at":"2026-09-10T07:00:00-04:00"},"evidence":[{"kind":"submission_receipt","observed_at":"2026-09-10T07:00:00-04:00"}]}]}
+    missing_reference_res=record_transition(cs,"app-submitted","SUBMITTED",missing_reference_ev,{"providerSnapshot":missing_reference_snap,"providerAuthorized":True})
+    assert missing_reference_res["receipt"]["to"]!="SUBMITTED"
+    assert all(e.get("id") for e in missing_reference_res["updatedState"]["evidence"])
+
+    # Email SUBMITTED requires an affirmative sent signal, not merely an omitted mailSent option.
+    email_data=load_fixture("08-email-draft-vs-sent.json")
+    sent_case=next(c for c in email_data["cases"] if c["label"]=="sent_email_with_confirmation_allows_submitted")
+    missing_mail=record_transition(email_data["career_state"], "app-email", "SUBMITTED", sent_case["evidence"], {"providerSnapshot": sent_case["provider_snapshot"], "providerAuthorized": True})
+    assert missing_mail["receipt"]["to"]!="SUBMITTED"
+    assert "draft_email" in missing_mail["receipt"]["reason"]
+
+    # An evidence id already owned by another application cannot be rebound or used to submit.
+    cross=copy.deepcopy(cs)
+    cross["evidence"].append({"id":"ev-cross-app","application_id":"app-submitted","kind":"submission_receipt","artifact":{"owner":"user","kind":"relative_path","locator":"evidence/app-submitted/earlier.txt"},"observed_at":"2026-09-10T06:55:00-04:00"})
+    cross["evidence"].append({"id":"ev-cross-app","application_id":"app-other","kind":"submission_receipt","artifact":{"owner":"user","kind":"relative_path","locator":"evidence/app-other/receipt.txt"},"observed_at":"2026-09-10T07:00:00-04:00"})
+    cross_ev={"id":"ev-cross-app","kind":"submission_receipt","observed_at":"2026-09-10T07:00:00-04:00","artifact":{"owner":"user","kind":"relative_path","locator":"evidence/app-submitted/receipt.txt"}}
+    cross_snap={"observed_at":"2026-09-10T07:00:00-04:00","provider_id":"synthetic-provider","read_back":True,"opportunities":[],"applications":[{"application_id":"app-submitted","execution":{"state":"SUBMITTED","channel":"web_form","last_transition_at":"2026-09-10T07:00:00-04:00"},"evidence":[{"id":"ev-cross-app","kind":"submission_receipt","observed_at":"2026-09-10T07:00:00-04:00"}]}]}
+    cross_res=record_transition(cross, "app-submitted", "SUBMITTED", cross_ev, {"providerSnapshot": cross_snap, "providerAuthorized": True})
+    assert cross_res["receipt"]["to"]!="SUBMITTED"
+    assert cross_res["receipt"]["reason"]=="evidence_id_bound_to_other_application"
+    assert cross_res["receipt"]["conflict_preserved"] is True
+    assert cross_res["updatedState"]["applications"][0]["execution"].get("evidence_id")!="ev-cross-app"
 
 def test_synthetic_only_no_real_data():
     for fname in (FIXTURE_DIR).glob("*.json"):
@@ -295,8 +397,12 @@ if __name__=="__main__":
     print("PASS channel_negative")
     test_multi_item_batch_priority_and_status_projection()
     print("PASS multi_batch_status")
+    test_coordinate_reconciles_provider_freshness_before_routing()
+    print("PASS pre_route_provider_freshness")
     test_email_draft_vs_sent_and_operator_confirmed()
     print("PASS email_draft_sent")
+    test_submission_proof_guards()
+    print("PASS submission_proof_guards")
     test_synthetic_only_no_real_data()
     print("PASS synthetic")
     print("ALL TESTS PASS")

@@ -1,0 +1,19 @@
+{
+  "schema": "escapehatch/application-resume-artifact-manifest/v1",
+  "application_id": "synthetic-role-002",
+  "resume_state": "DURABLE_READY",
+  "resume_source": "tailored",
+  "role_specific_artifact_present": true,
+  "local_artifacts": {
+    "docx_path": "C:/private/example.docx",
+    "pdf_path": "C:/private/example.pdf"
+  },
+  "drive": {
+    "company_folder_id": "",
+    "editable_resume_id": "",
+    "pdf_id": "",
+    "provider_read_back": false
+  },
+  "tracker": {"resume_doc_id": "", "resume_pdf_id": ""},
+  "expected_valid": false
+}

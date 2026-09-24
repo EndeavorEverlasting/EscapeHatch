@@ -204,6 +204,9 @@ def validate_contract(contract: dict) -> None:
         "email_draft_requires_sent_outbox_provider_confirmation_or_operator_confirmed_evidence_before_submission_promotion",
         "reconciliation_is_idempotent",
         "preserve_conflicts_rather_than_silently_overwriting_stronger_evidence",
+        "no_promotion_FILLED_to_SUBMITTED_without_qualifying_evidence",
+        "never_infer_submission_from_LIVE_VERIFIED_alone",
+        "validate_career_state_before_commit",
     }:
         require(marker in rules, f"reconciliation rule missing: {marker}")
     guards = reconciliation.get("channel_guards", {})
@@ -293,6 +296,15 @@ def self_tests(contract: dict, fixture: dict, career_fixture: dict) -> int:
     c, f = pair(); f["progress_event"]["evidence"]["sha256"] = "bad"; negatives.append((c, f))
     c, f = pair(); f["sync"]["google_drive"]["last_synced_revision"] = f["career_state"]["revision"] - 1; negatives.append((c, f))
     c, f = pair(); f["sync"]["google_drive"]["access_token"] = "example"; negatives.append((c, f))
+
+    for required_rule in [
+        "no_promotion_FILLED_to_SUBMITTED_without_qualifying_evidence",
+        "never_infer_submission_from_LIVE_VERIFIED_alone",
+        "validate_career_state_before_commit",
+    ]:
+        c, f = pair()
+        c["reconciliation"]["rules"].remove(required_rule)
+        negatives.append((c, f))
 
     passed = 0
     for number, (candidate_contract, candidate_fixture) in enumerate(negatives, 1):

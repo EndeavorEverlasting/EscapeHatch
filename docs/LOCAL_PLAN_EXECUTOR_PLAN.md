@@ -1,10 +1,10 @@
 # EscapeHatch Local Repository Plan Executor
 
-**Canonical plan owner:** \`docs/LOCAL_PLAN_EXECUTOR_PLAN.md\`  
-**Plan date:** 2026-09-24  
-**Planning floor:** \`integration/replit-donor-b01f628-20260921@fb888ae5611e8242883d7a6134259f2dd9c03110\`  
-**Provider default:** \`main@0824535b9dc1341def885a79a098d297df770ac8\`  
-**Disposition:** planning / harness design only; this artifact does not claim that a local executor is running.  
+**Canonical plan owner:** \`docs/LOCAL_PLAN_EXECUTOR_PLAN.md\`
+**Plan date:** 2026-09-24
+**Planning floor:** \`integration/replit-donor-b01f628-20260921@fb888ae5611e8242883d7a6134259f2dd9c03110\`
+**Provider default:** \`main@0824535b9dc1341def885a79a098d297df770ac8\`
+**Disposition:** planning / harness design only; this artifact does not claim that a local executor is running.
 **Run manifest:** \`Outputs/prompt-parallel-dispatch/runs/escapehatch-mainline-autoload-multisurface-executor-20260924/manifest.json\`
 
 ## 1. Mission

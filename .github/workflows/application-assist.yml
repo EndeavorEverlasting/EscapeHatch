@@ -70,6 +70,10 @@ jobs:
         run: node tests/test_navigation_adapter.mjs
       - name: Test cockpit profile sync and recovery path
         run: node tests/test_profile_sync.mjs
+      - name: Validate ambient companion presence contract
+        run: python tests/test_application_assist_presence_contract.py
+      - name: Test ambient companion presence runtime
+        run: node tests/test_application_assist_presence.mjs
       - name: Test three-mode modality harness
         run: node tests/test_application_assist_modality.mjs
       - name: Parse popup and modality runtime
@@ -78,6 +82,7 @@ jobs:
           node --check browser/application-assist/progression.js
           node --check browser/application-assist/navigation-adapter.js
           node --check browser/application-assist/content.js
+          node --check browser/application-assist/presence.js
           node --check browser/application-assist/popup.js
       - name: Validate JSON syntax
         run: |

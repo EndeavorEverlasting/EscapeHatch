@@ -282,7 +282,7 @@ def record_transition(career_state: Dict[str,Any], application_id: str, target_s
             if not app.get("external_reference"):
                 app["external_reference"]=f"batch-{now}-{application_id}"
 
-    if evidence and not evidence_id_conflict and not any(e["id"]==evidence["id"] for e in updated.get("evidence",[])):
+    if evidence and has_qualifying and not evidence_id_conflict and not any(e["id"]==evidence["id"] for e in updated.get("evidence",[])):
         updated.setdefault("evidence",[]).append({
             "id": evidence["id"],
             "application_id": application_id,

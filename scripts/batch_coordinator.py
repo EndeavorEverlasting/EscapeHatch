@@ -152,8 +152,8 @@ def record_transition(career_state: Dict[str,Any], application_id: str, target_s
     provider_authorized=opts.get("providerAuthorized")
     mail_sent=opts.get("mailSent")
     operator_confirmed=opts.get("operatorConfirmed") is True
-    existing_evidence=next((e for e in updated.get("evidence",[]) if evidence and e.get("id")==evidence.get("id")), None)
-    evidence_id_conflict=bool(existing_evidence and existing_evidence.get("application_id")!=application_id)
+    matching_evidence=[e for e in updated.get("evidence",[]) if evidence and e.get("id")==evidence.get("id")]
+    evidence_id_conflict=any(e.get("application_id")!=application_id for e in matching_evidence)
     has_qualifying=bool(evidence and not evidence_id_conflict and _is_qualifying(evidence.get("kind","")) and _is_datetime(evidence.get("observed_at","")))
     has_evidence=bool(evidence)
     local_has_qualifying=any(

@@ -1,11 +1,11 @@
 # EscapeHatch Career Store + Opportunity Import Plan
 
-**Canonical plan owner:** `docs/CAREER_STORE_IMPORT_PLAN.md`  
-**Plan date:** 2026-09-24  
-**Planning branch:** `plan/career-store-import-20260924`  
-**Target floor at planning PR creation:** `integration/replit-donor-b01f628-20260921@d0f89105ed6619263ca311df09abc2a7960f1a0d` (must be refreshed again before implementation)  
-**Disposition:** planning / handoff durability only; no product-runtime implementation is authorized by this planning pass.  
-**Planning PR:** #35 — `plan/career-store-import-20260924` → `integration/replit-donor-b01f628-20260921`  
+**Canonical plan owner:** `docs/CAREER_STORE_IMPORT_PLAN.md`
+**Plan date:** 2026-09-24
+**Planning branch:** `plan/career-store-import-20260924`
+**Target floor at planning PR creation:** `integration/replit-donor-b01f628-20260921@d0f89105ed6619263ca311df09abc2a7960f1a0d` (must be refreshed again before implementation)
+**Disposition:** planning / handoff durability only; no product-runtime implementation is authorized by this planning pass.
+**Planning PR:** #35 — `plan/career-store-import-20260924` → `integration/replit-donor-b01f628-20260921`
 **Run-scoped dispatch manifest:** `Outputs/prompt-parallel-dispatch/runs/escapehatch-career-store-import-20260924/manifest.json`
 
 ## 1. Mission

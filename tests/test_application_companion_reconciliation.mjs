@@ -139,6 +139,59 @@ function testIdempotentConflict() {
   console.log("PASS idempotent_conflict_preserved (mjs)");
 }
 
+function testUndatedProviderEvidence() {
+  const data = loadFixture("fixture-04-local-edit-remains-local.json");
+  const cs = JSON.parse(JSON.stringify(data.career_state));
+  const ps = JSON.parse(JSON.stringify(data.provider_snapshot));
+  ps.read_back = true;
+  ps.observed_at = "2026-09-10T07:00:00-04:00";
+  ps.applications = [{
+    application_id: "app-fixture-001",
+    execution: { state: "SUBMITTED", channel: "web_form", last_transition_at: "2026-09-10T07:00:00-04:00" },
+    evidence: [{ id: "ev-undated", kind: "submission_receipt" }],
+    auth: { authorized: true }
+  }];
+  const { result, reconciledState } = reconcile(cs, ps);
+  const exec = result.execution_transition.find(e => e.application_id === "app-fixture-001");
+  assert.notEqual(exec.to, "SUBMITTED", "undated provider evidence must not promote");
+  assert.notEqual(reconciledState.applications[0].execution.state, "SUBMITTED");
+  console.log("PASS undated_provider_evidence (mjs)");
+}
+
+function testEvidenceOnlyRevision() {
+  const data = loadFixture("fixture-07-idempotent-conflict-preserved.json");
+  const cs = JSON.parse(JSON.stringify(data.career_state));
+  const ps = JSON.parse(JSON.stringify(data.provider_snapshot));
+  const providerApp = ps.applications[0];
+  const providerOpp = ps.opportunities[0];
+  const app = cs.applications[0];
+  const opp = cs.opportunities[0];
+
+  const pv = providerOpp.verification;
+  opp.verification = {
+    state: pv.state,
+    verified_at: pv.verified_at,
+    detail: pv.detail || "Live posting re-observed via provider read-back",
+    source: pv.source || ps.provider_id
+  };
+  const pe = providerApp.execution;
+  app.execution.state = pe.state;
+  app.execution.channel = pe.channel;
+  app.execution.last_transition_at = pe.last_transition_at;
+  app.execution.evidence_id = providerApp.evidence[0].id;
+  app.submitted_at = pe.last_transition_at;
+  app.external_reference = `provider-${ps.provider_id}-${app.id}`;
+  cs.evidence = [];
+
+  const beforeRevision = cs.revision;
+  const first = reconcile(cs, ps);
+  assert(first.reconciledState.evidence.some(e => e.id === "ev-provider-007"));
+  assert.equal(first.reconciledState.revision, beforeRevision + 1, "evidence-only mutation must bump revision");
+  const second = reconcile(first.reconciledState, ps);
+  assert.equal(second.reconciledState.revision, first.reconciledState.revision, "idempotent second pass must not bump revision");
+  console.log("PASS evidence_only_revision (mjs)");
+}
+
 function testSynthetic() {
   const files = readdirSync(fixtureDir).filter(f=>f.endsWith(".json"));
   assert(files.length >= 7, `expected at least 7 fixtures, got ${files.length}`);
@@ -156,5 +209,7 @@ testLocalRemainsLocal();
 testAuthFailure();
 testDraftEmail();
 testIdempotentConflict();
+testUndatedProviderEvidence();
+testEvidenceOnlyRevision();
 testSynthetic();
 console.log("ALL MJS TESTS PASS");

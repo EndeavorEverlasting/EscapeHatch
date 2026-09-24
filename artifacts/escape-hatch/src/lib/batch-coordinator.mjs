@@ -13,6 +13,14 @@ function isDateTime(s){try{const v=s.endsWith("Z")?s:s.replace("Z","+00:00");ret
 function nowIso(){return new Date().toISOString();}
 function priorityRank(p){if(p==="high") return 3; if(p==="medium") return 2; if(p==="low") return 1; return 0;}
 function isQualifyingKind(k){return QUALIFYING_KINDS.has(k);}
+function providerHasMatchingQualifying(snapshot, applicationId, evidence){
+  if(!snapshot || snapshot.read_back!==true || !isDateTime(snapshot.observed_at || "") || !evidence) return false;
+  if(!isQualifyingKind(evidence.kind) || !isDateTime(evidence.observed_at || "")) return false;
+  const providerApp=(snapshot.applications || []).find(a=>a.application_id===applicationId);
+  return Boolean(providerApp && (providerApp.evidence || []).some(pe=>
+    pe.id===evidence.id && pe.kind===evidence.kind && isDateTime(pe.observed_at || "")
+  ));
+}
 
 export function selectNextQueueItem(careerState){
   const oppById=new Map(careerState.opportunities.map(o=>[o.id,o]));
@@ -105,30 +113,44 @@ export function recordTransition(careerState, applicationId, targetState, eviden
   let conflict=false;
   let queueActive=verification==="LIVE_VERIFIED" && to!=="BLOCKED" && to!=="SUBMITTED";
 
-  const hasQualifying=evidence ? isQualifyingKind(evidence.kind) && isDateTime(evidence.observed_at) : false;
-  const hasEvidence=!!evidence;
-  const localHasQualifying=updated.evidence.some(e=>e.application_id===applicationId && isQualifyingKind(e.kind));
-  const providerReadBack=Boolean(opts.providerSnapshot && opts.providerSnapshot.read_back===true);
+  const providerSnapshot=opts.providerSnapshot;
+  const providerReadBack=Boolean(providerSnapshot && providerSnapshot.read_back===true && isDateTime(providerSnapshot.observed_at || ""));
   const providerAuthorized=opts.providerAuthorized;
   const mailSent=opts.mailSent;
   const operatorConfirmed=opts.operatorConfirmed===true;
+  const existingEvidence=updated.evidence.find(e=>evidence && e.id===evidence.id);
+  const evidenceIdConflict=Boolean(existingEvidence && existingEvidence.application_id!==applicationId);
+  const hasQualifying=Boolean(evidence && !evidenceIdConflict && isQualifyingKind(evidence.kind) && isDateTime(evidence.observed_at || ""));
+  const hasEvidence=!!evidence;
+  const localHasQualifying=updated.evidence.some(e=>e.application_id===applicationId && isQualifyingKind(e.kind) && isDateTime(e.observed_at || ""));
+  const providerHasQualifying=providerHasMatchingQualifying(providerSnapshot, applicationId, evidence) && !evidenceIdConflict;
+  if(evidenceIdConflict) conflict=true;
 
   if(to==="SUBMITTED"){
     if(providerAuthorized===false){
       to=channel==="email"?"AWAITING_OPERATOR":"BLOCKED";
       reason="provider_authorization_failure_BLOCKED_never_SUBMITTED";
       evidenceBinding=localHasQualifying?"local":"none";
-    }else if(channel==="email" && mailSent===false && !operatorConfirmed){
+    }else if(evidenceIdConflict){
+      to=from==="FILLED"?"FILLED":"AWAITING_OPERATOR";
+      reason="evidence_id_bound_to_other_application";
+      evidenceBinding="none";
+    }else if(channel==="email" && mailSent!==true && !operatorConfirmed){
       to=from==="FILLED"?"FILLED":"AWAITING_OPERATOR";
       reason="draft_email_requires_sent_confirmation_never_SUBMITTED";
       evidenceBinding=hasEvidence?"local":"none";
       conflict=true;
-    }else if(!hasQualifying && !localHasQualifying && !operatorConfirmed){
+    }else if(!providerHasQualifying && !operatorConfirmed){
       if(from==="FILLED") to="FILLED";
       else if(from==="READY_TO_APPLY") to="READY_TO_APPLY";
       else to="AWAITING_OPERATOR";
-      reason="SUBMITTED_requires_qualifying_evidence_with_timestamp_and_reference";
-      evidenceBinding="none";
+      if(hasQualifying || localHasQualifying){
+        reason="provider_read_back_or_operator_confirmation_required_before_SUBMITTED";
+        evidenceBinding="local";
+      }else{
+        reason="SUBMITTED_requires_qualifying_evidence_with_timestamp_and_reference";
+        evidenceBinding="none";
+      }
       if(hasEvidence && !hasQualifying) conflict=true;
     }else if(verification==="BLOCKED"){
       to="BLOCKED";
@@ -139,7 +161,7 @@ export function recordTransition(careerState, applicationId, targetState, eviden
       to=from;
       reason="missing_timestamp";
     }else{
-      evidenceBinding=operatorConfirmed?"operator_confirmed":hasQualifying?"provider":localHasQualifying?"local":"none";
+      evidenceBinding=operatorConfirmed?"operator_confirmed":"provider";
       reason="qualifying_confirmation_promotes_SUBMITTED";
       if(hasEvidence && localHasQualifying && evidence && updated.evidence.some(e=>e.id===evidence.id && e.application_id!==applicationId)) conflict=true;
     }
@@ -172,7 +194,7 @@ export function recordTransition(careerState, applicationId, targetState, eviden
   if(app.execution){
     app.execution.state=finalTo;
     app.execution.last_transition_at=now;
-    if(evidence && hasQualifying) app.execution.evidence_id=evidence.id;
+    if(evidence && hasQualifying && !evidenceIdConflict) app.execution.evidence_id=evidence.id;
     if(finalTo==="BLOCKED" && !app.execution.block_reason) app.execution.block_reason=reason;
     if(finalTo==="AWAITING_OPERATOR" && !app.execution.awaiting_reason) app.execution.awaiting_reason=reason;
     if(finalTo==="SUBMITTED"){
@@ -181,14 +203,14 @@ export function recordTransition(careerState, applicationId, targetState, eviden
     }
   }else{
     app.execution={ state:finalTo, channel, last_transition_at:now, detail:reason };
-    if(evidence && hasQualifying) app.execution.evidence_id=evidence.id;
+    if(evidence && hasQualifying && !evidenceIdConflict) app.execution.evidence_id=evidence.id;
     if(finalTo==="SUBMITTED"){
       if(!app.submitted_at) app.submitted_at=now;
       if(!app.external_reference) app.external_reference=`batch-${now}-${applicationId}`;
     }
   }
 
-  if(evidence && !updated.evidence.some(e=>e.id===evidence.id)){
+  if(evidence && !evidenceIdConflict && !updated.evidence.some(e=>e.id===evidence.id)){
     updated.evidence.push({
       id: evidence.id,
       application_id: applicationId,
@@ -204,7 +226,7 @@ export function recordTransition(careerState, applicationId, targetState, eviden
     updated.updated_at=now;
   }
 
-  const reference=evidence?.id ?? app.external_reference ?? `batch-${applicationId}-${now}`;
+  const reference=(!evidenceIdConflict ? evidence?.id : null) ?? app.external_reference ?? `batch-${applicationId}-${now}`;
   const receipt={
     schema:BATCH_RECEIPT_SCHEMA,
     application_id:applicationId,

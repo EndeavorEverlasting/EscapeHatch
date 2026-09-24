@@ -34,6 +34,7 @@ function runtimeDecision(data, overrides = {}) {
     archetype: plan.archetype,
     controls: [{ label }],
     fillStable: data.progression_plan?.deterministic_fill_completed_and_stable_after_live_rescan === true,
+    transitionObserverReady: true,
     hasValidationError: data.progression_plan?.no_visible_validation_error_present === false,
     unresolvedRequiredFields:
       data.progression_plan?.no_required_unknown_manual_review_control_unresolved === false ? ["synthetic-required"] : [],

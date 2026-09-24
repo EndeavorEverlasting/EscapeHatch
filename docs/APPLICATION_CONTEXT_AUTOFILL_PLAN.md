@@ -3,7 +3,7 @@
 **Parent plan:** `docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md`
 **Scoped owner:** `docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md`
 **Plan date:** 2026-09-24
-**Planning floor:** `integration/replit-donor-b01f628-20260921@d0f89105ed6619263ca311df09abc2a7960f1a0d`
+**Planning floor:** `integration/replit-donor-b01f628-20260921@f3d40c1238f76957ae71519be8e628b48ef83047`
 **Disposition:** planning only; no runtime implementation is authorized by this pass.
 **Dispatch manifest:** `Outputs/prompt-parallel-dispatch/runs/escapehatch-contextual-autofill-navigation-20260924/manifest.json`
 
@@ -347,3 +347,646 @@ Dependency: explicit implementation authorization and refreshed provider floor.
 First action: refresh integration plus PR #29/#27 ownership, then dispatch EH-COMP0/EH-ACT0/EH-CTX0 in isolated lanes.
 Expected proof: three versioned contracts with focused positive/negative fixtures and no private data.
 Completion gate: focused validators green and exact validated contract heads integrated without overwriting separately owned work.
+
+## 15. Observation round 2 — standard questionnaire memory, native-autofill repair, tracker hydration, and durable account access
+
+A second 2026-09-24 observed application pass supplies a fuller nine-stage reference flow. The evidence is Taleo-shaped but the product requirement is ATS-generic:
+
+1. profile / personal information;
+2. education and certifications;
+3. repeated work experience;
+4. company questionnaire;
+5. position questionnaire;
+6. diversity / EEO questionnaire;
+7. attachments;
+8. electronic signature;
+9. review and submit.
+
+The observed flow also exposed a common application entry pattern in which the ATS offers a native donor such as a résumé import or a third-party profile import. EscapeHatch must treat those imports as potentially useful **donor data, never canonical truth**. Native autofill may be incomplete, mis-bind repeated records, or lose formatting.
+
+The hard submission boundary remains unchanged.
+
+### 15.1 Native-autofill reconciliation invariant
+
+After an ATS-native résumé/profile import completes, EscapeHatch should:
+
+`start user-edit provenance capture before donor import -> wait for donor stability -> describe page -> group repeated records -> match each group to canonical user records -> diff donor vs canonical state -> repair only policy-owned fields that remain unedited -> record provenance`
+
+Required behavior:
+
+- do not align repeated work-history records by DOM index alone;
+- bind a work-experience group using deterministic evidence such as employer, title, dates, and canonical record identity;
+- responsibilities, dates, employer, title, and location from one record may never leak into another record;
+- preserve multiline/bulleted responsibilities through a text-field presentation adapter;
+- recognize that a donor-filled field can be wrong even when it is non-empty;
+- keep source provenance per field: ATS donor, EscapeHatch canonical value, user edit, or unresolved;
+- user-change provenance begins before/during native donor import, not only after reconciliation;
+- any field edited by the user while donor import/reconciliation is pending is protected from overwrite; the reconciler must rebase around that edit or stop for review;
+- once the user edits a field at any point in the current application session, that edit becomes authoritative unless the user explicitly requests another repair;
+- unknown or low-confidence record matching stops for review rather than silently overwriting.
+
+Permanent negative fixture: two employment records where native autofill places record B responsibilities into record A. The reconciler must detect the cross-record mismatch and repair or block it.
+
+Permanent presentation fixture: correct responsibilities imported as one collapsed paragraph. The presentation adapter must preserve readable list structure without changing factual content.
+
+### 15.2 Application Answer Memory
+
+The existing application-question taxonomy and preference cache are the correct floor, but they are not yet broad enough to eliminate repeat questioning.
+
+The reusable answer layer must distinguish:
+
+- **stable profile facts** — name, education, languages, ordinary identity/contact;
+- **stable explicit eligibility choices** — reusable until the user changes them;
+- **derived per-employer facts** — e.g. prior-employer relationship;
+- **opportunity-scoped answers** — e.g. compensation;
+- **capability/tenure answers** — skill experience that must remain evidence-backed;
+- **sensitive explicit preferences** — demographic/EEO answers supplied by the user, never inferred;
+- **legal-current answers** — reusable only under their configured freshness/reconfirmation policy;
+- **manual-each-submission answers** — signature, certification, attestation.
+
+Standard families now required by observed application flows include:
+
+- age-threshold eligibility such as age 18 or older;
+- essential-functions capability with or without reasonable accommodation;
+- prior employment with the employer or related entity;
+- current/future sponsorship requirement;
+- ability to provide work-authorization documentation;
+- highest completed education;
+- years/bucket of experience creating agents;
+- years/bucket of experience using a named agent platform such as MS Copilot;
+- years/bucket of SQL experience;
+- scripting/programming languages;
+- source/referral tracking such as job board or website;
+- race/ethnicity;
+- gender;
+- veteran status;
+- disabled-veteran status;
+- recently-separated-veteran status;
+- active-duty wartime/campaign-badge veteran status;
+- armed-forces service-medal veteran status.
+
+The answer store needs provenance fields such as:
+
+- canonical `question_id`;
+- normalized observed question;
+- selected value;
+- answer scope;
+- sensitivity;
+- source (`explicit_user_action`, `profile_import`, `evidence_derived`, or `opportunity_override`);
+- `confirmed_at`;
+- freshness policy;
+- reusable/auto-fill policy;
+- observed option signature where option mapping matters.
+
+### 15.3 Learn once, reuse later
+
+When the EscapeHatch session is active and the user manually answers a question that is not yet confidently mapped:
+
+1. observe the user-originated change as a **candidate answer**, not durable consent;
+2. extract deterministic DOM/accessibility context;
+3. canonicalize the question if possible;
+4. resolve whether the answer is profile-, employer-, opportunity-, capability-, sensitive-, legal-, or session-scoped;
+5. stage the candidate locally for the current session;
+6. obtain an explicit **Save/reuse this answer** action (or a previously explicit user-configured reuse policy) before mutating durable answer memory;
+7. acknowledge through the ambient companion whether the answer is merely observed for this session or durably saved for reuse;
+8. use a durably saved answer on future semantically equivalent questions according to its scope/freshness policy.
+
+This is not permission to infer protected characteristics. A name, résumé, location, photograph, or other proxy may **never** be used to infer race/ethnicity, gender, veteran status, disability, or another protected/sensitive answer. Only an explicit user selection may seed those reusable values.
+
+### 15.4 Hidden/opaque question fallback
+
+DOM/accessibility evidence remains primary. Matching should inspect, when present:
+
+- label;
+- aria-label / aria-labelledby;
+- name/id;
+- placeholder;
+- fieldset/legend;
+- table/row/column headers;
+- nearby question text;
+- option-group text;
+- current stage/section context.
+
+If those signals still cannot expose the semantic question, EscapeHatch may offer a **user-authorized visual mapping fallback**:
+
+- request one screenshot/capture of the relevant page or field region;
+- keep the image local and ephemeral;
+- extract only enough text/context to propose a question mapping;
+- require the user to confirm the mapping before it becomes reusable;
+- discard the image after mapping unless the user explicitly saves it;
+- never place the screenshot, sensitive values, or raw page capture in Git, telemetry, logs, ordinary exports, or regression fixtures.
+
+A future vision adapter is therefore a fallback capability, not the primary application engine.
+
+### 15.5 Capability tenure
+
+“Years of experience” questions must not become a generic résumé-keyword counter.
+
+Use a capability-tenure resolver with:
+
+- canonical capability id;
+- explicit user-confirmed tenure when available;
+- dated evidence windows from verified work/projects;
+- vendor/product aliases;
+- answer bucket mapping for site options;
+- confidence and provenance;
+- user override.
+
+A computed tenure may never exceed what the accepted evidence interval supports. If evidence is insufficient to choose a bucket, stop for user input and then remember the explicit answer under the configured scope.
+
+### 15.6 Taleo adapter boundary
+
+Repeated Taleo layouts justify an ATS adapter as an optimization layer, not a second domain model.
+
+A `TaleoAdapter` may own:
+
+- stepper/progress extraction;
+- repeated-work-history container detection;
+- Taleo label/control descriptor normalization;
+- questionnaire option-group extraction;
+- Save and Continue / Save as Draft / Quit control discovery;
+- attachments table interpretation;
+- review-section extraction;
+- page-transition observation.
+
+It may **not** own:
+
+- user answers;
+- compensation policy;
+- submission state;
+- final-submit authority;
+- demographic inference;
+- canonical question semantics.
+
+Generic DOM/accessibility fallback must continue to work when the adapter does not recognize a page.
+
+## 16. Tracker-to-application knowledge hydration
+
+The uploaded application tracker demonstrates that an existing user ledger can already contain most of the opportunity context needed by Application Assist: status/priority, company, role, work mode/location, employment type, compensation, fit/gaps, application dates, next action, apply link, résumé references, notes/source evidence, and study guidance.
+
+PR #35 / `docs/CAREER_STORE_IMPORT_PLAN.md` already owns **JSON/CSV/XLSX/document import into canonical `escapehatch-career-state/v1`**. Do not build a second tracker parser here.
+
+After that importer exists, this plan owns only the downstream hydration seam:
+
+`canonical career state -> selected opportunity -> application run context`
+
+Application-run hydration should expose at least:
+
+- company / organization;
+- role title;
+- verified compensation and active override;
+- application channel;
+- verified apply link;
+- posting/source identity and freshness;
+- current application execution state;
+- role-specific résumé artifact;
+- optional cover-letter artifact;
+- known account identity / secret reference;
+- question-answer memory;
+- source/referral metadata when known.
+
+Dashboard and list/helper sheets are projections, not canonical imported records.
+
+### 16.1 Compensation control
+
+When a verified opportunity has a range:
+
+- present a range control bounded to the posted minimum and maximum;
+- default the value to the verified maximum;
+- show unit and currency;
+- moving the control creates an explicit opportunity override;
+- provide a deterministic “Use posting max” reset;
+- do not synthesize a slider for a fixed value, missing range, or incompatible units.
+
+The value emitted to an application field still passes the compensation semantic resolver from this plan.
+
+### 16.2 Launch application
+
+A reusable `launch_application` capability should:
+
+1. resolve the selected canonical opportunity;
+2. verify or consume current freshness evidence;
+3. resolve the correct application channel;
+4. open the canonical apply link for web-form routes;
+5. hydrate Application Assist with opportunity/profile/answer/artifact/account context;
+6. enter account bootstrap when needed;
+7. never mark an application submitted merely because the application page opened.
+
+This capability belongs above provider/browser adapters and below queue orchestration.
+
+## 17. Durable account credentials
+
+The existing account-bootstrap floor intentionally stores generated secrets only for the browser session. The observed workflow adds a stronger user requirement: a user who creates an application account must be able to recover the account identity later.
+
+New invariant:
+
+> Application state may durably retain non-secret account metadata and a secret reference, but a reusable password must live only behind a dedicated secure secret-store adapter. A session-only secret is not permitted to masquerade as durable recoverability.
+
+Durable account metadata may include:
+
+- ATS/application origin;
+- username or account email;
+- account-created timestamp;
+- last-used timestamp;
+- recovery/login URL;
+- account state;
+- secret reference.
+
+Password/secret bytes must never appear in:
+
+- career-state JSON;
+- job tracker export;
+- ordinary profile export;
+- Git;
+- logs;
+- screenshots;
+- telemetry;
+- application receipts.
+
+The credential architecture must expose a `SecretStore` interface. Candidate adapters require an evidence-backed implementation decision, such as a platform credential vault/native host or an encrypted local vault with a user-controlled unlock boundary. Existing session storage remains the safe fallback until a durable adapter passes its security contract.
+
+The UX must provide an account-credentials surface that can display username/account origin and, when the secret store authorizes it, explicitly reveal/copy the password. If durable secure storage is unavailable, the product must say so and require the user to copy/save the temporary password before the session ends.
+
+## 18. Attachments and final review
+
+### 18.1 Opportunity attachment package
+
+Extend the existing résumé-artifact-sync owner with an application-facing package concept rather than creating a second résumé authority.
+
+An opportunity attachment package can reference:
+
+- selected résumé PDF;
+- optional cover letter;
+- optional other approved supporting artifacts;
+- filename;
+- MIME/type;
+- size;
+- artifact revision/hash;
+- purpose (`resume`, `cover_letter`, etc.);
+- opportunity binding.
+
+The attachments runtime may attempt deterministic upload only when:
+
+- the exact artifact bytes are locally/authorizedly accessible;
+- the site permits the interaction;
+- size/type constraints pass;
+- artifact identity matches the selected opportunity;
+- the action is not blocked by browser security or an unresolved mismatch.
+
+Otherwise EscapeHatch prepares the exact artifact and stops with a precise user handoff. It must never claim attachment success without observing the resulting ATS attachment state.
+
+### 18.2 Final-review auditor
+
+Before the manual final Submit action, EscapeHatch should perform a read-only audit of the review page.
+
+Compare visible review values to the expected application projection for:
+
+- identity/contact;
+- source tracking;
+- compensation;
+- education;
+- work history;
+- reusable questionnaire answers;
+- sensitive answers that the user explicitly chose to reuse;
+- attachments;
+- account/application metadata where shown.
+
+Output:
+
+- matched;
+- mismatch;
+- missing;
+- intentionally manual;
+- unable to verify.
+
+The auditor should deep-link or point to the relevant Edit section when the ATS exposes such navigation.
+
+Electronic signature, certification, and final Submit remain operator actions. The auditor may verify that a user-completed signature state is present after the fact, but it may not create or accept the signature.
+
+## 19. Round-2 dependency graph and bounded sprints
+
+Round 1 remains:
+
+`{ EH-COMP0 || EH-ACT0 || EH-CTX0 } -> { EH-COMP1 || EH-ACT1 || EH-CTX1 || EH-VAL1 } -> EH-CONV -> EH-LIVE`
+
+Round 2 extends it:
+
+`{ EH-REC0 || EH-CRED0 || EH-ART0 || EH-REV0 || EH-COMP0 } -> EH-QMEM0`
+
+After required contract floors and refreshed recovery/import owners:
+
+`{ EH-WORK1 || EH-QMEM1 || EH-CRED1 || EH-ART1 || EH-REV1 || EH-TAL1 }`
+
+PR #35 implementation plus the relevant domain floors unlock:
+
+`EH-KNOW1`
+
+Then:
+
+`{ EH-CONV + EH-WORK1 + EH-QMEM1 + EH-CRED1 + EH-ART1 + EH-REV1 + EH-TAL1 + EH-KNOW1 } -> EH-CONV2 -> EH-LIVE2`
+
+### EH-REC0 — Native Autofill Reconciliation Contract
+
+**Type:** application contract + validation
+
+**Goal:** define donor-autofill provenance, repeated-record matching, repair authority, user-edit preservation, and multiline presentation.
+
+**Owned scope**
+- new `contracts/application-native-autofill-reconciliation.v1.json`;
+- synthetic two-record mismatch fixtures;
+- formatting fixture;
+- focused validator/tests.
+
+**Forbidden scope**
+- production DOM mutation;
+- résumé parser changes owned by PR #27;
+- user-specific work-history fixtures.
+
+### EH-QMEM0 — Application Answer Memory Contract
+
+**Type:** harness spine + application contract
+
+**Dependencies:** EH-COMP0 because compensation and question-memory work share taxonomy/preference owners.
+
+**Goal:** make standard questionnaire answers reusable under typed scope/sensitivity/freshness rules.
+
+**Owned scope**
+- `harness/contracts/application-form-taxonomy.v1.json`;
+- `harness/contracts/application-preference-cache.v1.json`;
+- optional new `contracts/application-answer-memory.v1.json`;
+- synthetic question/option fixtures;
+- validator/tests.
+
+**Forbidden scope**
+- real user answers;
+- inference of protected characteristics;
+- production fill/capture runtime.
+
+### EH-CRED0 — Durable Credential Contract & Adapter Decision
+
+**Type:** security contract + research/design
+
+**Goal:** define durable account metadata, secret references, SecretStore interface, and acceptable secure persistence adapters.
+
+**Owned scope**
+- new `contracts/application-credential-vault.v1.json`;
+- synthetic secret-reference fixtures;
+- security validator/tests;
+- short adapter decision record.
+
+**Forbidden scope**
+- raw passwords in Git/tests/logs;
+- plaintext durable browser storage;
+- weakening existing session-secret rules before the durable adapter proves stronger guarantees.
+
+### EH-ART0 — Opportunity Attachment Package Contract
+
+**Type:** integration contract
+
+**Goal:** bind the correct role-specific résumé/cover-letter artifacts to an application run.
+
+**Owned scope**
+- extension or companion contract that references the existing application-resume-artifact-sync owner;
+- synthetic package fixtures;
+- size/type/identity guards.
+
+**Forbidden scope**
+- duplicate résumé authority;
+- private document bytes in Git.
+
+### EH-REV0 — Final Review Audit Contract
+
+**Type:** safety/validation contract
+
+**Goal:** define read-only expected-vs-observed review semantics before manual submission.
+
+**Owned scope**
+- new review-audit contract;
+- synthetic match/mismatch/missing/manual fixtures;
+- validator/tests.
+
+**Forbidden scope**
+- submit/sign/certify automation.
+
+### EH-WORK1 — Native Autofill Repair + Work Record Binding
+
+**Type:** conventional application logic
+
+**Dependencies:** EH-REC0; PR #27 merged/superseded/reconciled; refreshed Application Assist floor.
+
+**Goal:** repair native résumé/profile import mistakes without cross-record contamination.
+
+**Owned scope**
+- donor reconciliation module;
+- repeated-record matcher;
+- work-responsibility presentation adapter;
+- smallest Fill Plan integration;
+- focused tests.
+
+### EH-QMEM1 — Question Capture, Reuse, and Visual Fallback Runtime
+
+**Type:** conventional application logic + integration seam
+
+**Dependencies:** EH-QMEM0; PR #29 merged/superseded/reconciled.
+
+**Goal:** fill known standard questions and learn explicit user answers for future reuse.
+
+**Owned scope**
+- question descriptor/canonicalization runtime;
+- answer-memory resolver;
+- user-change observer;
+- option mapping;
+- ephemeral screenshot/visual mapping fallback;
+- ambient presence projections such as learning/saved/waiting-for-mapping;
+- focused tests.
+
+**Safety**
+- protected/sensitive answers are explicit only;
+- screenshots are local/ephemeral and never logged/exported by default;
+- attestation/signature remains manual.
+
+### EH-CRED1 — Credential Store + Account Access UX
+
+**Type:** security implementation + UI
+
+**Dependencies:** EH-CRED0; account-bootstrap floor; PR #29 reconciliation.
+
+**Goal:** make generated account credentials recoverable without leaking secrets into career state.
+
+**Owned scope**
+- chosen SecretStore adapter;
+- account metadata/secret-reference service;
+- credentials UI with copy/reveal gating;
+- migration from session-only secret when available;
+- focused security tests.
+
+### EH-ART1 — Attachment Resolver and ATS Attachment Observation
+
+**Type:** integration seam
+
+**Dependencies:** EH-ART0; role-specific artifact-sync floor.
+
+**Goal:** select the correct application artifacts and automate or precisely hand off attachment work.
+
+**Owned scope**
+- attachment package resolver;
+- ATS attachment state observer;
+- deterministic upload adapter only where technically supported;
+- manual handoff when browser/site constraints block automation.
+
+### EH-REV1 — Final Review Auditor Runtime
+
+**Type:** validation + UI
+
+**Dependencies:** EH-REV0; EH-QMEM0; EH-REC0; compensation/context floors.
+
+**Goal:** catch wrong values before the human submits.
+
+**Owned scope**
+- review-page extractor;
+- expected-vs-observed comparator;
+- mismatch UI;
+- Edit-section routing hints;
+- no-write audit mode.
+
+### EH-TAL1 — Taleo Adapter
+
+**Type:** ATS adapter
+
+**Dependencies:** EH-CTX0, EH-ACT0, EH-REC0, EH-QMEM0.
+
+**Goal:** use repeatable Taleo structure to improve descriptor quality without moving domain ownership into vendor code.
+
+**Owned scope**
+- new Taleo descriptor adapter;
+- sanitized nine-stage fixtures;
+- stepper/work-history/questionnaire/attachment/review extraction tests.
+
+### EH-KNOW1 — Career-State to Application-Run Hydration
+
+**Type:** integration seam
+
+**Dependencies:** implemented PR #35 career-store/import floor; EH-COMP0; EH-ART0.
+
+**Goal:** turn imported/manual canonical opportunity state into one launchable Application Assist context.
+
+**Owned scope**
+- selected-opportunity hydration service;
+- `launch_application` capability;
+- apply-link/channel/freshness integration;
+- compensation control projection;
+- artifact/account/question context references.
+
+**Forbidden scope**
+- a second spreadsheet/XLSX parser;
+- dashboard/list sheet import as domain authority.
+
+### EH-CONV2 — Learned-Application Convergence
+
+**Type:** integration + UX
+
+**Dependencies:** EH-CONV, EH-WORK1, EH-QMEM1, EH-CRED1, EH-ART1, EH-REV1, EH-TAL1, EH-KNOW1.
+
+**Goal:** deliver the full observed workflow: launch -> native donor or EscapeHatch profile -> repair -> fill/learn -> safe advance -> attach -> manual signature -> review audit -> manual submit.
+
+### EH-LIVE2 — Full-Flow Live Acceptance
+
+**Type:** runtime proof
+
+**Dependencies:** EH-CONV2.
+
+**Acceptance**
+- one Taleo-shaped multi-step application traversed with the indicator active;
+- repeated work history proves no cross-record responsibility leakage;
+- a previously answered standard questionnaire auto-fills on a later compatible form;
+- a new explicit answer is learned and reused locally;
+- protected/sensitive answer is reused only from explicit user choice;
+- attachment identity is correct or a precise manual handoff is shown;
+- credentials are recoverable according to the proven secret-store contract;
+- review auditor catches a synthetic/controlled mismatch;
+- electronic signature and final Submit remain manual;
+- one materially different ATS topology confirms the generic fallback.
+
+## 20. Round-2 capabilities and triggers
+
+New reusable capabilities:
+
+- `reconcile_native_autofill`
+  - input: donor-filled page + canonical records + user-edit provenance;
+  - output: repair Fill Plan or REVIEW_REQUIRED.
+- `resolve_question_answer`
+  - input: canonical question + answer memory + opportunity/employer context;
+  - output: reusable answer or unresolved reason.
+- `capture_explicit_answer`
+  - input: user-originated field change + canonical question + policy;
+  - output: local answer-memory mutation or non-persist disposition.
+- `resolve_capability_tenure`
+  - input: capability id + verified evidence + explicit override;
+  - output: supported tenure/bucket.
+- `request_visual_question_mapping`
+  - input: unresolved field descriptor;
+  - output: user-authorized ephemeral mapping proposal.
+- `resolve_application_attachments`
+  - input: opportunity + registered artifacts + ATS constraints;
+  - output: attachment package or manual handoff.
+- `audit_final_review`
+  - input: expected application projection + observed review page;
+  - output: mismatch receipt; never writes/submits.
+- `load_application_account`
+  - input: application origin/account metadata + authorized SecretStore;
+  - output: account bootstrap context without exposing raw secret to logs/state.
+- `launch_application`
+  - input: selected canonical opportunity;
+  - output: verified routed application session context.
+
+New triggers:
+
+- `native_autofill_stable` -> reconcile native autofill;
+- `unknown_question_answered_by_user` -> stage candidate answer; persist only after explicit save/reuse consent;
+- `known_question_detected` -> resolve question answer;
+- `opaque_question_unresolved` -> offer visual mapping fallback;
+- `repeated_work_record_detected` -> record matcher;
+- `attachment_stage_detected` -> resolve application attachments;
+- `signature_or_attestation_stage_detected` -> manual gate;
+- `review_stage_detected` -> audit final review;
+- `application_account_created` -> persist account metadata + secure secret reference when available;
+- `selected_opportunity_launched` -> hydrate application context from canonical career state.
+
+## 21. Additional regression invariants
+
+The following are permanent regressions if they recur:
+
+- native résumé/profile autofill is trusted without reconciliation;
+- work responsibilities from one employment record populate another record;
+- correct multiline responsibilities are flattened into unreadable text;
+- a user has to repeatedly answer a previously **explicitly saved for reuse** stable question;
+- a user-originated selection is durably reused without explicit save/reuse consent or a previously explicit reuse policy;
+- a sensitive demographic answer is inferred from a name, résumé, image, or other proxy;
+- an unknown field silently receives a guessed answer;
+- an authorized visual mapping screenshot persists into logs, Git, telemetry, or ordinary exports;
+- skill-tenure answers exceed supported evidence without an explicit user override;
+- a Taleo optimization owns generic question or submission semantics;
+- tracker/XLSX parsing is reimplemented outside the career-store/import owner;
+- a dashboard/helper sheet becomes canonical career state;
+- a generated password is called durable while it is only in session memory;
+- a raw password enters career-state JSON or the job tracker;
+- the wrong résumé/cover letter is attached to an opportunity;
+- attachment success is claimed without observed ATS state;
+- final review proceeds without surfacing a known deterministic mismatch;
+- signature/certification/final Submit is auto-performed.
+
+## 22. Revised launch order
+
+This remains a planning-only pass.
+
+After explicit implementation authorization and refreshed collision inspection:
+
+1. Parallel contract floor: **EH-COMP0, EH-ACT0, EH-CTX0, EH-REC0, EH-CRED0, EH-ART0, EH-REV0**.
+2. **EH-QMEM0** after EH-COMP0 because both own taxonomy/preference surfaces.
+3. After contract floors and recovery-owner reconciliation, parallel implementation: **EH-COMP1, EH-ACT1, EH-CTX1, EH-VAL1, EH-WORK1, EH-QMEM1, EH-CRED1, EH-ART1, EH-REV1, EH-TAL1** subject to file-collision inspection.
+4. **EH-KNOW1** after the career-store/import implementation from PR #35 exists.
+5. **EH-CONV** may close the original context/compensation/action loop as soon as its original dependencies are green; it must not wait merely for round-2 work.
+6. **EH-CONV2** after round-2 runtime lanes plus EH-CONV.
+7. **EH-LIVE2** for observed end-to-end acceptance and promotion handoff.
+
+The original EH-LIVE remains useful for narrower compensation/context/action acceptance and does not replace EH-LIVE2.

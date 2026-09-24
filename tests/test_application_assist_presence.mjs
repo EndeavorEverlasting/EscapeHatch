@@ -275,6 +275,19 @@ ok("fixture");
 assert.ok(jsText.includes("hidden_for_session") && jsText.includes("display") && jsText.includes("none"));
 ok("hidden semantics in JS");
 
+
+// 17. Installable extension runtime reachability (EH-A5 convergence)
+const popupText = fs.readFileSync(path.join(ROOT, "browser/application-assist/popup.js"), "utf-8");
+assert.ok(popupText.includes('"presence.js"'), "popup runtime must inject the presence module into the active application tab");
+assert.ok(popupText.includes("projectPresenceOnPage"), "popup runtime must own the shared presence projection seam");
+assert.ok(popupText.includes("projectPresence"), "runtime seam must project canonical assist state");
+assert.ok(popupText.includes("updateBeacon"), "runtime seam must mount/update the in-page companion beacon");
+assert.ok(popupText.includes("bindBeaconInteractions"), "runtime seam must bind intentional companion interactions");
+assert.ok(popupText.includes("PRESENCE_PREF_KEY"), "session-scoped presence preferences must have a stable owner");
+assert.ok(popupText.includes("presence_pause"), "in-page Pause must route through the existing assist session handler");
+assert.ok(popupText.includes("stopSession"), "in-page Stop must route through the existing assist session handler");
+ok("presence is reachable through the installable extension runtime");
+
 console.log("PRESENCE_MJS: PASS");
 console.log(`states=${stateIds.length}`);
 console.log(`loc=${loc}`);

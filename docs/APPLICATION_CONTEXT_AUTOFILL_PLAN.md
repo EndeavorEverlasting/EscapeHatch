@@ -370,7 +370,7 @@ The hard submission boundary remains unchanged.
 
 After an ATS-native résumé/profile import completes, EscapeHatch should:
 
-`wait for donor stability -> describe page -> group repeated records -> match each group to canonical user records -> diff donor vs canonical state -> repair only policy-owned fields -> preserve subsequent user edits -> record provenance`
+`start user-edit provenance capture before donor import -> wait for donor stability -> describe page -> group repeated records -> match each group to canonical user records -> diff donor vs canonical state -> repair only policy-owned fields that remain unedited -> record provenance`
 
 Required behavior:
 
@@ -380,7 +380,9 @@ Required behavior:
 - preserve multiline/bulleted responsibilities through a text-field presentation adapter;
 - recognize that a donor-filled field can be wrong even when it is non-empty;
 - keep source provenance per field: ATS donor, EscapeHatch canonical value, user edit, or unresolved;
-- once the user edits a field after EscapeHatch reconciliation, that edit becomes authoritative for the current application session unless the user explicitly requests another repair;
+- user-change provenance begins before/during native donor import, not only after reconciliation;
+- any field edited by the user while donor import/reconciliation is pending is protected from overwrite; the reconciler must rebase around that edit or stop for review;
+- once the user edits a field at any point in the current application session, that edit becomes authoritative unless the user explicitly requests another repair;
 - unknown or low-confidence record matching stops for review rather than silently overwriting.
 
 Permanent negative fixture: two employment records where native autofill places record B responsibilities into record A. The reconciler must detect the cross-record mismatch and repair or block it.
@@ -440,13 +442,14 @@ The answer store needs provenance fields such as:
 
 When the EscapeHatch session is active and the user manually answers a question that is not yet confidently mapped:
 
-1. observe the user-originated change;
+1. observe the user-originated change as a **candidate answer**, not durable consent;
 2. extract deterministic DOM/accessibility context;
 3. canonicalize the question if possible;
 4. resolve whether the answer is profile-, employer-, opportunity-, capability-, sensitive-, legal-, or session-scoped;
-5. store the answer locally only if its policy permits reuse;
-6. acknowledge through the ambient companion that a reusable answer was learned;
-7. use that answer on future semantically equivalent questions.
+5. stage the candidate locally for the current session;
+6. obtain an explicit **Save/reuse this answer** action (or a previously explicit user-configured reuse policy) before mutating durable answer memory;
+7. acknowledge through the ambient companion whether the answer is merely observed for this session or durably saved for reuse;
+8. use a durably saved answer on future semantically equivalent questions according to its scope/freshness policy.
 
 This is not permission to infer protected characteristics. A name, résumé, location, photograph, or other proxy may **never** be used to infer race/ethnicity, gender, veteran status, disability, or another protected/sensitive answer. Only an explicit user selection may seed those reusable values.
 
@@ -939,7 +942,7 @@ New reusable capabilities:
 New triggers:
 
 - `native_autofill_stable` -> reconcile native autofill;
-- `unknown_question_answered_by_user` -> capture explicit answer;
+- `unknown_question_answered_by_user` -> stage candidate answer; persist only after explicit save/reuse consent;
 - `known_question_detected` -> resolve question answer;
 - `opaque_question_unresolved` -> offer visual mapping fallback;
 - `repeated_work_record_detected` -> record matcher;
@@ -956,7 +959,8 @@ The following are permanent regressions if they recur:
 - native résumé/profile autofill is trusted without reconciliation;
 - work responsibilities from one employment record populate another record;
 - correct multiline responsibilities are flattened into unreadable text;
-- a user has to repeatedly answer a previously mapped stable question;
+- a user has to repeatedly answer a previously **explicitly saved for reuse** stable question;
+- a user-originated selection is durably reused without explicit save/reuse consent or a previously explicit reuse policy;
 - a sensitive demographic answer is inferred from a name, résumé, image, or other proxy;
 - an unknown field silently receives a guessed answer;
 - an authorized visual mapping screenshot persists into logs, Git, telemetry, or ordinary exports;

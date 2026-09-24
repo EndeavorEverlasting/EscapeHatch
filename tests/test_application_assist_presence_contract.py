@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import unittest
 from pathlib import Path
 
@@ -220,14 +221,25 @@ class PresenceContractTests(unittest.TestCase):
 
     def test_no_secret_in_contract(self):
         text = json.dumps(self.contract)
-        for marker in ["password", "secret", "token"]:
-            # contract may discuss secret_handling generically but must not contain actual secret values
-            # Allow word "secret" in keys, but not values that look like real secrets
-            pass
-        # ensure fixtures placeholder mention is synthetic only
-        secret_handling = json.dumps(self.contract.get("persistence", {}))
-        self.assertNotIn("SYNTHETIC_PLACEHOLDER_PW", text)  # real placeholder is in fixture only
-        # ensure contract copy does not leak PII
+        lower = text.lower()
+        # Policy prose may contain words such as "secret"; credential-bearing fields and
+        # high-entropy credential shapes must never appear in the tracked presence contract.
+        for marker in ["access_token", "refresh_token", "api_key", "password_value", "secret_value"]:
+            self.assertNotIn(f'"{marker}"', lower)
+        for pattern in [
+            r"(?i)\bbearer\s+[a-z0-9._~-]{16,}",
+            r"\b(?:sk|ghp|gho|ghu|ghs|ghr)[-_][A-Za-z0-9_-]{16,}\b",
+            r"(?i)\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b",
+        ]:
+            self.assertIsNone(re.search(pattern, text), f"credential/PII-like value matched: {pattern}")
+        representative_leaks = [
+            ("Bearer abcdefghijklmnop", r"(?i)\bbearer\s+[a-z0-9._~-]{16,}"),
+            ("ghp_abcdefghijklmnop", r"\b(?:sk|ghp|gho|ghu|ghs|ghr)[-_][A-Za-z0-9_-]{16,}\b"),
+            ("foo@example.com", r"(?i)\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"),
+        ]
+        for sample, pattern in representative_leaks:
+            self.assertIsNotNone(re.search(pattern, sample), f"secret-leak guard lost sensitivity: {pattern}")
+        self.assertNotIn("SYNTHETIC_PLACEHOLDER_PW", text)
         for state in self.contract["states"]:
             short = state["copy"]["short"]
             self.assertNotIn("@", short)

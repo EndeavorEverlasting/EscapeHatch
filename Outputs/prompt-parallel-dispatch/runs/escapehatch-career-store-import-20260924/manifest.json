@@ -13,10 +13,11 @@
     "provider_default_branch": "main",
     "provider_default_head": "0824535b9dc1341def885a79a098d297df770ac8",
     "provider_integration_branch": "integration/replit-donor-b01f628-20260921",
-    "provider_integration_head": "RESOLVE_AT_PLANNING_PR_CREATION",
+    "provider_integration_head": "d0f89105ed6619263ca311df09abc2a7960f1a0d",
     "planning_branch": "plan/career-store-import-20260924",
-    "planning_head": "00b8266a09756790b5efbc2bdc1a412dcec99f92",
-    "freshness": "PROVIDER_REFRESHED_2026-09-24_BEFORE_PLAN_WRITE"
+    "freshness": "PROVIDER_REFRESHED_2026-09-24_PR35_BASE_BOUND",
+    "planning_pr": 35,
+    "planning_head_at_pr_creation": "d453df2ebf7f99a6705b6f94ec35a283896cc500"
   },
   "graph": {
     "expression": "G0 -> EH-D0 -> { EH-D1 || EH-D2 || EH-D3 } -> EH-D4 -> { EH-D5 || EH-D6 } -> EH-D7",
@@ -24,9 +25,9 @@
     "max_width": 3,
     "parallel_disposition": "REQUIRED_AFTER_EH_D0"
   },
-  "status": "PLANNED_NOT_DISPATCHED",
+  "status": "PLANNED_NOT_DISPATCHED_PR35_TRACKED",
   "blockers": [
-    "Planning-only disposition does not authorize product/runtime implementation dispatch in this pass.",
+    "Planning-only disposition does not authorize product/runtime implementation dispatch in this pass; PR #35 tracks the complete plan/manifest.",
     "PRs #27, #29, #30, and #31 overlap cockpit import, persistence, batch, and companion surfaces and must be integrated or explicitly reconciled before their dependent lanes write.",
     "The inspected integration floor does not contain harness/contracts/prompt-parallel-dispatch.v1.json or scripts/prompt_parallel_dispatch.py, so canonical manifest CLI validation/receipt proof is unavailable.",
     "The generic Outputs/prompt-parallel-dispatch/manifest.json target is not established on the inspected floor; the repository already uses run-scoped manifests for application-assist planning.",

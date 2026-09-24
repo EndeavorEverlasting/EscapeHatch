@@ -48,6 +48,12 @@ const bc=await import("../artifacts/escape-hatch/src/lib/batch-coordinator.mjs")
   assert.equal(route2.targetState,"AWAITING_OPERATOR");
   const route3=bc.routeChannel(app, {progressionDecision:"AUTO_ADVANCE_SAFE", hasManualGate:true, providerAuthorized:true});
   assert.equal(route3.targetState,"AWAITING_OPERATOR");
+  const missingReferenceEv={kind:"submission_receipt",observed_at:"2026-09-10T07:00:00-04:00",artifact:{owner:"user",kind:"relative_path",locator:"evidence/app-submitted/missing-id.txt"}};
+  const missingReferenceSnap={observed_at:"2026-09-10T07:00:00-04:00",provider_id:"synthetic-provider",read_back:true,opportunities:[],applications:[{application_id:"app-submitted",execution:{state:"SUBMITTED",channel:"web_form",last_transition_at:"2026-09-10T07:00:00-04:00"},evidence:[{kind:"submission_receipt",observed_at:"2026-09-10T07:00:00-04:00"}]}]};
+  const missingReferenceRes=bc.recordTransition(cs,"app-submitted","SUBMITTED",missingReferenceEv,{providerSnapshot:missingReferenceSnap,providerAuthorized:true});
+  assert.notEqual(missingReferenceRes.receipt.to,"SUBMITTED");
+  assert.ok(missingReferenceRes.updatedState.evidence.every(e=>Boolean(e.id)));
+
   const emailData=loadFixture("08-email-draft-vs-sent.json");
   const appEmail=emailData.career_state.applications[0];
   const rEmail=bc.routeChannel(appEmail, {mailSent:false, operatorConfirmed:false, providerAuthorized:true});
@@ -123,6 +129,26 @@ const bc=await import("../artifacts/escape-hatch/src/lib/batch-coordinator.mjs")
   assert.ok(step.selected);
   assert.equal(step.route.targetState,"FILLED");
   console.log("PASS mjs multi_batch");
+}
+
+// pre-route provider freshness reconciliation
+{
+  const data=loadFixture("02-live-web-form-routed.json");
+  const cs=JSON.parse(JSON.stringify(data.career_state));
+  const oppId=cs.opportunities[0].id;
+  const providerSnapshot={
+    observed_at:"2026-09-10T07:30:00-04:00",
+    provider_id:"synthetic-provider",
+    read_back:true,
+    opportunities:[{opportunity_id:oppId,verification:{state:"CLOSED",verified_at:"2026-09-10T07:30:00-04:00"},auth:{authorized:true}}],
+    applications:[]
+  };
+  const step=bc.coordinateStep(cs,providerSnapshot,{progressionDecision:"AUTO_ADVANCE_SAFE",providerAuthorized:true});
+  assert.equal(step.selected,null,"provider-closed item must retire before queue selection");
+  assert.equal(step.transition,null);
+  assert.equal(step.batchStatus.byVerification.CLOSED,1);
+  assert.equal(step.batchStatus.byExecution.BLOCKED,1);
+  console.log("PASS mjs pre_route_provider_freshness");
 }
 
 // 7 email draft vs sent

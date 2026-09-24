@@ -28,6 +28,6 @@ jobs:
       - name: Install Chromium
         run: npx --prefix artifacts/escape-hatch playwright install --with-deps chromium
       - name: Test career state store
-        run: npx --prefix artifacts/escape-hatch playwright test tests/career-store.spec.ts --config=playwright.config.ts
+        run: cd artifacts/escape-hatch && npx playwright test tests/career-store.spec.ts --config=playwright.config.ts
       - name: Check whitespace
         run: git diff --check

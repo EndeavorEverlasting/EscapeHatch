@@ -128,12 +128,16 @@ Manual JSON import/export remains a **recovery** feature, not the normal path.
 
 ### Target normal path
 
-1. EscapeHatch cockpit owns the canonical reviewed profile.
-2. The extension exposes a one-action **Sync from EscapeHatch** path.
-3. The sync uses the existing `activeTab + scripting + storage` permission model to read the validated EscapeHatch profile from the active local cockpit tab when possible, instead of forcing file shuttling.
-4. The profile is validated and projected into the extension's local profile/preference store.
-5. Subsequent application pages can fill email and other deterministic identity fields immediately without a local agent.
-6. JSON import/export stays available for backup/recovery and cross-machine portability.
+1. EscapeHatch cockpit owns the canonical local profile.
+2. A user-selected resume is parsed locally and explicit resume facts are projected into that profile automatically; routine intake has no per-field accept/edit/save configuration step.
+3. Deterministic projection covers representable contact data, links, summary, skills, projects, experience, and education. Missing or ambiguous facts remain unset rather than being guessed.
+4. Existing non-empty profile values win when a newly imported resume disagrees, so automatic intake cannot silently overwrite divergent user truth.
+5. Resume import may capture a phone value, but it does not invent `phone_authority`; any existing explicit authority is preserved and the runtime's contact-authority gate remains authoritative.
+6. The extension exposes a one-action **Sync from EscapeHatch** path.
+7. The sync uses the existing `activeTab + scripting + storage` permission model to read the validated EscapeHatch profile from the active local cockpit tab when possible, instead of forcing file shuttling.
+8. The profile is validated and projected into the extension's local profile/preference store.
+9. Subsequent application pages can fill deterministic identity fields immediately without a local agent.
+10. JSON import/export stays available for backup/recovery and cross-machine portability.
 
 This design intentionally avoids introducing broad host permissions or page-runtime network access merely to solve profile bootstrap.
 

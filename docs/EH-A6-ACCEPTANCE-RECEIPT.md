@@ -236,4 +236,3 @@ python scripts/promotion_guard.py check --candidate-sha <new_HEAD_SHA> --base-sh
 ```
 
 Until the workstation live observation is recorded, the promotion ceiling remains **synthetic fixture only**.
-

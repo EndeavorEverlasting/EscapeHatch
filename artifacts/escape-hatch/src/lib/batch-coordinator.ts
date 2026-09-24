@@ -28,7 +28,7 @@ export type TransitionReceipt = { schema:typeof BATCH_RECEIPT_SCHEMA; applicatio
 function deepClone<T>(v:T):T{return JSON.parse(JSON.stringify(v));}
 function isDateTime(s:string){
   if(typeof s!=="string") return false;
-  const m=/^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.(\\d+))?(Z|([+-])(\\d{2}):(\\d{2}))$/.exec(s);
+  const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(Z|([+-])(\d{2}):(\d{2}))$/.exec(s);
   if(!m) return false;
   const year=Number(m[1]),month=Number(m[2]),day=Number(m[3]),hour=Number(m[4]),minute=Number(m[5]),second=Number(m[6]);
   const offsetHour=m[10]===undefined?0:Number(m[10]),offsetMinute=m[11]===undefined?0:Number(m[11]);

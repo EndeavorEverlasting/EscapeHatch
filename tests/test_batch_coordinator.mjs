@@ -150,10 +150,34 @@ const bc=await import("../artifacts/escape-hatch/src/lib/batch-coordinator.mjs")
   assert.equal(localRes.receipt.evidence_binding,localAttempt.expected_binding);
   assert.match(localRes.receipt.reason,/provider_read_back/);
 
-  const invalidEv={id:"ev-undated",kind:"submission_receipt",observed_at:"",artifact:{owner:"user",kind:"relative_path",locator:"evidence/app-submitted/undated.txt"}};
-  const invalidSnap={observed_at:"2026-09-10T07:00:00-04:00",provider_id:"synthetic-provider",read_back:true,opportunities:[],applications:[{application_id:"app-submitted",execution:{state:"SUBMITTED",channel:"web_form",last_transition_at:"2026-09-10T07:00:00-04:00"},evidence:[{id:"ev-undated",kind:"submission_receipt",observed_at:""}]}]};
-  const invalidRes=bc.recordTransition(cs,"app-submitted","SUBMITTED",invalidEv,{providerSnapshot:invalidSnap,providerAuthorized:true});
-  assert.notEqual(invalidRes.receipt.to,"SUBMITTED");
+  const qualifyingAttempt=data.promotion_attempts[2];
+  const restarted=JSON.parse(JSON.stringify(cs));
+  const durableEv=JSON.parse(JSON.stringify(qualifyingAttempt.evidence));
+  restarted.evidence.push({
+    id:durableEv.id,
+    application_id:"app-submitted",
+    kind:durableEv.kind,
+    artifact:durableEv.artifact,
+    observed_at:durableEv.observed_at
+  });
+  restarted.applications[0].execution.evidence_id=durableEv.id;
+  const restartRes=bc.recordTransition(restarted,"app-submitted","SUBMITTED",null,{providerSnapshot:qualifyingAttempt.provider_snapshot,providerAuthorized:true});
+  assert.equal(restartRes.receipt.to,"SUBMITTED");
+  assert.equal(restartRes.receipt.evidence_binding,"provider");
+  assert.equal(restartRes.receipt.reference,durableEv.id);
+  assert.equal(restartRes.updatedState.applications[0].execution.evidence_id,durableEv.id);
+
+  const reconciledRes=bc.recordTransition(cs,"app-submitted","FILLED",null,{providerSnapshot:qualifyingAttempt.provider_snapshot,providerAuthorized:true});
+  assert.ok(reconciledRes.reconciliation);
+  assert.equal(reconciledRes.updatedState.applications[0].execution.state,"SUBMITTED");
+  assert.ok(reconciledRes.updatedState.evidence.some(e=>e.id===durableEv.id));
+
+  for(const badTimestamp of ["","2026-09-10","2026-02-30T00:00:00Z"]){
+    const invalidEv={id:"ev-undated",kind:"submission_receipt",observed_at:badTimestamp,artifact:{owner:"user",kind:"relative_path",locator:"evidence/app-submitted/undated.txt"}};
+    const invalidSnap={observed_at:"2026-09-10T07:00:00-04:00",provider_id:"synthetic-provider",read_back:true,opportunities:[],applications:[{application_id:"app-submitted",execution:{state:"SUBMITTED",channel:"web_form",last_transition_at:"2026-09-10T07:00:00-04:00"},evidence:[{id:"ev-undated",kind:"submission_receipt",observed_at:badTimestamp}]}]};
+    const invalidRes=bc.recordTransition(cs,"app-submitted","SUBMITTED",invalidEv,{providerSnapshot:invalidSnap,providerAuthorized:true});
+    assert.notEqual(invalidRes.receipt.to,"SUBMITTED",`invalid timestamp promoted: ${badTimestamp}`);
+  }
 
   const emailData=loadFixture("08-email-draft-vs-sent.json");
   const sentCase=emailData.cases.find(c=>c.label==="sent_email_with_confirmation_allows_submitted");

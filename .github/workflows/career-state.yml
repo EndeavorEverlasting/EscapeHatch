@@ -6,6 +6,8 @@ on:
       - "contracts/**"
       - "fixtures/**"
       - "scripts/validate_career_state.py"
+      - "scripts/validate_opportunity_import.py"
+      - "tests/test_opportunity_import_contract.py"
       - "scripts/validate_application_companion.py"
       - "scripts/export_study_guidance.py"
       - "tests/test_study_guidance_export.py"
@@ -35,12 +37,16 @@ jobs:
           python-version: "3.13"
       - name: Validate career-state graph
         run: python scripts/validate_career_state.py
+      - name: Validate opportunity import contract
+        run: python scripts/validate_opportunity_import.py
+      - name: Test opportunity import contract
+        run: python tests/test_opportunity_import_contract.py
       - name: Validate application companion
         run: python scripts/validate_application_companion.py
       - name: Test StudySyndicate export
         run: python tests/test_study_guidance_export.py
       - name: Compile product validators
-        run: python -m py_compile scripts/validate_career_state.py scripts/validate_application_companion.py scripts/export_study_guidance.py tests/test_study_guidance_export.py
+        run: python -m py_compile scripts/validate_career_state.py scripts/validate_opportunity_import.py scripts/validate_application_companion.py scripts/export_study_guidance.py tests/test_opportunity_import_contract.py tests/test_study_guidance_export.py
       - name: Check whitespace
         shell: bash
         run: |

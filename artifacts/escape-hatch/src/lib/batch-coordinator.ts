@@ -281,7 +281,7 @@ export function recordTransition(careerState:CareerState, applicationId:string, 
   }
 
   // append evidence if qualifying and not already present (smallest safe receipt)
-  if(evidence && !evidenceIdConflict && !updated.evidence.some(e=>e.id===evidence.id)){
+  if(evidence && hasQualifying && !evidenceIdConflict && !updated.evidence.some(e=>e.id===evidence.id)){
     updated.evidence.push({
       id: evidence.id,
       application_id: applicationId,

@@ -197,6 +197,38 @@ function testEvidenceOnlyRevision() {
   console.log("PASS evidence_only_revision (mjs)");
 }
 
+function testAuthFailureIdempotence() {
+  const data=loadFixture("fixture-05-auth-failure-blocked.json");
+  const first=reconcile(JSON.parse(JSON.stringify(data.career_state)),JSON.parse(JSON.stringify(data.provider_snapshot)));
+  const firstRevision=first.reconciledState.revision;
+  const firstTransitionAt=first.reconciledState.applications[0].execution.last_transition_at;
+  const second=reconcile(first.reconciledState,JSON.parse(JSON.stringify(data.provider_snapshot)));
+  assert.deepEqual(second.reconciledState,first.reconciledState,"same authorization-failure snapshot must be idempotent");
+  assert.equal(second.reconciledState.revision,firstRevision);
+  assert.equal(second.reconciledState.applications[0].execution.last_transition_at,firstTransitionAt);
+  assert.equal(isIdempotent(JSON.parse(JSON.stringify(data.career_state)),JSON.parse(JSON.stringify(data.provider_snapshot))),true);
+  console.log("PASS auth_failure_idempotent (mjs)");
+}
+
+function testProviderEvidenceReferenceRequired() {
+  const data=loadFixture("fixture-04-local-edit-remains-local.json");
+  const cs=JSON.parse(JSON.stringify(data.career_state));
+  const ps=JSON.parse(JSON.stringify(data.provider_snapshot));
+  ps.read_back=true;
+  ps.observed_at="2026-09-10T07:00:00-04:00";
+  ps.applications=[{
+    application_id:"app-fixture-001",
+    execution:{state:"SUBMITTED",channel:"web_form",last_transition_at:"2026-09-10T07:00:00-04:00"},
+    evidence:[{kind:"submission_receipt",observed_at:"2026-09-10T07:00:00-04:00"}],
+    auth:{authorized:true}
+  }];
+  const out=reconcile(cs,ps);
+  const transition=out.result.execution_transition.find(e=>e.application_id==="app-fixture-001");
+  assert.notEqual(transition.to,"SUBMITTED");
+  assert.notEqual(out.reconciledState.applications[0].execution.state,"SUBMITTED");
+  console.log("PASS provider_evidence_reference (mjs)");
+}
+
 function testSynthetic() {
   const files = readdirSync(fixtureDir).filter(f=>f.endsWith(".json"));
   assert(files.length >= 7, `expected at least 7 fixtures, got ${files.length}`);
@@ -216,5 +248,7 @@ testDraftEmail();
 testIdempotentConflict();
 testUndatedProviderEvidence();
 testEvidenceOnlyRevision();
+testAuthFailureIdempotence();
+testProviderEvidenceReferenceRequired();
 testSynthetic();
 console.log("ALL MJS TESTS PASS");

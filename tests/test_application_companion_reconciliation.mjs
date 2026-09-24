@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { reconcile, isIdempotent } from "../artifacts/escape-hatch/src/lib/companion-reconciliation.mjs";
+import { reconcile, isIdempotent, requiresProviderReadBack } from "../artifacts/escape-hatch/src/lib/companion-reconciliation.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -141,20 +141,25 @@ function testIdempotentConflict() {
 
 function testUndatedProviderEvidence() {
   const data = loadFixture("fixture-04-local-edit-remains-local.json");
-  const cs = JSON.parse(JSON.stringify(data.career_state));
-  const ps = JSON.parse(JSON.stringify(data.provider_snapshot));
-  ps.read_back = true;
-  ps.observed_at = "2026-09-10T07:00:00-04:00";
-  ps.applications = [{
-    application_id: "app-fixture-001",
-    execution: { state: "SUBMITTED", channel: "web_form", last_transition_at: "2026-09-10T07:00:00-04:00" },
-    evidence: [{ id: "ev-undated", kind: "submission_receipt" }],
-    auth: { authorized: true }
-  }];
-  const { result, reconciledState } = reconcile(cs, ps);
-  const exec = result.execution_transition.find(e => e.application_id === "app-fixture-001");
-  assert.notEqual(exec.to, "SUBMITTED", "undated provider evidence must not promote");
-  assert.notEqual(reconciledState.applications[0].execution.state, "SUBMITTED");
+  for (const badTimestamp of ["", "2026-09-10", "2026-02-30T00:00:00Z"]) {
+    const cs = JSON.parse(JSON.stringify(data.career_state));
+    const ps = JSON.parse(JSON.stringify(data.provider_snapshot));
+    ps.read_back = true;
+    ps.observed_at = "2026-09-10T07:00:00-04:00";
+    ps.applications = [{
+      application_id: "app-fixture-001",
+      execution: { state: "SUBMITTED", channel: "web_form", last_transition_at: "2026-09-10T07:00:00-04:00" },
+      evidence: [{ id: "ev-undated", kind: "submission_receipt", observed_at: badTimestamp }],
+      auth: { authorized: true }
+    }];
+    const { result, reconciledState } = reconcile(cs, ps);
+    const exec = result.execution_transition.find(e => e.application_id === "app-fixture-001");
+    assert.notEqual(exec.to, "SUBMITTED", `invalid provider evidence timestamp must not promote: ${badTimestamp}`);
+    assert.notEqual(reconciledState.applications[0].execution.state, "SUBMITTED");
+  }
+  assert.equal(requiresProviderReadBack({read_back:true, observed_at:"2026-09-10"}), true);
+  assert.equal(requiresProviderReadBack({read_back:true, observed_at:"2026-02-30T00:00:00Z"}), true);
+  assert.equal(requiresProviderReadBack({read_back:true, observed_at:"2026-09-10T07:00:00Z"}), false);
   console.log("PASS undated_provider_evidence (mjs)");
 }
 

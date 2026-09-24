@@ -15,6 +15,11 @@ COMPONENTS = {
     "governance_validator": "scripts/validate_governance.py",
     "application_harness_validator": "scripts/validate_application_harness.py",
     "resume_presentation_validator": "scripts/validate_resume_presentation.py",
+    "application_resume_artifact_sync_contract": "contracts/application-resume-artifact-sync.v1.json",
+    "application_resume_artifact_sync_positive_fixture": "fixtures/application-resume-artifact-sync/01-durable-ready-positive.json",
+    "application_resume_artifact_sync_negative_fixture": "fixtures/application-resume-artifact-sync/02-local-only-negative.json",
+    "application_resume_artifact_sync_validator": "scripts/validate_application_resume_artifact_sync.py",
+    "application_resume_artifact_sync_tests": "tests/test_application_resume_artifact_sync.py",
     "product_version_validator": "scripts/validate_product_version.py",
     "product_version_authority": "VERSION",
     "product_release_contract": "contracts/product-release.v1.json",
@@ -46,6 +51,7 @@ VALIDATION_ORDER = [
     "python scripts/validate_application_harness.py",
     "python scripts/validate_application_companion.py",
     "python scripts/validate_resume_presentation.py",
+    "python scripts/validate_application_resume_artifact_sync.py",
     "python scripts/validate_harness.py",
     "python scripts/validate_career_state.py",
     "python scripts/validate_local_runtime_lifecycle.py",
@@ -79,6 +85,9 @@ REQUIRED_REGISTRY = {
     "Application companion validator": "scripts/validate_application_companion.py",
     "Resume presentation contract": "contracts/resume-presentation.v1.json",
     "Resume presentation validator": "scripts/validate_resume_presentation.py",
+    "Application resume artifact durability contract": "contracts/application-resume-artifact-sync.v1.json",
+    "Application resume artifact durability validator": "scripts/validate_application_resume_artifact_sync.py",
+    "Application resume artifact durability tests": "tests/test_application_resume_artifact_sync.py",
     "Local runtime lifecycle contract": "contracts/local-runtime-lifecycle.v1.json",
     "Local runtime lifecycle example fixture": "fixtures/local-runtime-lifecycle.v1.example.json",
     "Local runtime lifecycle validator": "scripts/validate_local_runtime_lifecycle.py",
@@ -190,7 +199,7 @@ def validate_resolver() -> None:
 
 def validate_ci() -> None:
     text = read(".github/workflows/harness.yml")
-    for marker in ("name: Harness Validation","push:","pull_request:","name: Validate governance","run: python scripts/validate_governance.py","name: Validate product version","run: python scripts/validate_product_version.py","name: Test product version","run: python tests/test_product_version.py","name: Validate repository promotion","run: python scripts/validate_repository_promotion.py","name: Test promotion guard","run: python tests/test_repository_promotion.py","name: Validate application harness","run: python scripts/validate_application_harness.py","name: Validate application companion","run: python scripts/validate_application_companion.py","name: Validate resume presentation","run: python scripts/validate_resume_presentation.py","name: Validate harness","run: python scripts/validate_harness.py","name: Validate career-state contract","run: python scripts/validate_career_state.py","name: Validate local runtime lifecycle","run: python scripts/validate_local_runtime_lifecycle.py","git diff --check","windows-location:","scripts/resolve_repo.ps1 -ResolveOnly","WINDOWS_REPO_ROOT=PASS"):
+    for marker in ("name: Harness Validation","push:","pull_request:","name: Validate governance","run: python scripts/validate_governance.py","name: Validate product version","run: python scripts/validate_product_version.py","name: Test product version","run: python tests/test_product_version.py","name: Validate repository promotion","run: python scripts/validate_repository_promotion.py","name: Test promotion guard","run: python tests/test_repository_promotion.py","name: Validate application harness","run: python scripts/validate_application_harness.py","name: Validate application companion","run: python scripts/validate_application_companion.py","name: Validate resume presentation","run: python scripts/validate_resume_presentation.py","name: Validate application resume artifact sync","run: python scripts/validate_application_resume_artifact_sync.py","name: Test application resume artifact sync","run: python tests/test_application_resume_artifact_sync.py","name: Validate harness","run: python scripts/validate_harness.py","name: Validate career-state contract","run: python scripts/validate_career_state.py","name: Validate local runtime lifecycle","run: python scripts/validate_local_runtime_lifecycle.py","git diff --check","windows-location:","scripts/resolve_repo.ps1 -ResolveOnly","WINDOWS_REPO_ROOT=PASS"):
         if marker not in text:
             raise HarnessError(f"CI missing active marker: {marker}")
     # Promotion workflow must exist and have correct triggers
@@ -227,7 +236,7 @@ def self_tests(manifest: dict) -> int:
 def main() -> int:
     try:
         manifest = load_manifest(); validate_markers(); rows = parse_registry(); validate_hooks(); validate_resolver(); validate_ci()
-        run_validator("scripts/validate_governance.py"); run_validator("scripts/validate_product_version.py"); run_validator("scripts/validate_repository_promotion.py"); run_validator("scripts/validate_application_harness.py"); run_validator("scripts/validate_application_companion.py"); run_validator("scripts/validate_resume_presentation.py"); run_validator("scripts/validate_local_runtime_lifecycle.py")
+        run_validator("scripts/validate_governance.py"); run_validator("scripts/validate_product_version.py"); run_validator("scripts/validate_repository_promotion.py"); run_validator("scripts/validate_application_harness.py"); run_validator("scripts/validate_application_companion.py"); run_validator("scripts/validate_resume_presentation.py"); run_validator("scripts/validate_application_resume_artifact_sync.py"); run_validator("scripts/validate_local_runtime_lifecycle.py")
         negatives = self_tests(manifest)
     except HarnessError as exc:
         print(f"HARNESS_VALIDATION: FAIL: {exc}", file=sys.stderr); return 1
@@ -242,6 +251,7 @@ def main() -> int:
     print("application_harness_validator=PASS")
     print("application_companion_validator=PASS")
     print("resume_presentation_validator=PASS")
+    print("application_resume_artifact_sync_validator=PASS")
     print("local_runtime_lifecycle_validator=PASS")
     return 0
 

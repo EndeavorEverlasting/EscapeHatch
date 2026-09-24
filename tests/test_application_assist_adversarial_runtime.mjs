@@ -34,7 +34,7 @@ function runtimeDecision(data, overrides = {}) {
     archetype: plan.archetype,
     controls: [{ label }],
     fillStable: data.progression_plan?.deterministic_fill_completed_and_stable_after_live_rescan === true,
-    transitionObserverReady: true,
+    transitionObserverReady: overrides.transitionObserverReady === true,
     hasValidationError: data.progression_plan?.no_visible_validation_error_present === false,
     unresolvedRequiredFields:
       data.progression_plan?.no_required_unknown_manual_review_control_unresolved === false ? ["synthetic-required"] : [],
@@ -67,10 +67,16 @@ for (const [name, expected] of [
   ["11-spa-transition-loop-guard.json", "REVIEW_REQUIRED"]
 ]) {
   const data = fixture(name);
-  const result = runtimeDecision(data);
+  const result = runtimeDecision(data, { transitionObserverReady: true });
   assert.equal(result.gate.decision, expected, `${name}: runtime decision drifted from adversarial fixture`);
   assert.equal(result.gate.decision, data.expected_decision, `${name}: fixture expected_decision disagrees with runtime`);
 }
+
+// Observer readiness is a real pre-dispatch gate, not a fixture shortcut.
+const observerControl = fixture("04-safe-intermediate-next.json");
+const observerMissing = runtimeDecision(observerControl, { transitionObserverReady: false });
+assert.equal(observerMissing.gate.decision, "REVIEW_REQUIRED", "observer-not-armed control must block safe progression");
+assert.equal(observerMissing.gate.reason, "transition_observer_not_ready");
 
 // Final-submit fixture must remain unreachable through the navigation policy.
 const finalReview = fixture("10-final-review-submit-never-auto.json");

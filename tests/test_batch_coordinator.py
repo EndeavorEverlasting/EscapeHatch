@@ -253,6 +253,27 @@ def test_multi_item_batch_priority_and_status_projection():
     # ensure synthetic domain
     assert_no_leakage(cs2)
 
+def test_coordinate_reconciles_provider_freshness_before_routing():
+    data=load_fixture("02-live-web-form-routed.json")
+    cs=copy.deepcopy(data["career_state"])
+    opp_id=cs["opportunities"][0]["id"]
+    provider_snapshot={
+        "observed_at":"2026-09-10T07:30:00-04:00",
+        "provider_id":"synthetic-provider",
+        "read_back":True,
+        "opportunities":[{
+            "opportunity_id":opp_id,
+            "verification":{"state":"CLOSED","verified_at":"2026-09-10T07:30:00-04:00"},
+            "auth":{"authorized":True},
+        }],
+        "applications":[],
+    }
+    step=coordinate_step(cs, provider_snapshot, {"progressionDecision":"AUTO_ADVANCE_SAFE","providerAuthorized":True})
+    assert step["selected"] is None, "provider-closed item must retire before queue selection"
+    assert step["transition"] is None
+    assert step["batchStatus"]["byVerification"].get("CLOSED")==1
+    assert step["batchStatus"]["byExecution"].get("BLOCKED")==1
+
 def test_email_draft_vs_sent_and_operator_confirmed():
     data=load_fixture("08-email-draft-vs-sent.json")
     cs=data["career_state"]
@@ -328,6 +349,13 @@ def test_submission_proof_guards():
         invalid_res=record_transition(cs, "app-submitted", "SUBMITTED", invalid_ev, {"providerSnapshot": invalid_snap, "providerAuthorized": True})
         assert invalid_res["receipt"]["to"]!="SUBMITTED", f"invalid timestamp promoted: {bad_timestamp!r}"
 
+    # Qualifying kind/timestamp without a durable evidence reference is not proof.
+    missing_reference_ev={"kind":"submission_receipt","observed_at":"2026-09-10T07:00:00-04:00","artifact":{"owner":"user","kind":"relative_path","locator":"evidence/app-submitted/missing-id.txt"}}
+    missing_reference_snap={"observed_at":"2026-09-10T07:00:00-04:00","provider_id":"synthetic-provider","read_back":True,"opportunities":[],"applications":[{"application_id":"app-submitted","execution":{"state":"SUBMITTED","channel":"web_form","last_transition_at":"2026-09-10T07:00:00-04:00"},"evidence":[{"kind":"submission_receipt","observed_at":"2026-09-10T07:00:00-04:00"}]}]}
+    missing_reference_res=record_transition(cs,"app-submitted","SUBMITTED",missing_reference_ev,{"providerSnapshot":missing_reference_snap,"providerAuthorized":True})
+    assert missing_reference_res["receipt"]["to"]!="SUBMITTED"
+    assert all(e.get("id") for e in missing_reference_res["updatedState"]["evidence"])
+
     # Email SUBMITTED requires an affirmative sent signal, not merely an omitted mailSent option.
     email_data=load_fixture("08-email-draft-vs-sent.json")
     sent_case=next(c for c in email_data["cases"] if c["label"]=="sent_email_with_confirmation_allows_submitted")
@@ -369,6 +397,8 @@ if __name__=="__main__":
     print("PASS channel_negative")
     test_multi_item_batch_priority_and_status_projection()
     print("PASS multi_batch_status")
+    test_coordinate_reconciles_provider_freshness_before_routing()
+    print("PASS pre_route_provider_freshness")
     test_email_draft_vs_sent_and_operator_confirmed()
     print("PASS email_draft_sent")
     test_submission_proof_guards()

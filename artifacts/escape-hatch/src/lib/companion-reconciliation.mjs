@@ -22,6 +22,16 @@ function isDateTime(s) {
   return !Number.isNaN(Date.parse(s));
 }
 
+function isQualifyingEvidence(evidence) {
+  return Boolean(
+    evidence &&
+    typeof evidence.id === "string" &&
+    evidence.id.trim().length > 0 &&
+    QUALIFYING_KINDS.has(evidence.kind) &&
+    isDateTime(evidence.observed_at || "")
+  );
+}
+
 export function reconcile(careerState, providerSnapshot) {
   const now = new Date().toISOString();
   const reconciled = deepClone(careerState);
@@ -91,9 +101,9 @@ export function reconcile(careerState, providerSnapshot) {
     let evidenceBinding = "none";
     let conflict = false;
     let reason = "no_change";
-    const localQual = reconciled.evidence.filter(e => e.application_id === app.id && QUALIFYING_KINDS.has(e.kind) && isDateTime(e.observed_at || ""));
+    const localQual = reconciled.evidence.filter(e => e.application_id === app.id && isQualifyingEvidence(e));
     const hasLocal = localQual.length > 0;
-    const providerQual = (providerApp?.evidence || []).filter(e => QUALIFYING_KINDS.has(e.kind) && isDateTime(e.observed_at || ""));
+    const providerQual = (providerApp?.evidence || []).filter(isQualifyingEvidence);
     const hasProvider = providerQual.length > 0;
     const localAny = reconciled.evidence.filter(e => e.application_id === app.id);
     const hasAnyLocal = localAny.length > 0;
@@ -115,12 +125,12 @@ export function reconcile(careerState, providerSnapshot) {
       if (authFailure || oppAuthFailure) {
         if (from === "SUBMITTED") {
           conflict = true; anyConflict = true; to = "BLOCKED"; evidenceBinding = hasAnyLocal ? "local" : "none"; reason = "provider_authorization_failure_BLOCKED";
-          if (app.execution) { app.execution.state = "BLOCKED"; app.execution.block_reason = providerApp.auth?.reason || "provider_authorization_failure"; app.execution.last_transition_at = now; }
+          if (app.execution) { const stateChanged=app.execution.state!=="BLOCKED"; app.execution.state = "BLOCKED"; app.execution.block_reason = providerApp.auth?.reason || "provider_authorization_failure"; if(stateChanged) app.execution.last_transition_at = now; }
         } else {
           const channel = app.execution?.channel || providerApp.auth?.channel || fromChannel;
           if (channel === "email") {
             to = "AWAITING_OPERATOR"; reason = "provider_authorization_failure_AWAITING_OPERATOR";
-            if (app.execution) { app.execution.state = "AWAITING_OPERATOR"; app.execution.awaiting_reason = "provider_authorization_failure"; app.execution.last_transition_at = now; }
+            if (app.execution) { const stateChanged=app.execution.state!=="AWAITING_OPERATOR"; app.execution.state = "AWAITING_OPERATOR"; app.execution.awaiting_reason = "provider_authorization_failure"; if(stateChanged) app.execution.last_transition_at = now; }
           } else {
             to = "BLOCKED"; reason = "provider_authorization_failure_BLOCKED";
             if (app.execution) { app.execution.state = "BLOCKED"; app.execution.block_reason = providerApp.auth?.reason || "provider_authorization_failure"; app.execution.last_transition_at = now; }

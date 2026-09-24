@@ -30,6 +30,18 @@ function isDateTime(s:string){try{const v=s.endsWith("Z")?s:s.replace("Z","+00:0
 function nowIso(){return new Date().toISOString();}
 function priorityRank(p?:string){if(p==="high") return 3; if(p==="medium") return 2; if(p==="low") return 1; return 0;}
 function isQualifyingKind(k:string){return QUALIFYING_KINDS.has(k);}
+function providerHasMatchingQualifying(
+  snapshot:ProviderSnapshot|null|undefined,
+  applicationId:string,
+  evidence:{id:string; kind:string; observed_at:string; artifact?:{owner:string; kind:string; locator:string}}|null
+):boolean{
+  if(!snapshot || snapshot.read_back!==true || !isDateTime(snapshot.observed_at || "") || !evidence) return false;
+  if(!isQualifyingKind(evidence.kind) || !isDateTime(evidence.observed_at || "")) return false;
+  const providerApp=snapshot.applications?.find(a=>a.application_id===applicationId);
+  return Boolean(providerApp?.evidence?.some(pe=>
+    pe.id===evidence.id && pe.kind===evidence.kind && isDateTime(pe.observed_at || "")
+  ));
+}
 
 // Select one dependency-ready queue item by priority + freshness (only LIVE_VERIFIED + not BLOCKED/SUBMITTED)
 export function selectNextQueueItem(careerState:CareerState):{opportunity:CareerState["opportunities"][number]; application:CareerState["applications"][number]}|null{
@@ -131,14 +143,18 @@ export function recordTransition(careerState:CareerState, applicationId:string, 
   let queueActive=verification==="LIVE_VERIFIED" && to!=="BLOCKED" && to!=="SUBMITTED";
 
   // evidence helpers
-  const hasQualifying=evidence ? isQualifyingKind(evidence.kind) && isDateTime(evidence.observed_at) : false;
-  const hasEvidence=!!evidence;
-  const localHasQualifying=updated.evidence.some(e=>e.application_id===applicationId && isQualifyingKind(e.kind));
-  // provider snapshot read_back
-  const providerReadBack=Boolean(opts.providerSnapshot && opts.providerSnapshot.read_back===true);
+  const providerSnapshot=opts.providerSnapshot;
+  const providerReadBack=Boolean(providerSnapshot && providerSnapshot.read_back===true && isDateTime(providerSnapshot.observed_at || ""));
   const providerAuthorized=opts.providerAuthorized;
   const mailSent=opts.mailSent;
   const operatorConfirmed=opts.operatorConfirmed===true;
+  const existingEvidence=updated.evidence.find(e=>evidence && e.id===evidence.id);
+  const evidenceIdConflict=Boolean(existingEvidence && existingEvidence.application_id!==applicationId);
+  const hasQualifying=Boolean(evidence && !evidenceIdConflict && isQualifyingKind(evidence.kind) && isDateTime(evidence.observed_at || ""));
+  const hasEvidence=!!evidence;
+  const localHasQualifying=updated.evidence.some(e=>e.application_id===applicationId && isQualifyingKind(e.kind) && isDateTime(e.observed_at || ""));
+  const providerHasQualifying=providerHasMatchingQualifying(providerSnapshot, applicationId, evidence) && !evidenceIdConflict;
+  if(evidenceIdConflict) conflict=true;
 
   // no-promotion guards
   if(to==="SUBMITTED"){
@@ -146,19 +162,28 @@ export function recordTransition(careerState:CareerState, applicationId:string, 
       to=channel==="email"?"AWAITING_OPERATOR":"BLOCKED";
       reason="provider_authorization_failure_BLOCKED_never_SUBMITTED";
       evidenceBinding=localHasQualifying?"local":"none";
-    }else if(channel==="email" && mailSent===false && !operatorConfirmed){
+    }else if(evidenceIdConflict){
+      to=from==="FILLED"?"FILLED":"AWAITING_OPERATOR";
+      reason="evidence_id_bound_to_other_application";
+      evidenceBinding="none";
+    }else if(channel==="email" && mailSent!==true && !operatorConfirmed){
       to=from==="FILLED"?"FILLED":"AWAITING_OPERATOR";
       reason="draft_email_requires_sent_confirmation_never_SUBMITTED";
       evidenceBinding=hasEvidence?"local":"none";
       conflict=true;
-    }else if(!hasQualifying && !localHasQualifying && !operatorConfirmed){
-      // FILLED != SUBMITTED, LIVE_VERIFIED != SUBMITTED, need qualifying
+    }else if(!providerHasQualifying && !operatorConfirmed){
+      // SUBMITTED requires provider-matched qualifying evidence or explicit operator confirmation.
       if(from==="FILLED") to="FILLED";
       else if(from==="READY_TO_APPLY") to="READY_TO_APPLY";
       else to="AWAITING_OPERATOR";
       to=to as ExecutionState;
-      reason="SUBMITTED_requires_qualifying_evidence_with_timestamp_and_reference";
-      evidenceBinding="none";
+      if(hasQualifying || localHasQualifying){
+        reason="provider_read_back_or_operator_confirmation_required_before_SUBMITTED";
+        evidenceBinding="local";
+      }else{
+        reason="SUBMITTED_requires_qualifying_evidence_with_timestamp_and_reference";
+        evidenceBinding="none";
+      }
       if(hasEvidence && !hasQualifying) conflict=true;
     }else if(verification==="BLOCKED"){
       to="BLOCKED";
@@ -170,7 +195,7 @@ export function recordTransition(careerState:CareerState, applicationId:string, 
       reason="missing_timestamp";
     }else{
       // valid promotion requires reference
-      evidenceBinding=operatorConfirmed?"operator_confirmed":hasQualifying?"provider":localHasQualifying?"local":"none";
+      evidenceBinding=operatorConfirmed?"operator_confirmed":"provider";
       reason="qualifying_confirmation_promotes_SUBMITTED";
       if(hasEvidence && localHasQualifying && evidence && updated.evidence.some(e=>e.id===evidence.id && e.application_id!==applicationId)) conflict=true;
     }
@@ -208,7 +233,7 @@ export function recordTransition(careerState:CareerState, applicationId:string, 
   if(app.execution){
     app.execution.state=finalTo;
     app.execution.last_transition_at=now;
-    if(evidence && hasQualifying) app.execution.evidence_id=evidence.id;
+    if(evidence && hasQualifying && !evidenceIdConflict) app.execution.evidence_id=evidence.id;
     if(finalTo==="BLOCKED" && !app.execution.block_reason) app.execution.block_reason=reason;
     if(finalTo==="AWAITING_OPERATOR" && !app.execution.awaiting_reason) app.execution.awaiting_reason=reason;
     if(finalTo==="SUBMITTED"){
@@ -217,7 +242,7 @@ export function recordTransition(careerState:CareerState, applicationId:string, 
     }
   }else{
     app.execution={ state:finalTo, channel, last_transition_at:now, detail:reason } as any;
-    if(evidence && hasQualifying) (app.execution as any).evidence_id=evidence.id;
+    if(evidence && hasQualifying && !evidenceIdConflict) (app.execution as any).evidence_id=evidence.id;
     if(finalTo==="SUBMITTED"){
       if(!app.submitted_at) app.submitted_at=now;
       if(!app.external_reference) app.external_reference=`batch-${now}-${applicationId}`;
@@ -225,7 +250,7 @@ export function recordTransition(careerState:CareerState, applicationId:string, 
   }
 
   // append evidence if qualifying and not already present (smallest safe receipt)
-  if(evidence && !updated.evidence.some(e=>e.id===evidence.id)){
+  if(evidence && !evidenceIdConflict && !updated.evidence.some(e=>e.id===evidence.id)){
     updated.evidence.push({
       id: evidence.id,
       application_id: applicationId,
@@ -242,7 +267,7 @@ export function recordTransition(careerState:CareerState, applicationId:string, 
     updated.updated_at=now;
   }
 
-  const reference=evidence?.id ?? app.external_reference ?? `batch-${applicationId}-${now}`;
+  const reference=(!evidenceIdConflict ? evidence?.id : null) ?? app.external_reference ?? `batch-${applicationId}-${now}`;
   const receipt:TransitionReceipt={
     schema:BATCH_RECEIPT_SCHEMA,
     application_id:applicationId,

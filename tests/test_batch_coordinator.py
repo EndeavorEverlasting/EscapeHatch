@@ -284,11 +284,49 @@ def test_submission_proof_guards():
     assert local_res["receipt"]["evidence_binding"]==local_attempt["expected_binding"]
     assert "provider_read_back" in local_res["receipt"]["reason"]
 
-    # Missing/invalid observed_at never qualifies even when provider echoes the evidence id.
-    invalid_ev={"id":"ev-undated","kind":"submission_receipt","observed_at":"","artifact":{"owner":"user","kind":"relative_path","locator":"evidence/app-submitted/undated.txt"}}
-    invalid_snap={"observed_at":"2026-09-10T07:00:00-04:00","provider_id":"synthetic-provider","read_back":True,"opportunities":[],"applications":[{"application_id":"app-submitted","execution":{"state":"SUBMITTED","channel":"web_form","last_transition_at":"2026-09-10T07:00:00-04:00"},"evidence":[{"id":"ev-undated","kind":"submission_receipt","observed_at":""}]}]}
-    invalid_res=record_transition(cs, "app-submitted", "SUBMITTED", invalid_ev, {"providerSnapshot": invalid_snap, "providerAuthorized": True})
-    assert invalid_res["receipt"]["to"]!="SUBMITTED"
+    # Durable qualifying evidence survives restart: provider read-back can reconcile
+    # the already-persisted receipt even when the caller has no new evidence object.
+    qualifying_attempt=data["promotion_attempts"][2]
+    restarted=copy.deepcopy(cs)
+    durable_ev=copy.deepcopy(qualifying_attempt["evidence"])
+    restarted["evidence"].append({
+        "id":durable_ev["id"],
+        "application_id":"app-submitted",
+        "kind":durable_ev["kind"],
+        "artifact":durable_ev["artifact"],
+        "observed_at":durable_ev["observed_at"],
+    })
+    restarted["applications"][0]["execution"]["evidence_id"]=durable_ev["id"]
+    restart_res=record_transition(
+        restarted,
+        "app-submitted",
+        "SUBMITTED",
+        None,
+        {"providerSnapshot":qualifying_attempt["provider_snapshot"],"providerAuthorized":True},
+    )
+    assert restart_res["receipt"]["to"]=="SUBMITTED"
+    assert restart_res["receipt"]["evidence_binding"]=="provider"
+    assert restart_res["receipt"]["reference"]==durable_ev["id"]
+    assert restart_res["updatedState"]["applications"][0]["execution"]["evidence_id"]==durable_ev["id"]
+
+    # The coordinator must return the reconciled state, not just a reconciliation report.
+    reconciled_res=record_transition(
+        cs,
+        "app-submitted",
+        "FILLED",
+        None,
+        {"providerSnapshot":qualifying_attempt["provider_snapshot"],"providerAuthorized":True},
+    )
+    assert reconciled_res["reconciliation"] is not None
+    assert reconciled_res["updatedState"]["applications"][0]["execution"]["state"]=="SUBMITTED"
+    assert any(e["id"]==durable_ev["id"] for e in reconciled_res["updatedState"]["evidence"])
+
+    # Missing/date-only/impossible observed_at values never qualify even when echoed.
+    for bad_timestamp in ["", "2026-09-10", "2026-02-30T00:00:00Z"]:
+        invalid_ev={"id":"ev-undated","kind":"submission_receipt","observed_at":bad_timestamp,"artifact":{"owner":"user","kind":"relative_path","locator":"evidence/app-submitted/undated.txt"}}
+        invalid_snap={"observed_at":"2026-09-10T07:00:00-04:00","provider_id":"synthetic-provider","read_back":True,"opportunities":[],"applications":[{"application_id":"app-submitted","execution":{"state":"SUBMITTED","channel":"web_form","last_transition_at":"2026-09-10T07:00:00-04:00"},"evidence":[{"id":"ev-undated","kind":"submission_receipt","observed_at":bad_timestamp}]}]}
+        invalid_res=record_transition(cs, "app-submitted", "SUBMITTED", invalid_ev, {"providerSnapshot": invalid_snap, "providerAuthorized": True})
+        assert invalid_res["receipt"]["to"]!="SUBMITTED", f"invalid timestamp promoted: {bad_timestamp!r}"
 
     # Email SUBMITTED requires an affirmative sent signal, not merely an omitted mailSent option.
     email_data=load_fixture("08-email-draft-vs-sent.json")
@@ -301,8 +339,6 @@ def test_submission_proof_guards():
     cross=copy.deepcopy(cs)
     cross["evidence"].append({"id":"ev-cross-app","application_id":"app-submitted","kind":"submission_receipt","artifact":{"owner":"user","kind":"relative_path","locator":"evidence/app-submitted/earlier.txt"},"observed_at":"2026-09-10T06:55:00-04:00"})
     cross["evidence"].append({"id":"ev-cross-app","application_id":"app-other","kind":"submission_receipt","artifact":{"owner":"user","kind":"relative_path","locator":"evidence/app-other/receipt.txt"},"observed_at":"2026-09-10T07:00:00-04:00"})
-    duplicate_same_app_first=True
-    assert duplicate_same_app_first
     cross_ev={"id":"ev-cross-app","kind":"submission_receipt","observed_at":"2026-09-10T07:00:00-04:00","artifact":{"owner":"user","kind":"relative_path","locator":"evidence/app-submitted/receipt.txt"}}
     cross_snap={"observed_at":"2026-09-10T07:00:00-04:00","provider_id":"synthetic-provider","read_back":True,"opportunities":[],"applications":[{"application_id":"app-submitted","execution":{"state":"SUBMITTED","channel":"web_form","last_transition_at":"2026-09-10T07:00:00-04:00"},"evidence":[{"id":"ev-cross-app","kind":"submission_receipt","observed_at":"2026-09-10T07:00:00-04:00"}]}]}
     cross_res=record_transition(cross, "app-submitted", "SUBMITTED", cross_ev, {"providerSnapshot": cross_snap, "providerAuthorized": True})

@@ -6,16 +6,40 @@
   "profile": {
     "id": "profile-primary",
     "headline": "IT operations professional building toward agentic software engineering",
-    "skills": ["IT operations", "Python automation", "repository validation"],
+    "skills": [
+      "IT operations",
+      "Python automation",
+      "repository validation"
+    ],
     "source_artifacts": [],
     "career_objective": {
       "target_lane": "Agentic software development and AI automation",
-      "target_roles": ["AI Automation Engineer", "AI Systems Engineer", "Applied AI Engineer"],
-      "deprioritized_roles": ["General project management", "Non-building AI enablement"],
-      "lead_capabilities": ["AI-assisted product engineering", "Repository automation", "Testing and validation", "Workflow automation"],
+      "target_roles": [
+        "AI Automation Engineer",
+        "AI Systems Engineer",
+        "Applied AI Engineer"
+      ],
+      "deprioritized_roles": [
+        "General project management",
+        "Non-building AI enablement"
+      ],
+      "lead_capabilities": [
+        "AI-assisted product engineering",
+        "Repository automation",
+        "Testing and validation",
+        "Workflow automation"
+      ],
       "proof_artifacts": [
-        {"owner": "user", "kind": "uri", "locator": "https://example.invalid/portfolio"},
-        {"owner": "user", "kind": "relative_path", "locator": "proof/live-product.md"}
+        {
+          "owner": "user",
+          "kind": "uri",
+          "locator": "https://example.invalid/portfolio"
+        },
+        {
+          "owner": "user",
+          "kind": "relative_path",
+          "locator": "proof/live-product.md"
+        }
       ]
     }
   },
@@ -27,18 +51,44 @@
       "status": "targeted",
       "priority": "high",
       "fit_score": 92,
-      "requirements_gaps": ["Strengthen LLM API integration evidence."],
+      "requirements_gaps": [
+        "Strengthen LLM API integration evidence."
+      ],
       "next_action": "Tailor the agentic-software resume and export the associated study guidance.",
-      "source": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/jobs/123"},
-      "apply_link": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/apply/123"},
-      "posting_snapshot": {"owner": "user", "kind": "relative_path", "locator": "opportunities/opp-example/posting.txt"},
+      "source": {
+        "owner": "external",
+        "kind": "uri",
+        "locator": "https://example.invalid/jobs/123"
+      },
+      "apply_link": {
+        "owner": "external",
+        "kind": "uri",
+        "locator": "https://example.invalid/apply/123"
+      },
+      "posting_snapshot": {
+        "owner": "user",
+        "kind": "relative_path",
+        "locator": "opportunities/opp-example/posting.txt"
+      },
       "captured_at": "2026-09-10T04:45:00-04:00",
       "verification": {
         "state": "LIVE_VERIFIED",
         "verified_at": "2026-09-10T04:50:00-04:00",
         "source": "https://example.invalid/jobs/123",
         "detail": "Live posting re-observed; apply entry available."
-      }
+      },
+      "location": {
+        "display": "Remote / United States",
+        "country": "United States"
+      },
+      "work_mode": "remote",
+      "employment_type": "Full-time",
+      "compensation_text": "$100,000-$150,000/year",
+      "fit_rationale": "Synthetic example showing tracker-equivalent rationale without private user data.",
+      "notes": "Synthetic import-compatible opportunity metadata.",
+      "found_on": "2026-09-10",
+      "follow_up_due_on": "2026-09-17",
+      "source_guidance": "Use the canonical employer posting as the durable role source."
     },
     {
       "id": "opp-example-email",
@@ -49,9 +99,21 @@
       "fit_score": 88,
       "requirements_gaps": [],
       "next_action": "Route through email channel.",
-      "source": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/jobs/124"},
-      "apply_link": {"owner": "external", "kind": "uri", "locator": "mailto:hiring@example.invalid"},
-      "posting_snapshot": {"owner": "user", "kind": "relative_path", "locator": "opportunities/opp-example-email/posting.txt"},
+      "source": {
+        "owner": "external",
+        "kind": "uri",
+        "locator": "https://example.invalid/jobs/124"
+      },
+      "apply_link": {
+        "owner": "external",
+        "kind": "uri",
+        "locator": "mailto:hiring@example.invalid"
+      },
+      "posting_snapshot": {
+        "owner": "user",
+        "kind": "relative_path",
+        "locator": "opportunities/opp-example-email/posting.txt"
+      },
       "captured_at": "2026-09-10T04:46:00-04:00",
       "verification": {
         "state": "LIVE_VERIFIED",
@@ -66,14 +128,22 @@
       "id": "resume-example-v1",
       "profile_id": "profile-primary",
       "opportunity_id": "opp-example",
-      "artifact": {"owner": "user", "kind": "relative_path", "locator": "resumes/example-ai-automation-engineer.pdf"},
+      "artifact": {
+        "owner": "user",
+        "kind": "relative_path",
+        "locator": "resumes/example-ai-automation-engineer.pdf"
+      },
       "created_at": "2026-09-10T04:50:00-04:00"
     },
     {
       "id": "resume-example-email-v1",
       "profile_id": "profile-primary",
       "opportunity_id": "opp-example-email",
-      "artifact": {"owner": "user", "kind": "relative_path", "locator": "resumes/example-applied-ai-engineer.pdf"},
+      "artifact": {
+        "owner": "user",
+        "kind": "relative_path",
+        "locator": "resumes/example-applied-ai-engineer.pdf"
+      },
       "created_at": "2026-09-10T04:52:00-04:00"
     }
   ],
@@ -116,10 +186,16 @@
       "contract": "study-syndicate/study-guidance/v1",
       "trigger_kind": "requirements-gap",
       "reason": "The opportunity surfaced an LLM API integration evidence gap that should generate targeted study material.",
-      "cascade_concept_ids": ["ai.application-engineering"],
+      "cascade_concept_ids": [
+        "ai.application-engineering"
+      ],
       "iteration": 1,
       "concepts": [
-        {"concept_id": "llm.api-integration", "reason": "Practice reliable model API integration in an application workflow.", "priority": 5}
+        {
+          "concept_id": "llm.api-integration",
+          "reason": "Practice reliable model API integration in an application workflow.",
+          "priority": 5
+        }
       ],
       "resources": [
         {
@@ -127,7 +203,9 @@
           "title": "AI Engineering",
           "author": "Chip Huyen",
           "relation": "primary",
-          "concept_ids": ["llm.api-integration"],
+          "concept_ids": [
+            "llm.api-integration"
+          ],
           "note": "Use the resource as guidance input; reading alone is not mastery evidence."
         }
       ],
@@ -140,7 +218,11 @@
       "id": "ev-example-email-001",
       "application_id": "app-example-email",
       "kind": "correspondence",
-      "artifact": {"owner": "user", "kind": "relative_path", "locator": "evidence/app-example-email/sent-confirmation.txt"},
+      "artifact": {
+        "owner": "user",
+        "kind": "relative_path",
+        "locator": "evidence/app-example-email/sent-confirmation.txt"
+      },
       "observed_at": "2026-09-10T05:10:00-04:00"
     }
   ]

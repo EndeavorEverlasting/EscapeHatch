@@ -286,6 +286,8 @@ def validate(state):
         allowed = (
             "id", "title", "organization", "status", "priority", "fit_score", "requirements_gaps",
             "next_action", "source", "apply_link", "posting_snapshot", "captured_at", "verification",
+            "location", "work_mode", "employment_type", "compensation_text", "fit_rationale", "notes",
+            "found_on", "follow_up_due_on", "source_guidance",
         )
         require_keys(opportunity, ("id", "title", "organization", "status", "source"), allowed, where)
         artifact(opportunity["source"], f"{where}.source")
@@ -304,6 +306,26 @@ def validate(state):
             raise ContractError(f"{where}.requirements_gaps invalid")
         if "next_action" in opportunity and not isinstance(opportunity["next_action"], str):
             raise ContractError(f"{where}.next_action invalid")
+        location = opportunity.get("location")
+        if location is not None:
+            require_keys(location, ("display",), ("display", "city", "region", "country"), f"{where}.location")
+            for key, value in location.items():
+                if not isinstance(value, str) or not value:
+                    raise ContractError(f"{where}.location.{key} must be a non-empty string")
+        if "work_mode" in opportunity and opportunity["work_mode"] not in {"remote", "hybrid", "on_site", "unknown"}:
+            raise ContractError(f"{where}.work_mode invalid")
+        for key in ("employment_type", "compensation_text", "fit_rationale", "notes", "source_guidance"):
+            if key in opportunity and (not isinstance(opportunity[key], str) or not opportunity[key]):
+                raise ContractError(f"{where}.{key} must be a non-empty string")
+        for key in ("found_on", "follow_up_due_on"):
+            if key in opportunity:
+                value = opportunity[key]
+                if not isinstance(value, str):
+                    raise ContractError(f"{where}.{key} must be YYYY-MM-DD")
+                try:
+                    datetime.strptime(value, "%Y-%m-%d")
+                except ValueError as exc:
+                    raise ContractError(f"{where}.{key} must be YYYY-MM-DD") from exc
         if "apply_link" in opportunity:
             artifact(opportunity["apply_link"], f"{where}.apply_link")
             if opportunity["apply_link"]["kind"] != "uri":

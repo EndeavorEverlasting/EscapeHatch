@@ -3,8 +3,9 @@
 **Canonical plan owner:** `docs/CAREER_STORE_IMPORT_PLAN.md`  
 **Plan date:** 2026-09-24  
 **Planning branch:** `plan/career-store-import-20260924`  
-**Target floor:** `integration/replit-donor-b01f628-20260921` (exact provider base SHA is recorded by the planning PR and must be refreshed before implementation)  
+**Target floor at planning PR creation:** `integration/replit-donor-b01f628-20260921@d0f89105ed6619263ca311df09abc2a7960f1a0d` (must be refreshed again before implementation)  
 **Disposition:** planning / handoff durability only; no product-runtime implementation is authorized by this planning pass.  
+**Planning PR:** #35 — `plan/career-store-import-20260924` → `integration/replit-donor-b01f628-20260921`  
 **Run-scoped dispatch manifest:** `Outputs/prompt-parallel-dispatch/runs/escapehatch-career-store-import-20260924/manifest.json`
 
 ## 1. Mission
@@ -24,7 +25,7 @@ The required user flow is:
 - Repository: `EndeavorEverlasting/EscapeHatch`.
 - Provider default branch: `main`.
 - Provider default head observed during this planning pass: `0824535b9dc1341def885a79a098d297df770ac8`.
-- Provider integration branch: `integration/replit-donor-b01f628-20260921`.
+- Provider integration branch at PR creation: `integration/replit-donor-b01f628-20260921@d0f89105ed6619263ca311df09abc2a7960f1a0d`.
 - The integration branch is 119 commits ahead / 0 behind the observed default-branch head.
 - Historical durable local path from repository plans: `C:\Users\pa_rperez26\OneDrive - Northwell Health\OG Laptop Backup\Desktop\dev\EscapeHatch`. A future local executor must re-resolve it rather than assume it.
 - This runtime cannot resolve `github.com` from the container, so local checkout/worktree proof is unavailable here. Provider reads/writes remain available through the connected GitHub surface.

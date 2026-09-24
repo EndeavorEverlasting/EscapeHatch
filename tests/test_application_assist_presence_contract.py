@@ -232,6 +232,13 @@ class PresenceContractTests(unittest.TestCase):
             r"(?i)\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\\b",
         ]:
             self.assertIsNone(re.search(pattern, text), f"credential/PII-like value matched: {pattern}")
+        representative_leaks = [
+            ("Bearer abcdefghijklmnop", r"(?i)\bbearer\s+[a-z0-9._~-]{16,}"),
+            ("ghp_abcdefghijklmnop", r"\b(?:sk|ghp|gho|ghu|ghs|ghr)[-_][A-Za-z0-9_-]{16,}\b"),
+            ("foo@example.com", r"(?i)\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"),
+        ]
+        for sample, pattern in representative_leaks:
+            self.assertIsNotNone(re.search(pattern, sample), f"secret-leak guard lost sensitivity: {pattern}")
         self.assertNotIn("SYNTHETIC_PLACEHOLDER_PW", text)
         for state in self.contract["states"]:
             short = state["copy"]["short"]

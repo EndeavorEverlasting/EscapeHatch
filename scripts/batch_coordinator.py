@@ -3,6 +3,7 @@
 from __future__ import annotations
 import copy
 import json
+import re
 from datetime import datetime, timezone
 from typing import Any, Dict, Tuple, Optional
 
@@ -15,14 +16,18 @@ BATCH_RECEIPT_SCHEMA = "escapehatch/batch-coordinator-transition-receipt/v1"
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00","Z")
 
+_RFC3339_DATE_TIME = re.compile(
+    r"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+)
+
 def _is_datetime(s: str) -> bool:
-    if not isinstance(s, str) or not s:
+    if not isinstance(s, str) or not _RFC3339_DATE_TIME.fullmatch(s):
         return False
     try:
-        v = s.replace("Z","+00:00") if s.endswith("Z") else s
+        v = s[:-1] + "+00:00" if s.endswith("Z") else s
         datetime.fromisoformat(v)
         return True
-    except Exception:
+    except (TypeError, ValueError):
         return False
 
 def _priority_rank(p: Optional[str]) -> int:
@@ -34,22 +39,32 @@ def _priority_rank(p: Optional[str]) -> int:
 def _is_qualifying(kind: str) -> bool:
     return kind in QUALIFYING_KINDS
 
-def _provider_has_matching_qualifying(snapshot: Optional[Dict[str,Any]], application_id: str, evidence: Optional[Dict[str,Any]]) -> bool:
+def _provider_matching_qualifying(
+    snapshot: Optional[Dict[str,Any]],
+    application_id: str,
+    evidence: Optional[Dict[str,Any]],
+    durable_candidates: list[Dict[str,Any]],
+) -> Optional[Dict[str,Any]]:
     if not snapshot or snapshot.get("read_back") is not True or not _is_datetime(snapshot.get("observed_at","")):
-        return False
-    if not evidence or not _is_qualifying(evidence.get("kind","")) or not _is_datetime(evidence.get("observed_at","")):
-        return False
-    for provider_app in snapshot.get("applications",[]):
-        if provider_app.get("application_id") != application_id:
-            continue
+        return None
+    if evidence is not None:
+        if not _is_qualifying(evidence.get("kind","")) or not _is_datetime(evidence.get("observed_at","")):
+            return None
+        candidates=[evidence]
+    else:
+        candidates=durable_candidates
+    provider_app=next((a for a in snapshot.get("applications",[]) if a.get("application_id")==application_id), None)
+    if not provider_app:
+        return None
+    for candidate in candidates:
         for provider_evidence in provider_app.get("evidence",[]) or []:
             if (
-                provider_evidence.get("id") == evidence.get("id")
-                and provider_evidence.get("kind") == evidence.get("kind")
+                provider_evidence.get("id") == candidate.get("id")
+                and provider_evidence.get("kind") == candidate.get("kind")
                 and _is_datetime(provider_evidence.get("observed_at",""))
             ):
-                return True
-    return False
+                return candidate
+    return None
 
 def select_next_queue_item(career_state: Dict[str,Any]):
     opp_by_id={o["id"]:o for o in career_state.get("opportunities",[])}
@@ -152,15 +167,21 @@ def record_transition(career_state: Dict[str,Any], application_id: str, target_s
     provider_authorized=opts.get("providerAuthorized")
     mail_sent=opts.get("mailSent")
     operator_confirmed=opts.get("operatorConfirmed") is True
-    matching_evidence=[e for e in updated.get("evidence",[]) if evidence and e.get("id")==evidence.get("id")]
+    all_evidence=updated.get("evidence",[])
+    matching_evidence=[e for e in all_evidence if evidence and e.get("id")==evidence.get("id")]
     evidence_id_conflict=any(e.get("application_id")!=application_id for e in matching_evidence)
     has_qualifying=bool(evidence and not evidence_id_conflict and _is_qualifying(evidence.get("kind","")) and _is_datetime(evidence.get("observed_at","")))
     has_evidence=bool(evidence)
-    local_has_qualifying=any(
-        e.get("application_id")==application_id and _is_qualifying(e.get("kind","")) and _is_datetime(e.get("observed_at",""))
-        for e in updated.get("evidence",[])
-    )
-    provider_has_qualifying=_provider_has_matching_qualifying(provider_snapshot, application_id, evidence) and not evidence_id_conflict
+    durable_local_qualifying=[
+        e for e in all_evidence
+        if e.get("application_id")==application_id
+        and _is_qualifying(e.get("kind",""))
+        and _is_datetime(e.get("observed_at",""))
+        and not any(other.get("id")==e.get("id") and other.get("application_id")!=application_id for other in all_evidence)
+    ]
+    local_has_qualifying=bool(durable_local_qualifying)
+    provider_matching_evidence=_provider_matching_qualifying(provider_snapshot, application_id, evidence, durable_local_qualifying)
+    provider_has_qualifying=bool(provider_matching_evidence) and not evidence_id_conflict
     if evidence_id_conflict:
         conflict=True
 
@@ -228,6 +249,8 @@ def record_transition(career_state: Dict[str,Any], application_id: str, target_s
         app["execution"]["last_transition_at"]=now
         if evidence and has_qualifying and not evidence_id_conflict:
             app["execution"]["evidence_id"]=evidence["id"]
+        elif final_to=="SUBMITTED" and provider_matching_evidence:
+            app["execution"]["evidence_id"]=provider_matching_evidence["id"]
         if final_to=="BLOCKED" and "block_reason" not in app["execution"]:
             app["execution"]["block_reason"]=reason
         if final_to=="AWAITING_OPERATOR" and "awaiting_reason" not in app["execution"]:
@@ -241,6 +264,8 @@ def record_transition(career_state: Dict[str,Any], application_id: str, target_s
         app["execution"]={"state":final_to,"channel":channel,"last_transition_at":now,"detail":reason}
         if evidence and has_qualifying and not evidence_id_conflict:
             app["execution"]["evidence_id"]=evidence["id"]
+        elif final_to=="SUBMITTED" and provider_matching_evidence:
+            app["execution"]["evidence_id"]=provider_matching_evidence["id"]
         if final_to=="SUBMITTED":
             if not app.get("submitted_at"):
                 app["submitted_at"]=now
@@ -262,7 +287,7 @@ def record_transition(career_state: Dict[str,Any], application_id: str, target_s
         updated["updated_at"]=now
 
     reference=(evidence or {}).get("id") if evidence and not evidence_id_conflict else None
-    reference=reference or app.get("external_reference") or f"batch-{application_id}-{now}"
+    reference=reference or (provider_matching_evidence or {}).get("id") or app.get("external_reference") or f"batch-{application_id}-{now}"
     receipt={
         "schema": BATCH_RECEIPT_SCHEMA,
         "application_id": application_id,
@@ -285,7 +310,8 @@ def record_transition(career_state: Dict[str,Any], application_id: str, target_s
         snap=opts.get("providerSnapshot")
         try:
             from companion_reconciliation import reconcile as comp_reconcile
-            _, result = comp_reconcile(updated, snap)
+            reconciled_state, result = comp_reconcile(updated, snap)
+            updated=reconciled_state
             reconciliation=result
         except Exception:
             reconciliation=None

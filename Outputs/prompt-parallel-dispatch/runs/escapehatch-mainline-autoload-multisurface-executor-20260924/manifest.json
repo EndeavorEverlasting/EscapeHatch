@@ -30,7 +30,7 @@
     "fallback": "run-scoped manifest persisted here; no claim of canonical validate/run/verify receipt"
   },
   "graph": {
-    "expression": "{OWNER-27 || OWNER-29-31 || OWNER-35 || EH-SURF0 || EH-ADAPT0 || EH-PEX0} -> {EH-BOOT0(after OWNER-27+OWNER-35) || EH-QMEM0-ref || EH-KNOW1-ref || EH-D7-ref} ; {EH-SURF0+EH-ADAPT0+EH-TAL1-ref} -> EH-TAL1 ; {EH-SURF0 -> EH-FORM1}; {EH-SURF0+OWNER-29-31 -> EH-DOC1}; {EH-PEX0 -> EH-PEX1 || EH-PEX3}; {EH-PEX1 -> EH-PEX2 || EH-PEX5}; {EH-PEX0+EH-PEX2+EH-PEX3 -> EH-PEX4}; {EH-BOOT0+OWNER-27+EH-D7-ref+EH-KNOW1-ref -> EH-BOOT1}; {EH-SEED0+OWNER-27+EH-QMEM1-ref -> EH-SEED1}; EH-PEX6 -> {EH-MAIN0 || EH-PEX7}",
+    "expression": "{OWNER-27 || OWNER-29-31 || OWNER-35 || EH-SURF0 || EH-ADAPT0 || EH-PEX0 || EH-QMEM0-ref || REPO-PROMOTION-ref} ; OWNER-27 + OWNER-35 -> EH-BOOT0 ; EH-QMEM0-ref -> EH-SEED0 ; OWNER-35 -> EH-D7-ref -> EH-KNOW1-ref ; EH-SURF0 + EH-ADAPT0 -> EH-TAL1-ref ; EH-SURF0 + EH-ADAPT0 -> EH-FORM1 ; EH-SURF0 + OWNER-29-31 -> EH-DOC1 ; EH-PEX0 -> {EH-PEX1 || EH-PEX3} ; EH-PEX1 -> {EH-PEX2 || EH-PEX5} ; EH-PEX0 + EH-PEX2 + EH-PEX3 -> EH-PEX4 ; EH-BOOT0 + OWNER-27 + EH-D7-ref + EH-KNOW1-ref -> EH-BOOT1 ; EH-QMEM0-ref -> EH-QMEM1-ref ; EH-SEED0 + OWNER-27 + EH-QMEM1-ref -> EH-SEED1 ; EH-TAL1-ref + EH-QMEM1-ref + EH-KNOW1-ref -> EH-CONV2-ref ; EH-PEX0 + REPO-PROMOTION-ref -> EH-PEX6 ; EH-BOOT1 + EH-TAL1-ref + EH-FORM1 + EH-DOC1 + EH-SEED1 + EH-KNOW1-ref + EH-D7-ref + EH-CONV2-ref + REPO-PROMOTION-ref -> EH-MAIN0 ; EH-PEX1 + EH-PEX2 + EH-PEX3 + EH-PEX4 + EH-PEX5 + EH-PEX6 -> EH-PEX7",
     "max_width": 4,
     "parallel_disposition": "REQUIRED_AFTER_IMPLEMENTATION_AUTHORIZATION",
     "note": "Independent generic contract lanes EH-SURF0/EH-ADAPT0/EH-PEX0 may proceed while owner PR repairs run. Dependent bootstrap/runtime lanes remain explicitly gated."
@@ -711,7 +711,7 @@
       "mission": "Write remote completion only after required integration/mainline containment and proof ceilings are satisfied.",
       "dependencies": [
         "EH-PEX0",
-        "repository promotion contract"
+        "REPO-PROMOTION-ref"
       ],
       "owned_mutation_surfaces": [
         "remote execution ledger completion transitions",
@@ -757,10 +757,11 @@
         "EH-TAL1-ref",
         "EH-FORM1",
         "EH-DOC1",
-        "required existing Application Assist/career-state owners integrated",
         "EH-SEED1",
         "EH-KNOW1-ref",
-        "EH-D7-ref"
+        "EH-D7-ref",
+        "EH-CONV2-ref",
+        "REPO-PROMOTION-ref"
       ],
       "owned_mutation_surfaces": [
         "integration conflict resolution",
@@ -1099,6 +1100,71 @@
       ],
       "convergence_owner": "EH-MAIN0",
       "status": "WAITING_EXISTING_CANONICAL_LANE"
+    },
+    {
+      "lane_id": "EH-CONV2-ref",
+      "wave": 0,
+      "mission": "Reference the existing canonical EH-CONV2 learned-application convergence owner; no second convergence writer.",
+      "dependencies": [
+        "EH-TAL1-ref",
+        "EH-QMEM1-ref",
+        "EH-KNOW1-ref"
+      ],
+      "owned_mutation_surfaces": [],
+      "forbidden_surfaces": [
+        "all convergence mutations from this reference node"
+      ],
+      "posture": "read-only external canonical lane reference",
+      "adapter": {
+        "kind": "existing_plan_reference",
+        "rung": 0
+      },
+      "launch": {
+        "mode": "reference",
+        "operation": "await_canonical_lane",
+        "arguments": {
+          "lane_id": "EH-CONV2",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "canonical EH-CONV2 integration evidence"
+      ],
+      "validation": [
+        "read canonical contextual-autofill manifest"
+      ],
+      "convergence_owner": "EH-MAIN0",
+      "status": "WAITING_EXISTING_CANONICAL_LANE"
+    },
+    {
+      "lane_id": "REPO-PROMOTION-ref",
+      "wave": 0,
+      "mission": "Reference contracts/repository-promotion.v1.json and its provider promotion owner; no duplicate promotion implementation.",
+      "dependencies": [],
+      "owned_mutation_surfaces": [],
+      "forbidden_surfaces": [
+        "repository promotion policy mutations"
+      ],
+      "posture": "read-only canonical contract reference",
+      "adapter": {
+        "kind": "existing_contract_reference",
+        "rung": 0
+      },
+      "launch": {
+        "mode": "reference",
+        "operation": "await_canonical_contract",
+        "arguments": {
+          "contract": "contracts/repository-promotion.v1.json"
+        }
+      },
+      "expected_artifacts": [
+        "repository promotion policy available and validated"
+      ],
+      "validation": [
+        "python scripts/validate_repository_promotion.py"
+      ],
+      "convergence_owner": "EH-MAIN0",
+      "status": "AVAILABLE_ON_PLANNING_FLOOR"
     }
   ],
   "closeout": {

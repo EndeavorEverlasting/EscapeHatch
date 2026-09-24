@@ -1,0 +1,23 @@
+{
+  "description": "Manual gates (file upload, CAPTCHA, attestation) produce AWAITING_OPERATOR, not FILLED or SUBMITTED. Synthetic.",
+  "career_state": {
+    "schema_version": "escapehatch-career-state/v1",
+    "state_id": "state-batch-manual",
+    "revision": 3,
+    "updated_at": "2026-09-10T05:00:00-04:00",
+    "profile": {"id": "profile-primary", "headline": "Synthetic", "skills": ["Testing"], "source_artifacts": [], "career_objective": {"target_lane": "Agentic", "target_roles": ["AI Engineer"], "lead_capabilities": ["Testing"], "proof_artifacts": [{"owner": "user", "kind": "uri", "locator": "https://example.invalid/portfolio"}]}},
+    "opportunities": [
+      {"id": "opp-manual", "title": "Manual Gate Role", "organization": "Example Employer", "status": "targeted", "priority": "high", "fit_score": 90, "requirements_gaps": [], "next_action": "Await operator", "source": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/jobs/040"}, "apply_link": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/apply/040"}, "posting_snapshot": {"owner": "user", "kind": "relative_path", "locator": "opportunities/opp-manual/posting.txt"}, "captured_at": "2026-09-10T04:45:00-04:00", "verification": {"state": "LIVE_VERIFIED", "verified_at": "2026-09-10T04:50:00-04:00", "detail": "Live with file upload gate", "source": "https://example.invalid/jobs/040"}}
+    ],
+    "resumes": [{"id": "resume-manual", "profile_id": "profile-primary", "opportunity_id": "opp-manual", "artifact": {"owner": "user", "kind": "relative_path", "locator": "resumes/manual.pdf"}, "created_at": "2026-09-10T04:50:00-04:00"}],
+    "applications": [{"id": "app-manual", "opportunity_id": "opp-manual", "resume_id": "resume-manual", "status": "draft", "submitted_at": null, "external_reference": null, "execution": {"state": "READY_TO_APPLY", "channel": "web_form", "last_transition_at": "2026-09-10T05:00:00-04:00"}}],
+    "evidence": [],
+    "study_guidance": []
+  },
+  "channel_contexts": [
+    {"label": "file_upload", "context": {"progressionDecision": "AUTO_ADVANCE_SAFE", "hasManualGate": true, "providerAuthorized": true}, "expectedRoute": "AWAITING_OPERATOR", "expectedState": "AWAITING_OPERATOR"},
+    {"label": "captcha", "context": {"progressionDecision": "REVIEW_REQUIRED", "hasManualGate": true, "providerAuthorized": true}, "expectedRoute": "AWAITING_OPERATOR", "expectedState": "AWAITING_OPERATOR"},
+    {"label": "progression_review", "context": {"progressionDecision": "REVIEW_REQUIRED", "hasManualGate": false, "providerAuthorized": true}, "expectedRoute": "AWAITING_OPERATOR", "expectedState": "AWAITING_OPERATOR"}
+  ],
+  "expected": {"never_filled_without_progression_safe": true, "never_submitted": true, "awaiting_reason_present": true}
+}

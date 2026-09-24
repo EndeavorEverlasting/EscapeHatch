@@ -1,0 +1,98 @@
+{
+  "schema": "escapehatch/application-assist-adversarial-fixture/v1",
+  "fixture_id": "05-visible-validation-error",
+  "title": "Visible validation error blocks progression (adversarial: validation_error_present)",
+  "description": "Sanitized page where visible validation errors are present (e.g., 'This field is required' inline). Even though candidate Next is intermediate and fill stable, progression must be REVIEW_REQUIRED with precise reason validation_error_present. Host https://careers.example.invalid/application/personal.",
+  "host": "https://careers.example.invalid",
+  "scenario": "visible-validation-error",
+  "url": "https://careers.example.invalid/application/personal",
+  "page_archetype": "identity-contact",
+  "session": {
+    "status": "active",
+    "origin": "https://careers.example.invalid"
+  },
+  "fields": [
+    {
+      "label": "First Name",
+      "type": "text",
+      "value": "Alex",
+      "required": true
+    },
+    {
+      "label": "Last Name",
+      "type": "text",
+      "value": "",
+      "required": true
+    }
+  ],
+  "visible_validation_errors": [
+    {
+      "field_index": 1,
+      "message": "This field is required.",
+      "selector": "span.error[data-field=last_name]",
+      "visible": true
+    },
+    {
+      "field_index": 1,
+      "message": "Please fill out this field.",
+      "selector": ".field-error",
+      "visible": true
+    }
+  ],
+  "fill_plan": {
+    "schema_version": "escapehatch-application-fill-plan/v1",
+    "items": [
+      {
+        "index": 0,
+        "profile_key": "first_name",
+        "question_id": "identity.first_name",
+        "value": "Alex",
+        "decision": "gate_allowed"
+      }
+    ],
+    "denied": [
+      {
+        "index": 1,
+        "profile_key": "last_name",
+        "question_id": "identity.last_name",
+        "decision": "missing_user_value"
+      }
+    ]
+  },
+  "progression_plan": {
+    "candidate_control": {
+      "label": "Next",
+      "kind": "intermediate",
+      "terminal": false,
+      "selector": "button.next",
+      "normalized": "next",
+      "uniquely_identified": true
+    },
+    "action_identity_stable": true,
+    "deterministic_fill_completed_and_stable_after_live_rescan": true,
+    "no_visible_validation_error_present": false,
+    "no_required_unknown_manual_review_control_unresolved": true,
+    "no_password_requested_outside_explicit_account_bootstrap_state": true,
+    "no_file_upload_captcha_mfa_otp_legal_compliance_attestation_demographic_gate_unresolved": true,
+    "advance_budget_loop_guard_not_exceeded": true,
+    "next_observed_page_transition_matches_permitted_state_transition": true,
+    "failed_gate": "no_visible_validation_error_present"
+  },
+  "expected_decision": "REVIEW_REQUIRED",
+  "expected_reason": "validation_error_present",
+  "all_gates_pass": false,
+  "failed_gate": "no_visible_validation_error_present",
+  "terminal_forbidden_applies": false,
+  "reason_detail": "Visible inline validation error 'This field is required' prevents AUTO_ADVANCE_SAFE; progression gate requires no_visible_validation_error_present.",
+  "loop_guard": {
+    "advances_per_session": 1,
+    "advances_per_page": 1,
+    "require_page_transition": false,
+    "detect_repeated_page": false
+  },
+  "synthetic_data": {
+    "first_name": "Alex",
+    "last_name": "",
+    "email": "alex@example.invalid"
+  }
+}

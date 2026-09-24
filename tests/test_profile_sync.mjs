@@ -364,7 +364,7 @@ assert.equal(syncSource.includes("Outputs/application-assist/"), true);
   const registry = readText("ARTIFACT_REGISTRY.md");
   assert.equal(registry.includes("Outputs/application-assist/"), true, "registry must document Outputs/application-assist/");
   assert.equal(registry.includes("profile-sync.js"), true, "registry must register profile-sync adapter");
-  assert.equal(registry.includes("Generated application-assist distribution"), true);
+  assert.equal(registry.includes("Generated application-assist artifact root (local, not tracked)"), true);
   assert.equal(registry.includes("single canonical generated-output root") || registry.includes("single canonical"), true);
   assert.equal(registry.includes("escapehatch-application-assist-profile"), true, "registry must mention recovery export prefix");
   assert.equal(registry.includes("64 KiB"), true, "registry must mention 64 KiB cap");

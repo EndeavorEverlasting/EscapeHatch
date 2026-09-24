@@ -79,7 +79,9 @@ def parse_semver(text: str) -> SemVer:
     )
 
 
-def read_version(path: Path = VERSION_PATH) -> SemVer:
+def read_version(path: Path | None = None) -> SemVer:
+    if path is None:
+        path = VERSION_PATH
     if not path.is_file():
         raise VersionError(f"missing canonical authority: {path}")
     lines = [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
@@ -88,11 +90,15 @@ def read_version(path: Path = VERSION_PATH) -> SemVer:
     return parse_semver(lines[0])
 
 
-def write_version(version: SemVer, path: Path = VERSION_PATH) -> None:
+def write_version(version: SemVer, path: Path | None = None) -> None:
+    if path is None:
+        path = VERSION_PATH
     path.write_text(f"{version}\n", encoding="utf-8")
 
 
-def load_contract(path: Path = CONTRACT_PATH) -> dict:
+def load_contract(path: Path | None = None) -> dict:
+    if path is None:
+        path = CONTRACT_PATH
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -205,14 +211,18 @@ def next_version(current: SemVer, changes: list[str]) -> SemVer:
     return current.bump(aggregate_bump(changes))
 
 
-def changelog_has_release(version: SemVer, path: Path = CHANGELOG_PATH) -> bool:
+def changelog_has_release(version: SemVer, path: Path | None = None) -> bool:
+    if path is None:
+        path = CHANGELOG_PATH
     if not path.is_file():
         return False
     heading = f"## [{version}]"
     return heading in path.read_text(encoding="utf-8")
 
 
-def prepend_changelog(version: SemVer, notes: str, path: Path = CHANGELOG_PATH) -> None:
+def prepend_changelog(version: SemVer, notes: str, path: Path | None = None) -> None:
+    if path is None:
+        path = CHANGELOG_PATH
     heading = f"## [{version}]"
     body = notes.strip() or "### Changed\n\n- Release notes pending reviewed change evidence."
     entry = f"{heading}\n\n{body}\n\n"

@@ -1,0 +1,19 @@
+{
+  "description": "Live web_form item routed through Application Assist progression AUTO_ADVANCE_SAFE to FILLED. Synthetic only.",
+  "career_state": {
+    "schema_version": "escapehatch-career-state/v1",
+    "state_id": "state-batch-live-web",
+    "revision": 3,
+    "updated_at": "2026-09-10T05:00:00-04:00",
+    "profile": {"id": "profile-primary", "headline": "Synthetic", "skills": ["Testing"], "source_artifacts": [], "career_objective": {"target_lane": "Agentic", "target_roles": ["AI Engineer"], "lead_capabilities": ["Testing"], "proof_artifacts": [{"owner": "user", "kind": "uri", "locator": "https://example.invalid/portfolio"}]}},
+    "opportunities": [
+      {"id": "opp-live-web", "title": "Live Web Role", "organization": "Example Employer", "status": "targeted", "priority": "high", "fit_score": 90, "requirements_gaps": [], "next_action": "Apply", "source": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/jobs/010"}, "apply_link": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/apply/010"}, "posting_snapshot": {"owner": "user", "kind": "relative_path", "locator": "opportunities/opp-live-web/posting.txt"}, "captured_at": "2026-09-10T04:45:00-04:00", "verification": {"state": "LIVE_VERIFIED", "verified_at": "2026-09-10T04:50:00-04:00", "detail": "Live", "source": "https://example.invalid/jobs/010"}}
+    ],
+    "resumes": [{"id": "resume-live-web", "profile_id": "profile-primary", "opportunity_id": "opp-live-web", "artifact": {"owner": "user", "kind": "relative_path", "locator": "resumes/live-web.pdf"}, "created_at": "2026-09-10T04:50:00-04:00"}],
+    "applications": [{"id": "app-live-web", "opportunity_id": "opp-live-web", "resume_id": "resume-live-web", "status": "draft", "submitted_at": null, "external_reference": null, "execution": {"state": "READY_TO_APPLY", "channel": "web_form", "last_transition_at": "2026-09-10T05:00:00-04:00"}}],
+    "evidence": [],
+    "study_guidance": []
+  },
+  "channel_context": {"progressionDecision": "AUTO_ADVANCE_SAFE", "providerAuthorized": true, "hasManualGate": false},
+  "expected": {"route": "web_form_via_progression", "targetState": "FILLED", "queue_active": true, "history_preserved": true}
+}

@@ -11,6 +11,10 @@ on:
       - "tests/test_application_assist_session.mjs"
       - "tests/test_progression.mjs"
       - "tests/test_navigation_adapter.mjs"
+      - "fixtures/application-assist-adversarial/**"
+      - "tests/test_application_assist_adversarial_fixtures.py"
+      - "tests/test_application_assist_adversarial_runtime.mjs"
+      - ".github/workflows/application-assist-adversarial.yml"
       - "tests/test_application_assist_modality_contract.py"
       - "tests/test_application_assist_modality.mjs"
       - ".github/workflows/application-assist.yml"
@@ -24,6 +28,10 @@ on:
       - "tests/test_application_assist_session.mjs"
       - "tests/test_progression.mjs"
       - "tests/test_navigation_adapter.mjs"
+      - "fixtures/application-assist-adversarial/**"
+      - "tests/test_application_assist_adversarial_fixtures.py"
+      - "tests/test_application_assist_adversarial_runtime.mjs"
+      - ".github/workflows/application-assist-adversarial.yml"
       - "tests/test_application_assist_modality_contract.py"
       - "tests/test_application_assist_modality.mjs"
       - ".github/workflows/application-assist.yml"
@@ -46,6 +54,10 @@ jobs:
           node-version: "22"
       - name: Validate assist session contract and extension safety
         run: python tests/test_application_assist_session_contract.py
+      - name: Validate adversarial fixtures regression gate (EH-A4)
+        run: python tests/test_application_assist_adversarial_fixtures.py -v
+      - name: Validate adversarial fixtures against production runtime
+        run: node tests/test_application_assist_adversarial_runtime.mjs
       - name: Validate assist modality contract
         run: python tests/test_application_assist_modality_contract.py
       - name: Test Fill Plan, policy gate, stop, and undo runtime

@@ -15,10 +15,24 @@ export type FreshnessTransition = { opportunity_id:string; from:VerificationStat
 export type ExecutionTransition = { application_id:string; from:ExecutionState|null; to:ExecutionState|null; evidence_binding:"local"|"provider"|"operator_confirmed"|"none"; conflict_preserved:boolean; reason:string };
 export type ReconciliationResult = { schema:typeof RECONCILIATION_SCHEMA; reconciled_at:string; provider_read_back:boolean; freshness_transition:FreshnessTransition[]; execution_transition:ExecutionTransition[]; evidence_binding:"local"|"provider"|"operator_confirmed"|"none"; conflict_preserved:boolean; queue_active:Record<string,boolean>; history_preserved:boolean; idempotent:boolean };
 function deepClone<T>(v:T):T{return JSON.parse(JSON.stringify(v));}
-function isDateTime(s:string){try{const v=s.endsWith("Z")?s:s.replace("Z","+00:00");return !Number.isNaN(Date.parse(v));}catch{return false;}}
-function qualifyingEvidenceForApp(ev:CareerState["evidence"],appId:string){return ev.filter(e=>e.application_id===appId && QUALIFYING_KINDS.has(e.kind));}
+function isDateTime(s:string){
+  if(typeof s!=="string") return false;
+  const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(Z|([+-])(\d{2}):(\d{2}))$/.exec(s);
+  if(!m) return false;
+  const year=Number(m[1]),month=Number(m[2]),day=Number(m[3]),hour=Number(m[4]),minute=Number(m[5]),second=Number(m[6]);
+  const offsetHour=m[10]===undefined?0:Number(m[10]),offsetMinute=m[11]===undefined?0:Number(m[11]);
+  if(year<1||month<1||month>12||hour>23||minute>59||second>59||offsetHour>23||offsetMinute>59) return false;
+  const leap=(year%4===0&&year%100!==0)||year%400===0;
+  const monthDays=[31,leap?29:28,31,30,31,30,31,31,30,31,30,31];
+  if(day<1||day>monthDays[month-1]) return false;
+  return !Number.isNaN(Date.parse(s));
+}
+function isQualifyingEvidence(e:{id?:unknown;kind?:unknown;observed_at?:unknown}|null|undefined){
+  return Boolean(e && typeof e.id==="string" && e.id.trim().length>0 && typeof e.kind==="string" && QUALIFYING_KINDS.has(e.kind) && typeof e.observed_at==="string" && isDateTime(e.observed_at));
+}
+function qualifyingEvidenceForApp(ev:CareerState["evidence"],appId:string){return ev.filter(e=>e.application_id===appId && isQualifyingEvidence(e));}
 export function reconcile(careerState:CareerState, providerSnapshot:ProviderSnapshot|null|undefined):{reconciledState:CareerState; result:ReconciliationResult}{
-  const now=new Date().toISOString(); const reconciledState=deepClone(careerState); const providerReadBack=Boolean(providerSnapshot && providerSnapshot.read_back===true);
+  const now=new Date().toISOString(); const reconciledState=deepClone(careerState); const providerReadBack=Boolean(providerSnapshot && providerSnapshot.read_back===true && isDateTime(providerSnapshot.observed_at || ""));
   const freshness:FreshnessTransition[]=[]; const execution:ExecutionTransition[]=[]; let anyConflict=false; const queueActive:Record<string,boolean>={}; const historyPreserved=true;
   const oppById=new Map(reconciledState.opportunities.map(o=>[o.id,o])); const providerOppMap=new Map<string,ProviderOpportunity>(); for(const po of providerSnapshot?.opportunities||[]) providerOppMap.set(po.opportunity_id,po);
   const providerAppMap=new Map<string,ProviderApplication>(); for(const pa of providerSnapshot?.applications||[]) providerAppMap.set(pa.application_id,pa);
@@ -39,15 +53,15 @@ export function reconcile(careerState:CareerState, providerSnapshot:ProviderSnap
     const oppVerification=opp?.verification?.state as VerificationState|undefined; const providerApp=providerAppMap.get(app.id);
     let to:ExecutionState|null=from; let evidenceBinding:ExecutionTransition["evidence_binding"]="none"; let conflict=false; let reason="no_change";
     const localQual=qualifyingEvidenceForApp(reconciledState.evidence,app.id); const hasLocalQual=localQual.length>0;
-    const providerQual=providerApp?.evidence?.filter(e=>QUALIFYING_KINDS.has(e.kind))||[]; const hasProviderQual=providerQual.length>0;
+    const providerQual=providerApp?.evidence?.filter(e=>isQualifyingEvidence(e))||[]; const hasProviderQual=providerQual.length>0;
     const localAny=reconciledState.evidence.filter(e=>e.application_id===app.id); const hasAnyLocal=localAny.length>0; const providerAny=providerApp?.evidence||[]; const hasAnyProvider=providerAny.length>0;
     if(!providerReadBack){to=from; evidenceBinding=hasAnyLocal?"local":"none"; reason="provider_read_back_required";
     }else if(!providerApp){to=from; evidenceBinding=hasAnyLocal?"local":"none"; reason="no_provider_application_snapshot"; if(["STALE","CLOSED"].includes(oppVerification as string)&&["READY_TO_APPLY","FILLED"].includes(from as string)){to="BLOCKED"; reason=`posting_${oppVerification}_deactivates_queue`; if(app.execution){app.execution.state="BLOCKED"; app.execution.block_reason=`posting_${oppVerification}_without_erasing_history`; app.execution.last_transition_at=now;}else app.execution={state:"BLOCKED",channel:fromChannel,last_transition_at:now,block_reason:`posting_${oppVerification}` as string};}
     }else{
       const authFailure=providerApp.auth&&providerApp.auth.authorized===false; const oppAuthFailure=providerOppMap.get(oppId)?.auth?.authorized===false;
       if(authFailure||oppAuthFailure){
-        if(from==="SUBMITTED"){conflict=true; anyConflict=true; to="BLOCKED"; evidenceBinding=hasAnyLocal?"local":"none"; reason="provider_authorization_failure_BLOCKED"; if(app.execution){app.execution.state="BLOCKED"; app.execution.block_reason=providerApp.auth?.reason||"provider_authorization_failure"; app.execution.last_transition_at=now;}
-        }else{if(["READY_TO_APPLY","FILLED","AWAITING_OPERATOR","BLOCKED"].includes(from as string)){const ch=app.execution?.channel??providerApp.auth?.channel as Channel??fromChannel; if(ch==="email"){to="AWAITING_OPERATOR"; reason="provider_authorization_failure_AWAITING_OPERATOR"; if(app.execution){app.execution.state="AWAITING_OPERATOR"; app.execution.awaiting_reason="provider_authorization_failure"; app.execution.last_transition_at=now;}}else{to="BLOCKED"; reason="provider_authorization_failure_BLOCKED"; if(app.execution){app.execution.state="BLOCKED"; app.execution.block_reason=providerApp.auth?.reason||"provider_authorization_failure"; app.execution.last_transition_at=now;}} evidenceBinding=hasAnyProvider?"provider":hasAnyLocal?"local":"none";}}
+        if(from==="SUBMITTED"){conflict=true; anyConflict=true; to="BLOCKED"; evidenceBinding=hasAnyLocal?"local":"none"; reason="provider_authorization_failure_BLOCKED"; if(app.execution){const stateChanged=app.execution.state!=="BLOCKED"; app.execution.state="BLOCKED"; app.execution.block_reason=providerApp.auth?.reason||"provider_authorization_failure"; if(stateChanged) app.execution.last_transition_at=now;}
+        }else{if(["READY_TO_APPLY","FILLED","AWAITING_OPERATOR","BLOCKED"].includes(from as string)){const ch=app.execution?.channel??providerApp.auth?.channel as Channel??fromChannel; if(ch==="email"){to="AWAITING_OPERATOR"; reason="provider_authorization_failure_AWAITING_OPERATOR"; if(app.execution){const stateChanged=app.execution.state!=="AWAITING_OPERATOR"; app.execution.state="AWAITING_OPERATOR"; app.execution.awaiting_reason="provider_authorization_failure"; if(stateChanged) app.execution.last_transition_at=now;}}else{to="BLOCKED"; reason="provider_authorization_failure_BLOCKED"; if(app.execution){app.execution.state="BLOCKED"; app.execution.block_reason=providerApp.auth?.reason||"provider_authorization_failure"; app.execution.last_transition_at=now;}} evidenceBinding=hasAnyProvider?"provider":hasAnyLocal?"local":"none";}}
       }else{
         const providerFreshness=providerOppMap.get(oppId)?.verification?.state??oppVerification;
         if(["STALE","CLOSED"].includes(providerFreshness as string)&&["READY_TO_APPLY","FILLED"].includes(from as string)){to="BLOCKED"; reason=`stale_closed_deactivates_queue_${providerFreshness}`; evidenceBinding=hasAnyLocal?"local":"none"; if(app.execution){app.execution.state="BLOCKED"; app.execution.block_reason=`posting_${providerFreshness}_deactivates_queue_without_erasing_history`; app.execution.last_transition_at=now;}
@@ -70,8 +84,8 @@ export function reconcile(careerState:CareerState, providerSnapshot:ProviderSnap
   }
   let overall:ReconciliationResult["evidence_binding"]="none"; if(execution.some(e=>e.evidence_binding==="operator_confirmed")) overall="operator_confirmed"; else if(execution.some(e=>e.evidence_binding==="provider")) overall="provider"; else if(execution.some(e=>e.evidence_binding==="local")) overall="local";
   const result:ReconciliationResult={schema:RECONCILIATION_SCHEMA,reconciled_at:now,provider_read_back:providerReadBack,freshness_transition:freshness,execution_transition:execution,evidence_binding:overall,conflict_preserved:anyConflict,queue_active:queueActive,history_preserved:historyPreserved,idempotent:true};
-  const hasFresh=freshness.some(f=>f.from!==f.to); const hasExec=execution.some(e=>e.from!==e.to); const hasChanges=hasFresh||hasExec||anyConflict; if(hasChanges&&JSON.stringify(careerState)!==JSON.stringify(reconciledState)){reconciledState.revision=(reconciledState.revision??0)+1; reconciledState.updated_at=now;}
+  if(JSON.stringify(careerState)!==JSON.stringify(reconciledState)){reconciledState.revision=(reconciledState.revision??0)+1; reconciledState.updated_at=now;}
   return {reconciledState,result};
 }
 export function isIdempotent(careerState:CareerState,snapshot:ProviderSnapshot){const f=reconcile(careerState,snapshot); const s=reconcile(f.reconciledState,snapshot); return JSON.stringify(f.reconciledState)===JSON.stringify(s.reconciledState);}
-export function requiresProviderReadBack(s:ProviderSnapshot|null|undefined){return !s||s.read_back!==true;}
+export function requiresProviderReadBack(s:ProviderSnapshot|null|undefined){return !s||s.read_back!==true||!isDateTime(s.observed_at||"");}

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Tuple
 
@@ -19,21 +20,37 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+_RFC3339_DATE_TIME = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$"
+)
+
 def _is_datetime(s: str) -> bool:
-    if not isinstance(s, str) or not s:
+    if not isinstance(s, str) or not _RFC3339_DATE_TIME.fullmatch(s):
         return False
     try:
-        v = s.replace("Z", "+00:00") if s.endswith("Z") else s
+        v = s[:-1] + "+00:00" if s.endswith("Z") else s
         datetime.fromisoformat(v)
         return True
-    except Exception:
+    except (TypeError, ValueError):
         return False
+
+
+def _is_qualifying_evidence(evidence: Dict[str, Any] | None) -> bool:
+    if not isinstance(evidence, dict):
+        return False
+    evidence_id=evidence.get("id")
+    return (
+        isinstance(evidence_id, str)
+        and bool(evidence_id.strip())
+        and evidence.get("kind") in QUALIFYING_KINDS
+        and _is_datetime(evidence.get("observed_at", ""))
+    )
 
 
 def reconcile(career_state: Dict[str, Any], provider_snapshot: Dict[str, Any] | None) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     now = _now_iso()
     reconciled = copy.deepcopy(career_state)
-    provider_read_back = bool(provider_snapshot and provider_snapshot.get("read_back") is True)
+    provider_read_back = bool(provider_snapshot and provider_snapshot.get("read_back") is True and _is_datetime(provider_snapshot.get("observed_at", "")))
 
     freshness: List[Dict[str, Any]] = []
     execution: List[Dict[str, Any]] = []
@@ -142,9 +159,9 @@ def reconcile(career_state: Dict[str, Any], provider_snapshot: Dict[str, Any] | 
         conflict = False
         reason = "no_change"
 
-        local_qual = [e for e in reconciled.get("evidence", []) if e["application_id"] == app_id and e["kind"] in QUALIFYING_KINDS]
+        local_qual = [e for e in reconciled.get("evidence", []) if e["application_id"] == app_id and _is_qualifying_evidence(e)]
         has_local = len(local_qual) > 0
-        provider_qual = [e for e in (provider_app or {}).get("evidence", []) if e.get("kind") in QUALIFYING_KINDS]
+        provider_qual = [e for e in (provider_app or {}).get("evidence", []) if _is_qualifying_evidence(e)]
         has_provider = len(provider_qual) > 0
         # any evidence (even note/draft) counts for local binding
         local_any = [e for e in reconciled.get("evidence", []) if e["application_id"] == app_id]
@@ -189,16 +206,20 @@ def reconcile(career_state: Dict[str, Any], provider_snapshot: Dict[str, Any] | 
                         to_state = "AWAITING_OPERATOR"
                         reason = "provider_authorization_failure_AWAITING_OPERATOR"
                         if app.get("execution"):
+                            state_changed=app["execution"].get("state") != "AWAITING_OPERATOR"
                             app["execution"]["state"] = "AWAITING_OPERATOR"
                             app["execution"]["awaiting_reason"] = "provider_authorization_failure"
-                            app["execution"]["last_transition_at"] = now
+                            if state_changed:
+                                app["execution"]["last_transition_at"] = now
                     else:
                         to_state = "BLOCKED"
                         reason = "provider_authorization_failure_BLOCKED"
                         if app.get("execution"):
+                            state_changed=app["execution"].get("state") != "BLOCKED"
                             app["execution"]["state"] = "BLOCKED"
                             app["execution"]["block_reason"] = provider_app.get("auth", {}).get("reason") or "provider_authorization_failure"
-                            app["execution"]["last_transition_at"] = now
+                            if state_changed:
+                                app["execution"]["last_transition_at"] = now
                     evidence_binding = "provider" if has_any_provider else "local" if has_any_local else "none"
             else:
                 provider_freshness = provider_opp_map.get(opp_id, {}).get("verification", {}).get("state") if provider_opp_map.get(opp_id, {}).get("verification") else opp_verification
@@ -360,13 +381,10 @@ def reconcile(career_state: Dict[str, Any], provider_snapshot: Dict[str, Any] | 
         "idempotent": True,
     }
 
-    has_fresh = any(f["from"] != f["to"] for f in freshness)
-    has_exec = any(e["from"] != e["to"] for e in execution)
-    has_changes = has_fresh or has_exec or any_conflict
-    if has_changes:
-        if json.dumps(career_state, sort_keys=True) != json.dumps(reconciled, sort_keys=True):
-            reconciled["revision"] = (reconciled.get("revision") or 0) + 1
-            reconciled["updated_at"] = now
+    # Any persisted mutation (including evidence-only reconciliation) advances revision.
+    if json.dumps(career_state, sort_keys=True) != json.dumps(reconciled, sort_keys=True):
+        reconciled["revision"] = (reconciled.get("revision") or 0) + 1
+        reconciled["updated_at"] = now
 
     return reconciled, result
 
@@ -378,4 +396,4 @@ def is_idempotent(career_state: Dict[str, Any], snapshot: Dict[str, Any]) -> boo
 
 
 def requires_provider_read_back(snapshot: Dict[str, Any] | None) -> bool:
-    return not snapshot or snapshot.get("read_back") is not True
+    return not snapshot or snapshot.get("read_back") is not True or not _is_datetime(snapshot.get("observed_at", ""))

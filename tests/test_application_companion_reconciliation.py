@@ -8,7 +8,7 @@ import copy
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from companion_reconciliation import reconcile, is_idempotent
+from companion_reconciliation import reconcile, is_idempotent, requires_provider_read_back
 
 FIXTURE_DIR = ROOT / "fixtures" / "application-companion-reconciliation"
 
@@ -190,6 +190,95 @@ def test_no_promotion_without_qualifying_evidence():
     assert exec_trans["to"] != "SUBMITTED", "FILLED without qualifying evidence must not promote to SUBMITTED"
     assert exec_trans["reason"] == "SUBMITTED_requires_qualifying_evidence"
 
+def test_undated_provider_evidence_does_not_promote():
+    data = load_fixture("fixture-04-local-edit-remains-local.json")
+    for bad_timestamp in ["", "2026-09-10", "2026-02-30T00:00:00Z"]:
+        cs = copy.deepcopy(data["career_state"])
+        ps = copy.deepcopy(data["provider_snapshot"])
+        ps["read_back"] = True
+        ps["observed_at"] = "2026-09-10T07:00:00-04:00"
+        ps["applications"] = [{
+            "application_id": "app-fixture-001",
+            "execution": {
+                "state": "SUBMITTED",
+                "channel": "web_form",
+                "last_transition_at": "2026-09-10T07:00:00-04:00",
+            },
+            "evidence": [{"id": "ev-undated", "kind": "submission_receipt", "observed_at": bad_timestamp}],
+            "auth": {"authorized": True},
+        }]
+        reconciled, result = reconcile(cs, ps)
+        exec_trans = next(e for e in result["execution_transition"] if e["application_id"] == "app-fixture-001")
+        assert exec_trans["to"] != "SUBMITTED", f"invalid provider evidence timestamp must not promote: {bad_timestamp!r}"
+        assert reconciled["applications"][0]["execution"]["state"] != "SUBMITTED"
+
+    assert requires_provider_read_back({"read_back": True, "observed_at": "2026-09-10"}) is True
+    assert requires_provider_read_back({"read_back": True, "observed_at": "2026-02-30T00:00:00Z"}) is True
+    assert requires_provider_read_back({"read_back": True, "observed_at": "2026-09-10T07:00:00Z"}) is False
+
+def test_evidence_only_reconciliation_bumps_revision():
+    data = load_fixture("fixture-07-idempotent-conflict-preserved.json")
+    cs = copy.deepcopy(data["career_state"])
+    ps = copy.deepcopy(data["provider_snapshot"])
+    provider_app = ps["applications"][0]
+    provider_opp = ps["opportunities"][0]
+    app = cs["applications"][0]
+    opp = cs["opportunities"][0]
+
+    # Pre-align all non-evidence provider projections so provider evidence append is
+    # the only durable mutation exercised by this regression.
+    pv = provider_opp["verification"]
+    opp["verification"] = {
+        "state": pv["state"],
+        "verified_at": pv["verified_at"],
+        "detail": pv.get("detail") or "Live posting re-observed via provider read-back",
+        "source": pv.get("source") or ps["provider_id"],
+    }
+    pe = provider_app["execution"]
+    app["execution"]["state"] = pe["state"]
+    app["execution"]["channel"] = pe["channel"]
+    app["execution"]["last_transition_at"] = pe["last_transition_at"]
+    app["execution"]["evidence_id"] = provider_app["evidence"][0]["id"]
+    app["submitted_at"] = pe["last_transition_at"]
+    app["external_reference"] = f"provider-{ps['provider_id']}-{app['id']}"
+    cs["evidence"] = []
+
+    before_revision = cs["revision"]
+    reconciled, result = reconcile(cs, ps)
+    assert any(e["id"] == "ev-provider-007" for e in reconciled["evidence"])
+    assert reconciled["revision"] == before_revision + 1, "evidence-only persisted mutation must bump revision"
+
+    reconciled2, _ = reconcile(reconciled, ps)
+    assert reconciled2["revision"] == reconciled["revision"], "idempotent second reconciliation must not bump revision again"
+
+def test_auth_failure_reconciliation_is_idempotent():
+    data = load_fixture("fixture-05-auth-failure-blocked.json")
+    first, _ = reconcile(copy.deepcopy(data["career_state"]), copy.deepcopy(data["provider_snapshot"]))
+    first_revision = first["revision"]
+    first_transition_at = first["applications"][0]["execution"]["last_transition_at"]
+    second, _ = reconcile(first, copy.deepcopy(data["provider_snapshot"]))
+    assert second == first, "same authorization-failure snapshot must be idempotent"
+    assert second["revision"] == first_revision
+    assert second["applications"][0]["execution"]["last_transition_at"] == first_transition_at
+    assert is_idempotent(copy.deepcopy(data["career_state"]), copy.deepcopy(data["provider_snapshot"])) is True
+
+def test_provider_evidence_requires_reference_id():
+    data = load_fixture("fixture-04-local-edit-remains-local.json")
+    cs = copy.deepcopy(data["career_state"])
+    ps = copy.deepcopy(data["provider_snapshot"])
+    ps["read_back"] = True
+    ps["observed_at"] = "2026-09-10T07:00:00-04:00"
+    ps["applications"] = [{
+        "application_id": "app-fixture-001",
+        "execution": {"state":"SUBMITTED","channel":"web_form","last_transition_at":"2026-09-10T07:00:00-04:00"},
+        "evidence": [{"kind":"submission_receipt","observed_at":"2026-09-10T07:00:00-04:00"}],
+        "auth": {"authorized": True},
+    }]
+    reconciled, result = reconcile(cs, ps)
+    transition = next(e for e in result["execution_transition"] if e["application_id"]=="app-fixture-001")
+    assert transition["to"] != "SUBMITTED"
+    assert reconciled["applications"][0]["execution"]["state"] != "SUBMITTED"
+
 def test_provider_snapshot_synthetic_only():
     # ensure provider snapshot uses example.invalid and no secrets
     all_fixtures = list(FIXTURE_DIR.glob("*.json"))
@@ -216,6 +305,14 @@ if __name__ == "__main__":
     print("PASS idempotent_conflict")
     test_no_promotion_without_qualifying_evidence()
     print("PASS no_promotion")
+    test_undated_provider_evidence_does_not_promote()
+    print("PASS undated_provider_evidence")
+    test_evidence_only_reconciliation_bumps_revision()
+    print("PASS evidence_only_revision")
+    test_auth_failure_reconciliation_is_idempotent()
+    print("PASS auth_failure_idempotent")
+    test_provider_evidence_requires_reference_id()
+    print("PASS provider_evidence_reference")
     test_provider_snapshot_synthetic_only()
     print("PASS synthetic")
     print("ALL TESTS PASS")

@@ -8,13 +8,34 @@ export const RECONCILIATION_SCHEMA = "escapehatch/application-companion-reconcil
 
 function deepClone(v) { return JSON.parse(JSON.stringify(v)); }
 function isDateTime(s) {
-  try { const v = s.endsWith("Z") ? s : s.replace("Z", "+00:00"); return !Number.isNaN(Date.parse(v)); } catch { return false; }
+  if (typeof s !== "string") return false;
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(Z|([+-])(\d{2}):(\d{2}))$/.exec(s);
+  if (!m) return false;
+  const year=Number(m[1]), month=Number(m[2]), day=Number(m[3]);
+  const hour=Number(m[4]), minute=Number(m[5]), second=Number(m[6]);
+  const offsetHour=m[10]===undefined ? 0 : Number(m[10]);
+  const offsetMinute=m[11]===undefined ? 0 : Number(m[11]);
+  if (year < 1 || month < 1 || month > 12 || hour > 23 || minute > 59 || second > 59 || offsetHour > 23 || offsetMinute > 59) return false;
+  const leap=(year%4===0 && year%100!==0) || year%400===0;
+  const monthDays=[31, leap?29:28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (day < 1 || day > monthDays[month-1]) return false;
+  return !Number.isNaN(Date.parse(s));
+}
+
+function isQualifyingEvidence(evidence) {
+  return Boolean(
+    evidence &&
+    typeof evidence.id === "string" &&
+    evidence.id.trim().length > 0 &&
+    QUALIFYING_KINDS.has(evidence.kind) &&
+    isDateTime(evidence.observed_at || "")
+  );
 }
 
 export function reconcile(careerState, providerSnapshot) {
   const now = new Date().toISOString();
   const reconciled = deepClone(careerState);
-  const providerReadBack = Boolean(providerSnapshot && providerSnapshot.read_back === true);
+  const providerReadBack = Boolean(providerSnapshot && providerSnapshot.read_back === true && isDateTime(providerSnapshot.observed_at || ""));
   const freshness = [];
   const execution = [];
   let anyConflict = false;
@@ -80,9 +101,9 @@ export function reconcile(careerState, providerSnapshot) {
     let evidenceBinding = "none";
     let conflict = false;
     let reason = "no_change";
-    const localQual = reconciled.evidence.filter(e => e.application_id === app.id && QUALIFYING_KINDS.has(e.kind));
+    const localQual = reconciled.evidence.filter(e => e.application_id === app.id && isQualifyingEvidence(e));
     const hasLocal = localQual.length > 0;
-    const providerQual = (providerApp?.evidence || []).filter(e => QUALIFYING_KINDS.has(e.kind));
+    const providerQual = (providerApp?.evidence || []).filter(isQualifyingEvidence);
     const hasProvider = providerQual.length > 0;
     const localAny = reconciled.evidence.filter(e => e.application_id === app.id);
     const hasAnyLocal = localAny.length > 0;
@@ -104,12 +125,12 @@ export function reconcile(careerState, providerSnapshot) {
       if (authFailure || oppAuthFailure) {
         if (from === "SUBMITTED") {
           conflict = true; anyConflict = true; to = "BLOCKED"; evidenceBinding = hasAnyLocal ? "local" : "none"; reason = "provider_authorization_failure_BLOCKED";
-          if (app.execution) { app.execution.state = "BLOCKED"; app.execution.block_reason = providerApp.auth?.reason || "provider_authorization_failure"; app.execution.last_transition_at = now; }
+          if (app.execution) { const stateChanged=app.execution.state!=="BLOCKED"; app.execution.state = "BLOCKED"; app.execution.block_reason = providerApp.auth?.reason || "provider_authorization_failure"; if(stateChanged) app.execution.last_transition_at = now; }
         } else {
           const channel = app.execution?.channel || providerApp.auth?.channel || fromChannel;
           if (channel === "email") {
             to = "AWAITING_OPERATOR"; reason = "provider_authorization_failure_AWAITING_OPERATOR";
-            if (app.execution) { app.execution.state = "AWAITING_OPERATOR"; app.execution.awaiting_reason = "provider_authorization_failure"; app.execution.last_transition_at = now; }
+            if (app.execution) { const stateChanged=app.execution.state!=="AWAITING_OPERATOR"; app.execution.state = "AWAITING_OPERATOR"; app.execution.awaiting_reason = "provider_authorization_failure"; if(stateChanged) app.execution.last_transition_at = now; }
           } else {
             to = "BLOCKED"; reason = "provider_authorization_failure_BLOCKED";
             if (app.execution) { app.execution.state = "BLOCKED"; app.execution.block_reason = providerApp.auth?.reason || "provider_authorization_failure"; app.execution.last_transition_at = now; }
@@ -195,14 +216,9 @@ export function reconcile(careerState, providerSnapshot) {
   else if (execution.some(e=>e.evidence_binding==="local")) overall="local";
 
   const result={schema:RECONCILIATION_SCHEMA, reconciled_at:now, provider_read_back:providerReadBack, freshness_transition:freshness, execution_transition:execution, evidence_binding:overall, conflict_preserved:anyConflict, queue_active:queueActive, history_preserved:historyPreserved, idempotent:true};
-  const hasFresh=freshness.some(f=>f.from!==f.to);
-  const hasExec=execution.some(e=>e.from!==e.to);
-  const hasChanges=hasFresh||hasExec||anyConflict;
-  if (hasChanges){
-    if (JSON.stringify(careerState)!==JSON.stringify(reconciled)){
-      reconciled.revision=(reconciled.revision||0)+1;
-      reconciled.updated_at=now;
-    }
+  if (JSON.stringify(careerState)!==JSON.stringify(reconciled)){
+    reconciled.revision=(reconciled.revision||0)+1;
+    reconciled.updated_at=now;
   }
   return {reconciledState:reconciled, result};
 }
@@ -212,4 +228,4 @@ export function isIdempotent(careerState, snapshot){
   const second=reconcile(first.reconciledState, snapshot);
   return JSON.stringify(first.reconciledState)===JSON.stringify(second.reconciledState);
 }
-export function requiresProviderReadBack(snapshot){ return !snapshot || snapshot.read_back!==true; }
+export function requiresProviderReadBack(snapshot){ return !snapshot || snapshot.read_back!==true || !isDateTime(snapshot.observed_at || ""); }

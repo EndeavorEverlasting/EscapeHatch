@@ -2,14 +2,19 @@
 
 **Lane:** EH-A6 — Live acceptance, release classification, and durable closeout  
 **Plan owner:** `docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md` Section EH-A6 + manifest lane `EH-A6`  
-**Branch:** `feat/eh-a6-20260923`  
-**Base pinned:** `upstream/integration/replit-donor-b01f628-20260921@b884b42` (merge of `feat/eh-q2-20260923` containing all Wave 0–3)  
-**Commit after EH-A6 release bump:** _to be filled with post-bump HEAD SHA after validation_ (see report)  
-**Date:** 2026-09-23  
-**Worktree:** `C:/Users/pa_rperez26/OneDrive - Northwell Health/OG Laptop Backup/Desktop/dev/EscapeHatch-a6`  
+**Original branch:** `feat/eh-a6-20260923@d3767a6b43f1f192897dfca6adfe157cb53d500c`  
+**Recovery branch:** `recovery/eh-crash-align-20260924` / PR #29  
+**Repaired integration floor:** `e5cc7b5a7204e318e243f91d4badda46f6489253`  
+**Recovery candidate at reconstruction:** `61cea014518ee56f3c7fd4ccb0d9de8ebec7b82f`  
+**Date:** 2026-09-23; recovery reconciliation 2026-09-24  
+**Worktree:** local isolated worktree; machine-local path intentionally omitted  
 **Disposition:** sanitized repository proof only — no profile values, credentials, PII, or live ATS data.
 
 ---
+
+### Recovery provenance note
+
+The validation commands recorded below are historical evidence for the original EH-A6 head, not automatic proof for the later recovery merge. The 2026-09-24 recovery candidate replays the pushed A5/Q2/A6 work onto the stronger faithfulness-repaired integration floor, so proof-relevant browser/account/progression inputs changed. Exact-head provider validation for PR #29 is required before integration. The original live-workstation limitation remains unchanged: this receipt does not prove compatibility with a real employer ATS or live provider.
 
 ## 1. Executive summary
 

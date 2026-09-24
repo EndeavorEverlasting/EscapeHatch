@@ -1040,6 +1040,40 @@ After successful import, a user selecting an opportunity should not have to re-e
 
 PR #35 / \`docs/CAREER_STORE_IMPORT_PLAN.md\` owns tracker/document decoding and canonical import. This plan owns downstream startup/application hydration only.
 
+### 23.4 Completed-application snapshot as a profile donor
+
+A user-supplied completed/reviewed application snapshot is a richer donor than a résumé and should be usable to bootstrap the first local EscapeHatch profile.
+
+Potential donor classes include a saved review page, user-exported application PDF/document, or another user-authorized application summary.
+
+The intake path is:
+
+\`completed application snapshot -> structural extraction -> canonical question/profile mapping -> proposal set -> user review/reuse consent -> local profile + answer memory\`
+
+It may propose:
+
+- identity/contact values;
+- source/referral metadata;
+- compensation preference for the opportunity;
+- education;
+- work-history records and responsibility text;
+- standard company/position questionnaire answers;
+- capability/tenure answer buckets;
+- attachment identities;
+- other non-secret application metadata.
+
+Rules:
+
+- current explicit user edits remain authoritative;
+- repeated work/education records retain identity and must not cross-contaminate;
+- opportunity-scoped facts remain opportunity-scoped unless the user explicitly promotes them;
+- sensitive demographic, legal, accommodation, veteran, disability, or similar values may be recognized only from the user's explicit supplied record and require the Answer Memory reuse-consent policy before durable cross-application reuse;
+- signature/certification text is evidence of a prior user action, never reusable signing authority;
+- credentials/secrets are never extracted into ordinary profile state;
+- the source snapshot remains user-owned/private and is not committed to repository fixtures.
+
+This makes the first-user experience capable of combining \`resume + completed application snapshot + job tracker\` into one reviewed local state rather than treating each as a separate configuration exercise.
+
 ### 23.3 Mainline completion gate
 
 A lane may be IMPLEMENTED or VALIDATED before default-branch integration, but this feature is not COMPLETE until:
@@ -1254,6 +1288,22 @@ A draft, local email file, or composed message is not submission proof.
 **Dependencies:** EH-BOOT0; repaired/integrated PR #27; implemented/reconciled PR #35.
 
 **Goal:** startup with reviewed profile + authorized resume + canonical career store already hydrated, with no normal-path JSON/file shuttling.
+
+### EH-SEED0 — Completed-Application Donor Contract
+
+**Type:** application contract + privacy boundary
+
+**Goal:** define how a user-supplied completed application/review snapshot can propose profile and Answer Memory state without importing secrets, signing authority, or silent sensitive reuse.
+
+**Dependencies:** existing Answer Memory/QMEM contract.
+
+### EH-SEED1 — Completed-Application Donor Runtime
+
+**Type:** conventional application logic
+
+**Dependencies:** EH-SEED0; repaired profile/resume owner; Answer Memory runtime.
+
+**Goal:** ingest a user-authorized application snapshot, generate reviewed proposals, and merge accepted values into local canonical state with provenance.
 
 ### EH-MAIN0 — Default-Branch Product Convergence
 

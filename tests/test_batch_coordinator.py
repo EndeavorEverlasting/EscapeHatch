@@ -299,7 +299,10 @@ def test_submission_proof_guards():
 
     # An evidence id already owned by another application cannot be rebound or used to submit.
     cross=copy.deepcopy(cs)
+    cross["evidence"].append({"id":"ev-cross-app","application_id":"app-submitted","kind":"submission_receipt","artifact":{"owner":"user","kind":"relative_path","locator":"evidence/app-submitted/earlier.txt"},"observed_at":"2026-09-10T06:55:00-04:00"})
     cross["evidence"].append({"id":"ev-cross-app","application_id":"app-other","kind":"submission_receipt","artifact":{"owner":"user","kind":"relative_path","locator":"evidence/app-other/receipt.txt"},"observed_at":"2026-09-10T07:00:00-04:00"})
+    duplicate_same_app_first=True
+    assert duplicate_same_app_first
     cross_ev={"id":"ev-cross-app","kind":"submission_receipt","observed_at":"2026-09-10T07:00:00-04:00","artifact":{"owner":"user","kind":"relative_path","locator":"evidence/app-submitted/receipt.txt"}}
     cross_snap={"observed_at":"2026-09-10T07:00:00-04:00","provider_id":"synthetic-provider","read_back":True,"opportunities":[],"applications":[{"application_id":"app-submitted","execution":{"state":"SUBMITTED","channel":"web_form","last_transition_at":"2026-09-10T07:00:00-04:00"},"evidence":[{"id":"ev-cross-app","kind":"submission_receipt","observed_at":"2026-09-10T07:00:00-04:00"}]}]}
     cross_res=record_transition(cross, "app-submitted", "SUBMITTED", cross_ev, {"providerSnapshot": cross_snap, "providerAuthorized": True})

@@ -14,7 +14,7 @@ function isDateTime(s) {
 export function reconcile(careerState, providerSnapshot) {
   const now = new Date().toISOString();
   const reconciled = deepClone(careerState);
-  const providerReadBack = Boolean(providerSnapshot && providerSnapshot.read_back === true);
+  const providerReadBack = Boolean(providerSnapshot && providerSnapshot.read_back === true && isDateTime(providerSnapshot.observed_at || ""));
   const freshness = [];
   const execution = [];
   let anyConflict = false;
@@ -80,9 +80,9 @@ export function reconcile(careerState, providerSnapshot) {
     let evidenceBinding = "none";
     let conflict = false;
     let reason = "no_change";
-    const localQual = reconciled.evidence.filter(e => e.application_id === app.id && QUALIFYING_KINDS.has(e.kind));
+    const localQual = reconciled.evidence.filter(e => e.application_id === app.id && QUALIFYING_KINDS.has(e.kind) && isDateTime(e.observed_at || ""));
     const hasLocal = localQual.length > 0;
-    const providerQual = (providerApp?.evidence || []).filter(e => QUALIFYING_KINDS.has(e.kind));
+    const providerQual = (providerApp?.evidence || []).filter(e => QUALIFYING_KINDS.has(e.kind) && isDateTime(e.observed_at || ""));
     const hasProvider = providerQual.length > 0;
     const localAny = reconciled.evidence.filter(e => e.application_id === app.id);
     const hasAnyLocal = localAny.length > 0;
@@ -195,14 +195,9 @@ export function reconcile(careerState, providerSnapshot) {
   else if (execution.some(e=>e.evidence_binding==="local")) overall="local";
 
   const result={schema:RECONCILIATION_SCHEMA, reconciled_at:now, provider_read_back:providerReadBack, freshness_transition:freshness, execution_transition:execution, evidence_binding:overall, conflict_preserved:anyConflict, queue_active:queueActive, history_preserved:historyPreserved, idempotent:true};
-  const hasFresh=freshness.some(f=>f.from!==f.to);
-  const hasExec=execution.some(e=>e.from!==e.to);
-  const hasChanges=hasFresh||hasExec||anyConflict;
-  if (hasChanges){
-    if (JSON.stringify(careerState)!==JSON.stringify(reconciled)){
-      reconciled.revision=(reconciled.revision||0)+1;
-      reconciled.updated_at=now;
-    }
+  if (JSON.stringify(careerState)!==JSON.stringify(reconciled)){
+    reconciled.revision=(reconciled.revision||0)+1;
+    reconciled.updated_at=now;
   }
   return {reconciledState:reconciled, result};
 }

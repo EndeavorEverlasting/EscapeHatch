@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Tuple
 
@@ -19,14 +20,18 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+_RFC3339_DATE_TIME = re.compile(
+    r"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+)
+
 def _is_datetime(s: str) -> bool:
-    if not isinstance(s, str) or not s:
+    if not isinstance(s, str) or not _RFC3339_DATE_TIME.fullmatch(s):
         return False
     try:
-        v = s.replace("Z", "+00:00") if s.endswith("Z") else s
+        v = s[:-1] + "+00:00" if s.endswith("Z") else s
         datetime.fromisoformat(v)
         return True
-    except Exception:
+    except (TypeError, ValueError):
         return False
 
 
@@ -375,4 +380,4 @@ def is_idempotent(career_state: Dict[str, Any], snapshot: Dict[str, Any]) -> boo
 
 
 def requires_provider_read_back(snapshot: Dict[str, Any] | None) -> bool:
-    return not snapshot or snapshot.get("read_back") is not True
+    return not snapshot or snapshot.get("read_back") is not True or not _is_datetime(snapshot.get("observed_at", ""))

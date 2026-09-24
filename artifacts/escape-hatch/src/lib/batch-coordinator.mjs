@@ -118,8 +118,8 @@ export function recordTransition(careerState, applicationId, targetState, eviden
   const providerAuthorized=opts.providerAuthorized;
   const mailSent=opts.mailSent;
   const operatorConfirmed=opts.operatorConfirmed===true;
-  const existingEvidence=updated.evidence.find(e=>evidence && e.id===evidence.id);
-  const evidenceIdConflict=Boolean(existingEvidence && existingEvidence.application_id!==applicationId);
+  const matchingEvidence=updated.evidence.filter(e=>evidence && e.id===evidence.id);
+  const evidenceIdConflict=matchingEvidence.some(e=>e.application_id!==applicationId);
   const hasQualifying=Boolean(evidence && !evidenceIdConflict && isQualifyingKind(evidence.kind) && isDateTime(evidence.observed_at || ""));
   const hasEvidence=!!evidence;
   const localHasQualifying=updated.evidence.some(e=>e.application_id===applicationId && isQualifyingKind(e.kind) && isDateTime(e.observed_at || ""));

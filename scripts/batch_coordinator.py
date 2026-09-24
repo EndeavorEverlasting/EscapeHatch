@@ -34,6 +34,23 @@ def _priority_rank(p: Optional[str]) -> int:
 def _is_qualifying(kind: str) -> bool:
     return kind in QUALIFYING_KINDS
 
+def _provider_has_matching_qualifying(snapshot: Optional[Dict[str,Any]], application_id: str, evidence: Optional[Dict[str,Any]]) -> bool:
+    if not snapshot or snapshot.get("read_back") is not True or not _is_datetime(snapshot.get("observed_at","")):
+        return False
+    if not evidence or not _is_qualifying(evidence.get("kind","")) or not _is_datetime(evidence.get("observed_at","")):
+        return False
+    for provider_app in snapshot.get("applications",[]):
+        if provider_app.get("application_id") != application_id:
+            continue
+        for provider_evidence in provider_app.get("evidence",[]) or []:
+            if (
+                provider_evidence.get("id") == evidence.get("id")
+                and provider_evidence.get("kind") == evidence.get("kind")
+                and _is_datetime(provider_evidence.get("observed_at",""))
+            ):
+                return True
+    return False
+
 def select_next_queue_item(career_state: Dict[str,Any]):
     opp_by_id={o["id"]:o for o in career_state.get("opportunities",[])}
     candidates=[]
@@ -130,31 +147,47 @@ def record_transition(career_state: Dict[str,Any], application_id: str, target_s
     conflict=False
     queue_active=verification=="LIVE_VERIFIED" and to not in ("BLOCKED","SUBMITTED")
 
-    has_qualifying=bool(evidence and _is_qualifying(evidence.get("kind","")) and _is_datetime(evidence.get("observed_at","")))
-    has_evidence=bool(evidence)
-    local_has_qualifying=any(e["application_id"]==application_id and _is_qualifying(e["kind"]) for e in updated.get("evidence",[]))
     provider_snapshot=opts.get("providerSnapshot")
-    provider_read_back=bool(provider_snapshot and provider_snapshot.get("read_back") is True)
+    provider_read_back=bool(provider_snapshot and provider_snapshot.get("read_back") is True and _is_datetime(provider_snapshot.get("observed_at","")))
     provider_authorized=opts.get("providerAuthorized")
     mail_sent=opts.get("mailSent")
     operator_confirmed=opts.get("operatorConfirmed") is True
+    existing_evidence=next((e for e in updated.get("evidence",[]) if evidence and e.get("id")==evidence.get("id")), None)
+    evidence_id_conflict=bool(existing_evidence and existing_evidence.get("application_id")!=application_id)
+    has_qualifying=bool(evidence and not evidence_id_conflict and _is_qualifying(evidence.get("kind","")) and _is_datetime(evidence.get("observed_at","")))
+    has_evidence=bool(evidence)
+    local_has_qualifying=any(
+        e.get("application_id")==application_id and _is_qualifying(e.get("kind","")) and _is_datetime(e.get("observed_at",""))
+        for e in updated.get("evidence",[])
+    )
+    provider_has_qualifying=_provider_has_matching_qualifying(provider_snapshot, application_id, evidence) and not evidence_id_conflict
+    if evidence_id_conflict:
+        conflict=True
 
     if to=="SUBMITTED":
         if provider_authorized is False:
             to="AWAITING_OPERATOR" if channel=="email" else "BLOCKED"
             reason="provider_authorization_failure_BLOCKED_never_SUBMITTED"
             evidence_binding="local" if local_has_qualifying else "none"
-        elif channel=="email" and mail_sent is False and not operator_confirmed:
+        elif evidence_id_conflict:
+            to="FILLED" if frm=="FILLED" else "AWAITING_OPERATOR"
+            reason="evidence_id_bound_to_other_application"
+            evidence_binding="none"
+        elif channel=="email" and mail_sent is not True and not operator_confirmed:
             to="FILLED" if frm=="FILLED" else "AWAITING_OPERATOR"
             reason="draft_email_requires_sent_confirmation_never_SUBMITTED"
             evidence_binding="local" if has_evidence else "none"
             conflict=True
-        elif not has_qualifying and not local_has_qualifying and not operator_confirmed:
+        elif not provider_has_qualifying and not operator_confirmed:
             if frm=="FILLED": to="FILLED"
             elif frm=="READY_TO_APPLY": to="READY_TO_APPLY"
             else: to="AWAITING_OPERATOR"
-            reason="SUBMITTED_requires_qualifying_evidence_with_timestamp_and_reference"
-            evidence_binding="none"
+            if has_qualifying or local_has_qualifying:
+                reason="provider_read_back_or_operator_confirmation_required_before_SUBMITTED"
+                evidence_binding="local"
+            else:
+                reason="SUBMITTED_requires_qualifying_evidence_with_timestamp_and_reference"
+                evidence_binding="none"
             if has_evidence and not has_qualifying: conflict=True
         elif verification=="BLOCKED":
             to="BLOCKED"
@@ -165,7 +198,7 @@ def record_transition(career_state: Dict[str,Any], application_id: str, target_s
             to=frm
             reason="missing_timestamp"
         else:
-            evidence_binding="operator_confirmed" if operator_confirmed else "provider" if has_qualifying else "local" if local_has_qualifying else "none"
+            evidence_binding="operator_confirmed" if operator_confirmed else "provider"
             reason="qualifying_confirmation_promotes_SUBMITTED"
         if to=="SUBMITTED" and verification not in ("LIVE_VERIFIED", None):
             if verification in ("STALE","CLOSED"):
@@ -193,7 +226,7 @@ def record_transition(career_state: Dict[str,Any], application_id: str, target_s
     if app.get("execution"):
         app["execution"]["state"]=final_to
         app["execution"]["last_transition_at"]=now
-        if evidence and has_qualifying:
+        if evidence and has_qualifying and not evidence_id_conflict:
             app["execution"]["evidence_id"]=evidence["id"]
         if final_to=="BLOCKED" and "block_reason" not in app["execution"]:
             app["execution"]["block_reason"]=reason
@@ -206,7 +239,7 @@ def record_transition(career_state: Dict[str,Any], application_id: str, target_s
                 app["external_reference"]=f"batch-{now}-{application_id}"
     else:
         app["execution"]={"state":final_to,"channel":channel,"last_transition_at":now,"detail":reason}
-        if evidence and has_qualifying:
+        if evidence and has_qualifying and not evidence_id_conflict:
             app["execution"]["evidence_id"]=evidence["id"]
         if final_to=="SUBMITTED":
             if not app.get("submitted_at"):
@@ -214,7 +247,7 @@ def record_transition(career_state: Dict[str,Any], application_id: str, target_s
             if not app.get("external_reference"):
                 app["external_reference"]=f"batch-{now}-{application_id}"
 
-    if evidence and not any(e["id"]==evidence["id"] for e in updated.get("evidence",[])):
+    if evidence and not evidence_id_conflict and not any(e["id"]==evidence["id"] for e in updated.get("evidence",[])):
         updated.setdefault("evidence",[]).append({
             "id": evidence["id"],
             "application_id": application_id,
@@ -228,7 +261,8 @@ def record_transition(career_state: Dict[str,Any], application_id: str, target_s
         updated["revision"]=(updated.get("revision") or 0)+1
         updated["updated_at"]=now
 
-    reference=(evidence or {}).get("id") or app.get("external_reference") or f"batch-{application_id}-{now}"
+    reference=(evidence or {}).get("id") if evidence and not evidence_id_conflict else None
+    reference=reference or app.get("external_reference") or f"batch-{application_id}-{now}"
     receipt={
         "schema": BATCH_RECEIPT_SCHEMA,
         "application_id": application_id,

@@ -1257,13 +1257,15 @@ A draft, local email file, or composed message is not submission proof.
 - sanitized structural fixture rules;
 - adapter detection collision rules.
 
-### EH-TAL2 — Taleo Adapter Implementation
+### EH-TAL1 — Taleo Adapter (existing canonical owner, extended)
 
 **Type:** application adapter
 
-**Dependencies:** EH-SURF0, EH-ADAPT0, existing EH-TAL1 design work.
+**Dependencies:** existing EH-CTX0, EH-ACT0, EH-REC0, EH-QMEM0 plus new EH-SURF0 and EH-ADAPT0.
 
-**Goal:** implement Taleo as the first vendor optimization against the generic adapter interface.
+**Goal:** keep one Taleo implementation owner and extend it to implement the first vendor optimization against the generic adapter interface.
+
+**Ownership rule:** this section extends the existing EH-TAL1 lane defined earlier in this plan; it does not create a second Taleo writer.
 
 ### EH-FORM1 — Form-Builder Adapter Floor
 
@@ -1285,9 +1287,9 @@ A draft, local email file, or composed message is not submission proof.
 
 **Type:** conventional application logic
 
-**Dependencies:** EH-BOOT0; repaired/integrated PR #27; implemented/reconciled PR #35.
+**Dependencies:** EH-BOOT0; repaired/integrated PR #27; career-store convergence EH-D7; existing selected-opportunity hydration owner EH-KNOW1.
 
-**Goal:** startup with reviewed profile + authorized resume + canonical career store already hydrated, with no normal-path JSON/file shuttling.
+**Goal:** compose already-canonical profile/resume/career-store/opportunity hydration into startup, with no normal-path JSON/file shuttling. EH-BOOT1 must not duplicate EH-KNOW1's selected-opportunity hydration service.
 
 ### EH-SEED0 — Completed-Application Donor Contract
 

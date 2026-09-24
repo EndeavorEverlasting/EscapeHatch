@@ -1,0 +1,1180 @@
+{
+  "schema_version": "prompt-parallel-dispatch/v1",
+  "run_id": "escapehatch-mainline-autoload-multisurface-executor-20260924",
+  "repository": "EndeavorEverlasting/EscapeHatch",
+  "plan_owners": [
+    "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md",
+    "docs/LOCAL_PLAN_EXECUTOR_PLAN.md",
+    "docs/CAREER_STORE_IMPORT_PLAN.md"
+  ],
+  "base_ref": {
+    "provider_default_branch": "main",
+    "provider_default_head": "0824535b9dc1341def885a79a098d297df770ac8",
+    "provider_integration_branch": "integration/replit-donor-b01f628-20260921",
+    "provider_integration_head": "fb888ae5611e8242883d7a6134259f2dd9c03110",
+    "planning_branch": "plan/mainline-autoload-multisurface-plan-executor-20260924",
+    "freshness": "PROVIDER_REFRESHED_2026-09-24"
+  },
+  "authorization": {
+    "disposition": "PLANNING_ONLY",
+    "implementation_dispatch_performed": false,
+    "note": "This pass persists the execution map. Product/runtime and local-agent implementation remain successor work."
+  },
+  "canonical_dispatch_gate": {
+    "target": "Outputs/prompt-parallel-dispatch/manifest.json",
+    "status": "BLOCKED_BY_MISSING_CANONICAL_SCHEMA_RUNNER_ON_REFRESHED_FLOOR",
+    "evidence": [
+      "harness/contracts/prompt-parallel-dispatch.v1.json is absent from the refreshed integration tree",
+      "scripts/prompt_parallel_dispatch.py is absent from the refreshed integration tree"
+    ],
+    "fallback": "run-scoped manifest persisted here; no claim of canonical validate/run/verify receipt"
+  },
+  "graph": {
+    "expression": "{OWNER-27 || OWNER-29-31 || OWNER-35 || EH-SURF0 || EH-ADAPT0 || EH-PEX0 || EH-QMEM0-ref || REPO-PROMOTION-ref} ; OWNER-27 + OWNER-35 -> EH-BOOT0 ; EH-QMEM0-ref -> EH-SEED0 ; OWNER-35 -> EH-D7-ref -> EH-KNOW1-ref ; EH-SURF0 + EH-ADAPT0 -> EH-TAL1-ref ; EH-SURF0 + EH-ADAPT0 -> EH-FORM1 ; EH-SURF0 + OWNER-29-31 -> EH-DOC1 ; EH-PEX0 -> {EH-PEX1 || EH-PEX3} ; EH-PEX1 -> {EH-PEX2 || EH-PEX5} ; EH-PEX0 + EH-PEX2 + EH-PEX3 -> EH-PEX4 ; EH-BOOT0 + OWNER-27 + EH-D7-ref + EH-KNOW1-ref -> EH-BOOT1 ; EH-QMEM0-ref -> EH-QMEM1-ref ; EH-SEED0 + OWNER-27 + EH-QMEM1-ref -> EH-SEED1 ; EH-TAL1-ref + EH-QMEM1-ref + EH-KNOW1-ref -> EH-CONV2-ref ; EH-PEX0 + REPO-PROMOTION-ref -> EH-PEX6 ; EH-BOOT1 + EH-TAL1-ref + EH-FORM1 + EH-DOC1 + EH-SEED1 + EH-KNOW1-ref + EH-D7-ref + EH-CONV2-ref + REPO-PROMOTION-ref -> EH-MAIN0 ; EH-PEX1 + EH-PEX2 + EH-PEX3 + EH-PEX4 + EH-PEX5 + EH-PEX6 -> EH-PEX7",
+    "max_width": 4,
+    "parallel_disposition": "REQUIRED_AFTER_IMPLEMENTATION_AUTHORIZATION",
+    "note": "Independent generic contract lanes EH-SURF0/EH-ADAPT0/EH-PEX0 may proceed while owner PR repairs run. Dependent bootstrap/runtime lanes remain explicitly gated."
+  },
+  "current_blockers": [
+    {
+      "owner": "PR #27",
+      "state": "open; unresolved review; Web Cockpit Validation failing",
+      "blocks": [
+        "EH-BOOT1",
+        "work-history/profile convergence"
+      ]
+    },
+    {
+      "owner": "PR #29",
+      "state": "open; unresolved review; multiple required workflows failing",
+      "blocks": [
+        "Application Assist convergence",
+        "new runtime surface lanes"
+      ]
+    },
+    {
+      "owner": "PR #30",
+      "state": "stacked on PR #29; unresolved review; application-queue workflow failing",
+      "blocks": [
+        "email/submission evidence convergence"
+      ]
+    },
+    {
+      "owner": "PR #31",
+      "state": "stacked on PR #29; checks observed green but unresolved timestamp/read-back review findings",
+      "blocks": [
+        "provider reconciliation convergence"
+      ]
+    },
+    {
+      "owner": "PR #35",
+      "state": "planning-only; unresolved review; Harness Validation failing",
+      "blocks": [
+        "tracker/career-store implementation",
+        "EH-BOOT1"
+      ]
+    },
+    {
+      "owner": "canonical dispatch runner",
+      "state": "schema/runner absent",
+      "blocks": [
+        "typed local manifest validation/receipt proof only; not provider planning"
+      ]
+    }
+  ],
+  "lanes": [
+    {
+      "lane_id": "OWNER-27",
+      "wave": 0,
+      "mission": "Repair and reconcile deterministic resume/profile intake PR #27 against current integration truth, resolving stale-profile, address/location, confidence, race, and failing validation issues.",
+      "dependencies": [],
+      "owned_mutation_surfaces": [
+        "existing PR #27 owned files"
+      ],
+      "forbidden_surfaces": [
+        "new career-store importer",
+        "new vendor adapters",
+        "unrelated shared runtime files"
+      ],
+      "posture": "reuse existing PR/branch owner",
+      "adapter": {
+        "kind": "existing_pr_owner",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "repair_existing_pr",
+        "arguments": {
+          "pr": 27
+        }
+      },
+      "expected_artifacts": [
+        "resolved review threads",
+        "green required checks",
+        "exact validated PR head"
+      ],
+      "validation": [
+        "Web Cockpit Validation",
+        "Harness Validation",
+        "focused resume/profile tests",
+        "git diff --check"
+      ],
+      "convergence_owner": "integration/replit-donor-b01f628-20260921",
+      "status": "REPAIR_REQUIRED"
+    },
+    {
+      "lane_id": "OWNER-29-31",
+      "wave": 0,
+      "mission": "Repair the Application Assist recovery stack in dependency order: PR #29, then #30/#31 evidence/reconciliation repairs, preserving stacked ownership.",
+      "dependencies": [],
+      "owned_mutation_surfaces": [
+        "existing PR #29/#30/#31 owned files"
+      ],
+      "forbidden_surfaces": [
+        "PR #27 files except read-only collision inspection",
+        "PR #35 plan files"
+      ],
+      "posture": "reuse stacked PR owners",
+      "adapter": {
+        "kind": "existing_pr_stack",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "repair_stacked_prs",
+        "arguments": {
+          "prs": [
+            29,
+            30,
+            31
+          ]
+        }
+      },
+      "expected_artifacts": [
+        "review findings resolved",
+        "required workflows green",
+        "provider-evidence semantics preserved"
+      ],
+      "validation": [
+        "Application Assist Session Validation",
+        "Application Queue Reconciliation Validation",
+        "Career State Validation",
+        "Adversarial Fixtures",
+        "Harness Validation"
+      ],
+      "convergence_owner": "integration/replit-donor-b01f628-20260921",
+      "status": "REPAIR_REQUIRED"
+    },
+    {
+      "lane_id": "OWNER-35",
+      "wave": 0,
+      "mission": "Repair career-store/import plan PR #35: pin exact floor, define strict schema mappings/status semantics, separate V1/V1.1 dependencies, and reconcile actual queue-consumer ownership.",
+      "dependencies": [],
+      "owned_mutation_surfaces": [
+        "docs/CAREER_STORE_IMPORT_PLAN.md",
+        "its run-scoped manifest"
+      ],
+      "forbidden_surfaces": [
+        "runtime import implementation",
+        "Application Assist production files"
+      ],
+      "posture": "reuse existing PR #35",
+      "adapter": {
+        "kind": "existing_pr_owner",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "repair_existing_pr",
+        "arguments": {
+          "pr": 35
+        }
+      },
+      "expected_artifacts": [
+        "reproducible planning floor",
+        "schema-valid mappings",
+        "V1 dependency split",
+        "green planning validation"
+      ],
+      "validation": [
+        "Harness Validation",
+        "manifest JSON parse",
+        "review-thread closure"
+      ],
+      "convergence_owner": "integration/replit-donor-b01f628-20260921",
+      "status": "REPAIR_REQUIRED"
+    },
+    {
+      "lane_id": "EH-BOOT0",
+      "wave": 1,
+      "mission": "Define zero-config startup resolution from explicit profile, authorized resume, and canonical career store with mainline completion semantics.",
+      "dependencies": [
+        "OWNER-27",
+        "OWNER-35"
+      ],
+      "owned_mutation_surfaces": [
+        "new startup-bootstrap contract/fixtures/tests",
+        "scoped plan status"
+      ],
+      "forbidden_surfaces": [
+        "PR #27 parser internals",
+        "PR #35 importer internals"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent_or_provider_writer",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-BOOT0",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "startup precedence contract",
+        "resume/tracker hydration fixtures",
+        "mainline completion invariant"
+      ],
+      "validation": [
+        "focused startup contract tests",
+        "career-state/application-assist validators",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-MAIN0",
+      "status": "PLANNED"
+    },
+    {
+      "lane_id": "EH-SURF0",
+      "wave": 1,
+      "mission": "Define application surface classes and safe routing across ATS forms, form builders, generic forms, documents, email, providers, and manual-only paths.",
+      "dependencies": [],
+      "owned_mutation_surfaces": [
+        "new application-surface contract",
+        "routing fixtures/tests"
+      ],
+      "forbidden_surfaces": [
+        "vendor runtime adapters",
+        "submission implementation"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent_or_provider_writer",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-SURF0",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "surface taxonomy",
+        "routing state transitions",
+        "document-to-email fixtures"
+      ],
+      "validation": [
+        "focused surface tests",
+        "application harness validator",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-MAIN0",
+      "status": "PLANNED"
+    },
+    {
+      "lane_id": "EH-ADAPT0",
+      "wave": 1,
+      "mission": "Define vendor adapter registry and recurrence-first structural observation contract.",
+      "dependencies": [],
+      "owned_mutation_surfaces": [
+        "adapter registry contract",
+        "recurrence observation contract",
+        "sanitized fixtures/tests"
+      ],
+      "forbidden_surfaces": [
+        "real user answers/resume/screenshots",
+        "vendor-specific product truth"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent_or_provider_writer",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-ADAPT0",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "adapter interface",
+        "recurrence scoring model",
+        "fixture-promotion rules"
+      ],
+      "validation": [
+        "focused adapter-contract tests",
+        "privacy fixture scan",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-MAIN0",
+      "status": "PLANNED"
+    },
+    {
+      "lane_id": "EH-PEX0",
+      "wave": 1,
+      "mission": "Define remote plan-execution ledger, claim/CAS, handoff, proof, and mainline-completion contracts.",
+      "dependencies": [],
+      "owned_mutation_surfaces": [
+        "contracts/repository-plan-execution.v1.json",
+        "Outputs/plan-executor/ledger.json schema/seed",
+        "handoff/receipt schemas",
+        "validator/tests"
+      ],
+      "forbidden_surfaces": [
+        "product domain logic",
+        "generated docs/plans task files"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent_or_provider_writer",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-PEX0",
+          "plan": "docs/LOCAL_PLAN_EXECUTOR_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "execution contract",
+        "remote ledger",
+        "collision fixtures",
+        "handoff schema"
+      ],
+      "validation": [
+        "focused plan-executor validator/tests",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-PEX7",
+      "status": "PLANNED"
+    },
+    {
+      "lane_id": "EH-FORM1",
+      "wave": 2,
+      "mission": "Prove the adapter registry against a materially different stepwise form-builder pattern.",
+      "dependencies": [
+        "EH-SURF0",
+        "EH-ADAPT0"
+      ],
+      "owned_mutation_surfaces": [
+        "form-builder adapter module",
+        "synthetic/observed sanitized fixtures"
+      ],
+      "forbidden_surfaces": [
+        "universal Typeform compatibility claim",
+        "private data"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-FORM1",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "form-builder descriptors",
+        "transition fixtures",
+        "generic fallback"
+      ],
+      "validation": [
+        "focused adapter tests",
+        "Application Assist tests",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-MAIN0",
+      "status": "WAITING"
+    },
+    {
+      "lane_id": "EH-DOC1",
+      "wave": 2,
+      "mission": "Implement document-instruction to email/provider/manual routing with deterministic package preparation and no false submission promotion.",
+      "dependencies": [
+        "EH-SURF0",
+        "OWNER-29-31"
+      ],
+      "owned_mutation_surfaces": [
+        "document instruction extractor",
+        "email application router",
+        "focused fixtures/tests"
+      ],
+      "forbidden_surfaces": [
+        "automatic final send without policy",
+        "submission state without provider evidence"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-DOC1",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "PDF/document route extraction",
+        "email-ready package",
+        "sent-proof boundary"
+      ],
+      "validation": [
+        "application queue tests",
+        "email draft-vs-sent regressions",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-MAIN0",
+      "status": "WAITING"
+    },
+    {
+      "lane_id": "EH-PEX1",
+      "wave": 2,
+      "mission": "Build deterministic plan/task/PR discovery and dependency DAG classification.",
+      "dependencies": [
+        "EH-PEX0"
+      ],
+      "owned_mutation_surfaces": [
+        "plan executor discovery/parser modules",
+        "graph tests"
+      ],
+      "forbidden_surfaces": [
+        "generated task-file edits",
+        "product implementation"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-PEX1",
+          "plan": "docs/LOCAL_PLAN_EXECUTOR_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "normalized DAG",
+        "stale/superseded/already-proven dispositions",
+        "collision map"
+      ],
+      "validation": [
+        "focused parser/DAG tests",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-PEX7",
+      "status": "WAITING"
+    },
+    {
+      "lane_id": "EH-PEX3",
+      "wave": 2,
+      "mission": "Implement durable context rollover and successor-window handoffs.",
+      "dependencies": [
+        "EH-PEX0"
+      ],
+      "owned_mutation_surfaces": [
+        "handoff writer/reader",
+        "resume protocol",
+        "tests"
+      ],
+      "forbidden_surfaces": [
+        "product domain code",
+        "human-as-message-bus workflow"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-PEX3",
+          "plan": "docs/LOCAL_PLAN_EXECUTOR_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "machine-readable handoff",
+        "context epoch sequencing",
+        "successor acknowledgement"
+      ],
+      "validation": [
+        "handoff round-trip tests",
+        "stale-handoff rejection",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-PEX7",
+      "status": "WAITING"
+    },
+    {
+      "lane_id": "EH-BOOT1",
+      "wave": 3,
+      "mission": "Compose startup around canonical profile/resume/career-store/selected-opportunity owners without duplicating EH-KNOW1 hydration.",
+      "dependencies": [
+        "EH-BOOT0",
+        "OWNER-27",
+        "EH-D7-ref",
+        "EH-KNOW1-ref"
+      ],
+      "owned_mutation_surfaces": [
+        "startup hydration service",
+        "minimal cockpit/assist integration",
+        "focused tests"
+      ],
+      "forbidden_surfaces": [
+        "duplicate resume parser",
+        "duplicate tracker importer",
+        "selected-opportunity hydration service owned by EH-KNOW1"
+      ],
+      "posture": "isolated writer after owner convergence",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-BOOT1",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "zero-config startup behavior",
+        "resume-present hydration",
+        "tracker-backed opportunity availability"
+      ],
+      "validation": [
+        "web cockpit tests",
+        "profile sync tests",
+        "career-state/import tests",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-MAIN0",
+      "status": "WAITING"
+    },
+    {
+      "lane_id": "EH-PEX2",
+      "wave": 3,
+      "mission": "Implement isolated worktree/branch claim and remote ledger ownership semantics.",
+      "dependencies": [
+        "EH-PEX0",
+        "EH-PEX1"
+      ],
+      "owned_mutation_surfaces": [
+        "worktree/branch claim module",
+        "ledger CAS/lease module",
+        "tests"
+      ],
+      "forbidden_surfaces": [
+        "deleting foreign worktrees",
+        "force resets"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-PEX2",
+          "plan": "docs/LOCAL_PLAN_EXECUTOR_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "safe lane claim/release",
+        "collision refusal",
+        "lease recovery"
+      ],
+      "validation": [
+        "synthetic multi-writer tests",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-PEX7",
+      "status": "WAITING"
+    },
+    {
+      "lane_id": "EH-PEX4",
+      "wave": 3,
+      "mission": "Probe and bind an actually installed local LLM-agent adapter, then launch one bounded lane with a typed handoff/receipt.",
+      "dependencies": [
+        "EH-PEX0",
+        "EH-PEX2",
+        "EH-PEX3"
+      ],
+      "owned_mutation_surfaces": [
+        "local agent adapter config/launcher",
+        "adapter tests/docs"
+      ],
+      "forbidden_surfaces": [
+        "inventing unavailable AgentSwitchboard/OpenCode/Cursor capability",
+        "embedding secrets"
+      ],
+      "posture": "local workstation proof required",
+      "adapter": {
+        "kind": "capability_probe_then_local_adapter",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "bootstrap_and_prove_local_agent_adapter",
+        "arguments": {
+          "plan": "docs/LOCAL_PLAN_EXECUTOR_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "proven local adapter",
+        "worker launch receipt",
+        "successor handoff receipt"
+      ],
+      "validation": [
+        "one real bounded local worker run",
+        "receipt validation",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-PEX7",
+      "status": "WAITING"
+    },
+    {
+      "lane_id": "EH-PEX5",
+      "wave": 3,
+      "mission": "Implement unresolved-review/CI repair loop over existing PR owners and successor PRs.",
+      "dependencies": [
+        "EH-PEX1"
+      ],
+      "owned_mutation_surfaces": [
+        "plan-executor review/check queue logic",
+        "tests"
+      ],
+      "forbidden_surfaces": [
+        "automatic dismissal of valid review findings",
+        "merging red candidates"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent_plus_github_provider",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-PEX5",
+          "plan": "docs/LOCAL_PLAN_EXECUTOR_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "review repair queue",
+        "required-check refresh",
+        "exact-head merge gate"
+      ],
+      "validation": [
+        "synthetic review/check fixtures",
+        "provider dry-run where available",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-PEX7",
+      "status": "WAITING"
+    },
+    {
+      "lane_id": "EH-PEX6",
+      "wave": 4,
+      "mission": "Write remote completion only after required integration/mainline containment and proof ceilings are satisfied.",
+      "dependencies": [
+        "EH-PEX0",
+        "REPO-PROMOTION-ref"
+      ],
+      "owned_mutation_surfaces": [
+        "remote execution ledger completion transitions",
+        "promotion containment checks",
+        "tests"
+      ],
+      "forbidden_surfaces": [
+        "editing generated task mirror as execution truth",
+        "branch-green equals complete"
+      ],
+      "posture": "single completion writer",
+      "adapter": {
+        "kind": "local_convergence_owner_plus_provider",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-PEX6",
+          "plan": "docs/LOCAL_PLAN_EXECUTOR_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "mainline containment proof",
+        "completion CAS",
+        "blocked/superseded receipts"
+      ],
+      "validation": [
+        "promotion/containment tests",
+        "ledger validator",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-PEX7",
+      "status": "WAITING"
+    },
+    {
+      "lane_id": "EH-MAIN0",
+      "wave": 5,
+      "mission": "Converge required product lanes and promote exact validated behavior to refreshed main.",
+      "dependencies": [
+        "EH-BOOT1",
+        "EH-TAL1-ref",
+        "EH-FORM1",
+        "EH-DOC1",
+        "EH-SEED1",
+        "EH-KNOW1-ref",
+        "EH-D7-ref",
+        "EH-CONV2-ref",
+        "REPO-PROMOTION-ref"
+      ],
+      "owned_mutation_surfaces": [
+        "integration conflict resolution",
+        "promotion evidence",
+        "plan status closeout"
+      ],
+      "forbidden_surfaces": [
+        "unrelated product features",
+        "weakening no-submit evidence"
+      ],
+      "posture": "single convergence owner",
+      "adapter": {
+        "kind": "repository_promotion_owner",
+        "rung": 3
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "converge_validate_promote",
+        "arguments": {
+          "target": "main",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "exact candidate",
+        "green required checks",
+        "mainline containment proof",
+        "observed acceptance handoff"
+      ],
+      "validation": [
+        "owning product suites",
+        "promotion guard",
+        "post-promotion containment"
+      ],
+      "convergence_owner": "main",
+      "status": "WAITING"
+    },
+    {
+      "lane_id": "EH-PEX7",
+      "wave": 5,
+      "mission": "Run the local executor over the real remaining repository plan graph until every item has a supported terminal disposition and no dependency-ready work remains.",
+      "dependencies": [
+        "EH-PEX1",
+        "EH-PEX2",
+        "EH-PEX3",
+        "EH-PEX4",
+        "EH-PEX5",
+        "EH-PEX6"
+      ],
+      "owned_mutation_surfaces": [
+        "plan-executor ledger/receipts/handoffs",
+        "owned lane branches through delegated workers"
+      ],
+      "forbidden_surfaces": [
+        "silent draft promotion",
+        "foreign worktree deletion",
+        "false COMPLETE states"
+      ],
+      "posture": "single orchestration owner with isolated delegated writers",
+      "adapter": {
+        "kind": "proven_local_plan_executor",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "sweep_repository_plans",
+        "arguments": {
+          "plan": "docs/LOCAL_PLAN_EXECUTOR_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "fully dispositioned plan graph",
+        "remote progress ledger",
+        "mainline completion evidence or exact blockers",
+        "no unclaimed dependency-ready lanes"
+      ],
+      "validation": [
+        "ledger validator",
+        "per-lane owning validators",
+        "post-mainline containment",
+        "residual work sweep"
+      ],
+      "convergence_owner": "mainline repository owner",
+      "status": "WAITING"
+    },
+    {
+      "lane_id": "EH-SEED0",
+      "wave": 1,
+      "mission": "Define completed-application snapshot intake as a private profile/answer donor with provenance, scope, sensitive reuse consent, and no signing/secret authority.",
+      "dependencies": [
+        "EH-QMEM0-ref"
+      ],
+      "owned_mutation_surfaces": [
+        "completed-application donor contract",
+        "synthetic sanitized review fixtures",
+        "focused validator/tests"
+      ],
+      "forbidden_surfaces": [
+        "real application snapshots in Git",
+        "credential extraction",
+        "signature reuse",
+        "silent protected-answer reuse"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent_or_provider_writer",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-SEED0",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "donor proposal schema",
+        "profile/question mapping rules",
+        "sensitive-consent negative fixtures"
+      ],
+      "validation": [
+        "focused donor-contract tests",
+        "application harness validator",
+        "privacy fixture scan",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-MAIN0",
+      "status": "PLANNED"
+    },
+    {
+      "lane_id": "EH-SEED1",
+      "wave": 2,
+      "mission": "Implement user-authorized completed-application snapshot intake and merge accepted proposals into canonical local profile/Answer Memory.",
+      "dependencies": [
+        "EH-SEED0",
+        "OWNER-27",
+        "EH-QMEM1-ref"
+      ],
+      "owned_mutation_surfaces": [
+        "application snapshot parser/mapper",
+        "proposal review integration",
+        "canonical merge/provenance tests"
+      ],
+      "forbidden_surfaces": [
+        "repository persistence of private snapshots",
+        "auto-saving sensitive answers without consent",
+        "signature/credential import"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-SEED1",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "snapshot-to-proposal runtime",
+        "reviewed profile merge",
+        "answer-memory candidate proposals"
+      ],
+      "validation": [
+        "focused intake tests",
+        "profile/Answer Memory tests",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-MAIN0",
+      "status": "WAITING"
+    },
+    {
+      "lane_id": "EH-QMEM0-ref",
+      "wave": 0,
+      "mission": "Reference the existing canonical EH-QMEM0 Answer Memory contract lane; no second writer.",
+      "dependencies": [],
+      "owned_mutation_surfaces": [],
+      "forbidden_surfaces": [
+        "all mutations from this reference node"
+      ],
+      "posture": "read-only external canonical lane reference",
+      "adapter": {
+        "kind": "existing_plan_reference",
+        "rung": 0
+      },
+      "launch": {
+        "mode": "reference",
+        "operation": "await_canonical_lane",
+        "arguments": {
+          "lane_id": "EH-QMEM0",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "canonical EH-QMEM0 completion evidence"
+      ],
+      "validation": [
+        "read canonical contextual-autofill manifest"
+      ],
+      "convergence_owner": "EH-MAIN0",
+      "status": "WAITING_EXISTING_CANONICAL_LANE"
+    },
+    {
+      "lane_id": "EH-QMEM1-ref",
+      "wave": 0,
+      "mission": "Reference the existing canonical EH-QMEM1 Answer Memory runtime lane; no second writer.",
+      "dependencies": [
+        "EH-QMEM0-ref"
+      ],
+      "owned_mutation_surfaces": [],
+      "forbidden_surfaces": [
+        "all mutations from this reference node"
+      ],
+      "posture": "read-only external canonical lane reference",
+      "adapter": {
+        "kind": "existing_plan_reference",
+        "rung": 0
+      },
+      "launch": {
+        "mode": "reference",
+        "operation": "await_canonical_lane",
+        "arguments": {
+          "lane_id": "EH-QMEM1",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "canonical EH-QMEM1 completion evidence"
+      ],
+      "validation": [
+        "read canonical contextual-autofill manifest"
+      ],
+      "convergence_owner": "EH-MAIN0",
+      "status": "WAITING_EXISTING_CANONICAL_LANE"
+    },
+    {
+      "lane_id": "EH-KNOW1-ref",
+      "wave": 0,
+      "mission": "Reference existing EH-KNOW1 selected-opportunity hydration owner; EH-BOOT1 composes startup around it rather than duplicating it.",
+      "dependencies": [
+        "EH-D7-ref"
+      ],
+      "owned_mutation_surfaces": [],
+      "forbidden_surfaces": [
+        "selected-opportunity hydration mutations"
+      ],
+      "posture": "read-only external canonical lane reference",
+      "adapter": {
+        "kind": "existing_plan_reference",
+        "rung": 0
+      },
+      "launch": {
+        "mode": "reference",
+        "operation": "await_canonical_lane",
+        "arguments": {
+          "lane_id": "EH-KNOW1",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "canonical application-run hydration service"
+      ],
+      "validation": [
+        "read canonical contextual-autofill manifest"
+      ],
+      "convergence_owner": "EH-MAIN0",
+      "status": "WAITING_EXISTING_CANONICAL_LANE"
+    },
+    {
+      "lane_id": "EH-D7-ref",
+      "wave": 0,
+      "mission": "Reference PR #35 career-store/import convergence lane EH-D7 after OWNER-35 repairs and implementation.",
+      "dependencies": [
+        "OWNER-35"
+      ],
+      "owned_mutation_surfaces": [],
+      "forbidden_surfaces": [
+        "career-store/import mutations from this reference node"
+      ],
+      "posture": "read-only external canonical lane reference",
+      "adapter": {
+        "kind": "existing_plan_reference",
+        "rung": 0
+      },
+      "launch": {
+        "mode": "reference",
+        "operation": "await_canonical_lane",
+        "arguments": {
+          "lane_id": "EH-D7",
+          "plan": "docs/CAREER_STORE_IMPORT_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "career-store/import convergence evidence"
+      ],
+      "validation": [
+        "read repaired career-store dispatch manifest"
+      ],
+      "convergence_owner": "EH-MAIN0",
+      "status": "WAITING_EXISTING_CANONICAL_LANE"
+    },
+    {
+      "lane_id": "EH-TAL1-ref",
+      "wave": 0,
+      "mission": "Reference existing canonical EH-TAL1 Taleo adapter owner; this request extends that lane rather than creating EH-TAL2.",
+      "dependencies": [
+        "EH-SURF0",
+        "EH-ADAPT0"
+      ],
+      "owned_mutation_surfaces": [],
+      "forbidden_surfaces": [
+        "second Taleo adapter writer"
+      ],
+      "posture": "read-only external canonical lane reference",
+      "adapter": {
+        "kind": "existing_plan_reference",
+        "rung": 0
+      },
+      "launch": {
+        "mode": "reference",
+        "operation": "await_canonical_lane",
+        "arguments": {
+          "lane_id": "EH-TAL1",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "single canonical Taleo adapter"
+      ],
+      "validation": [
+        "read canonical contextual-autofill manifest"
+      ],
+      "convergence_owner": "EH-MAIN0",
+      "status": "WAITING_EXISTING_CANONICAL_LANE"
+    },
+    {
+      "lane_id": "EH-CONV2-ref",
+      "wave": 0,
+      "mission": "Reference the existing canonical EH-CONV2 learned-application convergence owner; no second convergence writer.",
+      "dependencies": [
+        "EH-TAL1-ref",
+        "EH-QMEM1-ref",
+        "EH-KNOW1-ref"
+      ],
+      "owned_mutation_surfaces": [],
+      "forbidden_surfaces": [
+        "all convergence mutations from this reference node"
+      ],
+      "posture": "read-only external canonical lane reference",
+      "adapter": {
+        "kind": "existing_plan_reference",
+        "rung": 0
+      },
+      "launch": {
+        "mode": "reference",
+        "operation": "await_canonical_lane",
+        "arguments": {
+          "lane_id": "EH-CONV2",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "canonical EH-CONV2 integration evidence"
+      ],
+      "validation": [
+        "read canonical contextual-autofill manifest"
+      ],
+      "convergence_owner": "EH-MAIN0",
+      "status": "WAITING_EXISTING_CANONICAL_LANE"
+    },
+    {
+      "lane_id": "REPO-PROMOTION-ref",
+      "wave": 0,
+      "mission": "Reference contracts/repository-promotion.v1.json and its provider promotion owner; no duplicate promotion implementation.",
+      "dependencies": [],
+      "owned_mutation_surfaces": [],
+      "forbidden_surfaces": [
+        "repository promotion policy mutations"
+      ],
+      "posture": "read-only canonical contract reference",
+      "adapter": {
+        "kind": "existing_contract_reference",
+        "rung": 0
+      },
+      "launch": {
+        "mode": "reference",
+        "operation": "await_canonical_contract",
+        "arguments": {
+          "contract": "contracts/repository-promotion.v1.json"
+        }
+      },
+      "expected_artifacts": [
+        "repository promotion policy available and validated"
+      ],
+      "validation": [
+        "python scripts/validate_repository_promotion.py"
+      ],
+      "convergence_owner": "EH-MAIN0",
+      "status": "AVAILABLE_ON_PLANNING_FLOOR"
+    }
+  ],
+  "closeout": {
+    "proof_ceiling": "planning artifacts + provider floor inspection only",
+    "next_action": {
+      "owner": "OWNER-27",
+      "dependency": "none",
+      "command": "git fetch --all --prune --tags && git fetch origin pull/27/head:refs/remotes/origin/pr-27 && git worktree add ../EscapeHatch-pr27-repair -b repair/pr27-current refs/remotes/origin/pr-27 && cd ../EscapeHatch-pr27-repair && npm install --prefix artifacts/escape-hatch --ignore-scripts && npm --prefix artifacts/escape-hatch run typecheck && npm --prefix artifacts/escape-hatch run test:unit && npm --prefix artifacts/escape-hatch run build && npx --prefix artifacts/escape-hatch tsx scripts/replit-plan-sync/task-plan-sync.test.ts",
+      "expected_proof": "isolated PR #27 reproduction floor with exact failing/passing owner checks; nonzero exit propagates",
+      "completion_gate": "OWNER-27 review findings are repaired and the exact repaired head passes Web Cockpit Validation + Harness Validation"
+    }
+  }
+}

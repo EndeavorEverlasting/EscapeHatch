@@ -990,3 +990,329 @@ After explicit implementation authorization and refreshed collision inspection:
 7. **EH-LIVE2** for observed end-to-end acceptance and promotion handoff.
 
 The original EH-LIVE remains useful for narrower compensation/context/action acceptance and does not replace EH-LIVE2.
+
+## 23. Mainline user-state bootstrap invariant
+
+The requested product end state is the repository default branch, not a planning branch, integration branch, feature branch, worktree, or open pull request.
+
+EscapeHatch is not complete for this behavior until the refreshed default branch contains and validates a deterministic startup pipeline equivalent to:
+
+\`authorized local inputs -> canonical profile/career-state resolution -> selected opportunity context -> Application Assist hydration\`
+
+### 23.1 Zero-friction user profile startup
+
+Normal startup must not require JSON archaeology, a local agent, or retyping facts that EscapeHatch already owns.
+
+Resolution precedence:
+
+1. current explicit user edits in canonical local profile/state;
+2. current reviewed canonical profile derived from prior résumé/document intake;
+3. an authorized résumé already present in EscapeHatch-owned/user-selected local storage;
+4. explicit provider/import source authorized by the user;
+5. unresolved/manual entry only for facts that remain unknown or policy-gated.
+
+When a résumé is available to EscapeHatch:
+
+- parse it automatically without a separate “configure autofill” step;
+- normalize representable contact, links, summary, skills, projects, experience, and education into the existing profile model;
+- preserve explicit user edits over resume-derived values;
+- do not silently promote ambiguous or medium-confidence proposals into reusable truth;
+- keep sensitive demographic, legal, credential, and attestation values outside resume inference;
+- deduplicate repeated imports of the same evidence;
+- preserve record identity for repeated employers/schools and their supporting details;
+- expose only genuine conflicts for review.
+
+“Resume present” means the user has already supplied or authorized access to the file through an EscapeHatch-owned/user-selected surface. Browser security is not bypassed to crawl arbitrary local files.
+
+PR #27 remains the current separately owned resume/profile implementation lane and must be repaired/reconciled rather than duplicated.
+
+### 23.2 Job tracker as canonical-import input
+
+When an authorized job tracker is present, normal startup should ingest it through the career-store import owner and make its opportunities immediately usable by the ordinary EscapeHatch queue.
+
+The tracker is an input/projection format; it is not a second domain model.
+
+Required path:
+
+\`tracker/XLSX/CSV/JSON/document -> validated import preview -> escapehatch-career-state/v1 -> local durable store -> queue/application context\`
+
+After successful import, a user selecting an opportunity should not have to re-enter company, role, compensation, apply link, source metadata, resume reference, status, next action, or other already-mapped opportunity data.
+
+PR #35 / \`docs/CAREER_STORE_IMPORT_PLAN.md\` owns tracker/document decoding and canonical import. This plan owns downstream startup/application hydration only.
+
+### 23.4 Completed-application snapshot as a profile donor
+
+A user-supplied completed/reviewed application snapshot is a richer donor than a résumé and should be usable to bootstrap the first local EscapeHatch profile.
+
+Potential donor classes include a saved review page, user-exported application PDF/document, or another user-authorized application summary.
+
+The intake path is:
+
+\`completed application snapshot -> structural extraction -> canonical question/profile mapping -> proposal set -> user review/reuse consent -> local profile + answer memory\`
+
+It may propose:
+
+- identity/contact values;
+- source/referral metadata;
+- compensation preference for the opportunity;
+- education;
+- work-history records and responsibility text;
+- standard company/position questionnaire answers;
+- capability/tenure answer buckets;
+- attachment identities;
+- other non-secret application metadata.
+
+Rules:
+
+- current explicit user edits remain authoritative;
+- repeated work/education records retain identity and must not cross-contaminate;
+- opportunity-scoped facts remain opportunity-scoped unless the user explicitly promotes them;
+- sensitive demographic, legal, accommodation, veteran, disability, or similar values may be recognized only from the user's explicit supplied record and require the Answer Memory reuse-consent policy before durable cross-application reuse;
+- signature/certification text is evidence of a prior user action, never reusable signing authority;
+- credentials/secrets are never extracted into ordinary profile state;
+- the source snapshot remains user-owned/private and is not committed to repository fixtures.
+
+This makes the first-user experience capable of combining \`resume + completed application snapshot + job tracker\` into one reviewed local state rather than treating each as a separate configuration exercise.
+
+### 23.3 Mainline completion gate
+
+A lane may be IMPLEMENTED or VALIDATED before default-branch integration, but this feature is not COMPLETE until:
+
+- all required owner PRs are reconciled and their exact validated heads are integrated;
+- provider promotion places the required behavior on refreshed \`main\`;
+- \`git merge-base --is-ancestor <proven-integration-sha> origin/main\` or repository-owned equivalent proves containment;
+- default-branch content still contains the governing contracts and implementation;
+- required mainline validators remain green;
+- observed browser proof stays within its actual ATS/surface coverage ceiling.
+
+## 24. Application surface model
+
+Employer platform brand and application transport are orthogonal.
+
+Do not model “Taleo” as an application type. Taleo is one vendor adapter that can optimize a generic structured-form surface.
+
+### 24.1 Surface classes
+
+V1 surface classes:
+
+| Surface class | Examples | Routing behavior |
+| --- | --- | --- |
+| \`ATS_STRUCTURED_FORM\` | Taleo/Workday/Greenhouse/iCIMS-like flows | vendor adapter when recognized, generic form engine otherwise |
+| \`FORM_BUILDER\` | Typeform/Jotform/other stepwise form builders | form-builder adapter when recognized, generic form engine otherwise |
+| \`GENERIC_WEB_FORM\` | employer-owned/custom forms | generic DOM/accessibility engine |
+| \`DOCUMENT_INSTRUCTIONS\` | PDF/document/page containing application instructions | extract routing instructions; never treat document itself as submission proof |
+| \`EMAIL_APPLICATION\` | instructions require emailing materials | compose deterministic package, stop at send boundary unless a separately authorized channel policy allows sending |
+| \`EXTERNAL_PROVIDER\` | provider-owned application/identity workflow | route through authorized provider adapter |
+| \`MANUAL_ONLY\` | unsupported/ambiguous interaction | precise operator handoff |
+
+A \`DOCUMENT_INSTRUCTIONS\` surface may deterministically route to \`EMAIL_APPLICATION\`, \`EXTERNAL_PROVIDER\`, another URL, or \`MANUAL_ONLY\`.
+
+### 24.2 Surface classification contract
+
+A classifier should consume:
+
+- URL/origin and redirect chain;
+- DOM/accessibility structure;
+- vendor fingerprints that are stable enough to recognize;
+- visible page/form headings;
+- stepper/progress structure;
+- document MIME/type and extracted instructions;
+- apply-link/source metadata from the selected opportunity;
+- observed action semantics;
+- attachment/signature/review markers.
+
+Output:
+
+- \`surface_class\`;
+- optional \`vendor_adapter_id\`;
+- confidence/reason evidence;
+- permitted next adapter;
+- unresolved/manual gates.
+
+Unknown vendor is not failure if the generic surface engine can still operate safely.
+
+## 25. Vendor/form adapter registry
+
+Create one adapter registry behind generic interfaces rather than branching application logic throughout the product.
+
+Minimum adapter interface:
+
+- \`detect(surfaceEvidence) -> detection score + reasons\`;
+- \`describePage(document) -> normalized controls/sections\`;
+- \`describeProgress(document) -> stage/step model\`;
+- \`describeRepeatedRecords(document) -> normalized record containers\`;
+- \`describeActions(document) -> semantic action candidates\`;
+- \`describeAttachments(document) -> attachment state\`;
+- \`describeReview(document) -> review projection\`.
+
+Vendor adapters may optimize descriptors only. They do not own:
+
+- user profile values;
+- answer memory;
+- compensation policy;
+- credential secrets;
+- submission truth;
+- final-submit authority;
+- protected-class inference.
+
+The first proven adapter can be Taleo because repeated Taleo structure has now been observed, but the registry contract must support additional vendors without changing core domain services.
+
+## 26. Recurrence-first component doctrine
+
+A repeated application component is evidence of a reusable abstraction opportunity.
+
+This is a foundational product rule:
+
+> The more frequently a semantically stable application component recurs across applications or vendors, the higher its priority for extraction into a reusable component, classifier, fixture family, or adapter primitive.
+
+Frequency is prioritization evidence, not permission to collapse semantically distinct things.
+
+Maintain a local structural observation corpus with fields such as:
+
+- semantic component key;
+- surface class;
+- vendor adapter, if any;
+- observed structural fingerprint;
+- occurrence count;
+- first/last observed time;
+- confidence;
+- cross-vendor recurrence count;
+- current reusable owner;
+- sanitized fixture promotion status.
+
+High-value recurring examples include:
+
+- identity/contact blocks;
+- source/referral tracking;
+- education records;
+- repeated work-history groups;
+- standard company questionnaires;
+- skill/experience bucket questions;
+- EEO/veteran blocks;
+- Save/Continue/Draft/Quit controls;
+- attachment tables;
+- signature stages;
+- final-review summaries.
+
+Private answer values, credentials, resume text, or raw screenshots do not enter the repository corpus. Only sanitized structural evidence may become fixtures.
+
+## 27. Document-to-email application mode
+
+When a posting terminates in a PDF/document or page whose actionable instruction is “email these materials”:
+
+1. bind the document to the selected opportunity;
+2. extract recipient, subject guidance, required materials, requested metadata, deadline, and any body/instruction text;
+3. classify the resulting route as \`EMAIL_APPLICATION\`;
+4. resolve the role-specific resume/cover-letter/application package;
+5. prepare recipient, subject, body, and attachments;
+6. show an explicit send boundary because sending the email is the submission act;
+7. after user/provider-authorized send, require sent/outbox/provider evidence before promoting to \`SUBMITTED\`;
+8. if the email/provider adapter is unavailable, remain \`AWAITING_OPERATOR\` or \`BLOCKED\` with the exact prepared package and handoff.
+
+A draft, local email file, or composed message is not submission proof.
+
+## 28. New bounded sprints from this observation
+
+### EH-BOOT0 — Mainline Zero-Config Bootstrap Contract
+
+**Type:** application contract + integration seam
+
+**Goal:** make profile/résumé/tracker hydration a default startup property rather than an optional configuration flow.
+
+**Dependencies:** PR #27 profile/resume owner; PR #35 career-store/import owner.
+
+**Owns**
+- startup resolution/precedence contract;
+- conflict semantics;
+- duplicate-resume behavior;
+- tracker-to-canonical-store hydration handoff;
+- focused fixtures/tests.
+
+**Does not own**
+- resume parser internals from PR #27;
+- tracker decoder/import internals from PR #35;
+- provider credentials.
+
+### EH-SURF0 — Application Surface Taxonomy & Router Contract
+
+**Type:** application contract
+
+**Goal:** distinguish ATS structured forms, form builders, generic forms, document instructions, email applications, external providers, and manual-only routes.
+
+**Owns**
+- surface enum/descriptor contract;
+- routing invariants;
+- document-to-email transition fixtures;
+- unknown/fail-closed cases.
+
+### EH-ADAPT0 — Vendor Adapter Registry + Recurrence Contract
+
+**Type:** application architecture + validation
+
+**Goal:** make vendor-specific reuse modular and frequency-driven without moving domain truth into vendor code.
+
+**Owns**
+- adapter interface/registry;
+- recurrence observation schema;
+- sanitized structural fixture rules;
+- adapter detection collision rules.
+
+### EH-TAL1 — Taleo Adapter (existing canonical owner, extended)
+
+**Type:** application adapter
+
+**Dependencies:** existing EH-CTX0, EH-ACT0, EH-REC0, EH-QMEM0 plus new EH-SURF0 and EH-ADAPT0.
+
+**Goal:** keep one Taleo implementation owner and extend it to implement the first vendor optimization against the generic adapter interface.
+
+**Ownership rule:** this section extends the existing EH-TAL1 lane defined earlier in this plan; it does not create a second Taleo writer.
+
+### EH-FORM1 — Form-Builder Adapter Floor
+
+**Type:** application adapter
+
+**Dependencies:** EH-SURF0, EH-ADAPT0.
+
+**Goal:** prove the registry against a materially different stepwise form-builder pattern (Typeform-like or equivalent observed fixture), without asserting universal compatibility.
+
+### EH-DOC1 — Document/Email Application Router
+
+**Type:** integration seam
+
+**Dependencies:** EH-SURF0; existing batch/channel evidence semantics.
+
+**Goal:** recognize document instructions, prepare email applications, and preserve the submission-proof boundary.
+
+### EH-BOOT1 — Startup Hydration Runtime
+
+**Type:** conventional application logic
+
+**Dependencies:** EH-BOOT0; repaired/integrated PR #27; career-store convergence EH-D7; existing selected-opportunity hydration owner EH-KNOW1.
+
+**Goal:** compose already-canonical profile/resume/career-store/opportunity hydration into startup, with no normal-path JSON/file shuttling. EH-BOOT1 must not duplicate EH-KNOW1's selected-opportunity hydration service.
+
+### EH-SEED0 — Completed-Application Donor Contract
+
+**Type:** application contract + privacy boundary
+
+**Goal:** define how a user-supplied completed application/review snapshot can propose profile and Answer Memory state without importing secrets, signing authority, or silent sensitive reuse.
+
+**Dependencies:** existing Answer Memory/QMEM contract.
+
+### EH-SEED1 — Completed-Application Donor Runtime
+
+**Type:** conventional application logic
+
+**Dependencies:** EH-SEED0; repaired profile/resume owner; Answer Memory runtime.
+
+**Goal:** ingest a user-authorized application snapshot, generate reviewed proposals, and merge accepted values into local canonical state with provenance.
+
+### EH-MAIN0 — Default-Branch Product Convergence
+
+**Type:** integration/promotion
+
+**Dependencies:** required Application Assist, career-store, surface/router, adapter, answer-memory, attachment/review, and startup lanes.
+
+**Goal:** converge exact validated product heads and promote through the canonical repository-promotion owner to refreshed \`main\`.
+
+**Completion gate:** mainline containment plus owning validators; no feature is called complete merely because it exists on integration.

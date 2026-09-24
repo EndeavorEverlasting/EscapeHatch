@@ -931,12 +931,14 @@
     {
       "lane_id": "EH-TAL1",
       "wave": 2,
-      "mission": "Add a Taleo descriptor adapter for repeatable structural extraction while preserving generic domain semantics and fallback.",
+      "mission": "Implement the single canonical Taleo descriptor adapter, now against the generic surface/router and vendor-adapter registry contracts while preserving generic fallback.",
       "dependencies": [
         "EH-CTX0",
         "EH-ACT0",
         "EH-REC0",
-        "EH-QMEM0"
+        "EH-QMEM0",
+        "EH-SURF0",
+        "EH-ADAPT0"
       ],
       "owned_mutation_surfaces": [
         "browser/application-assist/adapters/taleo.js",

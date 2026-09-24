@@ -7,20 +7,20 @@
   "authorization": {
     "disposition": "PLANNING_ONLY",
     "implementation_dispatch_performed": false,
-    "reason": "Operator requested planning/factoring for salary autofill, semantic navigation actions, and application context awareness; no product-runtime implementation was authorized in this pass."
+    "reason": "This pass extends the durable implementation plan from observed application behavior; runtime implementation remains a successor action."
   },
   "base_ref": {
     "provider_default_branch": "main",
     "provider_default_head": "0824535b9dc1341def885a79a098d297df770ac8",
     "provider_integration_branch": "integration/replit-donor-b01f628-20260921",
-    "provider_integration_head": "d0f89105ed6619263ca311df09abc2a7960f1a0d",
-    "planning_branch": "plan/contextual-autofill-navigation-20260924",
-    "freshness": "PROVIDER_REFRESHED_2026-09-24"
+    "provider_integration_head": "f3d40c1238f76957ae71519be8e628b48ef83047",
+    "planning_branch": "plan/application-question-memory-taleo-20260924",
+    "freshness": "PROVIDER_REFRESHED_2026-09-24_ROUND2"
   },
   "graph": {
-    "expression": "{ EH-COMP0 || EH-ACT0 || EH-CTX0 } -> { EH-COMP1 || EH-ACT1 || EH-CTX1 || EH-VAL1 } -> EH-CONV -> EH-LIVE",
-    "initial_width_after_authorization": 3,
-    "max_width": 4,
+    "expression": "ROUND1: { EH-COMP0 || EH-ACT0 || EH-CTX0 } -> { EH-COMP1 || EH-ACT1 || EH-CTX1 || EH-VAL1 } -> EH-CONV -> EH-LIVE; ROUND2: { EH-REC0 || EH-CRED0 || EH-ART0 || EH-REV0 || EH-COMP0 } -> EH-QMEM0; then { EH-WORK1 || EH-QMEM1 || EH-CRED1 || EH-ART1 || EH-REV1 || EH-TAL1 } + EH-KNOW1(after career-store import) + EH-CONV -> EH-CONV2 -> EH-LIVE2",
+    "initial_width_after_authorization": 7,
+    "max_width": 10,
     "parallel_disposition": "REQUIRED_AFTER_AUTHORIZATION"
   },
   "status": "PLANNED_NOT_DISPATCHED_CANONICAL_VALIDATION_BLOCKED",
@@ -29,7 +29,11 @@
     "The integration floor does not contain harness/contracts/prompt-parallel-dispatch.v1.json.",
     "The integration floor does not contain scripts/prompt_parallel_dispatch.py.",
     "The generic Outputs/prompt-parallel-dispatch/manifest.json target remains reserved by the Windows lifecycle graph; this plan uses a run-scoped manifest.",
-    "Production progression/content convergence must refresh against PR #29 before mutation; cockpit/profile collision must refresh against PR #27."
+    "Production progression/content convergence must refresh against PR #29 before mutation; cockpit/profile collision must refresh against PR #27.",
+    "PR #29 remains the active Application Assist recovery/convergence owner; shared runtime integration must refresh after it is merged, superseded, or explicitly reconciled.",
+    "PR #27 remains the deterministic resume/profile-intake owner; work-history reconciliation must not overwrite its surfaces before reconciliation.",
+    "PR #35 currently plans the canonical career-store/XLSX import seam; EH-KNOW1 waits for its implementation rather than creating a duplicate importer.",
+    "Durable password recoverability requires a secure SecretStore adapter; session-only storage remains the safe floor until that adapter is proven."
   ],
   "autonomy_gap": "Canonical manifest validation/receipt verification cannot run until the dispatch schema/runner is introduced by its harness owner. This does not prevent durable planning. After implementation authorization, use isolated provider/local writer lanes and preserve exact-head evidence.",
   "convergence_owner": "EH-CONV",
@@ -448,6 +452,671 @@
       ],
       "convergence_owner": "repository promotion owner",
       "status": "WAITING_EH_CONV"
+    },
+    {
+      "lane_id": "EH-REC0",
+      "wave": 0,
+      "mission": "Define ATS-native donor autofill reconciliation, repeated work-record binding, provenance, user-edit preservation, and multiline presentation rules.",
+      "dependencies": [
+        "implementation authorization",
+        "refreshed integration floor"
+      ],
+      "owned_mutation_surfaces": [
+        "contracts/application-native-autofill-reconciliation.v1.json",
+        "synthetic repeated-record mismatch fixtures",
+        "multiline presentation fixture",
+        "focused validator/tests"
+      ],
+      "forbidden_surfaces": [
+        "production DOM mutation",
+        "PR #27 resume-parser implementation",
+        "real user work history"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent_or_provider_writer",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-REC0",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "donor provenance contract",
+        "record matcher contract",
+        "cross-record negative fixture",
+        "formatting positive fixture"
+      ],
+      "validation": [
+        "focused native-autofill reconciliation tests",
+        "python scripts/validate_application_harness.py",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-CONV2",
+      "status": "PLANNED"
+    },
+    {
+      "lane_id": "EH-QMEM0",
+      "wave": 1,
+      "mission": "Expand application question taxonomy/preference semantics into scoped answer memory for standard, sensitive, employer-derived, opportunity, capability-tenure, legal-current, and manual-each-submission questions.",
+      "dependencies": [
+        "EH-COMP0",
+        "implementation authorization"
+      ],
+      "owned_mutation_surfaces": [
+        "harness/contracts/application-form-taxonomy.v1.json",
+        "harness/contracts/application-preference-cache.v1.json",
+        "contracts/application-answer-memory.v1.json if separation is clearer",
+        "synthetic question/option fixtures",
+        "focused validator/tests"
+      ],
+      "forbidden_surfaces": [
+        "real user answers",
+        "protected-class inference",
+        "production fill/capture runtime"
+      ],
+      "posture": "isolated writer after EH-COMP0 to avoid taxonomy/preference collision",
+      "adapter": {
+        "kind": "local_repo_agent_or_provider_writer",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-QMEM0",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "answer-scope model",
+        "standard questionnaire families",
+        "sensitive explicit-only policy",
+        "capability-tenure semantics",
+        "positive/negative fixtures"
+      ],
+      "validation": [
+        "python scripts/validate_application_harness.py",
+        "focused answer-memory tests",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-CONV2",
+      "status": "WAITING_EH_COMP0"
+    },
+    {
+      "lane_id": "EH-CRED0",
+      "wave": 0,
+      "mission": "Define durable application-account metadata, secret references, SecretStore interface, and an evidence-backed secure persistence adapter decision.",
+      "dependencies": [
+        "implementation authorization",
+        "refreshed integration floor"
+      ],
+      "owned_mutation_surfaces": [
+        "contracts/application-credential-vault.v1.json",
+        "synthetic secret-reference fixtures",
+        "security validator/tests",
+        "credential adapter decision record"
+      ],
+      "forbidden_surfaces": [
+        "raw passwords in Git/tests/logs",
+        "plaintext durable secret storage",
+        "weakening existing session-secret guarantees"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent_or_provider_writer",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-CRED0",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "SecretStore contract",
+        "durable account metadata contract",
+        "secure adapter decision",
+        "negative secret-leak fixtures"
+      ],
+      "validation": [
+        "focused credential contract/security tests",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-CONV2",
+      "status": "PLANNED"
+    },
+    {
+      "lane_id": "EH-ART0",
+      "wave": 0,
+      "mission": "Define an opportunity-bound attachment package over the existing resume-artifact-sync authority.",
+      "dependencies": [
+        "implementation authorization",
+        "application-resume-artifact-sync contract"
+      ],
+      "owned_mutation_surfaces": [
+        "application attachment package contract",
+        "synthetic artifact package fixtures",
+        "size/type/identity validator/tests"
+      ],
+      "forbidden_surfaces": [
+        "duplicate resume authority",
+        "private document bytes in Git",
+        "submission automation"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent_or_provider_writer",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-ART0",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "opportunity attachment package contract",
+        "resume/cover-letter purpose mapping",
+        "identity/constraint guards"
+      ],
+      "validation": [
+        "application-resume-artifact-sync validator",
+        "focused attachment contract tests",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-CONV2",
+      "status": "PLANNED"
+    },
+    {
+      "lane_id": "EH-REV0",
+      "wave": 0,
+      "mission": "Define a read-only final-review audit contract that compares expected application projection with observed ATS review values while preserving manual signature/submit boundaries.",
+      "dependencies": [
+        "implementation authorization",
+        "refreshed integration floor"
+      ],
+      "owned_mutation_surfaces": [
+        "contracts/application-review-audit.v1.json",
+        "synthetic match/mismatch/missing/manual fixtures",
+        "focused validator/tests"
+      ],
+      "forbidden_surfaces": [
+        "submit/sign/certify mutation",
+        "real application values"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent_or_provider_writer",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-REV0",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "review-audit schema",
+        "mismatch severity/reason codes",
+        "manual-field semantics",
+        "negative final-submit fixture"
+      ],
+      "validation": [
+        "focused review-audit tests",
+        "python scripts/validate_application_harness.py",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-CONV2",
+      "status": "PLANNED"
+    },
+    {
+      "lane_id": "EH-WORK1",
+      "wave": 2,
+      "mission": "Implement native donor autofill repair with repeated work-history record matching and readable responsibility formatting.",
+      "dependencies": [
+        "EH-REC0",
+        "PR #27 merged/superseded/reconciled",
+        "refreshed Application Assist floor"
+      ],
+      "owned_mutation_surfaces": [
+        "native-autofill reconciliation module",
+        "repeated-record matcher",
+        "work-responsibility presentation adapter",
+        "smallest Fill Plan integration",
+        "focused tests"
+      ],
+      "forbidden_surfaces": [
+        "resume parser rewrite",
+        "index-only record matching",
+        "overwrite of user-edited current-session values"
+      ],
+      "posture": "isolated writer after PR #27 reconciliation",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-WORK1",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "record-safe repair runtime",
+        "proven cross-record mismatch detection",
+        "multiline formatting preservation"
+      ],
+      "validation": [
+        "focused reconciliation tests",
+        "node tests/test_application_assist_session.mjs",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-CONV2",
+      "status": "WAITING_EH_REC0_AND_PR27"
+    },
+    {
+      "lane_id": "EH-QMEM1",
+      "wave": 2,
+      "mission": "Implement standard-question autofill, explicit answer learning, scoped reuse, option mapping, capability-tenure resolution, and user-authorized visual mapping fallback.",
+      "dependencies": [
+        "EH-QMEM0",
+        "PR #29 merged/superseded/reconciled"
+      ],
+      "owned_mutation_surfaces": [
+        "question canonicalization runtime",
+        "answer-memory resolver",
+        "user-change observer",
+        "capability-tenure resolver",
+        "ephemeral visual mapping fallback",
+        "ambient answer-learning status",
+        "focused tests"
+      ],
+      "forbidden_surfaces": [
+        "protected-class inference",
+        "persistent screenshot capture by default",
+        "attestation/signature automation",
+        "real answer values in repository proof"
+      ],
+      "posture": "isolated writer after PR #29 reconciliation",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-QMEM1",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "answer reuse runtime",
+        "learn-on-user-action behavior",
+        "sensitive explicit-only guard",
+        "visual fallback with disposal proof",
+        "skill-tenure bucket resolver"
+      ],
+      "validation": [
+        "focused answer-memory runtime tests",
+        "application-assist runtime tests",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-CONV2",
+      "status": "WAITING_EH_QMEM0_AND_PR29"
+    },
+    {
+      "lane_id": "EH-CRED1",
+      "wave": 2,
+      "mission": "Implement the selected secure SecretStore adapter and account-credentials access UX without placing raw passwords in career state.",
+      "dependencies": [
+        "EH-CRED0",
+        "account-bootstrap floor",
+        "PR #29 merged/superseded/reconciled"
+      ],
+      "owned_mutation_surfaces": [
+        "chosen SecretStore adapter",
+        "account metadata/secret-reference service",
+        "credentials UI",
+        "focused security tests"
+      ],
+      "forbidden_surfaces": [
+        "plaintext password persistence",
+        "secret export/logging",
+        "silent downgrade from durable to session-only"
+      ],
+      "posture": "isolated security writer",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-CRED1",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "durable secret adapter",
+        "username/origin/recovery view",
+        "explicit reveal/copy gate",
+        "fallback warning when durable storage unavailable"
+      ],
+      "validation": [
+        "credential security tests",
+        "secret non-disclosure scan",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-CONV2",
+      "status": "WAITING_EH_CRED0"
+    },
+    {
+      "lane_id": "EH-ART1",
+      "wave": 2,
+      "mission": "Resolve the correct opportunity-bound resume/cover-letter package, observe ATS attachment state, and automate upload only where exact artifact bytes and browser/site capability make it deterministic.",
+      "dependencies": [
+        "EH-ART0",
+        "role-specific artifact-sync floor"
+      ],
+      "owned_mutation_surfaces": [
+        "attachment package resolver",
+        "ATS attachment observer",
+        "bounded upload adapter when technically supported",
+        "manual handoff projection",
+        "focused tests"
+      ],
+      "forbidden_surfaces": [
+        "wrong-opportunity artifact selection",
+        "unobserved success claims",
+        "private fixture bytes",
+        "final submission"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-ART1",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "artifact selection proof",
+        "constraint checks",
+        "observed attachment confirmation",
+        "precise manual fallback"
+      ],
+      "validation": [
+        "artifact-sync validator",
+        "focused attachment tests",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-CONV2",
+      "status": "WAITING_EH_ART0"
+    },
+    {
+      "lane_id": "EH-REV1",
+      "wave": 2,
+      "mission": "Implement the final-review read-only auditor and mismatch routing without performing signature or submission.",
+      "dependencies": [
+        "EH-REV0",
+        "EH-QMEM0",
+        "EH-REC0",
+        "compensation/context floors"
+      ],
+      "owned_mutation_surfaces": [
+        "review extractor",
+        "expected-vs-observed comparator",
+        "mismatch UI",
+        "Edit-section routing hints",
+        "focused tests"
+      ],
+      "forbidden_surfaces": [
+        "review-page writes",
+        "signature creation",
+        "submit click"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-REV1",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "review audit runtime",
+        "mismatch receipt",
+        "manual-field classifications",
+        "edit routing hints"
+      ],
+      "validation": [
+        "focused review runtime tests",
+        "application-assist tests",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-CONV2",
+      "status": "WAITING_EH_REV0"
+    },
+    {
+      "lane_id": "EH-TAL1",
+      "wave": 2,
+      "mission": "Add a Taleo descriptor adapter for repeatable structural extraction while preserving generic domain semantics and fallback.",
+      "dependencies": [
+        "EH-CTX0",
+        "EH-ACT0",
+        "EH-REC0",
+        "EH-QMEM0"
+      ],
+      "owned_mutation_surfaces": [
+        "browser/application-assist/adapters/taleo.js",
+        "sanitized Taleo-shaped nine-stage fixtures",
+        "focused adapter tests"
+      ],
+      "forbidden_surfaces": [
+        "Taleo-owned answer semantics",
+        "Taleo-owned submission authority",
+        "real application screenshots/data"
+      ],
+      "posture": "isolated new-module writer",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-TAL1",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "stepper extractor",
+        "repeated-work container descriptors",
+        "questionnaire descriptors",
+        "attachment/review descriptors",
+        "generic fallback proof"
+      ],
+      "validation": [
+        "focused Taleo adapter tests",
+        "application-assist tests",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-CONV2",
+      "status": "WAITING_CONTRACT_FLOORS"
+    },
+    {
+      "lane_id": "EH-KNOW1",
+      "wave": 2,
+      "mission": "Hydrate one Application Assist run from canonical career-state imported/manual opportunity data and expose launch_application without duplicating the career-store importer.",
+      "dependencies": [
+        "implemented career-store/import floor from PR #35 plan",
+        "EH-COMP0",
+        "EH-ART0"
+      ],
+      "owned_mutation_surfaces": [
+        "selected-opportunity hydration service",
+        "launch_application capability",
+        "apply-link/channel/freshness integration",
+        "compensation control projection",
+        "artifact/account/question references",
+        "focused tests"
+      ],
+      "forbidden_surfaces": [
+        "new XLSX/CSV parser",
+        "dashboard/list sheet authority",
+        "provider-success invention"
+      ],
+      "posture": "isolated integration writer",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-KNOW1",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "career-state application-run projection",
+        "launch_application route",
+        "posted-range control with max default",
+        "no duplicate importer"
+      ],
+      "validation": [
+        "career-state/import tests",
+        "application companion/batch tests",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-CONV2",
+      "status": "WAITING_CAREER_STORE_IMPORT_IMPLEMENTATION"
+    },
+    {
+      "lane_id": "EH-CONV2",
+      "wave": 3,
+      "mission": "Converge native-autofill repair, learned questionnaire answers, durable credentials, attachments, Taleo optimization, canonical opportunity hydration, and final-review audit over the original contextual-autofill convergence.",
+      "dependencies": [
+        "EH-CONV",
+        "EH-WORK1",
+        "EH-QMEM1",
+        "EH-CRED1",
+        "EH-ART1",
+        "EH-REV1",
+        "EH-TAL1",
+        "EH-KNOW1"
+      ],
+      "owned_mutation_surfaces": [
+        "shared application-assist integration files",
+        "session/cockpit/presence convergence",
+        "collision resolution",
+        "combined fixtures/tests"
+      ],
+      "forbidden_surfaces": [
+        "automatic signature",
+        "automatic final submit",
+        "protected-class inference",
+        "duplicate career-state authority"
+      ],
+      "posture": "single convergence owner",
+      "adapter": {
+        "kind": "local_convergence_owner_plus_provider",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "converge_validate_integrate",
+        "arguments": {
+          "sprint": "EH-CONV2",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "continuous launch-to-review workflow",
+        "learn-and-reuse question behavior",
+        "record-safe work history",
+        "credential recovery path",
+        "attachment/review evidence"
+      ],
+      "validation": [
+        "all focused lane tests",
+        "application-assist suites",
+        "career-state/import/companion tests",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-CONV2",
+      "status": "WAITING_ROUND2_LANES"
+    },
+    {
+      "lane_id": "EH-LIVE2",
+      "wave": 4,
+      "mission": "Execute controlled end-to-end acceptance across a Taleo-shaped multi-step flow and a materially different ATS topology, preserving manual signature/final-submit boundaries.",
+      "dependencies": [
+        "EH-CONV2"
+      ],
+      "owned_mutation_surfaces": [
+        "sanitized full-flow acceptance receipt",
+        "compatibility documentation",
+        "release/promotion evidence"
+      ],
+      "forbidden_surfaces": [
+        "private answer/screenshot/credential leakage",
+        "universal ATS claims",
+        "automatic final submission"
+      ],
+      "posture": "single closeout owner",
+      "adapter": {
+        "kind": "local_browser_acceptance_plus_provider",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "validate_release_promote",
+        "arguments": {
+          "sprint": "EH-LIVE2",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "Taleo-shaped observed acceptance",
+        "second-topology acceptance",
+        "manual signature/submit proof",
+        "promotion handoff"
+      ],
+      "validation": [
+        "controlled live browser observation",
+        "repository validators",
+        "post-integration containment proof"
+      ],
+      "convergence_owner": "repository promotion owner",
+      "status": "WAITING_EH_CONV2"
     }
   ],
   "manifest_path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-contextual-autofill-navigation-20260924/manifest.json",
@@ -455,5 +1124,21 @@
     "requested_target": "Outputs/prompt-parallel-dispatch/manifest.json",
     "status": "BLOCKED_RESERVED_BY_ACTIVE_WINDOWS_LIFECYCLE_GRAPH_AND_MISSING_CANONICAL_SCHEMA_RUNNER",
     "run_scoped_manifest": "Outputs/prompt-parallel-dispatch/runs/escapehatch-contextual-autofill-navigation-20260924/manifest.json"
-  }
+  },
+  "planning_evidence": [
+    {
+      "observed_at": "2026-09-24",
+      "kind": "sanitized_live_application_reference",
+      "summary": [
+        "nine-stage Taleo-shaped application flow observed",
+        "native resume/profile autofill can mis-bind repeated work-history responsibilities and lose formatting",
+        "company/position/EEO questionnaires contain highly reusable semantic question families",
+        "unknown/opaque fields may need user-authorized visual mapping fallback",
+        "attachments, electronic signature, and final review are distinct stages",
+        "uploaded job tracker can supply application-run opportunity context after canonical career-state import",
+        "generated application-account credentials need durable recoverability through a secure secret-store seam"
+      ],
+      "privacy": "No user answer values, protected-class values, credentials, contact data, screenshots, or private document content are persisted in this manifest."
+    }
+  ]
 }

@@ -615,6 +615,7 @@ function ProfilePage({
   const importData = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    const generation = ++resumeImportGenerationRef.current;
     const reader = new FileReader();
     reader.onload = () => {
       const result = parseProfileExportText(String(reader.result));
@@ -1062,6 +1063,11 @@ function AssistPage({
   const [milestone, setMilestone] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
   const sessionFileRef = useRef<HTMLInputElement>(null);
+  const resumeImportGenerationRef = useRef(0);
+  const assistProfileRef = useRef(assistProfile);
+  const profileRef = useRef(profile);
+  assistProfileRef.current = assistProfile;
+  profileRef.current = profile;
   const currentAnswers: AssistAnswer[] = [...answers.map((answer) => ({ ...answer, scope: 'reusable' as const })), ...assistAnswers].filter((answer, index, items) => items.findIndex((item) => item.id === answer.id) === index);
 
   const importResume = (event: ChangeEvent<HTMLInputElement>) => {
@@ -1071,10 +1077,13 @@ function AssistPage({
     reader.onload = async () => {
       try {
         const text = file.type === 'text/plain' || file.name.endsWith('.txt') ? String(reader.result) : await extractResumeText(file);
+        if (generation !== resumeImportGenerationRef.current) return;
         const imported = parseResumeText(text, file.name);
-        const deterministic = applyDeterministicResumeImport(imported, assistProfile, profile);
+        const currentAssistProfile = assistProfileRef.current;
+        const currentProfile = profileRef.current;
+        const deterministic = applyDeterministicResumeImport(imported, currentAssistProfile, currentProfile);
         const conflicts = Object.entries(deterministic.contactPatch).filter(([field, value]) => {
-          const existing = profile[field as keyof Profile];
+          const existing = currentProfile[field as keyof Profile];
           return Boolean(existing && value && existing !== value);
         });
         setAssistProfile(deterministic.profile);

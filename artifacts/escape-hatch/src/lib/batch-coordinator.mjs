@@ -9,17 +9,37 @@ export const BATCH_RECEIPT_SCHEMA = "escapehatch/batch-coordinator-transition-re
 export const BATCH_RUN_SCHEMA = "escapehatch/batch-coordinator-run/v1";
 
 function deepClone(v){return JSON.parse(JSON.stringify(v));}
-function isDateTime(s){try{const v=s.endsWith("Z")?s:s.replace("Z","+00:00");return !Number.isNaN(Date.parse(v));}catch{return false;}}
+function isDateTime(s){
+  if(typeof s!=="string") return false;
+  const m=/^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.(\\d+))?(Z|([+-])(\\d{2}):(\\d{2}))$/.exec(s);
+  if(!m) return false;
+  const year=Number(m[1]),month=Number(m[2]),day=Number(m[3]),hour=Number(m[4]),minute=Number(m[5]),second=Number(m[6]);
+  const offsetHour=m[10]===undefined?0:Number(m[10]),offsetMinute=m[11]===undefined?0:Number(m[11]);
+  if(year<1||month<1||month>12||hour>23||minute>59||second>59||offsetHour>23||offsetMinute>59) return false;
+  const leap=(year%4===0&&year%100!==0)||year%400===0;
+  const monthDays=[31,leap?29:28,31,30,31,30,31,31,30,31,30,31];
+  if(day<1||day>monthDays[month-1]) return false;
+  return !Number.isNaN(Date.parse(s));
+}
 function nowIso(){return new Date().toISOString();}
 function priorityRank(p){if(p==="high") return 3; if(p==="medium") return 2; if(p==="low") return 1; return 0;}
 function isQualifyingKind(k){return QUALIFYING_KINDS.has(k);}
-function providerHasMatchingQualifying(snapshot, applicationId, evidence){
-  if(!snapshot || snapshot.read_back!==true || !isDateTime(snapshot.observed_at || "") || !evidence) return false;
-  if(!isQualifyingKind(evidence.kind) || !isDateTime(evidence.observed_at || "")) return false;
+function providerMatchingQualifying(snapshot, applicationId, evidence, durableCandidates){
+  if(!snapshot || snapshot.read_back!==true || !isDateTime(snapshot.observed_at || "")) return null;
+  let candidates=durableCandidates;
+  if(evidence!==null && evidence!==undefined){
+    if(!isQualifyingKind(evidence.kind) || !isDateTime(evidence.observed_at || "")) return null;
+    candidates=[evidence];
+  }
   const providerApp=(snapshot.applications || []).find(a=>a.application_id===applicationId);
-  return Boolean(providerApp && (providerApp.evidence || []).some(pe=>
-    pe.id===evidence.id && pe.kind===evidence.kind && isDateTime(pe.observed_at || "")
-  ));
+  if(!providerApp) return null;
+  for(const candidate of candidates){
+    const matched=(providerApp.evidence || []).some(pe=>
+      pe.id===candidate.id && pe.kind===candidate.kind && isDateTime(pe.observed_at || "")
+    );
+    if(matched) return candidate;
+  }
+  return null;
 }
 
 export function selectNextQueueItem(careerState){
@@ -97,7 +117,7 @@ export function routeChannel(application, opts={}){
 
 export function recordTransition(careerState, applicationId, targetState, evidence, opts={}){
   const now=nowIso();
-  const updated=deepClone(careerState);
+  let updated=deepClone(careerState);
   const app=updated.applications.find(a=>a.id===applicationId);
   if(!app) throw new Error(`application not found: ${applicationId}`);
   const opp=updated.opportunities.find(o=>o.id===app.opportunity_id) ?? null;
@@ -118,12 +138,20 @@ export function recordTransition(careerState, applicationId, targetState, eviden
   const providerAuthorized=opts.providerAuthorized;
   const mailSent=opts.mailSent;
   const operatorConfirmed=opts.operatorConfirmed===true;
-  const matchingEvidence=updated.evidence.filter(e=>evidence && e.id===evidence.id);
+  const allEvidence=updated.evidence;
+  const matchingEvidence=allEvidence.filter(e=>evidence && e.id===evidence.id);
   const evidenceIdConflict=matchingEvidence.some(e=>e.application_id!==applicationId);
   const hasQualifying=Boolean(evidence && !evidenceIdConflict && isQualifyingKind(evidence.kind) && isDateTime(evidence.observed_at || ""));
   const hasEvidence=!!evidence;
-  const localHasQualifying=updated.evidence.some(e=>e.application_id===applicationId && isQualifyingKind(e.kind) && isDateTime(e.observed_at || ""));
-  const providerHasQualifying=providerHasMatchingQualifying(providerSnapshot, applicationId, evidence) && !evidenceIdConflict;
+  const durableLocalQualifying=allEvidence.filter(e=>
+    e.application_id===applicationId &&
+    isQualifyingKind(e.kind) &&
+    isDateTime(e.observed_at || "") &&
+    !allEvidence.some(other=>other.id===e.id && other.application_id!==applicationId)
+  );
+  const localHasQualifying=durableLocalQualifying.length>0;
+  const providerMatchingEvidence=providerMatchingQualifying(providerSnapshot, applicationId, evidence, durableLocalQualifying);
+  const providerHasQualifying=Boolean(providerMatchingEvidence) && !evidenceIdConflict;
   if(evidenceIdConflict) conflict=true;
 
   if(to==="SUBMITTED"){
@@ -195,6 +223,7 @@ export function recordTransition(careerState, applicationId, targetState, eviden
     app.execution.state=finalTo;
     app.execution.last_transition_at=now;
     if(evidence && hasQualifying && !evidenceIdConflict) app.execution.evidence_id=evidence.id;
+    else if(finalTo==="SUBMITTED" && providerMatchingEvidence) app.execution.evidence_id=providerMatchingEvidence.id;
     if(finalTo==="BLOCKED" && !app.execution.block_reason) app.execution.block_reason=reason;
     if(finalTo==="AWAITING_OPERATOR" && !app.execution.awaiting_reason) app.execution.awaiting_reason=reason;
     if(finalTo==="SUBMITTED"){
@@ -204,6 +233,7 @@ export function recordTransition(careerState, applicationId, targetState, eviden
   }else{
     app.execution={ state:finalTo, channel, last_transition_at:now, detail:reason };
     if(evidence && hasQualifying && !evidenceIdConflict) app.execution.evidence_id=evidence.id;
+    else if(finalTo==="SUBMITTED" && providerMatchingEvidence) app.execution.evidence_id=providerMatchingEvidence.id;
     if(finalTo==="SUBMITTED"){
       if(!app.submitted_at) app.submitted_at=now;
       if(!app.external_reference) app.external_reference=`batch-${now}-${applicationId}`;
@@ -226,7 +256,7 @@ export function recordTransition(careerState, applicationId, targetState, eviden
     updated.updated_at=now;
   }
 
-  const reference=(!evidenceIdConflict ? evidence?.id : null) ?? app.external_reference ?? `batch-${applicationId}-${now}`;
+  const reference=(!evidenceIdConflict ? evidence?.id : null) ?? providerMatchingEvidence?.id ?? app.external_reference ?? `batch-${applicationId}-${now}`;
   const receipt={
     schema:BATCH_RECEIPT_SCHEMA,
     application_id:applicationId,
@@ -249,6 +279,7 @@ export function recordTransition(careerState, applicationId, targetState, eviden
     const snap=opts.providerSnapshot ?? null;
     try{
       const r=companionReconcile(updated, snap);
+      updated=r.reconciledState;
       reconciliation=r;
     }catch(e){
       reconciliation=null;

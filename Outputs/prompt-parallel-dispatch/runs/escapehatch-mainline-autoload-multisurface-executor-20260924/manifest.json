@@ -30,7 +30,7 @@
     "fallback": "run-scoped manifest persisted here; no claim of canonical validate/run/verify receipt"
   },
   "graph": {
-    "expression": "REPAIR OWNERS {PR27 || PR29-stack || PR35} -> CONTRACTS {EH-BOOT0 || EH-SURF0 || EH-ADAPT0 || EH-PEX0} -> {EH-TAL2 || EH-FORM1 || EH-DOC1 || EH-PEX1 || EH-PEX3} -> {EH-BOOT1 || EH-PEX2 || EH-PEX4 || EH-PEX5} -> EH-PEX6 -> {EH-MAIN0 || EH-PEX7}",
+    "expression": "REPAIR OWNERS {PR27 || PR29-stack || PR35} -> CONTRACTS {EH-BOOT0 || EH-SURF0 || EH-ADAPT0 || EH-PEX0 || EH-SEED0} -> {EH-TAL2 || EH-FORM1 || EH-DOC1 || EH-PEX1 || EH-PEX3 || EH-SEED1} -> {EH-BOOT1 || EH-PEX2 || EH-PEX4 || EH-PEX5} -> EH-PEX6 -> {EH-MAIN0 || EH-PEX7}",
     "max_width": 4,
     "parallel_disposition": "REQUIRED_AFTER_IMPLEMENTATION_AUTHORIZATION"
   },
@@ -796,7 +796,8 @@
         "EH-TAL2",
         "EH-FORM1",
         "EH-DOC1",
-        "required existing Application Assist/career-state owners integrated"
+        "required existing Application Assist/career-state owners integrated",
+        "EH-SEED1"
       ],
       "owned_mutation_surfaces": [
         "integration conflict resolution",
@@ -880,6 +881,96 @@
         "residual work sweep"
       ],
       "convergence_owner": "mainline repository owner",
+      "status": "WAITING"
+    },
+    {
+      "lane_id": "EH-SEED0",
+      "wave": 1,
+      "mission": "Define completed-application snapshot intake as a private profile/answer donor with provenance, scope, sensitive reuse consent, and no signing/secret authority.",
+      "dependencies": [
+        "existing Answer Memory/QMEM contract"
+      ],
+      "owned_mutation_surfaces": [
+        "completed-application donor contract",
+        "synthetic sanitized review fixtures",
+        "focused validator/tests"
+      ],
+      "forbidden_surfaces": [
+        "real application snapshots in Git",
+        "credential extraction",
+        "signature reuse",
+        "silent protected-answer reuse"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent_or_provider_writer",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-SEED0",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "donor proposal schema",
+        "profile/question mapping rules",
+        "sensitive-consent negative fixtures"
+      ],
+      "validation": [
+        "focused donor-contract tests",
+        "application harness validator",
+        "privacy fixture scan",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-MAIN0",
+      "status": "PLANNED"
+    },
+    {
+      "lane_id": "EH-SEED1",
+      "wave": 2,
+      "mission": "Implement user-authorized completed-application snapshot intake and merge accepted proposals into canonical local profile/Answer Memory.",
+      "dependencies": [
+        "EH-SEED0",
+        "repaired/integrated profile owner",
+        "Answer Memory runtime"
+      ],
+      "owned_mutation_surfaces": [
+        "application snapshot parser/mapper",
+        "proposal review integration",
+        "canonical merge/provenance tests"
+      ],
+      "forbidden_surfaces": [
+        "repository persistence of private snapshots",
+        "auto-saving sensitive answers without consent",
+        "signature/credential import"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-SEED1",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "snapshot-to-proposal runtime",
+        "reviewed profile merge",
+        "answer-memory candidate proposals"
+      ],
+      "validation": [
+        "focused intake tests",
+        "profile/Answer Memory tests",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-MAIN0",
       "status": "WAITING"
     }
   ],

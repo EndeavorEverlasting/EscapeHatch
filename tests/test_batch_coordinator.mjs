@@ -162,6 +162,7 @@ const bc=await import("../artifacts/escape-hatch/src/lib/batch-coordinator.mjs")
   assert.match(missingMail.receipt.reason,/draft_email/);
 
   const cross=JSON.parse(JSON.stringify(cs));
+  cross.evidence.push({id:"ev-cross-app",application_id:"app-submitted",kind:"submission_receipt",artifact:{owner:"user",kind:"relative_path",locator:"evidence/app-submitted/earlier.txt"},observed_at:"2026-09-10T06:55:00-04:00"});
   cross.evidence.push({id:"ev-cross-app",application_id:"app-other",kind:"submission_receipt",artifact:{owner:"user",kind:"relative_path",locator:"evidence/app-other/receipt.txt"},observed_at:"2026-09-10T07:00:00-04:00"});
   const crossEv={id:"ev-cross-app",kind:"submission_receipt",observed_at:"2026-09-10T07:00:00-04:00",artifact:{owner:"user",kind:"relative_path",locator:"evidence/app-submitted/receipt.txt"}};
   const crossSnap={observed_at:"2026-09-10T07:00:00-04:00",provider_id:"synthetic-provider",read_back:true,opportunities:[],applications:[{application_id:"app-submitted",execution:{state:"SUBMITTED",channel:"web_form",last_transition_at:"2026-09-10T07:00:00-04:00"},evidence:[{id:"ev-cross-app",kind:"submission_receipt",observed_at:"2026-09-10T07:00:00-04:00"}]}]};

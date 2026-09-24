@@ -3,7 +3,7 @@
 **Parent plan:** `docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md`
 **Scoped owner:** `docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md`
 **Plan date:** 2026-09-24
-**Planning floor:** `integration/replit-donor-b01f628-20260921@d0f89105ed6619263ca311df09abc2a7960f1a0d`
+**Planning floor:** `integration/replit-donor-b01f628-20260921@f3d40c1238f76957ae71519be8e628b48ef83047`
 **Disposition:** planning only; no runtime implementation is authorized by this pass.
 **Dispatch manifest:** `Outputs/prompt-parallel-dispatch/runs/escapehatch-contextual-autofill-navigation-20260924/manifest.json`
 

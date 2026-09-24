@@ -41,6 +41,9 @@ function isDateTime(s:string){
 function nowIso(){return new Date().toISOString();}
 function priorityRank(p?:string){if(p==="high") return 3; if(p==="medium") return 2; if(p==="low") return 1; return 0;}
 function isQualifyingKind(k:string){return QUALIFYING_KINDS.has(k);}
+function isQualifyingEvidence(evidence:{id?:unknown;kind?:unknown;observed_at?:unknown}|null|undefined){
+  return Boolean(evidence && typeof evidence.id==="string" && evidence.id.trim().length>0 && typeof evidence.kind==="string" && isQualifyingKind(evidence.kind) && typeof evidence.observed_at==="string" && isDateTime(evidence.observed_at));
+}
 function providerMatchingQualifying(
   snapshot:ProviderSnapshot|null|undefined,
   applicationId:string,
@@ -50,7 +53,7 @@ function providerMatchingQualifying(
   if(!snapshot || snapshot.read_back!==true || !isDateTime(snapshot.observed_at || "")) return null;
   let candidates=durableCandidates;
   if(evidence!==null){
-    if(!isQualifyingKind(evidence.kind) || !isDateTime(evidence.observed_at || "")) return null;
+    if(!isQualifyingEvidence(evidence)) return null;
     candidates=[evidence];
   }
   const providerApp=snapshot.applications?.find(a=>a.application_id===applicationId);
@@ -170,12 +173,11 @@ export function recordTransition(careerState:CareerState, applicationId:string, 
   const allEvidence=updated.evidence;
   const matchingEvidence=allEvidence.filter(e=>evidence && e.id===evidence.id);
   const evidenceIdConflict=matchingEvidence.some(e=>e.application_id!==applicationId);
-  const hasQualifying=Boolean(evidence && !evidenceIdConflict && isQualifyingKind(evidence.kind) && isDateTime(evidence.observed_at || ""));
+  const hasQualifying=Boolean(evidence && !evidenceIdConflict && isQualifyingEvidence(evidence));
   const hasEvidence=!!evidence;
   const durableLocalQualifying=allEvidence.filter(e=>
     e.application_id===applicationId &&
-    isQualifyingKind(e.kind) &&
-    isDateTime(e.observed_at || "") &&
+    isQualifyingEvidence(e) &&
     !allEvidence.some(other=>other.id===e.id && other.application_id!==applicationId)
   );
   const localHasQualifying=durableLocalQualifying.length>0;
@@ -358,12 +360,16 @@ export function projectBatchStatus(careerState:CareerState):{ total:number; acti
 
 // One-step orchestration for continuous Batch Apply run (select -> verify -> route -> transition)
 export function coordinateStep(careerState:CareerState, providerSnapshot:ProviderSnapshot|null, channelContext: { progressionDecision?:string; providerAuthorized?:boolean; mailSent?:boolean; adapterAvailable?:boolean; hasManualGate?:boolean; operatorConfirmed?:boolean } = {}):{ selected:{opportunity:any; application:any}|null; freshness:FreshnessCheck|null; route:ChannelRoute|null; transition:{updatedState:CareerState; receipt:TransitionReceipt}|null; batchStatus:ReturnType<typeof projectBatchStatus> }{
-  const selected=selectNextQueueItem(careerState);
-  if(!selected) return { selected:null, freshness:null, route:null, transition:null, batchStatus:projectBatchStatus(careerState) };
+  let workingState=careerState;
+  if(providerSnapshot){
+    try{ workingState=companionReconcile(careerState as any,providerSnapshot as any).reconciledState as CareerState; }catch(_e){ workingState=careerState; }
+  }
+  const selected=selectNextQueueItem(workingState);
+  if(!selected) return { selected:null, freshness:null, route:null, transition:null, batchStatus:projectBatchStatus(workingState) };
   const freshness=verifyFreshness(selected.opportunity as any);
   if(!freshness.queue_active){
     // retire stale/closed immediately, preserve evidence: produce BLOCKED transition receipt
-    const blocked=recordTransition(careerState, selected.application.id, "BLOCKED", null, { providerSnapshot });
+    const blocked=recordTransition(workingState, selected.application.id, "BLOCKED", null, { providerSnapshot });
     return { selected, freshness, route:{route:"BLOCKED", targetState:"BLOCKED", reason:freshness.reason, blockReason:freshness.reason}, transition:{updatedState:blocked.updatedState, receipt:blocked.receipt}, batchStatus:projectBatchStatus(blocked.updatedState) };
   }
   const route=routeChannel(selected.application as any, channelContext);
@@ -372,6 +378,6 @@ export function coordinateStep(careerState:CareerState, providerSnapshot:Provide
   // Only transition if not already at target; otherwise still produce receipt
   const evidenceForPromotion: any = target==="SUBMITTED" ? { id:`ev-${selected.application.id}-${Date.now()}`, kind:"submission_receipt", observed_at:nowIso(), artifact:{owner:"user", kind:"relative_path", locator:`evidence/${selected.application.id}/receipt.txt`}} : null;
   // Do not auto-promote to SUBMITTED without qualifying; channel routes to FILLED/AWAITING_OPERATOR by default
-  const transition=recordTransition(careerState, selected.application.id, target, evidenceForPromotion, { providerSnapshot, providerAuthorized: channelContext.providerAuthorized, mailSent: channelContext.mailSent, operatorConfirmed: channelContext.operatorConfirmed });
+  const transition=recordTransition(workingState, selected.application.id, target, evidenceForPromotion, { providerSnapshot, providerAuthorized: channelContext.providerAuthorized, mailSent: channelContext.mailSent, operatorConfirmed: channelContext.operatorConfirmed });
   return { selected, freshness, route, transition, batchStatus:projectBatchStatus(transition.updatedState) };
 }

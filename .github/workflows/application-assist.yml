@@ -11,6 +11,7 @@ on:
       - "tests/test_application_assist_session.mjs"
       - "tests/test_progression.mjs"
       - "tests/test_navigation_adapter.mjs"
+      - "tests/test_profile_sync.mjs"
       - "fixtures/application-assist-adversarial/**"
       - "tests/test_application_assist_adversarial_fixtures.py"
       - "tests/test_application_assist_adversarial_runtime.mjs"
@@ -28,6 +29,7 @@ on:
       - "tests/test_application_assist_session.mjs"
       - "tests/test_progression.mjs"
       - "tests/test_navigation_adapter.mjs"
+      - "tests/test_profile_sync.mjs"
       - "fixtures/application-assist-adversarial/**"
       - "tests/test_application_assist_adversarial_fixtures.py"
       - "tests/test_application_assist_adversarial_runtime.mjs"
@@ -66,6 +68,8 @@ jobs:
         run: node tests/test_progression.mjs
       - name: Test gated navigation adapter
         run: node tests/test_navigation_adapter.mjs
+      - name: Test cockpit profile sync and recovery path
+        run: node tests/test_profile_sync.mjs
       - name: Test three-mode modality harness
         run: node tests/test_application_assist_modality.mjs
       - name: Parse popup and modality runtime

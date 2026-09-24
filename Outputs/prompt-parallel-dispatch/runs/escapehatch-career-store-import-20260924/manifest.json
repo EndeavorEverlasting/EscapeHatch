@@ -1,0 +1,465 @@
+{
+  "schema_version": "prompt-parallel-dispatch/v1",
+  "run_id": "escapehatch-career-store-import-20260924",
+  "repository": "EndeavorEverlasting/EscapeHatch",
+  "plan_owner": "docs/CAREER_STORE_IMPORT_PLAN.md",
+  "authorization": {
+    "disposition": "PLANNING_ONLY",
+    "implementation_dispatch_performed": false,
+    "reason": "This pass is authorized to inspect, factor, and persist the sprint map. Product/runtime implementation is a successor execution phase."
+  },
+  "base_ref": {
+    "historical_local_path": "C:\\Users\\pa_rperez26\\OneDrive - Northwell Health\\OG Laptop Backup\\Desktop\\dev\\EscapeHatch",
+    "provider_default_branch": "main",
+    "provider_default_head": "0824535b9dc1341def885a79a098d297df770ac8",
+    "provider_integration_branch": "integration/replit-donor-b01f628-20260921",
+    "provider_integration_head": "RESOLVE_AT_PLANNING_PR_CREATION",
+    "planning_branch": "plan/career-store-import-20260924",
+    "planning_head": "00b8266a09756790b5efbc2bdc1a412dcec99f92",
+    "freshness": "PROVIDER_REFRESHED_2026-09-24_BEFORE_PLAN_WRITE"
+  },
+  "graph": {
+    "expression": "G0 -> EH-D0 -> { EH-D1 || EH-D2 || EH-D3 } -> EH-D4 -> { EH-D5 || EH-D6 } -> EH-D7",
+    "initial_width_after_contract_floor": 3,
+    "max_width": 3,
+    "parallel_disposition": "REQUIRED_AFTER_EH_D0"
+  },
+  "status": "PLANNED_NOT_DISPATCHED",
+  "blockers": [
+    "Planning-only disposition does not authorize product/runtime implementation dispatch in this pass.",
+    "PRs #27, #29, #30, and #31 overlap cockpit import, persistence, batch, and companion surfaces and must be integrated or explicitly reconciled before their dependent lanes write.",
+    "The inspected integration floor does not contain harness/contracts/prompt-parallel-dispatch.v1.json or scripts/prompt_parallel_dispatch.py, so canonical manifest CLI validation/receipt proof is unavailable.",
+    "The generic Outputs/prompt-parallel-dispatch/manifest.json target is not established on the inspected floor; the repository already uses run-scoped manifests for application-assist planning.",
+    "This chat runtime exposes no independent repo-writing child-agent/local-agent runner, and its container cannot clone/fetch github.com."
+  ],
+  "autonomy_gap": "After explicit implementation authorization, refresh provider/local truth, complete EH-D0 on an isolated writer, then dispatch EH-D1, EH-D2, and EH-D3 concurrently through the first available repo-proven local-agent runner with separate worktrees/branches. If that adapter is unavailable, preserve the three lane prompts as machine-ingestible fallback and continue only with an explicitly degraded receipt.",
+  "convergence_owner": "EH-D7",
+  "lanes": [
+    {
+      "lane_id": "EH-D0",
+      "wave": 0,
+      "mission": "Extend canonical career-state coverage for ledger-equivalent opportunity metadata and define the versioned opportunity import preview/commit contract.",
+      "dependencies": [
+        "G0 provider/local refresh and collision reconciliation"
+      ],
+      "owned_mutation_surfaces": [
+        "contracts/career-state.v1.schema.json",
+        "fixtures/career-state.v1.example.json",
+        "scripts/validate_career_state.py",
+        "contracts/opportunity-import.v1.json",
+        "synthetic opportunity-import fixtures/tests/validator",
+        "minimum registry/map/workflow references required by the new contract"
+      ],
+      "forbidden_surfaces": [
+        "artifacts/escape-hatch/src/App.tsx",
+        "IndexedDB implementation",
+        "source-file parser implementations",
+        "real user ledgers/documents",
+        "provider sync",
+        "automatic application submission"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent_or_provider_writer",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-D0",
+          "plan": "docs/CAREER_STORE_IMPORT_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "backward-compatible career-state opportunity metadata",
+        "opportunity-import/v1 contract",
+        "synthetic ledger-equivalent positive fixture",
+        "invalid/ambiguous negative fixtures",
+        "contract validation coverage"
+      ],
+      "validation": [
+        "python scripts/validate_career_state.py",
+        "focused opportunity-import contract tests",
+        "python scripts/validate_harness.py when registry/map surfaces change",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-D4",
+      "status": "PLANNED"
+    },
+    {
+      "lane_id": "EH-D1",
+      "wave": 1,
+      "mission": "Implement a stable IndexedDB-backed CareerStateStore around validated escapehatch-career-state/v1, including one-way legacy workspace/localStorage migration.",
+      "dependencies": [
+        "EH-D0"
+      ],
+      "owned_mutation_surfaces": [
+        "artifacts/escape-hatch/src/lib/career-store.ts",
+        "focused IndexedDB/storage adapter modules",
+        "legacy workspace migration module",
+        "store/migration unit tests and recovery fixtures"
+      ],
+      "forbidden_surfaces": [
+        "artifacts/escape-hatch/src/App.tsx",
+        "source-file parsing",
+        "batch coordinator/companion implementation",
+        "Google Drive sync",
+        "resume parser behavior"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-D1",
+          "plan": "docs/CAREER_STORE_IMPORT_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "stable logical IndexedDB store",
+        "atomic validated career-state read/write",
+        "monotonic revision compare-and-set",
+        "immutable recovery snapshot",
+        "one-way legacy migration without dual-write"
+      ],
+      "validation": [
+        "focused career-store unit tests",
+        "legacy migration negative/positive cases",
+        "cockpit persistence tests that do not require App.tsx mutation",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-D4",
+      "status": "WAITING_EH_D0"
+    },
+    {
+      "lane_id": "EH-D2",
+      "wave": 1,
+      "mission": "Implement deterministic JSON/CSV/XLSX ledger decoders and header mapping that emit OpportunityImportPreview candidates without mutating user state.",
+      "dependencies": [
+        "EH-D0"
+      ],
+      "owned_mutation_surfaces": [
+        "new tabular import decoder modules",
+        "header alias/mapping registry",
+        "synthetic JSON/CSV/XLSX fixtures/tests",
+        "minimum justified XLSX parsing dependency if license-compatible"
+      ],
+      "forbidden_surfaces": [
+        "CareerStateStore commits",
+        "artifacts/escape-hatch/src/App.tsx",
+        "provider APIs",
+        "user-specific mapping code",
+        "PDF/DOCX freeform extraction"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-D2",
+          "plan": "docs/CAREER_STORE_IMPORT_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "canonical JSON adapter",
+        "legacy workspace adapter",
+        "CSV adapter",
+        "XLSX adapter",
+        "deterministic header aliases",
+        "row/sheet provenance",
+        "unmapped-column diagnostics"
+      ],
+      "validation": [
+        "focused tabular adapter tests",
+        "malformed-file no-mutation cases",
+        "dependency/license check for any new XLSX package",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-D4",
+      "status": "WAITING_EH_D0"
+    },
+    {
+      "lane_id": "EH-D3",
+      "wave": 1,
+      "mission": "Implement local TXT/Markdown/PDF/DOCX document decoding and reviewable opportunity proposal extraction, reusing the shared document-decoding seam rather than forking resume intake.",
+      "dependencies": [
+        "EH-D0",
+        "PR #27 integrated or explicitly reconciled"
+      ],
+      "owned_mutation_surfaces": [
+        "new generic local document-text decoder/extractor",
+        "opportunity-document candidate parser",
+        "synthetic document fixtures/tests"
+      ],
+      "forbidden_surfaces": [
+        "OCR",
+        "network upload",
+        "CareerStateStore mutation",
+        "resume semantic changes without convergence ownership",
+        "real user documents"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-D3",
+          "plan": "docs/CAREER_STORE_IMPORT_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "TXT/Markdown local decoder",
+        "text-PDF decoder seam",
+        "DOCX text decoder",
+        "confidence-bearing opportunity proposals",
+        "ambiguous/multi-job manual-review fixtures"
+      ],
+      "validation": [
+        "focused document adapter tests",
+        "unsupported/scanned/encrypted fail-closed cases",
+        "bounded input/timeout tests where applicable",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-D4",
+      "status": "WAITING_EH_D0_AND_PR27"
+    },
+    {
+      "lane_id": "EH-D4",
+      "wave": 2,
+      "mission": "Converge store and import adapters into one preview/dedupe/conflict/transactional-commit application service.",
+      "dependencies": [
+        "EH-D1",
+        "EH-D2",
+        "EH-D3"
+      ],
+      "owned_mutation_surfaces": [
+        "OpportunityImportPreview application service",
+        "dedupe/conflict classifier",
+        "transactional import commit coordinator",
+        "local import receipt",
+        "focused integration tests"
+      ],
+      "forbidden_surfaces": [
+        "cockpit presentation",
+        "batch/provider mutation",
+        "silent ambiguous merges",
+        "real user content in logs/fixtures"
+      ],
+      "posture": "single convergence owner",
+      "adapter": {
+        "kind": "local_convergence_owner",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "converge_validate_integrate",
+        "arguments": {
+          "sprint": "EH-D4",
+          "plan": "docs/CAREER_STORE_IMPORT_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "NEW/UPDATE/DUPLICATE/CONFLICT/SKIP classifier",
+        "preview identity and accepted-decision contract",
+        "revision compare-and-set commit",
+        "idempotent re-import proof",
+        "conflict preservation proof"
+      ],
+      "validation": [
+        "all EH-D1/D2/D3 focused tests",
+        "import orchestration integration tests",
+        "python scripts/validate_career_state.py",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-D7",
+      "status": "WAITING_WAVE1"
+    },
+    {
+      "lane_id": "EH-D5",
+      "wave": 3,
+      "mission": "Expose local source import, mapping preview, conflict review, transactional commit, and canonical export in the cockpit.",
+      "dependencies": [
+        "EH-D4",
+        "PR #27 integrated or explicitly reconciled"
+      ],
+      "owned_mutation_surfaces": [
+        "artifacts/escape-hatch/src/App.tsx",
+        "narrow cockpit import/review components",
+        "cockpit persistence/browser E2E tests",
+        "user-facing import/export controls"
+      ],
+      "forbidden_surfaces": [
+        "batch coordinator internals",
+        "provider sync",
+        "hidden auto-merge",
+        "automatic application submission"
+      ],
+      "posture": "isolated writer after collision reconciliation",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-D5",
+          "plan": "docs/CAREER_STORE_IMPORT_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "file import chooser",
+        "mapping/change preview",
+        "conflict review UI",
+        "cancel-without-mutation behavior",
+        "canonical JSON export",
+        "reload persistence proof"
+      ],
+      "validation": [
+        "cockpit unit tests",
+        "Playwright persistence/import tests",
+        "typecheck",
+        "build",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-D7",
+      "status": "WAITING_EH_D4_AND_PR27"
+    },
+    {
+      "lane_id": "EH-D6",
+      "wave": 3,
+      "mission": "Wire the canonical local CareerStateStore into batch/companion projections so imported opportunities use the same freshness, channel, evidence, and transition semantics.",
+      "dependencies": [
+        "EH-D1",
+        "EH-D4",
+        "PRs #29/#30/#31 integrated or explicitly reconciled"
+      ],
+      "owned_mutation_surfaces": [
+        "smallest store adapters around batch coordinator",
+        "smallest store adapters around companion reconciliation",
+        "queue projection integration tests",
+        "local-import no-provider-proof regression cases"
+      ],
+      "forbidden_surfaces": [
+        "cockpit UI",
+        "source decoders",
+        "provider success invention",
+        "automatic final submission"
+      ],
+      "posture": "isolated writer after recovery-PR convergence",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-D6",
+          "plan": "docs/CAREER_STORE_IMPORT_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "canonical store queue projection",
+        "batch coordinator parity for imported/native opportunities",
+        "companion reconciliation parity",
+        "provider-proof non-promotion guard"
+      ],
+      "validation": [
+        "batch coordinator tests",
+        "companion reconciliation tests",
+        "python scripts/validate_application_companion.py",
+        "python scripts/validate_career_state.py",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-D7",
+      "status": "WAITING_EH_D4_AND_RECOVERY_PRS"
+    },
+    {
+      "lane_id": "EH-D7",
+      "wave": 4,
+      "mission": "Converge and prove the local career store/import path, legacy compatibility, privacy boundary, queue parity, and release readiness.",
+      "dependencies": [
+        "EH-D5",
+        "EH-D6"
+      ],
+      "owned_mutation_surfaces": [
+        "combined acceptance tests/fixtures",
+        "ARTIFACT_REGISTRY.md",
+        "harness/CODEBASE_MAP.md",
+        "harness/WORKFLOWS.md",
+        "operator/support docs",
+        "release/version/promotion evidence when required"
+      ],
+      "forbidden_surfaces": [
+        "private user source content",
+        "unobserved provider-sync claims",
+        "automatic final submission",
+        "unrelated product redesign"
+      ],
+      "posture": "single convergence and closeout owner",
+      "adapter": {
+        "kind": "local_browser_acceptance_plus_provider",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "validate_release_promote",
+        "arguments": {
+          "sprint": "EH-D7",
+          "plan": "docs/CAREER_STORE_IMPORT_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "legacy workspace migration proof",
+        "canonical JSON round-trip proof",
+        "CSV/XLSX import proof",
+        "document-review import proof",
+        "duplicate/conflict/invalid-import proofs",
+        "browser restart persistence proof",
+        "batch queue parity proof",
+        "privacy/no-provider-promotion proof",
+        "release/promotion evidence"
+      ],
+      "validation": [
+        "all focused lane tests",
+        "cockpit Playwright suite",
+        "python scripts/validate_career_state.py",
+        "python scripts/validate_application_companion.py",
+        "python scripts/validate_harness.py",
+        "package typecheck/build",
+        "git diff --check",
+        "repository promotion gates when integration is authorized"
+      ],
+      "convergence_owner": "repository promotion owner",
+      "status": "WAITING_WAVE3"
+    }
+  ],
+  "manifest_path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-career-store-import-20260924/manifest.json",
+  "canonical_target_disposition": {
+    "generic_manifest_target": "UNRESOLVED_ON_INSPECTED_FLOOR",
+    "selected_target": "RUN_SCOPED_EXISTING_REPOSITORY_PATTERN",
+    "reason": "The inspected integration floor already uses run-scoped manifests and lacks the generic dispatch contract/runner required to prove a generic target safely."
+  },
+  "faithfulness_checkpoint": {
+    "user_outcome": "Convert an existing job-opportunity ledger and other users' local documents into app-readable JSON backed by a local database-like store so all opportunities participate in the same EscapeHatch tracking behavior.",
+    "canonical_domain_owner": "contracts/career-state.v1.schema.json",
+    "persistence_decision": "IndexedDB-backed CareerStateStore storing validated canonical career-state documents atomically for V1.",
+    "import_invariant": "Adapters emit reviewable previews; no source adapter mutates state directly.",
+    "privacy_invariant": "Real ledgers/documents remain user-owned local inputs and are never committed as repository fixtures.",
+    "proof_ceiling": "Planning artifacts and provider truth only; no product implementation, local browser runtime, or live provider-sync proof claimed."
+  }
+}

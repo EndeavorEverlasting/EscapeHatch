@@ -8,7 +8,18 @@ export const RECONCILIATION_SCHEMA = "escapehatch/application-companion-reconcil
 
 function deepClone(v) { return JSON.parse(JSON.stringify(v)); }
 function isDateTime(s) {
-  try { const v = s.endsWith("Z") ? s : s.replace("Z", "+00:00"); return !Number.isNaN(Date.parse(v)); } catch { return false; }
+  if (typeof s !== "string") return false;
+  const m = /^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.(\\d+))?(Z|([+-])(\\d{2}):(\\d{2}))$/.exec(s);
+  if (!m) return false;
+  const year=Number(m[1]), month=Number(m[2]), day=Number(m[3]);
+  const hour=Number(m[4]), minute=Number(m[5]), second=Number(m[6]);
+  const offsetHour=m[10]===undefined ? 0 : Number(m[10]);
+  const offsetMinute=m[11]===undefined ? 0 : Number(m[11]);
+  if (year < 1 || month < 1 || month > 12 || hour > 23 || minute > 59 || second > 59 || offsetHour > 23 || offsetMinute > 59) return false;
+  const leap=(year%4===0 && year%100!==0) || year%400===0;
+  const monthDays=[31, leap?29:28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (day < 1 || day > monthDays[month-1]) return false;
+  return !Number.isNaN(Date.parse(s));
 }
 
 export function reconcile(careerState, providerSnapshot) {
@@ -207,4 +218,4 @@ export function isIdempotent(careerState, snapshot){
   const second=reconcile(first.reconciledState, snapshot);
   return JSON.stringify(first.reconciledState)===JSON.stringify(second.reconciledState);
 }
-export function requiresProviderReadBack(snapshot){ return !snapshot || snapshot.read_back!==true; }
+export function requiresProviderReadBack(snapshot){ return !snapshot || snapshot.read_back!==true || !isDateTime(snapshot.observed_at || ""); }

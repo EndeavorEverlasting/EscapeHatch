@@ -35,6 +35,18 @@ def _is_datetime(s: str) -> bool:
         return False
 
 
+def _is_qualifying_evidence(evidence: Dict[str, Any] | None) -> bool:
+    if not isinstance(evidence, dict):
+        return False
+    evidence_id=evidence.get("id")
+    return (
+        isinstance(evidence_id, str)
+        and bool(evidence_id.strip())
+        and evidence.get("kind") in QUALIFYING_KINDS
+        and _is_datetime(evidence.get("observed_at", ""))
+    )
+
+
 def reconcile(career_state: Dict[str, Any], provider_snapshot: Dict[str, Any] | None) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     now = _now_iso()
     reconciled = copy.deepcopy(career_state)
@@ -147,9 +159,9 @@ def reconcile(career_state: Dict[str, Any], provider_snapshot: Dict[str, Any] | 
         conflict = False
         reason = "no_change"
 
-        local_qual = [e for e in reconciled.get("evidence", []) if e["application_id"] == app_id and e["kind"] in QUALIFYING_KINDS and _is_datetime(e.get("observed_at", ""))]
+        local_qual = [e for e in reconciled.get("evidence", []) if e["application_id"] == app_id and _is_qualifying_evidence(e)]
         has_local = len(local_qual) > 0
-        provider_qual = [e for e in (provider_app or {}).get("evidence", []) if e.get("kind") in QUALIFYING_KINDS and _is_datetime(e.get("observed_at", ""))]
+        provider_qual = [e for e in (provider_app or {}).get("evidence", []) if _is_qualifying_evidence(e)]
         has_provider = len(provider_qual) > 0
         # any evidence (even note/draft) counts for local binding
         local_any = [e for e in reconciled.get("evidence", []) if e["application_id"] == app_id]
@@ -194,16 +206,20 @@ def reconcile(career_state: Dict[str, Any], provider_snapshot: Dict[str, Any] | 
                         to_state = "AWAITING_OPERATOR"
                         reason = "provider_authorization_failure_AWAITING_OPERATOR"
                         if app.get("execution"):
+                            state_changed=app["execution"].get("state") != "AWAITING_OPERATOR"
                             app["execution"]["state"] = "AWAITING_OPERATOR"
                             app["execution"]["awaiting_reason"] = "provider_authorization_failure"
-                            app["execution"]["last_transition_at"] = now
+                            if state_changed:
+                                app["execution"]["last_transition_at"] = now
                     else:
                         to_state = "BLOCKED"
                         reason = "provider_authorization_failure_BLOCKED"
                         if app.get("execution"):
+                            state_changed=app["execution"].get("state") != "BLOCKED"
                             app["execution"]["state"] = "BLOCKED"
                             app["execution"]["block_reason"] = provider_app.get("auth", {}).get("reason") or "provider_authorization_failure"
-                            app["execution"]["last_transition_at"] = now
+                            if state_changed:
+                                app["execution"]["last_transition_at"] = now
                     evidence_binding = "provider" if has_any_provider else "local" if has_any_local else "none"
             else:
                 provider_freshness = provider_opp_map.get(opp_id, {}).get("verification", {}).get("state") if provider_opp_map.get(opp_id, {}).get("verification") else opp_verification

@@ -1,0 +1,33 @@
+name: Career State Store Validation
+
+on:
+  pull_request:
+    paths:
+      - "artifacts/escape-hatch/src/lib/career-store.ts"
+      - "artifacts/escape-hatch/tests/career-store.spec.ts"
+      - ".github/workflows/career-store.yml"
+  push:
+    paths:
+      - "artifacts/escape-hatch/src/lib/career-store.ts"
+      - "artifacts/escape-hatch/tests/career-store.spec.ts"
+      - ".github/workflows/career-store.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: npm install --prefix artifacts/escape-hatch --ignore-scripts
+      - name: Typecheck cockpit
+        run: npm --prefix artifacts/escape-hatch run typecheck
+      - name: Install Chromium
+        run: npx --prefix artifacts/escape-hatch playwright install --with-deps chromium
+      - name: Test career state store
+        run: npx --prefix artifacts/escape-hatch playwright test tests/career-store.spec.ts --config=playwright.config.ts
+      - name: Check whitespace
+        run: git diff --check

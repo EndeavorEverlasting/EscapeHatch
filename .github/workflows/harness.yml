@@ -45,6 +45,12 @@ jobs:
       - name: Validate resume presentation
         run: python scripts/validate_resume_presentation.py
 
+      - name: Validate application resume artifact sync
+        run: python scripts/validate_application_resume_artifact_sync.py
+
+      - name: Test application resume artifact sync
+        run: python tests/test_application_resume_artifact_sync.py
+
       - name: Validate harness
         run: python scripts/validate_harness.py
 
@@ -58,7 +64,7 @@ jobs:
         run: python tests/test_study_guidance_export.py
 
       - name: Compile harness validators
-        run: python -m py_compile scripts/validate_governance.py scripts/validate_product_version.py scripts/product_version.py scripts/validate_application_harness.py scripts/validate_application_companion.py scripts/validate_resume_presentation.py scripts/validate_harness.py scripts/validate_career_state.py scripts/validate_local_runtime_lifecycle.py scripts/validate_repository_promotion.py scripts/promotion_guard.py scripts/export_study_guidance.py tests/test_product_version.py tests/test_repository_promotion.py tests/test_study_guidance_export.py
+        run: python -m py_compile scripts/validate_governance.py scripts/validate_product_version.py scripts/product_version.py scripts/validate_application_harness.py scripts/validate_application_companion.py scripts/validate_resume_presentation.py scripts/validate_application_resume_artifact_sync.py scripts/validate_harness.py scripts/validate_career_state.py scripts/validate_local_runtime_lifecycle.py scripts/validate_repository_promotion.py scripts/promotion_guard.py scripts/export_study_guidance.py tests/test_product_version.py tests/test_repository_promotion.py tests/test_application_resume_artifact_sync.py tests/test_study_guidance_export.py
 
       - name: Check whitespace
         shell: bash

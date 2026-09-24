@@ -315,7 +315,8 @@ Priority repair/convergence before new product feature lanes:
 3. repair PR #35 planning defects and pin its current floor;
 4. converge the required owners to the refreshed integration floor;
 5. execute EH-PEX0/EH-PEX1/EH-PEX3 in parallel where file ownership permits;
-6. bootstrap/prove EH-PEX4;
-7. let the executor take over the remaining repository graph.
+6. execute EH-PEX2 after EH-PEX1 so isolated claim/worktree ownership exists;
+7. bootstrap/prove EH-PEX4 only after EH-PEX2 + EH-PEX3;
+8. let the executor take over the remaining repository graph.
 
 The operator should not have to paste each sprint manually once EH-PEX4 is proven.

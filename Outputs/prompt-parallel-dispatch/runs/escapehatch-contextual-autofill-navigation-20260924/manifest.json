@@ -33,10 +33,11 @@
     "PR #29 remains the active Application Assist recovery/convergence owner; shared runtime integration must refresh after it is merged, superseded, or explicitly reconciled.",
     "PR #27 remains the deterministic resume/profile-intake owner; work-history reconciliation must not overwrite its surfaces before reconciliation.",
     "PR #35 currently plans the canonical career-store/XLSX import seam; EH-KNOW1 waits for its implementation rather than creating a duplicate importer.",
-    "Durable password recoverability requires a secure SecretStore adapter; session-only storage remains the safe floor until that adapter is proven."
+    "Durable password recoverability requires a secure SecretStore adapter; session-only storage remains the safe floor until that adapter is proven.",
+    "Durable answer-memory mutation requires explicit save/reuse consent unless a previously explicit user-configured reuse policy already authorizes that question scope."
   ],
   "autonomy_gap": "Canonical manifest validation/receipt verification cannot run until the dispatch schema/runner is introduced by its harness owner. This does not prevent durable planning. After implementation authorization, use isolated provider/local writer lanes and preserve exact-head evidence.",
-  "convergence_owner": "EH-CONV",
+  "convergence_owner": "EH-CONV2",
   "lanes": [
     {
       "lane_id": "EH-COMP0",
@@ -456,7 +457,7 @@
     {
       "lane_id": "EH-REC0",
       "wave": 0,
-      "mission": "Define ATS-native donor autofill reconciliation, repeated work-record binding, provenance, user-edit preservation, and multiline presentation rules.",
+      "mission": "Define ATS-native donor autofill reconciliation, repeated work-record binding, provenance from the start of donor import, user-edit preservation during and after donor loading, and multiline presentation rules.",
       "dependencies": [
         "implementation authorization",
         "refreshed integration floor"
@@ -488,6 +489,7 @@
       "expected_artifacts": [
         "donor provenance contract",
         "record matcher contract",
+        "pre/during-import user-edit protection invariant",
         "cross-record negative fixture",
         "formatting positive fixture"
       ],
@@ -535,6 +537,7 @@
       "expected_artifacts": [
         "answer-scope model",
         "standard questionnaire families",
+        "explicit save/reuse consent contract",
         "sensitive explicit-only policy",
         "capability-tenure semantics",
         "positive/negative fixtures"
@@ -699,7 +702,8 @@
       "forbidden_surfaces": [
         "resume parser rewrite",
         "index-only record matching",
-        "overwrite of user-edited current-session values"
+        "overwrite of user-edited current-session values",
+        "overwrite of user-edited values while donor import/reconciliation is pending"
       ],
       "posture": "isolated writer after PR #27 reconciliation",
       "adapter": {
@@ -716,6 +720,7 @@
       },
       "expected_artifacts": [
         "record-safe repair runtime",
+        "pre/during-import user-edit provenance capture",
         "proven cross-record mismatch detection",
         "multiline formatting preservation"
       ],
@@ -730,7 +735,7 @@
     {
       "lane_id": "EH-QMEM1",
       "wave": 2,
-      "mission": "Implement standard-question autofill, explicit answer learning, scoped reuse, option mapping, capability-tenure resolution, and user-authorized visual mapping fallback.",
+      "mission": "Implement standard-question autofill, candidate answer observation, explicit save/reuse confirmation, scoped reuse, option mapping, capability-tenure resolution, and user-authorized visual mapping fallback.",
       "dependencies": [
         "EH-QMEM0",
         "PR #29 merged/superseded/reconciled"
@@ -765,7 +770,8 @@
       },
       "expected_artifacts": [
         "answer reuse runtime",
-        "learn-on-user-action behavior",
+        "candidate-answer staging",
+        "explicit save/reuse consent gate",
         "sensitive explicit-only guard",
         "visual fallback with disposal proof",
         "skill-tenure bucket resolver"

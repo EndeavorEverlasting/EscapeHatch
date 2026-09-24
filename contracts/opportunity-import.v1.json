@@ -1,0 +1,188 @@
+{
+  "schema": "escapehatch/opportunity-import/v1",
+  "version": 1,
+  "canonical_career_state": "escapehatch-career-state/v1",
+  "authority": {
+    "source_documents": "user_owned_local_input",
+    "canonical_domain_model": "career_state_only",
+    "provider_proof_from_local_import": "forbidden",
+    "final_submission": "outside_contract"
+  },
+  "source_classes": {
+    "v1": [
+      "career_state_json",
+      "legacy_workspace_json",
+      "csv",
+      "xlsx"
+    ],
+    "successor": [
+      "txt",
+      "markdown",
+      "text_pdf",
+      "docx"
+    ],
+    "unsupported_v1": [
+      "scanned_pdf",
+      "encrypted_document"
+    ]
+  },
+  "pipeline": [
+    "decode",
+    "identify",
+    "map",
+    "normalize",
+    "bind_provenance",
+    "dedupe",
+    "classify",
+    "preview",
+    "commit",
+    "validate",
+    "receipt"
+  ],
+  "candidate_states": [
+    "NEW",
+    "UPDATE",
+    "DUPLICATE",
+    "CONFLICT",
+    "SKIP"
+  ],
+  "field_mapping": {
+    "aliases": {
+      "organization": [
+        "Company",
+        "Employer",
+        "Organization"
+      ],
+      "title": [
+        "Role",
+        "Job Title",
+        "Position"
+      ],
+      "location": [
+        "Location",
+        "Job Location"
+      ],
+      "work_mode": [
+        "Work Mode",
+        "Work Arrangement"
+      ],
+      "employment_type": [
+        "Employment",
+        "Employment Type"
+      ],
+      "compensation_text": [
+        "Compensation",
+        "Pay",
+        "Salary"
+      ],
+      "priority": [
+        "Priority"
+      ],
+      "fit_score": [
+        "Fit Score"
+      ],
+      "fit_rationale": [
+        "Why It Fits",
+        "Key Observations"
+      ],
+      "requirements_gaps": [
+        "Requirements / Gaps",
+        "Requirements",
+        "Gaps"
+      ],
+      "found_on": [
+        "Date Found",
+        "Found Date"
+      ],
+      "follow_up_due_on": [
+        "Follow-Up Due",
+        "Follow Up Due"
+      ],
+      "next_action": [
+        "Next Action"
+      ],
+      "apply_link": [
+        "Apply Link",
+        "Application URL"
+      ],
+      "source": [
+        "Source Link",
+        "Posting URL"
+      ],
+      "source_guidance": [
+        "Source Guidance"
+      ],
+      "notes": [
+        "Notes"
+      ]
+    },
+    "unknown_header_policy": "retain_unmapped_in_preview",
+    "absent_fact_policy": "do_not_invent",
+    "ambiguous_mapping_policy": "review_required"
+  },
+  "identity_precedence": [
+    "explicit_canonical_id",
+    "exact_apply_or_source_url",
+    "normalized_organization_title_location_work_mode_with_corroboration"
+  ],
+  "preview": {
+    "schema_version": "escapehatch-opportunity-import-preview/v1",
+    "mutation": "forbidden",
+    "required_candidate_fields": [
+      "candidate_id",
+      "classification",
+      "source_ref",
+      "mapped_fields",
+      "unmapped_fields",
+      "conflicts"
+    ],
+    "provenance_required": true,
+    "classifications_requiring_review": [
+      "UPDATE",
+      "CONFLICT"
+    ]
+  },
+  "commit": {
+    "explicit_acceptance_required": true,
+    "expected_revision_required": true,
+    "compare_and_set": true,
+    "validate_resulting_career_state": true,
+    "transactional": true,
+    "preserve_state_on_failure": true,
+    "recovery_snapshot_before_mutation": true,
+    "ambiguous_conflict_auto_merge": "forbidden"
+  },
+  "receipt": {
+    "allowed_metadata": [
+      "import_id",
+      "source_name",
+      "source_type",
+      "content_sha256",
+      "source_coordinates",
+      "candidate_counts",
+      "from_revision",
+      "to_revision",
+      "result_codes",
+      "observed_at"
+    ],
+    "forbidden_content": [
+      "raw_source_content",
+      "resume_content",
+      "profile_values",
+      "application_answers",
+      "provider_tokens",
+      "provider_credentials"
+    ]
+  },
+  "privacy": {
+    "repository_real_user_inputs": "forbidden",
+    "telemetry_private_source_content": "forbidden",
+    "network_upload_required": false
+  },
+  "proof_ceiling": [
+    "repository_contract_and_synthetic_fixture_validation",
+    "no_parser_runtime_claim",
+    "no_indexeddb_runtime_claim",
+    "no_live_user_document_claim"
+  ]
+}

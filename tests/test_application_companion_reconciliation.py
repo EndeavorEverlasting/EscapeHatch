@@ -251,6 +251,34 @@ def test_evidence_only_reconciliation_bumps_revision():
     reconciled2, _ = reconcile(reconciled, ps)
     assert reconciled2["revision"] == reconciled["revision"], "idempotent second reconciliation must not bump revision again"
 
+def test_auth_failure_reconciliation_is_idempotent():
+    data = load_fixture("fixture-05-auth-failure-blocked.json")
+    first, _ = reconcile(copy.deepcopy(data["career_state"]), copy.deepcopy(data["provider_snapshot"]))
+    first_revision = first["revision"]
+    first_transition_at = first["applications"][0]["execution"]["last_transition_at"]
+    second, _ = reconcile(first, copy.deepcopy(data["provider_snapshot"]))
+    assert second == first, "same authorization-failure snapshot must be idempotent"
+    assert second["revision"] == first_revision
+    assert second["applications"][0]["execution"]["last_transition_at"] == first_transition_at
+    assert is_idempotent(copy.deepcopy(data["career_state"]), copy.deepcopy(data["provider_snapshot"])) is True
+
+def test_provider_evidence_requires_reference_id():
+    data = load_fixture("fixture-04-local-edit-remains-local.json")
+    cs = copy.deepcopy(data["career_state"])
+    ps = copy.deepcopy(data["provider_snapshot"])
+    ps["read_back"] = True
+    ps["observed_at"] = "2026-09-10T07:00:00-04:00"
+    ps["applications"] = [{
+        "application_id": "app-fixture-001",
+        "execution": {"state":"SUBMITTED","channel":"web_form","last_transition_at":"2026-09-10T07:00:00-04:00"},
+        "evidence": [{"kind":"submission_receipt","observed_at":"2026-09-10T07:00:00-04:00"}],
+        "auth": {"authorized": True},
+    }]
+    reconciled, result = reconcile(cs, ps)
+    transition = next(e for e in result["execution_transition"] if e["application_id"]=="app-fixture-001")
+    assert transition["to"] != "SUBMITTED"
+    assert reconciled["applications"][0]["execution"]["state"] != "SUBMITTED"
+
 def test_provider_snapshot_synthetic_only():
     # ensure provider snapshot uses example.invalid and no secrets
     all_fixtures = list(FIXTURE_DIR.glob("*.json"))
@@ -281,6 +309,10 @@ if __name__ == "__main__":
     print("PASS undated_provider_evidence")
     test_evidence_only_reconciliation_bumps_revision()
     print("PASS evidence_only_revision")
+    test_auth_failure_reconciliation_is_idempotent()
+    print("PASS auth_failure_idempotent")
+    test_provider_evidence_requires_reference_id()
+    print("PASS provider_evidence_reference")
     test_provider_snapshot_synthetic_only()
     print("PASS synthetic")
     print("ALL TESTS PASS")

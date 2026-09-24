@@ -163,6 +163,42 @@ test('deterministic resume intake auto-projects explicit facts, preserves confli
   assert.equal(second.profile.proposals.length, first.profile.proposals.length);
 });
 
+test('resume location parsing requires address evidence and recognizes explicit Canada country', () => {
+  const ambiguous = parseResumeText([
+    'Doe, Jane',
+    'Senior Engineer, Platform',
+    'candidate@example.test',
+  ].join('\n'), 'ambiguous-header.txt');
+  assert.equal(ambiguous.profilePatch.city, undefined);
+  assert.equal(ambiguous.profilePatch.region, undefined);
+
+  const canada = parseResumeText([
+    'Alex Example',
+    'Toronto, ON, Canada | alex@example.test',
+  ].join('\n'), 'canada.txt');
+  assert.equal(canada.profilePatch.city, 'Toronto');
+  assert.equal(canada.profilePatch.region, 'ON');
+  assert.equal(canada.profilePatch.country, 'Canada');
+});
+
+test('deterministic resume intake excludes medium-confidence ambiguous structured records', () => {
+  const imported = parseResumeText([
+    'Alex Example',
+    'Metro City, NY | alex@example.test',
+    'PROJECTS',
+    '• Ambiguous project without a separator',
+    'PROFESSIONAL EXPERIENCE',
+    'Ambiguous employer line without role/date structure',
+    'EDUCATION',
+    'Ambiguous school without a credential delimiter',
+  ].join('\n'), 'ambiguous-structure.txt');
+  const deterministic = applyDeterministicResumeImport(imported, emptyAssistProfile(emptyProfile));
+  assert.equal(deterministic.accepted.some((proposal) => proposal.confidence === 'medium'), false);
+  assert.equal(deterministic.profile.projects.some((project) => project.name.includes('Ambiguous project')), false);
+  assert.equal(deterministic.profile.experience.some((role) => role.company.includes('Ambiguous employer')), false);
+  assert.equal(deterministic.profile.education.some((item) => item.institution.includes('Ambiguous school')), false);
+});
+
 test('accepted resume edits drive every reviewed field while rejected contact data stays unchanged', () => {
   const imported = parseResumeText([
     'Review Candidate',

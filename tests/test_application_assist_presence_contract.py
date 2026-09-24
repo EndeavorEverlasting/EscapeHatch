@@ -227,9 +227,9 @@ class PresenceContractTests(unittest.TestCase):
         for marker in ["access_token", "refresh_token", "api_key", "password_value", "secret_value"]:
             self.assertNotIn(f'"{marker}"', lower)
         for pattern in [
-            r"(?i)\\bbearer\\s+[a-z0-9._~-]{16,}",
-            r"\\b(?:sk|ghp|gho|ghu|ghs|ghr)[-_][A-Za-z0-9_-]{16,}\\b",
-            r"(?i)\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\\b",
+            r"(?i)\bbearer\s+[a-z0-9._~-]{16,}",
+            r"\b(?:sk|ghp|gho|ghu|ghs|ghr)[-_][A-Za-z0-9_-]{16,}\b",
+            r"(?i)\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b",
         ]:
             self.assertIsNone(re.search(pattern, text), f"credential/PII-like value matched: {pattern}")
         representative_leaks = [

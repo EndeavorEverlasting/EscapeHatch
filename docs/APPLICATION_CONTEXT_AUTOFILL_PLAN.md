@@ -1,128 +1,104 @@
 # EscapeHatch Contextual Autofill & Navigation Plan
 
-**Parent plan:** `docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md`  
-**Scoped canonical owner for this expansion:** `docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md`  
-**Plan date:** 2026-09-24  
-**Planning floor:** `integration/replit-donor-b01f628-20260921@d0f89105ed6619263ca311df09abc2a7960f1a0d`  
-**Disposition:** planning / handoff durability only; no product-runtime implementation is authorized by this planning pass.  
-**Run-scoped dispatch manifest:** `Outputs/prompt-parallel-dispatch/runs/escapehatch-contextual-autofill-navigation-20260924/manifest.json`
+**Parent plan:** `docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md`
+**Scoped owner:** `docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md`
+**Plan date:** 2026-09-24
+**Planning floor:** `integration/replit-donor-b01f628-20260921@d0f89105ed6619263ca311df09abc2a7960f1a0d`
+**Disposition:** planning only; no runtime implementation is authorized by this pass.
+**Dispatch manifest:** `Outputs/prompt-parallel-dispatch/runs/escapehatch-contextual-autofill-navigation-20260924/manifest.json`
 
-## 1. Why this scoped plan exists
+## 1. Live evidence and problem statement
 
-The parent autopilot plan already establishes safe intermediate progression, account bootstrap, profile bootstrap, queue evidence semantics, ambient presence, and an absolute final-submit boundary. The 2026-09-24 live application run exposed three additional product seams that are now concrete enough to factor without widening the active recovery PR:
+The parent autopilot plan already owns safe intermediate progression, account bootstrap, profile bootstrap, queue evidence semantics, ambient presence, and the hard final-submit boundary. A 2026-09-24 live multi-step application exposed three additional reusable gaps:
 
-1. **Opportunity compensation must become executable application context.** A live job posting may publish a minimum/maximum compensation range while the application asks for aliases such as “Desired Salary Expectations,” “Desired Salary,” “Target Compensation,” “Expected Pay,” or an annual/hourly value. The product currently has a question taxonomy entry for desired annual salary and opportunity-scoped preference precedence, but canonical opportunity state does not carry a normalized compensation range. EscapeHatch therefore cannot deterministically derive the operator’s requested default: **use the verified posted maximum when the application asks for desired/expected compensation and no stronger user override exists.**
-2. **Navigation controls need semantic action typing, not a short label allowlist.** The runtime currently recognizes exact labels such as Next, Continue, and Save and Continue, and blocks obvious Submit/Apply/Finish labels. Real applications also expose Save Draft, Save & Exit, Save & Quit, Quit, Exit, Back, Cancel, Review & Submit, and controls whose HTML type is `submit` even when their semantic effect is merely “next step.” Those are materially different actions.
-3. **Application topology/context must be first-class.** A live Taleo flow exposed a nine-step application after login (profile, education/certifications, work experience, company questionnaire, position questionnaire, diversity questionnaire, attachments, electronic signature, review/submit), while other ATS flows may be one-page, SPA-driven, or hybrid. The product must model the current application/section context instead of assuming a fixed page count or one universal page shape.
+1. Opportunity compensation is not yet executable application context. The application can ask for a desired salary using many aliases, while the posting may publish a min/max range. Default behavior should use the verified posted maximum unless a stronger opportunity-specific user override exists.
+2. Navigation is still too label-driven. Save and Continue, Save Draft, Save and Exit, Quit, Exit, Back, Submit, Sign/Certify, and unknown controls are different semantic actions and must never share one loose alias bucket.
+3. Application topology must be explicit. One-page, multi-step, SPA, hybrid, and account-gated applications need one context engine that understands page, section, stage, and transition separately.
 
-This plan records only sanitized product evidence. It does not persist the operator’s contact data, salary entry, account credentials, application answers, screenshots, or employer-private state.
+This plan contains only sanitized product evidence. No real profile data, credentials, answers, or screenshots belong in Git.
 
-## 2. Refreshed floor and collision map
+## 2. Collision map
 
-- Provider default remains `main@0824535b9dc1341def885a79a098d297df770ac8`.
-- Provider integration floor is `integration/replit-donor-b01f628-20260921@d0f89105ed6619263ca311df09abc2a7960f1a0d`.
-- PR #29 (`recovery/eh-crash-align-20260924`) remains the active Application Assist/A6 recovery lane and owns convergence/acceptance surfaces including the parent autopilot plan, modality/presence, batch reconciliation, and acceptance receipt.
-- PR #27 owns deterministic zero-configuration resume/profile intake under the cockpit artifact and also touches the parent autopilot plan.
-- PR #35 is planning-only for the local career store/import pipeline and touches no production application-assist files.
-- This scoped plan therefore uses **new owned plan/manifest paths** and does not edit the parent autopilot plan while #29/#27 remain separately owned.
-- Production edits to `progression.js`, `navigation-adapter.js`, shared `content.js`, modality/presence convergence, or A6 acceptance must refresh against #29’s resolved integration result before mutation.
+- PR #29 remains the active Application Assist/A6 recovery owner.
+- PR #27 remains the deterministic resume/profile intake owner.
+- PR #35 is planning-only for the career-store/import pipeline.
+- This plan uses new paths and does not edit the parent autopilot plan while #29/#27 remain separately owned.
+- Runtime changes to progression, navigation, shared content, modality/presence, or A6 acceptance must refresh after #29 is merged, superseded, or explicitly reconciled.
 
-## 3. Design invariant: derive, classify, then act
+## 3. Extended runtime model
 
-The extended runtime should become:
+Target pipeline:
 
-`canonical opportunity/profile state -> application flow context -> semantic field classification -> value resolution -> Fill Plan -> field gate -> DOM writer -> semantic action classification -> Progression Plan -> progression gate -> navigation adapter -> transition observation`
+`canonical opportunity/profile state -> flow context -> semantic field classification -> value resolution -> Fill Plan -> field gate -> DOM writer -> semantic action classification -> Progression Plan -> progression gate -> navigation adapter -> transition observation`
 
-No field value may be invented because a label resembles another field, and no click may be dispatched because a control merely contains a familiar word.
+No field value may be invented because its label resembles another question. No control may be activated because its text merely resembles a safe button.
 
-### 3.1 Compensation default invariant
+## 4. Compensation policy
 
-When a live/verified opportunity publishes a parseable compensation range, the default desired-compensation strategy is:
+Default precedence:
 
-`session_confirmation > explicit opportunity_override > verified_posted_maximum > profile_preference > unresolved`
+`session confirmation > explicit opportunity override > verified posted maximum > profile preference > unresolved`
 
-The default **posted maximum** is eligible only when all required facts are explicit and compatible with the application field:
+The posted maximum is eligible only when:
 
-- the opportunity compensation source is current enough for the application attempt and bound to the opportunity;
-- maximum value is explicitly published, not inferred from market data;
-- currency is known;
-- pay period/unit is known or the destination field explicitly accepts the published unit;
-- the field is semantically a desired/expected/target compensation field;
-- the field is not current compensation, compensation history, minimum acceptable pay, or another materially different question;
-- any conversion between hourly/annual/other periods is performed only when a repository contract defines the conversion inputs; otherwise the field stops for review;
-- an explicit per-opportunity override always wins.
+- the opportunity compensation source is bound to the current opportunity and is sufficiently fresh;
+- maximum, currency, and pay period are explicit;
+- the destination is a desired/expected/target compensation field;
+- the destination is not current compensation, compensation history, or minimum acceptable compensation;
+- the field accepts the posted unit or a contract-defined conversion is available;
+- an explicit opportunity override does not exist.
 
-If the posting publishes both hourly and annual maxima, prefer the value whose unit matches the destination field. If the destination explicitly accepts either form, prefer the explicitly published annual maximum when available rather than recomputing it from hourly data.
+If the posting publishes both annual and hourly maxima, match the field's requested unit. If the field accepts either and an annual maximum is explicitly published, prefer that explicit annual value rather than recomputing it.
 
-### 3.2 Compensation provenance model
+Canonical compensation provenance should include minimum, maximum, currency, period, source artifact, verified_at, and override metadata.
 
-Add a typed opportunity-level compensation projection with at least:
-
-- `minimum`
-- `maximum`
-- `currency`
-- `period` / unit (hour, year, etc.)
-- optional alternate explicitly published range(s)
-- raw/source artifact identity
-- `verified_at`
-- derivation/provenance state
-- optional user override and override timestamp
-
-Do not store real operator values in repository fixtures. Synthetic fixtures only.
-
-### 3.3 Compensation semantic families
-
-Do not turn every salary-like phrase into one alias bucket. Distinguish:
+Compensation semantic families must remain distinct:
 
 - desired / expected / target compensation
 - desired annual salary
 - desired hourly rate
-- compensation currency
-- compensation period
+- currency
+- period
 - minimum acceptable compensation
 - current compensation
 - compensation history
-- posted range display (not an input)
+- posted range display
 
-Only desired/expected/target fields are eligible for the default posted-maximum policy in the first implementation.
+Only desired/expected/target fields receive the posted-maximum default.
 
-## 4. Semantic navigation-action ontology
+## 5. Navigation action semantics
 
-Introduce a versioned action-semantics owner rather than growing ad-hoc string tests forever.
+Create a typed action ontology:
 
-Minimum action kinds:
-
-| Action kind | Examples | Initial automation policy |
+| Action kind | Examples | V1 policy |
 | --- | --- | --- |
-| `ADVANCE_INTERMEDIATE` | Next, Continue, Next Step | auto-eligible only after Progression Gate |
-| `SAVE_AND_ADVANCE` | Save and Continue, Save & Next | auto-eligible only after Progression Gate |
-| `AUTH_CONTINUE` | Continue with email, Sign in and continue | auto-eligible only in recognized auth/account state |
-| `SAVE_STAY` | Save Draft, Save | manual/review initially |
-| `SAVE_EXIT` | Save and Quit, Save & Exit | manual-only initially |
-| `EXIT_NO_SAVE` | Quit, Exit | manual-only |
-| `BACK` | Back, Previous | manual/review initially |
+| `ADVANCE_INTERMEDIATE` | Next, Continue, Next Step | auto-eligible after Progression Gate |
+| `SAVE_AND_ADVANCE` | Save and Continue, Save & Next | auto-eligible after Progression Gate |
+| `AUTH_CONTINUE` | Continue with email, Sign in and continue | auto-eligible only in recognized auth state |
+| `SAVE_STAY` | Save Draft, Save | manual/review |
+| `SAVE_EXIT` | Save and Quit, Save & Exit | manual |
+| `EXIT_NO_SAVE` | Quit, Exit | manual |
+| `BACK` | Back, Previous | manual/review |
 | `CANCEL_WITHDRAW` | Cancel application, Withdraw | hard manual-only |
 | `FINAL_SUBMIT` | Submit, Submit Application, Apply, Finish | hard manual-only |
 | `ATTEST_SIGN` | Sign, Certify, Electronic Signature | hard manual-only |
-| `UNKNOWN` | ambiguous or mixed semantics | REVIEW_REQUIRED |
+| `UNKNOWN` | ambiguous/mixed | REVIEW_REQUIRED |
 
 Rules:
 
-- HTML `type=submit` is **not** equivalent to `FINAL_SUBMIT`; server-rendered multi-step forms frequently use submit-type controls for intermediate steps.
-- Raw label text alone is insufficient. Classification consumes control label, form/page context, current stage, surrounding heading/help text, location in the application flow, and prior transition evidence.
-- “Apply” at application entry and “Apply/Submit” at final review are different semantic actions; context decides.
-- Stepper labels such as “Review and Submit” are not clickable-action evidence by themselves.
-- Page chrome such as Sign Out, account options, browser navigation, unrelated site CTAs, and global headers must stay outside the application-control scope.
-- Any mixed/ambiguous action fails closed to `REVIEW_REQUIRED`.
-- The irreversible boundary remains: **no automatic final submit, certification, signature, withdrawal, or attestation.**
+- HTML `type=submit` is not semantic proof of final submission.
+- Control text alone is insufficient; action classification consumes flow context and surrounding evidence.
+- Initial Apply and final Submit/Apply are different actions.
+- Stepper text such as Review and Submit is not button evidence.
+- Global site chrome is outside application-control scope.
+- Mixed or ambiguous semantics fail closed.
+- Final submit, sign, certify, withdraw, and attestation remain non-automatable.
 
-## 5. Application Flow Context engine
+## 6. Application Flow Context engine
 
-This is separate from the existing mouse/keyboard/phone **interaction modality** contract. “Multimodal” here means **multiple evidence signals feeding one application-context model**, not a second user-input modality state machine.
+This is separate from the existing mouse/keyboard/phone interaction-modality contract.
 
-### 5.1 Topology modes
-
-Support at least:
+Topology modes:
 
 - `SINGLE_PAGE`
 - `MULTI_STEP`
@@ -131,67 +107,31 @@ Support at least:
 - `ACCOUNT_GATE`
 - `UNKNOWN`
 
-### 5.2 Stage/section archetypes
+Stage/section archetypes include application entry, auth/account, resume/profile, identity/contact, education, work experience, company questionnaire, position questionnaire, EEO/diversity, attachments, signature, review, final-submit boundary, and unknown/manual gate.
 
-The context engine should represent stages such as:
+Page, section, and stage are distinct. One page can contain several virtual sections; one stage can span several physical pages.
 
-- application entry
-- email/account/login
-- resume/profile upload
-- identity/contact
-- education/certifications
-- work experience
-- company questionnaire
-- position questionnaire
-- EEO/diversity
-- attachments
-- electronic signature
-- review
-- final submit boundary
-- unknown/manual gate
+V1 context signals:
 
-One page may expose several virtual sections. A multi-step flow may expose one or several sections per physical page. Therefore **page != section != stage**.
-
-### 5.3 Context signals
-
-V1 should fuse deterministic browser signals:
-
-- DOM form boundaries and required controls
-- visible headings/legends/labels
-- stepper/progress indicators and current-step markers
+- form boundaries and required controls
+- headings, legends, and labels
+- stepper/progress indicators
 - control/action semantics
-- URL/route changes
-- page/form fingerprints
+- URL/route change
+- page/form fingerprint
 - validation errors
-- prior observed transition
-- known account/application state
+- prior transition
+- current account/application state
 - field-family distribution
-- visible final-review/signature indicators
+- final-review/signature indicators
 
-A future visual/screenshot model may be added as an optional adapter, but V1 correctness must not require computer vision when the DOM/accessibility surface already provides deterministic evidence.
+A future visual adapter may supplement these signals, but V1 correctness must not require computer vision.
 
-### 5.4 Context state
+Persist session-local context sufficient to track origin, topology, current stage, page fingerprint, virtual sections, observed step/total when available, prior state, expected next states, transition budget, reason/confidence, and unresolved manual gates.
 
-Persist enough session-local state to reason about continuity without treating URL alone as truth:
+## 7. UX projection
 
-- application/session binding
-- origin
-- topology
-- current stage
-- current physical page fingerprint
-- current virtual section(s)
-- observed step index / total when available
-- prior stage/page
-- expected next stage set
-- transition budget
-- confidence/reason codes
-- unresolved manual gates
-
-The engine must tolerate unknown total page counts and dynamic insertion/removal of steps.
-
-## 6. UX projection
-
-The ambient companion should eventually project truth from the context engine rather than generic “working” state only. Examples:
+The ambient companion should project context truth, for example:
 
 - `Step 2 of 9 · Education & Certifications`
 - `Filling 4 deterministic fields`
@@ -199,314 +139,211 @@ The ambient companion should eventually project truth from the context engine ra
 - `Waiting on you · attachment required`
 - `Final review reached · Submit is manual`
 
-The projection must never imply that submission occurred merely because the form was filled or the final page was reached.
+Reaching final review is never equivalent to submission.
 
-## 7. Dependency graph and bounded sprints
-
-Graph:
+## 8. Dependency graph
 
 `{ EH-COMP0 || EH-ACT0 || EH-CTX0 } -> { EH-COMP1 || EH-ACT1 || EH-CTX1 || EH-VAL1 } -> EH-CONV -> EH-LIVE`
 
-Additional gate:
-
-- Production implementation lanes touching the Application Assist runtime must start from a refreshed floor where PR #29 is either merged into integration or explicitly superseded/reconciled.
-- PR #27 must be reconciled before any cockpit/profile intake collision is introduced; the compensation lanes should avoid its files unless refreshed evidence proves convergence.
-
-Graph width is **3** at the contract floor and up to **4** during implementation/validation when file ownership remains non-overlapping.
+Graph width is 3 at the contract floor and up to 4 in the implementation/validation wave when file ownership remains non-overlapping.
 
 ### EH-COMP0 — Compensation provenance & resolution contract
 
-**Type:** harness spine + conventional application data contract  
-**Goal:** make verified posted compensation and “posted maximum by default” a typed, provenance-bound policy.
+Owns compensation provenance in career-state, compensation question families/aliases, preference precedence, and focused synthetic validation.
 
-**Owned scope**
-- new compensation contract if separation is cleaner;
-- `contracts/career-state.v1.schema.json` compensation projection;
-- `harness/contracts/application-form-taxonomy.v1.json` compensation question families/aliases;
-- `harness/contracts/application-preference-cache.v1.json` strategy/precedence semantics;
-- focused synthetic validator/tests.
-
-**Forbidden scope**
-- real employer compensation records in Git;
-- scraping implementation;
-- browser DOM writes;
-- automatic final submission;
-- converting compensation across periods without explicit contract inputs.
-
-**Acceptance**
-- opportunity compensation can carry verified min/max/currency/period/provenance;
-- desired compensation strategy defaults to verified posted max;
+Acceptance:
+- min/max/currency/period/provenance are typed;
+- default strategy is verified posted maximum;
 - explicit opportunity override wins;
-- current/history/minimum-compensation questions cannot inherit desired-compensation values;
-- unknown/missing unit or stale source fails closed.
+- current/history/minimum compensation cannot inherit desired-compensation values;
+- stale or unit-ambiguous source fails closed.
 
 ### EH-ACT0 — Navigation action semantic contract
 
-**Type:** harness spine + safety contract  
-**Goal:** replace short label lists with typed action semantics and irreversible-action policy.
+Owns a new action-semantics contract, alias/context fixtures, and focused tests.
 
-**Owned scope**
-- new `contracts/application-action-semantics.v1.json`;
-- sanitized alias fixtures;
-- focused validator/tests;
-- compatibility mapping to existing Progression Plan terminology.
-
-**Forbidden scope**
-- production clicks;
-- final-submit automation;
-- ATS-specific hardcoded selectors.
-
-**Acceptance**
-- all action kinds above are machine-defined;
-- `type=submit` is explicitly non-authoritative;
-- final submit/sign/certify/withdraw remain manual;
-- unknown/mixed aliases fail closed.
+Acceptance:
+- action kinds above are machine-defined;
+- `type=submit` is non-authoritative;
+- irreversible actions remain manual-only;
+- unknown/mixed actions fail closed.
 
 ### EH-CTX0 — Application Flow Context contract
 
-**Type:** application context/state-machine contract  
-**Goal:** model application topology, stages, pages, and virtual sections independently of ATS vendor and page count.
+Owns a new flow-context contract and synthetic one-page, multi-step, SPA, account-gated, and unknown fixtures.
 
-**Owned scope**
-- new `contracts/application-flow-context.v1.json`;
-- sanitized topology fixtures for one-page, multi-step, SPA, account-gated, and unknown flows;
-- focused validator/tests.
-
-**Forbidden scope**
-- browser runtime mutation;
-- visual-model dependency;
-- employer-specific state machine.
-
-**Acceptance**
-- page, section, stage, and application topology are distinct;
+Acceptance:
+- page, section, stage, and topology are distinct;
 - step count is optional;
-- context is transition-aware and fail-closed;
-- interaction modality contract remains separate.
+- context is transition-aware;
+- interaction modality remains a separate owner.
 
 ### EH-COMP1 — Compensation resolver & field matcher
 
-**Type:** conventional application logic  
-**Dependencies:** EH-COMP0; refreshed Application Assist floor  
-**Goal:** derive the correct requested compensation value and feed it through the existing Fill Plan.
+Depends on EH-COMP0.
 
-**Owned scope**
-- new compensation resolver module under `browser/application-assist/`;
-- smallest required integration into Fill Plan/preference resolution;
-- opportunity-context adapter;
-- synthetic compensation fixtures/tests.
+Owns a compensation resolver under Application Assist plus the smallest Fill Plan/preference integration.
 
-**Forbidden scope**
-- market-rate inference;
-- current-salary inference;
-- unsupported period conversion;
-- unrelated profile/resume intake.
-
-**Acceptance**
-- a City-of-Hope-shaped “Annual (...) or Hourly (...)” synthetic field receives the verified posted maximum in a compatible published unit;
-- aliases route to the correct semantic family;
-- explicit user override wins;
-- stale/ambiguous ranges stop for review.
+Acceptance:
+- verified posted maximum auto-populates a semantically compatible desired-compensation field;
+- aliases resolve to the correct family;
+- explicit override wins;
+- stale/ambiguous inputs stop for review.
 
 ### EH-ACT1 — Context-aware action classifier & progression gate
 
-**Type:** conventional application logic + safety boundary  
-**Dependencies:** EH-ACT0; PR #29 merged/superseded/reconciled  
-**Goal:** classify controls semantically and let only safe intermediate actions reach the navigation adapter.
+Depends on EH-ACT0 and refreshed resolution of PR #29.
 
-**Owned scope**
-- `browser/application-assist/progression.js`;
-- `browser/application-assist/navigation-adapter.js`;
-- new action-classifier module if it keeps responsibilities cohesive;
-- focused tests.
+Owns progression/navigation action classification.
 
-**Forbidden scope**
-- final submit/sign/certify/withdraw;
-- generalized click-by-label;
-- unrelated profile logic.
-
-**Acceptance**
-- Save & Continue auto-advances only when all gates pass;
-- Save Draft, Save & Exit, Quit/Exit, Back, Submit, Sign/Certify remain distinct;
-- a submit-typed Next button can still classify as intermediate;
-- an initial Apply CTA cannot be confused with a final Submit/Apply control;
-- live re-scan must preserve action identity before dispatch.
+Acceptance:
+- Save and Continue may auto-advance only after all gates pass;
+- Save Draft, Save/Exit, Quit/Exit, Back, Submit, Sign/Certify remain distinct;
+- submit-typed Next can still be intermediate when context proves it;
+- initial Apply cannot be confused with final Submit/Apply;
+- live action identity is rechecked before dispatch.
 
 ### EH-CTX1 — Flow-context runtime engine
 
-**Type:** conventional application logic + integration seam  
-**Dependencies:** EH-CTX0; PR #29 merged/superseded/reconciled  
-**Goal:** build and maintain application topology/stage context across DOM mutations and page transitions.
+Depends on EH-CTX0 and refreshed resolution of PR #29.
 
-**Owned scope**
-- new `browser/application-assist/flow-context.js`;
-- smallest integration in `content.js`;
-- session-local context projection;
-- focused tests.
+Owns a new flow-context module and the smallest content/session integration.
 
-**Forbidden scope**
-- duplicate assist/session state machine;
-- vision as required dependency;
-- hardcoded Taleo-only flow.
+Acceptance:
+- one-page and multi-step flows both map coherently;
+- steppers can provide step/total when present;
+- single-page applications use virtual sections without fake navigation;
+- SPA transitions update context without duplicate progression;
+- uncertainty blocks risky navigation.
 
-**Acceptance**
-- one-page and nine-step-style synthetic applications both map coherently;
-- stepper evidence may provide 2-of-9 style state when present;
-- single-page flows create virtual sections without fake page transitions;
-- SPA transitions update context without double-advance;
-- context uncertainty blocks risky navigation.
+### EH-VAL1 — Cross-context regression floor
 
-### EH-VAL1 — Cross-context adversarial regression floor
+Depends on all three contract lanes.
 
-**Type:** validation  
-**Dependencies:** EH-COMP0, EH-ACT0, EH-CTX0  
-**Goal:** bind the new semantics to permanent negative/positive cases.
+Required fixtures include:
 
-**Required fixtures**
-1. desired salary alias with verified annual range -> posted max;
-2. desired salary alias with hourly-only range -> compatible hourly max;
-3. current salary label -> must not receive posted max;
-4. minimum acceptable salary label -> must not inherit desired max policy;
-5. stale compensation source -> review required;
+1. desired salary + verified annual range -> posted max;
+2. desired salary + hourly-only range -> compatible hourly max;
+3. current salary -> never posted max;
+4. minimum acceptable salary -> never inherit desired-max policy;
+5. stale compensation source -> review;
 6. Save and Continue -> safe intermediate candidate;
 7. Save Draft -> not progression;
 8. Save and Exit / Save and Quit -> manual exit;
 9. Quit / Exit -> manual no-save exit;
-10. server-side `type=submit` Next -> intermediate when context proves it;
+10. `type=submit` Next -> intermediate when context proves it;
 11. final Submit Application -> hard block;
-12. initial Apply CTA -> application-entry action, not submission;
-13. one-page application with virtual sections;
-14. nine-step Taleo-shaped flow with signature and final review;
-15. SPA route mutation with stable application binding;
-16. ambiguous/multiple candidate controls -> review required.
+12. initial Apply CTA -> entry action, not submission;
+13. one-page virtual-section application;
+14. nine-step-style flow with signature and final review;
+15. SPA transition;
+16. multiple/ambiguous candidates -> review.
 
 ### EH-CONV — Contextual autofill convergence
 
-**Type:** integration seam + UX  
-**Dependencies:** EH-COMP1, EH-ACT1, EH-CTX1, EH-VAL1  
-**Goal:** converge compensation, flow context, and action semantics into one continuous application-assist loop.
+Depends on EH-COMP1, EH-ACT1, EH-CTX1, EH-VAL1.
 
-**Owned scope**
-- shared session/content/popup integration;
-- context projection into ambient companion;
-- combined Fill Plan / Progression Plan evidence;
-- collision resolution with merged A6 recovery;
-- combined tests.
+Owns shared session/content/popup convergence, presence projection, combined Fill/Progression evidence, and collision reconciliation.
 
-**Forbidden scope**
-- automatic final submit;
-- weakening existing attestation/CAPTCHA/MFA/manual gates;
-- duplicate state authority.
+Acceptance:
+- eligible desired compensation requires no configuration;
+- context and action classification agree before auto-advance;
+- manual gates stop with exact reason and resume cleanly;
+- final review exposes a manual Submit boundary.
 
-**Acceptance**
-- known deterministic fields including eligible desired compensation populate without configuration;
-- context and action classifier agree before auto-advance;
-- manual gates stop with exact reason and can resume;
-- final review presents a manual Submit boundary.
+### EH-LIVE — Controlled live acceptance
 
-### EH-LIVE — Controlled live acceptance & promotion handoff
+Depends on EH-CONV.
 
-**Type:** runtime proof + docs/reporting  
-**Dependencies:** EH-CONV  
-**Goal:** prove behavior on controlled real applications without claiming universal ATS support.
+Acceptance:
+- observe one multi-step application with compensation and final-submit boundary;
+- observe one materially different one-page or SPA application;
+- final submit stays operator-only;
+- acceptance receipt is sanitized;
+- exact validated candidate is handed to repository promotion.
 
-**Acceptance targets**
-- one observed multi-step ATS flow with salary field and final submit boundary;
-- one materially different one-page or SPA application;
-- final submit remains operator-only in both;
-- sanitized acceptance receipt records observed topology/action/value decisions without private answers;
-- release/promotion owner receives exact validated candidate.
+Proof ceiling: observed flows only; never universal ATS compatibility.
 
-**Proof ceiling:** only observed ATS/application flows; no universal compatibility claim.
+## 9. Agent-harness factoring
 
-## 8. Agent-harness factoring
-
-No new skill is justified yet. Product/domain logic belongs in contracts and application code.
+No new skill is justified yet. Domain behavior belongs in contracts/application code.
 
 Planned reusable capabilities:
 
 - `resolve_opportunity_compensation`
-  - input: verified opportunity compensation + destination field semantic;
-  - output: typed value/unit/source or REVIEW_REQUIRED;
-  - guardrail: no market inference or unsupported conversion.
 - `classify_application_action`
-  - input: control descriptor + flow context;
-  - output: typed action kind + confidence/reason;
-  - guardrail: irreversible actions manual-only.
 - `derive_application_flow_context`
-  - input: DOM/page descriptor + prior context;
-  - output: topology/stage/section/transition context;
-  - guardrail: unknown context blocks risky progression.
-- existing `record_application_transition` remains the queue/application status owner after actual evidence changes.
+- existing `record_application_transition`
 
-Planned deterministic triggers:
+Planned triggers:
 
-- `opportunity_live_verified_with_compensation` -> normalize compensation provenance;
-- `desired_compensation_field_detected` -> resolve opportunity-scoped compensation;
-- `navigation_control_detected` -> classify action before Progression Plan;
-- `page_or_dom_transition_observed` -> refresh flow context;
-- `final_submit_boundary_detected` -> `AWAITING_OPERATOR`, never auto-click.
+- live verified opportunity with compensation -> normalize provenance
+- desired-compensation field detected -> resolve opportunity value
+- navigation control detected -> classify before Progression Plan
+- page/DOM transition -> refresh flow context
+- final-submit boundary -> AWAITING_OPERATOR, never auto-click
 
-## 9. Validation order
+## 10. Validation order
 
-1. focused compensation/action/context contract validators;
-2. focused unit tests for each implementation lane;
-3. existing application harness + session contract validators;
-4. application-assist runtime tests;
-5. adversarial cross-context fixture suite;
-6. modality/presence tests to prove no second UI state machine;
-7. career-state/application companion tests where compensation/application state changes;
-8. `git diff --check`;
-9. unpacked-extension synthetic/observed browser pass;
-10. controlled live multi-step + one-page/SPA acceptance;
-11. release/promotion validators after exact-candidate refresh.
+1. focused compensation/action/context contract validators
+2. focused implementation unit tests
+3. existing application harness/session validators
+4. Application Assist runtime tests
+5. adversarial cross-context fixtures
+6. modality/presence tests
+7. career-state/application-companion tests where touched
+8. `git diff --check`
+9. unpacked-extension observed pass
+10. controlled live multi-step + one-page/SPA acceptance
+11. release/promotion validators after exact-candidate refresh
 
-## 10. Regression invariants
+## 11. Regression invariants
 
-These are regressions if they recur:
+Regressions include:
 
-- desired/expected compensation is left manual when a verified compatible posted maximum and no stronger override exist;
-- salary-like aliases collapse current/history/minimum compensation into desired compensation;
-- compensation is converted between periods without explicit contract inputs;
-- navigation safety is based only on a control’s text or HTML `type`;
-- Save Draft, Save & Exit, Quit/Exit, Save & Continue, and Submit are treated as equivalent;
-- an initial Apply CTA is treated as final submission or vice versa;
+- eligible verified posted maximum still requires manual entry;
+- salary-like aliases collapse desired, current, historical, or minimum compensation;
+- pay-period conversion occurs without explicit contract inputs;
+- navigation safety depends only on label text or HTML type;
+- Save Draft, Save/Exit, Quit/Exit, Save/Continue, and Submit are treated as equivalent;
+- initial Apply and final Submit/Apply are conflated;
 - page count is assumed rather than observed;
 - single-page sections are treated as fake page transitions;
-- the flow-context engine duplicates mouse/keyboard/phone modality state;
+- flow context duplicates input-modality state;
 - any final Submit/Apply/Sign/Certify/attestation/withdraw action is auto-activated;
-- reaching final review is promoted to SUBMITTED without qualifying evidence.
+- final review is promoted to SUBMITTED without qualifying evidence.
 
-## 11. Contract horizon
+## 12. Contract horizon
 
 | Contract | Owner | Status | Next transition |
 | --- | --- | --- | --- |
-| Parent Application Assist autopilot | `docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md` | active / separately owned by recovery work | reconcile pointer after #29/#27 settle |
-| Compensation semantics | EH-COMP0 | PLANNED | versioned contract + provenance + taxonomy |
-| Navigation action semantics | EH-ACT0 | PLANNED | action ontology + negative fixtures |
-| Application flow context | EH-CTX0 | PLANNED | topology/stage/section contract |
-| Compensation runtime | EH-COMP1 | REQUIRED SUCCESSOR WORK | resolver + Fill Plan integration |
-| Action runtime | EH-ACT1 | REQUIRED SUCCESSOR WORK | classifier + Progression Gate integration |
-| Context runtime | EH-CTX1 | REQUIRED SUCCESSOR WORK | flow-context module + content integration |
-| Cross-context validation | EH-VAL1 | REQUIRED SUCCESSOR WORK | adversarial fixture floor |
-| Product convergence | EH-CONV | REQUIRED SUCCESSOR WORK | combined session/UX loop |
-| Live ATS acceptance | EH-LIVE | REQUIRED SUCCESSOR WORK | observed multi-step + materially different flow |
-| Final submission | operator | MANUAL-ONLY | never automated by this plan |
+| Parent autopilot | `docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md` | active / separately owned | reconcile pointer after #29/#27 settle |
+| Compensation semantics | EH-COMP0 | PLANNED | contract + provenance + taxonomy |
+| Action semantics | EH-ACT0 | PLANNED | ontology + negative fixtures |
+| Flow context | EH-CTX0 | PLANNED | topology/stage/section contract |
+| Compensation runtime | EH-COMP1 | REQUIRED SUCCESSOR WORK | resolver + Fill Plan |
+| Action runtime | EH-ACT1 | REQUIRED SUCCESSOR WORK | classifier + Progression Gate |
+| Context runtime | EH-CTX1 | REQUIRED SUCCESSOR WORK | flow-context runtime |
+| Validation | EH-VAL1 | REQUIRED SUCCESSOR WORK | adversarial floor |
+| Convergence | EH-CONV | REQUIRED SUCCESSOR WORK | combined assist loop |
+| Live acceptance | EH-LIVE | REQUIRED SUCCESSOR WORK | observed distinct ATS flows |
+| Final submission | operator | MANUAL-ONLY | never automated |
 
-## 12. Launch order
+## 13. Launch order
 
-This planning pass does **not** dispatch product implementation.
+This planning pass does not dispatch runtime implementation.
 
-After explicit implementation authorization and a refreshed collision check:
+After implementation authorization and refreshed collision inspection:
 
-1. **Parallel Wave 0:** EH-COMP0, EH-ACT0, EH-CTX0.
-2. **Parallel Wave 1:** EH-COMP1, EH-ACT1, EH-CTX1, EH-VAL1, with ACT1/CTX1 waiting for #29 merge/supersession if its shared runtime floor is unresolved.
-3. **EH-CONV:** single convergence owner.
-4. **EH-LIVE:** controlled live acceptance and promotion handoff.
+1. Parallel Wave 0: EH-COMP0, EH-ACT0, EH-CTX0.
+2. Parallel Wave 1: EH-COMP1, EH-ACT1, EH-CTX1, EH-VAL1. ACT1/CTX1 wait if PR #29 ownership is unresolved.
+3. EH-CONV.
+4. EH-LIVE.
 
-## 13. First executable continuation
+## 14. First executable continuation
 
-**Owner:** future implementation coordinator.  
-**Dependency:** explicit implementation authorization + refreshed provider floor.  
-**First action:** refresh integration/PR #29/#27 ownership, then dispatch EH-COMP0/EH-ACT0/EH-CTX0 in isolated non-overlapping lanes.  
-**Expected proof:** three versioned contracts with focused positive/negative fixtures and no private data.  
-**Completion gate:** focused validators green and the exact validated contract heads are integrated into the current integration floor without overwriting separately owned recovery work.
+Owner: implementation coordinator.
+Dependency: explicit implementation authorization and refreshed provider floor.
+First action: refresh integration plus PR #29/#27 ownership, then dispatch EH-COMP0/EH-ACT0/EH-CTX0 in isolated lanes.
+Expected proof: three versioned contracts with focused positive/negative fixtures and no private data.
+Completion gate: focused validators green and exact validated contract heads integrated without overwriting separately owned work.

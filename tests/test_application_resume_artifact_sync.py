@@ -27,3 +27,9 @@ def test_tracker_must_match_drive_identity():
     manifest["tracker"]["resume_pdf_id"] = "stale-pdf-id"
     errors = module.validate_manifest(manifest)
     assert "tracker resume_pdf_id does not match Drive pdf_id" in errors
+
+if __name__ == "__main__":
+    test_positive_control_is_durable_ready()
+    test_local_only_cannot_claim_durable_ready()
+    test_tracker_must_match_drive_identity()
+    print("APPLICATION_RESUME_ARTIFACT_SYNC_TESTS: PASS")

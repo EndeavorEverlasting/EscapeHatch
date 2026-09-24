@@ -16,9 +16,9 @@ export type ExecutionTransition = { application_id:string; from:ExecutionState|n
 export type ReconciliationResult = { schema:typeof RECONCILIATION_SCHEMA; reconciled_at:string; provider_read_back:boolean; freshness_transition:FreshnessTransition[]; execution_transition:ExecutionTransition[]; evidence_binding:"local"|"provider"|"operator_confirmed"|"none"; conflict_preserved:boolean; queue_active:Record<string,boolean>; history_preserved:boolean; idempotent:boolean };
 function deepClone<T>(v:T):T{return JSON.parse(JSON.stringify(v));}
 function isDateTime(s:string){try{const v=s.endsWith("Z")?s:s.replace("Z","+00:00");return !Number.isNaN(Date.parse(v));}catch{return false;}}
-function qualifyingEvidenceForApp(ev:CareerState["evidence"],appId:string){return ev.filter(e=>e.application_id===appId && QUALIFYING_KINDS.has(e.kind));}
+function qualifyingEvidenceForApp(ev:CareerState["evidence"],appId:string){return ev.filter(e=>e.application_id===appId && QUALIFYING_KINDS.has(e.kind) && isDateTime(e.observed_at || ""));}
 export function reconcile(careerState:CareerState, providerSnapshot:ProviderSnapshot|null|undefined):{reconciledState:CareerState; result:ReconciliationResult}{
-  const now=new Date().toISOString(); const reconciledState=deepClone(careerState); const providerReadBack=Boolean(providerSnapshot && providerSnapshot.read_back===true);
+  const now=new Date().toISOString(); const reconciledState=deepClone(careerState); const providerReadBack=Boolean(providerSnapshot && providerSnapshot.read_back===true && isDateTime(providerSnapshot.observed_at || ""));
   const freshness:FreshnessTransition[]=[]; const execution:ExecutionTransition[]=[]; let anyConflict=false; const queueActive:Record<string,boolean>={}; const historyPreserved=true;
   const oppById=new Map(reconciledState.opportunities.map(o=>[o.id,o])); const providerOppMap=new Map<string,ProviderOpportunity>(); for(const po of providerSnapshot?.opportunities||[]) providerOppMap.set(po.opportunity_id,po);
   const providerAppMap=new Map<string,ProviderApplication>(); for(const pa of providerSnapshot?.applications||[]) providerAppMap.set(pa.application_id,pa);
@@ -39,7 +39,7 @@ export function reconcile(careerState:CareerState, providerSnapshot:ProviderSnap
     const oppVerification=opp?.verification?.state as VerificationState|undefined; const providerApp=providerAppMap.get(app.id);
     let to:ExecutionState|null=from; let evidenceBinding:ExecutionTransition["evidence_binding"]="none"; let conflict=false; let reason="no_change";
     const localQual=qualifyingEvidenceForApp(reconciledState.evidence,app.id); const hasLocalQual=localQual.length>0;
-    const providerQual=providerApp?.evidence?.filter(e=>QUALIFYING_KINDS.has(e.kind))||[]; const hasProviderQual=providerQual.length>0;
+    const providerQual=providerApp?.evidence?.filter(e=>QUALIFYING_KINDS.has(e.kind) && isDateTime(e.observed_at || ""))||[]; const hasProviderQual=providerQual.length>0;
     const localAny=reconciledState.evidence.filter(e=>e.application_id===app.id); const hasAnyLocal=localAny.length>0; const providerAny=providerApp?.evidence||[]; const hasAnyProvider=providerAny.length>0;
     if(!providerReadBack){to=from; evidenceBinding=hasAnyLocal?"local":"none"; reason="provider_read_back_required";
     }else if(!providerApp){to=from; evidenceBinding=hasAnyLocal?"local":"none"; reason="no_provider_application_snapshot"; if(["STALE","CLOSED"].includes(oppVerification as string)&&["READY_TO_APPLY","FILLED"].includes(from as string)){to="BLOCKED"; reason=`posting_${oppVerification}_deactivates_queue`; if(app.execution){app.execution.state="BLOCKED"; app.execution.block_reason=`posting_${oppVerification}_without_erasing_history`; app.execution.last_transition_at=now;}else app.execution={state:"BLOCKED",channel:fromChannel,last_transition_at:now,block_reason:`posting_${oppVerification}` as string};}
@@ -70,7 +70,7 @@ export function reconcile(careerState:CareerState, providerSnapshot:ProviderSnap
   }
   let overall:ReconciliationResult["evidence_binding"]="none"; if(execution.some(e=>e.evidence_binding==="operator_confirmed")) overall="operator_confirmed"; else if(execution.some(e=>e.evidence_binding==="provider")) overall="provider"; else if(execution.some(e=>e.evidence_binding==="local")) overall="local";
   const result:ReconciliationResult={schema:RECONCILIATION_SCHEMA,reconciled_at:now,provider_read_back:providerReadBack,freshness_transition:freshness,execution_transition:execution,evidence_binding:overall,conflict_preserved:anyConflict,queue_active:queueActive,history_preserved:historyPreserved,idempotent:true};
-  const hasFresh=freshness.some(f=>f.from!==f.to); const hasExec=execution.some(e=>e.from!==e.to); const hasChanges=hasFresh||hasExec||anyConflict; if(hasChanges&&JSON.stringify(careerState)!==JSON.stringify(reconciledState)){reconciledState.revision=(reconciledState.revision??0)+1; reconciledState.updated_at=now;}
+  if(JSON.stringify(careerState)!==JSON.stringify(reconciledState)){reconciledState.revision=(reconciledState.revision??0)+1; reconciledState.updated_at=now;}
   return {reconciledState,result};
 }
 export function isIdempotent(careerState:CareerState,snapshot:ProviderSnapshot){const f=reconcile(careerState,snapshot); const s=reconcile(f.reconciledState,snapshot); return JSON.stringify(f.reconciledState)===JSON.stringify(s.reconciledState);}

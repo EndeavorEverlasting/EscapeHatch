@@ -36,7 +36,12 @@
     "application_resume_artifact_sync_positive_fixture": "fixtures/application-resume-artifact-sync/01-durable-ready-positive.json",
     "application_resume_artifact_sync_negative_fixture": "fixtures/application-resume-artifact-sync/02-local-only-negative.json",
     "application_resume_artifact_sync_validator": "scripts/validate_application_resume_artifact_sync.py",
-    "application_resume_artifact_sync_tests": "tests/test_application_resume_artifact_sync.py"
+    "application_resume_artifact_sync_tests": "tests/test_application_resume_artifact_sync.py",
+    "opportunity_import_contract": "contracts/opportunity-import.v1.json",
+    "opportunity_import_positive_fixture": "fixtures/opportunity-import/01-ledger-preview-valid.json",
+    "opportunity_import_negative_fixture": "fixtures/opportunity-import/02-conflict-autoaccept-invalid.json",
+    "opportunity_import_validator": "scripts/validate_opportunity_import.py",
+    "opportunity_import_tests": "tests/test_opportunity_import_contract.py"
   },
   "validation_order": [
     "python scripts/validate_governance.py",
@@ -48,6 +53,8 @@
     "python scripts/validate_application_resume_artifact_sync.py",
     "python scripts/validate_harness.py",
     "python scripts/validate_career_state.py",
+    "python scripts/validate_opportunity_import.py",
+    "python tests/test_opportunity_import_contract.py",
     "python scripts/validate_local_runtime_lifecycle.py",
     "git diff --check"
   ],

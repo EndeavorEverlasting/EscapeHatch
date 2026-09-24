@@ -1,0 +1,31 @@
+{
+  "schema": "escapehatch/application-resume-artifact-sync/v1",
+  "version": 1,
+  "mission": "A resume is durable for an application only after provider-backed Drive artifacts and tracker references reconcile; local files alone never satisfy readiness.",
+  "manifest_schema": "escapehatch/application-resume-artifact-manifest/v1",
+  "ready_state": "DURABLE_READY",
+  "required_provider": "google_drive",
+  "required_when_ready": [
+    "drive.company_folder_id",
+    "drive.editable_resume_id",
+    "drive.pdf_id",
+    "drive.provider_read_back",
+    "tracker.resume_doc_id",
+    "tracker.resume_pdf_id"
+  ],
+  "invariants": [
+    "local_artifacts_never_satisfy_durable_ready",
+    "tracker_resume_doc_id_matches_drive_editable_resume_id",
+    "tracker_resume_pdf_id_matches_drive_pdf_id",
+    "provider_read_back_required_before_sync_claim",
+    "role_specific_artifact_must_replace_generic_master_reference_when_present",
+    "do_not_create_duplicate_company_workspace_when_existing_workspace_is_evidenced",
+    "conflict_or_missing_provider_evidence_blocks_durable_ready"
+  ],
+  "allowed_resume_sources": ["master_copy", "tailored"],
+  "proof_ceiling": [
+    "synthetic_manifest_validation",
+    "no_live_google_drive_api_claim",
+    "no_private_resume_content_in_repository"
+  ]
+}

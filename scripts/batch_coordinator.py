@@ -39,6 +39,17 @@ def _priority_rank(p: Optional[str]) -> int:
 def _is_qualifying(kind: str) -> bool:
     return kind in QUALIFYING_KINDS
 
+def _is_qualifying_evidence(evidence: Optional[Dict[str,Any]]) -> bool:
+    if not isinstance(evidence, dict):
+        return False
+    evidence_id=evidence.get("id")
+    return (
+        isinstance(evidence_id, str)
+        and bool(evidence_id.strip())
+        and _is_qualifying(evidence.get("kind",""))
+        and _is_datetime(evidence.get("observed_at",""))
+    )
+
 def _provider_matching_qualifying(
     snapshot: Optional[Dict[str,Any]],
     application_id: str,
@@ -48,7 +59,7 @@ def _provider_matching_qualifying(
     if not snapshot or snapshot.get("read_back") is not True or not _is_datetime(snapshot.get("observed_at","")):
         return None
     if evidence is not None:
-        if not _is_qualifying(evidence.get("kind","")) or not _is_datetime(evidence.get("observed_at","")):
+        if not _is_qualifying_evidence(evidence):
             return None
         candidates=[evidence]
     else:
@@ -170,13 +181,12 @@ def record_transition(career_state: Dict[str,Any], application_id: str, target_s
     all_evidence=updated.get("evidence",[])
     matching_evidence=[e for e in all_evidence if evidence and e.get("id")==evidence.get("id")]
     evidence_id_conflict=any(e.get("application_id")!=application_id for e in matching_evidence)
-    has_qualifying=bool(evidence and not evidence_id_conflict and _is_qualifying(evidence.get("kind","")) and _is_datetime(evidence.get("observed_at","")))
+    has_qualifying=bool(evidence and not evidence_id_conflict and _is_qualifying_evidence(evidence))
     has_evidence=bool(evidence)
     durable_local_qualifying=[
         e for e in all_evidence
         if e.get("application_id")==application_id
-        and _is_qualifying(e.get("kind",""))
-        and _is_datetime(e.get("observed_at",""))
+        and _is_qualifying_evidence(e)
         and not any(other.get("id")==e.get("id") and other.get("application_id")!=application_id for other in all_evidence)
     ]
     local_has_qualifying=bool(durable_local_qualifying)
@@ -341,17 +351,24 @@ def project_batch_status(career_state: Dict[str,Any]):
 
 def coordinate_step(career_state: Dict[str,Any], provider_snapshot, channel_context=None):
     if channel_context is None: channel_context={}
-    selected=select_next_queue_item(career_state)
+    working_state=career_state
+    if provider_snapshot is not None:
+        try:
+            from companion_reconciliation import reconcile as comp_reconcile
+            working_state, _ = comp_reconcile(career_state, provider_snapshot)
+        except Exception:
+            working_state=career_state
+    selected=select_next_queue_item(working_state)
     if not selected:
-        return {"selected": None, "freshness": None, "route": None, "transition": None, "batchStatus": project_batch_status(career_state)}
+        return {"selected": None, "freshness": None, "route": None, "transition": None, "batchStatus": project_batch_status(working_state)}
     freshness=verify_freshness(selected["opportunity"])
     if not freshness["queue_active"]:
-        blocked=record_transition(career_state, selected["application"]["id"], "BLOCKED", None, {"providerSnapshot": provider_snapshot})
+        blocked=record_transition(working_state, selected["application"]["id"], "BLOCKED", None, {"providerSnapshot": provider_snapshot})
         return {"selected": selected, "freshness": freshness, "route": {"route":"BLOCKED","targetState":"BLOCKED","reason":freshness["reason"]}, "transition": {"updatedState": blocked["updatedState"], "receipt": blocked["receipt"]}, "batchStatus": project_batch_status(blocked["updatedState"])}
     route=route_channel(selected["application"], channel_context)
     target=route["targetState"]
     evidence_for_promotion=None
     if target=="SUBMITTED":
         evidence_for_promotion={"id": f"ev-{selected['application']['id']}-{int(datetime.now(timezone.utc).timestamp())}", "kind":"submission_receipt","observed_at":_now_iso(),"artifact":{"owner":"user","kind":"relative_path","locator": f"evidence/{selected['application']['id']}/receipt.txt"}}
-    transition=record_transition(career_state, selected["application"]["id"], target, evidence_for_promotion, {"providerSnapshot": provider_snapshot, "providerAuthorized": channel_context.get("providerAuthorized"), "mailSent": channel_context.get("mailSent"), "operatorConfirmed": channel_context.get("operatorConfirmed")})
+    transition=record_transition(working_state, selected["application"]["id"], target, evidence_for_promotion, {"providerSnapshot": provider_snapshot, "providerAuthorized": channel_context.get("providerAuthorized"), "mailSent": channel_context.get("mailSent"), "operatorConfirmed": channel_context.get("operatorConfirmed")})
     return {"selected": selected, "freshness": freshness, "route": route, "transition": transition, "batchStatus": project_batch_status(transition["updatedState"])}

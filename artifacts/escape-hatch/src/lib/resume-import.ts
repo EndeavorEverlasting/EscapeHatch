@@ -294,6 +294,8 @@ function parseResumeName(value: string) {
   };
 }
 
+const explicitCountry = /^(?:united states(?: of america)?|usa|u\.s\.a\.|us|canada|united kingdom|uk|mexico|india|germany|france|spain|italy|australia|new zealand|ireland)$/i;
+
 function parseContactLocation(lines: string[]): ParsedContactLocation {
   const firstHeading = lines.findIndex((line) => heading(line));
   const contactLines = lines.slice(0, firstHeading >= 0 ? firstHeading : Math.min(lines.length, 10));
@@ -310,14 +312,15 @@ function parseContactLocation(lines: string[]): ParsedContactLocation {
     if (!city || !parts.length) continue;
 
     let country = '';
-    if (parts.length > 1 && /^(?:united states(?: of america)?|usa|u\.s\.a\.|us)$/i.test(parts[parts.length - 1])) {
+    if (parts.length > 1 && explicitCountry.test(parts[parts.length - 1])) {
       country = parts.pop() ?? '';
     }
     const regionPostal = parts.join(', ').trim();
-    const regionPostalMatch = regionPostal.match(/^(.+?)(?:\s+(\d{5}(?:-\d{4})?))?$/);
+    const regionPostalMatch = regionPostal.match(/^(.+?)(?:\s+([A-Z]\d[A-Z]\s?\d[A-Z]\d|\d{5}(?:-\d{4})?))?$/i);
     const region = clean(regionPostalMatch?.[1] ?? '');
     const postal_code = clean(regionPostalMatch?.[2] ?? '');
-    if (!region) continue;
+    const regionLooksStructured = /^[A-Z]{2,3}$/i.test(region);
+    if (!region || (!hasStreet && !country && !postal_code && !regionLooksStructured)) continue;
     return { raw: candidate, street_address, city, region, postal_code, country };
   }
   return {};
@@ -372,7 +375,7 @@ export function parseResumeText(text: string, fileName = 'Imported resume'): Res
   const summary = summaryLines.join(' ');
   addProposal(proposals, 'summary', 'professional_summary', summary, summary ? 'high' : 'low', stamp(fileName, summary, 1));
   const skills = (sectionText(lines, /^(core strengths|skills)$/i).join(' • ').split(/[•·|]/).map(clean).filter((item) => item.length > 1));
-  [...new Set(skills)].forEach((skill) => addProposal(proposals, 'skills', 'skill', skill, 'medium', stamp(fileName, skill, 1)));
+  [...new Set(skills)].forEach((skill) => addProposal(proposals, 'skills', 'skill', skill, 'high', stamp(fileName, skill, 1)));
 
   const projectLines = sectionText(lines, /^(selected software\b.*|projects)$/i);
   const projects: AssistProject[] = [];
@@ -381,7 +384,7 @@ export function parseResumeText(text: string, fileName = 'Imported resume'): Res
     const [namePart, ...descriptionParts] = content.split(/\s+[—-]\s+/);
     const url = urls.find((item) => content.includes(item)) ?? '';
     projects.push({ id: idFor('project', namePart, content), name: clean(namePart), url, description: clean(descriptionParts.join(' — ') || content), provenance: stamp(fileName, content, 1) });
-    addProposal(proposals, 'projects', 'project', content, 'medium', stamp(fileName, content, 1));
+    addProposal(proposals, 'projects', 'project', content, /\s+[—-]\s+/.test(content) ? 'high' : 'medium', stamp(fileName, content, 1));
   }
 
   const experienceLines = sectionText(lines, /^(professional experience|experience)$/i);
@@ -393,7 +396,7 @@ export function parseResumeText(text: string, fileName = 'Imported resume'): Res
     const [head, dates = ''] = line.split(/\s+\|\s+/);
     const [company = '', title = ''] = head.split(/\s+[—-]\s+/);
     current = { id: idFor('experience', company, line), company: clean(company), title: clean(title), dates: clean(dates), location: '', bullets: [], provenance: stamp(fileName, line, 1) };
-    addProposal(proposals, 'experience', 'role', line, 'medium', stamp(fileName, line, 1));
+    addProposal(proposals, 'experience', 'role', line, /\s+[—-]\s+/.test(head) && Boolean(dates) ? 'high' : 'medium', stamp(fileName, line, 1));
   }
   if (current) experience.push(current);
 
@@ -417,7 +420,7 @@ export function parseResumeText(text: string, fileName = 'Imported resume'): Res
       const value = block.join('\n');
       const source = stamp(fileName, value, 2);
       education.push({ id: idFor('education', institution, value), institution: clean(institution), credential: clean(rest.join(' | ')), dates: '', details: block.slice(1).map(clean).join(' '), provenance: source });
-      addProposal(proposals, 'education', 'education', value, 'medium', source);
+      addProposal(proposals, 'education', 'education', value, first.includes('|') ? 'high' : 'medium', source);
     }
   }
 
@@ -426,7 +429,7 @@ export function parseResumeText(text: string, fileName = 'Imported resume'): Res
 
 export function getDeterministicResumeProposals(imported: ResumeImport): ReviewedProposal[] {
   return imported.proposals
-    .filter((proposal) => proposal.confidence === 'high' || proposal.confidence === 'medium')
+    .filter((proposal) => proposal.confidence === 'high')
     .map((proposal) => ({ ...proposal, review: 'accepted' as const }));
 }
 

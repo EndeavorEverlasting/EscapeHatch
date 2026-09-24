@@ -15,7 +15,18 @@ export type FreshnessTransition = { opportunity_id:string; from:VerificationStat
 export type ExecutionTransition = { application_id:string; from:ExecutionState|null; to:ExecutionState|null; evidence_binding:"local"|"provider"|"operator_confirmed"|"none"; conflict_preserved:boolean; reason:string };
 export type ReconciliationResult = { schema:typeof RECONCILIATION_SCHEMA; reconciled_at:string; provider_read_back:boolean; freshness_transition:FreshnessTransition[]; execution_transition:ExecutionTransition[]; evidence_binding:"local"|"provider"|"operator_confirmed"|"none"; conflict_preserved:boolean; queue_active:Record<string,boolean>; history_preserved:boolean; idempotent:boolean };
 function deepClone<T>(v:T):T{return JSON.parse(JSON.stringify(v));}
-function isDateTime(s:string){try{const v=s.endsWith("Z")?s:s.replace("Z","+00:00");return !Number.isNaN(Date.parse(v));}catch{return false;}}
+function isDateTime(s:string){
+  if(typeof s!=="string") return false;
+  const m=/^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.(\\d+))?(Z|([+-])(\\d{2}):(\\d{2}))$/.exec(s);
+  if(!m) return false;
+  const year=Number(m[1]),month=Number(m[2]),day=Number(m[3]),hour=Number(m[4]),minute=Number(m[5]),second=Number(m[6]);
+  const offsetHour=m[10]===undefined?0:Number(m[10]),offsetMinute=m[11]===undefined?0:Number(m[11]);
+  if(year<1||month<1||month>12||hour>23||minute>59||second>59||offsetHour>23||offsetMinute>59) return false;
+  const leap=(year%4===0&&year%100!==0)||year%400===0;
+  const monthDays=[31,leap?29:28,31,30,31,30,31,31,30,31,30,31];
+  if(day<1||day>monthDays[month-1]) return false;
+  return !Number.isNaN(Date.parse(s));
+}
 function qualifyingEvidenceForApp(ev:CareerState["evidence"],appId:string){return ev.filter(e=>e.application_id===appId && QUALIFYING_KINDS.has(e.kind) && isDateTime(e.observed_at || ""));}
 export function reconcile(careerState:CareerState, providerSnapshot:ProviderSnapshot|null|undefined):{reconciledState:CareerState; result:ReconciliationResult}{
   const now=new Date().toISOString(); const reconciledState=deepClone(careerState); const providerReadBack=Boolean(providerSnapshot && providerSnapshot.read_back===true && isDateTime(providerSnapshot.observed_at || ""));
@@ -74,4 +85,4 @@ export function reconcile(careerState:CareerState, providerSnapshot:ProviderSnap
   return {reconciledState,result};
 }
 export function isIdempotent(careerState:CareerState,snapshot:ProviderSnapshot){const f=reconcile(careerState,snapshot); const s=reconcile(f.reconciledState,snapshot); return JSON.stringify(f.reconciledState)===JSON.stringify(s.reconciledState);}
-export function requiresProviderReadBack(s:ProviderSnapshot|null|undefined){return !s||s.read_back!==true;}
+export function requiresProviderReadBack(s:ProviderSnapshot|null|undefined){return !s||s.read_back!==true||!isDateTime(s.observed_at||"");}

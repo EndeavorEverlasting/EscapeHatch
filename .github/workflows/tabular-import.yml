@@ -1,0 +1,39 @@
+name: Tabular Opportunity Import Validation
+
+on:
+  pull_request:
+    paths:
+      - "artifacts/escape-hatch/src/lib/opportunity-import-aliases.ts"
+      - "artifacts/escape-hatch/src/lib/opportunity-tabular-import.ts"
+      - "artifacts/escape-hatch/src/lib/opportunity-tabular-import.test.ts"
+      - "artifacts/escape-hatch/package.json"
+      - "contracts/opportunity-import.v1.json"
+      - ".github/workflows/tabular-import.yml"
+  push:
+    paths:
+      - "artifacts/escape-hatch/src/lib/opportunity-import-aliases.ts"
+      - "artifacts/escape-hatch/src/lib/opportunity-tabular-import.ts"
+      - "artifacts/escape-hatch/src/lib/opportunity-tabular-import.test.ts"
+      - "artifacts/escape-hatch/package.json"
+      - "contracts/opportunity-import.v1.json"
+      - ".github/workflows/tabular-import.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: npm install --prefix artifacts/escape-hatch --ignore-scripts
+      - name: Typecheck cockpit
+        run: npm --prefix artifacts/escape-hatch run typecheck
+      - name: Test tabular import adapters
+        run: npx --prefix artifacts/escape-hatch tsx --test artifacts/escape-hatch/src/lib/opportunity-tabular-import.test.ts
+      - name: Validate import contract
+        run: python scripts/validate_opportunity_import.py
+      - name: Check whitespace
+        run: git diff --check

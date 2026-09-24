@@ -1,0 +1,459 @@
+{
+  "schema_version": "prompt-parallel-dispatch/v1",
+  "run_id": "escapehatch-contextual-autofill-navigation-20260924",
+  "repository": "EndeavorEverlasting/EscapeHatch",
+  "plan_owner": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md",
+  "parent_plan": "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md",
+  "authorization": {
+    "disposition": "PLANNING_ONLY",
+    "implementation_dispatch_performed": false,
+    "reason": "Operator requested planning/factoring for salary autofill, semantic navigation actions, and application context awareness; no product-runtime implementation was authorized in this pass."
+  },
+  "base_ref": {
+    "provider_default_branch": "main",
+    "provider_default_head": "0824535b9dc1341def885a79a098d297df770ac8",
+    "provider_integration_branch": "integration/replit-donor-b01f628-20260921",
+    "provider_integration_head": "d0f89105ed6619263ca311df09abc2a7960f1a0d",
+    "planning_branch": "plan/contextual-autofill-navigation-20260924",
+    "freshness": "PROVIDER_REFRESHED_2026-09-24"
+  },
+  "graph": {
+    "expression": "{ EH-COMP0 || EH-ACT0 || EH-CTX0 } -> { EH-COMP1 || EH-ACT1 || EH-CTX1 || EH-VAL1 } -> EH-CONV -> EH-LIVE",
+    "initial_width_after_authorization": 3,
+    "max_width": 4,
+    "parallel_disposition": "REQUIRED_AFTER_AUTHORIZATION"
+  },
+  "status": "PLANNED_NOT_DISPATCHED_CANONICAL_VALIDATION_BLOCKED",
+  "blockers": [
+    "Planning disposition does not authorize product/runtime implementation dispatch.",
+    "The integration floor does not contain harness/contracts/prompt-parallel-dispatch.v1.json.",
+    "The integration floor does not contain scripts/prompt_parallel_dispatch.py.",
+    "The generic Outputs/prompt-parallel-dispatch/manifest.json target remains reserved by the Windows lifecycle graph; this plan uses a run-scoped manifest.",
+    "Production progression/content convergence must refresh against PR #29 before mutation; cockpit/profile collision must refresh against PR #27."
+  ],
+  "autonomy_gap": "Canonical manifest validation/receipt verification cannot run until the dispatch schema/runner is introduced by its harness owner. This does not prevent durable planning. After implementation authorization, use isolated provider/local writer lanes and preserve exact-head evidence.",
+  "convergence_owner": "EH-CONV",
+  "lanes": [
+    {
+      "lane_id": "EH-COMP0",
+      "wave": 0,
+      "mission": "Define verified opportunity compensation provenance, desired-compensation semantic families, and posted-maximum default/override rules.",
+      "dependencies": [
+        "implementation authorization",
+        "refreshed integration floor"
+      ],
+      "owned_mutation_surfaces": [
+        "contracts/career-state.v1.schema.json",
+        "harness/contracts/application-form-taxonomy.v1.json",
+        "harness/contracts/application-preference-cache.v1.json",
+        "new compensation contract/fixtures/tests if separation is clearer"
+      ],
+      "forbidden_surfaces": [
+        "real employer/application data",
+        "browser DOM writes",
+        "unsupported pay-period conversion",
+        "final submission"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent_or_provider_writer",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-COMP0",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "typed compensation provenance",
+        "posted_max default strategy",
+        "semantic alias families",
+        "positive/negative synthetic fixtures"
+      ],
+      "validation": [
+        "focused compensation contract validator/tests",
+        "python scripts/validate_career_state.py",
+        "python scripts/validate_application_harness.py",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-CONV",
+      "status": "PLANNED"
+    },
+    {
+      "lane_id": "EH-ACT0",
+      "wave": 0,
+      "mission": "Define semantic navigation action ontology and hard irreversible-action boundaries.",
+      "dependencies": [
+        "implementation authorization",
+        "refreshed integration floor"
+      ],
+      "owned_mutation_surfaces": [
+        "contracts/application-action-semantics.v1.json",
+        "synthetic action alias fixtures",
+        "focused validator/tests"
+      ],
+      "forbidden_surfaces": [
+        "production clicks",
+        "ATS-specific selectors",
+        "final submit/sign/certify/withdraw automation"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent_or_provider_writer",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-ACT0",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "action-kind enum",
+        "alias/context classification contract",
+        "manual-only irreversible set",
+        "positive/negative fixtures"
+      ],
+      "validation": [
+        "focused action-semantics validator/tests",
+        "python tests/test_application_assist_session_contract.py",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-CONV",
+      "status": "PLANNED"
+    },
+    {
+      "lane_id": "EH-CTX0",
+      "wave": 0,
+      "mission": "Define application flow topology/stage/page/virtual-section context independently of ATS vendor and input modality.",
+      "dependencies": [
+        "implementation authorization",
+        "refreshed integration floor"
+      ],
+      "owned_mutation_surfaces": [
+        "contracts/application-flow-context.v1.json",
+        "synthetic topology fixtures",
+        "focused validator/tests"
+      ],
+      "forbidden_surfaces": [
+        "browser runtime mutation",
+        "required vision dependency",
+        "ATS-specific flow hardcoding"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent_or_provider_writer",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-CTX0",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "topology enum",
+        "stage/section model",
+        "context signal contract",
+        "transition/context fixtures"
+      ],
+      "validation": [
+        "focused flow-context validator/tests",
+        "python scripts/validate_application_harness.py",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-CONV",
+      "status": "PLANNED"
+    },
+    {
+      "lane_id": "EH-COMP1",
+      "wave": 1,
+      "mission": "Implement opportunity-aware compensation resolver and desired-compensation field matcher through the canonical Fill Plan.",
+      "dependencies": [
+        "EH-COMP0",
+        "refreshed Application Assist runtime floor"
+      ],
+      "owned_mutation_surfaces": [
+        "browser/application-assist/compensation.js",
+        "smallest required Fill Plan/preference integration",
+        "synthetic compensation runtime tests"
+      ],
+      "forbidden_surfaces": [
+        "market inference",
+        "current salary inference",
+        "unsupported conversion",
+        "unrelated resume/profile intake"
+      ],
+      "posture": "isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-COMP1",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "posted-max resolver",
+        "semantic field matcher",
+        "override precedence",
+        "fail-closed ambiguity behavior"
+      ],
+      "validation": [
+        "focused compensation runtime tests",
+        "node tests/test_application_assist_session.mjs",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-CONV",
+      "status": "WAITING_EH_COMP0"
+    },
+    {
+      "lane_id": "EH-ACT1",
+      "wave": 1,
+      "mission": "Implement context-aware action classification and progression gating without weakening final-submit safety.",
+      "dependencies": [
+        "EH-ACT0",
+        "PR #29 merged/superseded/reconciled"
+      ],
+      "owned_mutation_surfaces": [
+        "browser/application-assist/progression.js",
+        "browser/application-assist/navigation-adapter.js",
+        "optional cohesive action-classifier module",
+        "focused tests"
+      ],
+      "forbidden_surfaces": [
+        "final submit/sign/certify/withdraw",
+        "click-by-label fallback",
+        "unrelated profile logic"
+      ],
+      "posture": "isolated writer after recovery-floor refresh",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-ACT1",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "semantic action classifier",
+        "context-aware Progression Plan",
+        "live action identity recheck",
+        "manual-only exit/submit actions"
+      ],
+      "validation": [
+        "focused action/progression tests",
+        "node tests/test_application_assist_session.mjs",
+        "application-assist CI",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-CONV",
+      "status": "WAITING_EH_ACT0_AND_PR29"
+    },
+    {
+      "lane_id": "EH-CTX1",
+      "wave": 1,
+      "mission": "Implement flow-context runtime across one-page, multi-step, SPA, and account-gated applications.",
+      "dependencies": [
+        "EH-CTX0",
+        "PR #29 merged/superseded/reconciled"
+      ],
+      "owned_mutation_surfaces": [
+        "browser/application-assist/flow-context.js",
+        "smallest content.js integration",
+        "session-local context projection",
+        "focused tests"
+      ],
+      "forbidden_surfaces": [
+        "duplicate assist state machine",
+        "required vision adapter",
+        "Taleo-only behavior"
+      ],
+      "posture": "isolated writer after recovery-floor refresh",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-CTX1",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "topology detector",
+        "stage/virtual-section context",
+        "stepper/transition fusion",
+        "fail-closed uncertainty"
+      ],
+      "validation": [
+        "focused context runtime tests",
+        "node tests/test_application_assist_session.mjs",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-CONV",
+      "status": "WAITING_EH_CTX0_AND_PR29"
+    },
+    {
+      "lane_id": "EH-VAL1",
+      "wave": 1,
+      "mission": "Bind compensation, action, and context semantics to cross-context adversarial positive/negative fixtures.",
+      "dependencies": [
+        "EH-COMP0",
+        "EH-ACT0",
+        "EH-CTX0"
+      ],
+      "owned_mutation_surfaces": [
+        "new contextual application fixtures",
+        "new focused validation/tests",
+        "non-colliding CI wiring"
+      ],
+      "forbidden_surfaces": [
+        "real application/profile values",
+        "production behavior except minimal testability seam approved by convergence owner"
+      ],
+      "posture": "isolated validator writer",
+      "adapter": {
+        "kind": "local_repo_agent_or_ci",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-VAL1",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "salary alias fixtures",
+        "action semantic fixtures",
+        "one-page/multi-step/SPA fixtures",
+        "final-submit negative cases"
+      ],
+      "validation": [
+        "focused contextual fixture suite",
+        "application-assist CI",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-CONV",
+      "status": "WAITING_CONTRACT_FLOORS"
+    },
+    {
+      "lane_id": "EH-CONV",
+      "wave": 2,
+      "mission": "Converge contextual compensation autofill, flow context, action semantics, and truth-driven UX into one continuous assist loop.",
+      "dependencies": [
+        "EH-COMP1",
+        "EH-ACT1",
+        "EH-CTX1",
+        "EH-VAL1"
+      ],
+      "owned_mutation_surfaces": [
+        "shared application-assist integration files",
+        "session/content/popup convergence",
+        "presence/context projection",
+        "combined tests"
+      ],
+      "forbidden_surfaces": [
+        "automatic final submit",
+        "manual-gate bypass",
+        "duplicate state authority"
+      ],
+      "posture": "single convergence owner",
+      "adapter": {
+        "kind": "local_convergence_owner_plus_provider",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "converge_validate_integrate",
+        "arguments": {
+          "sprint": "EH-CONV",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "continuous contextual autofill run",
+        "safe intermediate progression",
+        "final-submit stop",
+        "combined regression evidence"
+      ],
+      "validation": [
+        "all focused lane tests",
+        "application-assist contract/runtime/browser tests",
+        "career-state/companion tests where touched",
+        "git diff --check"
+      ],
+      "convergence_owner": "EH-CONV",
+      "status": "WAITING_WAVE1"
+    },
+    {
+      "lane_id": "EH-LIVE",
+      "wave": 3,
+      "mission": "Execute controlled live acceptance on materially different ATS topologies and hand the exact validated candidate to release/promotion.",
+      "dependencies": [
+        "EH-CONV"
+      ],
+      "owned_mutation_surfaces": [
+        "sanitized acceptance receipt",
+        "compatibility documentation",
+        "release classification/promotion evidence"
+      ],
+      "forbidden_surfaces": [
+        "private answer leakage",
+        "universal ATS claims",
+        "automatic final submission"
+      ],
+      "posture": "single closeout owner",
+      "adapter": {
+        "kind": "local_browser_acceptance_plus_provider",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "validate_release_promote",
+        "arguments": {
+          "sprint": "EH-LIVE",
+          "plan": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+        }
+      },
+      "expected_artifacts": [
+        "observed multi-step acceptance",
+        "observed materially different topology acceptance",
+        "manual final-submit proof",
+        "promotion handoff"
+      ],
+      "validation": [
+        "controlled live ATS observation",
+        "repository validators",
+        "post-integration containment proof"
+      ],
+      "convergence_owner": "repository promotion owner",
+      "status": "WAITING_EH_CONV"
+    }
+  ],
+  "manifest_path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-contextual-autofill-navigation-20260924/manifest.json",
+  "canonical_target_disposition": {
+    "requested_target": "Outputs/prompt-parallel-dispatch/manifest.json",
+    "status": "BLOCKED_RESERVED_BY_ACTIVE_WINDOWS_LIFECYCLE_GRAPH_AND_MISSING_CANONICAL_SCHEMA_RUNNER",
+    "run_scoped_manifest": "Outputs/prompt-parallel-dispatch/runs/escapehatch-contextual-autofill-navigation-20260924/manifest.json"
+  }
+}

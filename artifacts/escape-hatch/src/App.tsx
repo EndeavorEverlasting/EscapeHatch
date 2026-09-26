@@ -74,9 +74,8 @@ import {
   serializeSyncPayload,
   type AssistAnswer,
   type AssistProfile,
-  type ReviewedProposal,
 } from '@/lib/assist-contract';
-import { applyAcceptedResumeImport, extractResumeText, getAcceptedResumeContactPatch, parseResumeText, type ResumeImport } from '@/lib/resume-import';
+import { applyDeterministicResumeImport, extractResumeText, parseResumeText } from '@/lib/resume-import';
 import { initialSession, parseAssistSessionStatus, type AssistSession } from '@/lib/assist-session';
 
 const queryClient = new QueryClient();
@@ -616,6 +615,7 @@ function ProfilePage({
   const importData = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    const generation = ++resumeImportGenerationRef.current;
     const reader = new FileReader();
     reader.onload = () => {
       const result = parseProfileExportText(String(reader.result));
@@ -1058,12 +1058,16 @@ function AssistPage({
   const [assistProfile, setAssistProfile] = useStoredState<AssistProfile>(ASSIST_KEY, emptyAssistProfile(profile), parseAssistProfile);
   const [session, setSession] = useStoredState<AssistSession>(ASSIST_SESSION_KEY, initialSession(), parseAssistSessionStatus);
   const [assistAnswers, setAssistAnswers] = useStoredState<AssistAnswer[]>(ASSIST_ANSWERS_KEY, [], (value) => Array.isArray(value) ? value.filter((item): item is AssistAnswer => Boolean(item && typeof item === 'object' && typeof (item as AssistAnswer).id === 'string' && typeof (item as AssistAnswer).content === 'string')) : null);
-  const [resume, setResume] = useState<ResumeImport | null>(null);
   const [feedback, setFeedback] = useState('');
   const [pendingSync, setPendingSync] = useState<{ profile: AssistProfile; answers: AssistAnswer[]; baseProfile?: Profile } | null>(null);
   const [milestone, setMilestone] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
   const sessionFileRef = useRef<HTMLInputElement>(null);
+  const resumeImportGenerationRef = useRef(0);
+  const assistProfileRef = useRef(assistProfile);
+  const profileRef = useRef(profile);
+  assistProfileRef.current = assistProfile;
+  profileRef.current = profile;
   const currentAnswers: AssistAnswer[] = [...answers.map((answer) => ({ ...answer, scope: 'reusable' as const })), ...assistAnswers].filter((answer, index, items) => items.findIndex((item) => item.id === answer.id) === index);
 
   const importResume = (event: ChangeEvent<HTMLInputElement>) => {
@@ -1073,10 +1077,32 @@ function AssistPage({
     reader.onload = async () => {
       try {
         const text = file.type === 'text/plain' || file.name.endsWith('.txt') ? String(reader.result) : await extractResumeText(file);
-        setResume(parseResumeText(text, file.name));
-        setFeedback('Resume read locally. Review each proposal before saving anything.');
+        if (generation !== resumeImportGenerationRef.current) return;
+        const imported = parseResumeText(text, file.name);
+        const currentAssistProfile = assistProfileRef.current;
+        const currentProfile = profileRef.current;
+        const deterministic = applyDeterministicResumeImport(imported, currentAssistProfile, currentProfile);
+        const conflicts = Object.entries(deterministic.contactPatch).filter(([field, value]) => {
+          const existing = currentProfile[field as keyof Profile];
+          return Boolean(existing && value && existing !== value);
+        });
+        setAssistProfile(deterministic.profile);
+        setProfile((current) => {
+          const next = { ...current };
+          for (const [field, value] of Object.entries(deterministic.contactPatch) as [keyof Profile, string][]) {
+            if (!value) continue;
+            if (!next[field] || next[field] === value) next[field] = value;
+          }
+          return next;
+        });
+        const summaryAnswer = deterministic.accepted.find((item) => item.section === 'summary' && item.field === 'professional_summary');
+        if (summaryAnswer && !answers.some((answer) => answer.title === 'Professional summary')) {
+          setAnswers((items) => [{ id: uid(), title: 'Professional summary', category: 'Career story', content: summaryAnswer.value, updatedAt: now() }, ...items]);
+          setAssistAnswers((items) => [{ id: uid(), title: 'Professional summary', category: 'Career story', content: summaryAnswer.value, updatedAt: now(), scope: 'reusable', canonicalId: 'professional-summary' }, ...items.filter((item) => item.canonicalId !== 'professional-summary')]);
+        }
+        const preserved = conflicts.length ? ` ${conflicts.length} existing profile value${conflicts.length === 1 ? ' was' : 's were'} preserved because the resume disagreed.` : '';
+        setFeedback(`Resume parsed locally. ${deterministic.accepted.length} deterministic value${deterministic.accepted.length === 1 ? '' : 's'} are ready with no setup step.${preserved}`);
       } catch (error) {
-        setResume(null);
         setFeedback(error instanceof Error ? error.message : 'The resume could not be read.');
       }
     };
@@ -1086,29 +1112,6 @@ function AssistPage({
     event.target.value = '';
   };
 
-  const reviewProposal = (id: string, review: ReviewedProposal['review']) => {
-    setResume((current) => current ? { ...current, proposals: current.proposals.map((item) => item.id === id ? { ...item, review } : item) } : current);
-  };
-  const editProposal = (proposal: ReviewedProposal) => {
-    const next = window.prompt('Edit this proposed value before accepting it.', proposal.value);
-    if (next === null) return;
-    setResume((current) => current ? { ...current, proposals: current.proposals.map((item) => item.id === proposal.id ? { ...item, value: next, review: 'edited' } : item) } : current);
-  };
-  const approveResume = () => {
-    if (!resume) return;
-    const accepted = resume.proposals.filter((item) => item.review === 'accepted' || item.review === 'edited');
-    const nextAssist = applyAcceptedResumeImport(resume, accepted, assistProfile);
-    const nextBase: Profile = { ...profile, ...getAcceptedResumeContactPatch(accepted) };
-    setAssistProfile(nextAssist);
-    setProfile(nextBase);
-    const summaryAnswer = accepted.find((item) => item.section === 'summary' && item.field === 'professional_summary');
-    if (summaryAnswer && !answers.some((answer) => answer.title === 'Professional summary')) {
-      setAnswers((items) => [{ id: uid(), title: 'Professional summary', category: 'Career story', content: summaryAnswer.value, updatedAt: now() }, ...items]);
-      setAssistAnswers((items) => [{ id: uid(), title: 'Professional summary', category: 'Career story', content: summaryAnswer.value, updatedAt: now(), scope: 'reusable', canonicalId: 'professional-summary' }, ...items.filter((item) => item.canonicalId !== 'professional-summary')]);
-    }
-    setFeedback(`${accepted.length} reviewed proposal${accepted.length === 1 ? '' : 's'} saved locally. Rejected proposals were not saved.`);
-    setResume(null);
-  };
   const exportSync = () => {
     const blob = new Blob([serializeSyncPayload(assistProfile, currentAnswers, profile, 'cockpit')], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -1117,7 +1120,7 @@ function AssistPage({
     anchor.download = 'escape-hatch-assist-sync.json';
     anchor.click();
     URL.revokeObjectURL(url);
-    setFeedback('Reviewed assist sync exported. Nothing was sent to a server.');
+    setFeedback('Assist sync exported. Nothing was sent to a server.');
   };
   const importSync = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -1181,38 +1184,34 @@ function AssistPage({
   };
 
   return <div>
-     <PageIntro eyebrow="Browser assist" title="Fill the repeatable parts." description="Review local profile knowledge here, then use the MV3 assistant to scan and fill one page at a time. It never advances or submits an application." action={<div className="flex flex-wrap justify-end gap-2"><Button variant="outline" type="button" onClick={() => fileRef.current?.click()} data-testid="button-import-resume"><FileUp size={16} /> Import resume</Button><Button variant="outline" type="button" onClick={exportSync} data-testid="button-export-assist-sync"><FileDown size={16} /> Export assist sync</Button><Button variant="outline" type="button" onClick={exportSession} data-testid="button-export-assist-session"><FileDown size={16} /> Export session status</Button><label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm font-bold hover:bg-secondary"><FileUp size={16} /> Import session<input ref={sessionFileRef} type="file" accept="application/json,.json" onChange={importSession} className="hidden" data-testid="input-import-assist-session" /></label><input ref={fileRef} type="file" accept=".pdf,.txt,text/plain,application/pdf" onChange={importResume} className="hidden" data-testid="input-import-resume" /></div>} />
+     <PageIntro eyebrow="Browser assist" title="Fill the repeatable parts." description="Import a resume once and EscapeHatch deterministically builds the reusable profile locally. Then use the MV3 assistant to scan and fill one page at a time." action={<div className="flex flex-wrap justify-end gap-2"><Button variant="outline" type="button" onClick={() => fileRef.current?.click()} data-testid="button-import-resume"><FileUp size={16} /> Import resume</Button><Button variant="outline" type="button" onClick={exportSync} data-testid="button-export-assist-sync"><FileDown size={16} /> Export assist sync</Button><Button variant="outline" type="button" onClick={exportSession} data-testid="button-export-assist-session"><FileDown size={16} /> Export session status</Button><label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm font-bold hover:bg-secondary"><FileUp size={16} /> Import session<input ref={sessionFileRef} type="file" accept="application/json,.json" onChange={importSession} className="hidden" data-testid="input-import-assist-session" /></label><input ref={fileRef} type="file" accept=".pdf,.txt,text/plain,application/pdf" onChange={importResume} className="hidden" data-testid="input-import-resume" /></div>} />
     {feedback && <p role="status" aria-live="polite" data-testid="assist-feedback" className="mb-5 rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 text-sm font-bold text-primary">{feedback}</p>}
     <div className="grid gap-5 lg:grid-cols-[1.25fr_.75fr]">
       <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-7">
-        <div className="flex items-start justify-between gap-4"><div><p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-muted-foreground">Reviewed local knowledge</p><h2 className="mt-2 font-display text-2xl">Ready for an application page</h2><p className="mt-1 text-sm leading-6 text-muted-foreground">Only accepted or edited proposals become reusable data. Source labels and snippets stay attached for review.</p></div><ShieldCheck size={21} className="text-primary" /></div>
+        <div className="flex items-start justify-between gap-4"><div><p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-muted-foreground">Resume-derived local knowledge</p><h2 className="mt-2 font-display text-2xl">Ready for an application page</h2><p className="mt-1 text-sm leading-6 text-muted-foreground">Explicit resume facts become reusable data automatically. Existing non-empty profile values win on conflicts; missing or ambiguous facts are never guessed.</p></div><ShieldCheck size={21} className="text-primary" /></div>
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           {[
-            ['Contact', `${[assistProfile.contact.first_name, assistProfile.contact.last_name].filter(Boolean).join(' ') || 'Not reviewed'} · ${assistProfile.contact.email || 'No email'}`],
-            ['Summary', assistProfile.summary ? 'Reviewed summary ready' : 'No summary reviewed'],
+            ['Contact', `${[assistProfile.contact.first_name, assistProfile.contact.last_name].filter(Boolean).join(' ') || 'Not found'} · ${assistProfile.contact.email || 'No email'}`],
+            ['Summary', assistProfile.summary ? 'Resume summary ready' : 'No summary found'],
             ['Skills', `${assistProfile.skills.length} reusable skills`],
-            ['Experience', `${assistProfile.experience.length} reviewed roles`],
-            ['Projects', `${assistProfile.projects.length} reviewed projects`],
-            ['Education', `${assistProfile.education.length} reviewed entries`],
+            ['Experience', `${assistProfile.experience.length} resume roles`],
+            ['Projects', `${assistProfile.projects.length} resume projects`],
+            ['Education', `${assistProfile.education.length} resume entries`],
           ].map(([label, value]) => <div key={label} className="rounded-xl bg-secondary/55 p-4"><p className="font-mono-app text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p><p className="mt-2 text-sm font-bold">{value}</p></div>)}
         </div>
         <div className="mt-6 border-t border-border pt-5">
           <p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-muted-foreground">Bridge recovery</p>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">Sync is user initiated and validated. If the extension is unavailable, export this JSON and import it from its Profile bridge panel later.</p>
-       <div className="mt-4 flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={exportSync}>Export reviewed sync</Button><label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm font-bold hover:bg-secondary"><FileUp size={16} /> Import reviewed sync<input type="file" accept="application/json,.json" onChange={importSync} className="hidden" data-testid="input-import-assist-sync" /></label></div>
+       <div className="mt-4 flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={exportSync}>Export assist sync</Button><label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm font-bold hover:bg-secondary"><FileUp size={16} /> Import assist sync<input type="file" accept="application/json,.json" onChange={importSync} className="hidden" data-testid="input-import-assist-sync" /></label></div>
         </div>
       </section>
       <aside className="h-fit rounded-2xl border border-border bg-primary p-5 text-primary-foreground shadow-sm sm:p-6">
         <p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-primary-foreground/65">Load unpacked</p>
         <h2 className="mt-2 font-display text-2xl">Use the active tab, not automation.</h2>
-        <ol className="mt-5 space-y-3 text-sm leading-6 text-primary-foreground/80"><li><strong className="text-primary-foreground">1.</strong> Open browser extensions and enable developer mode.</li><li><strong className="text-primary-foreground">2.</strong> Choose Load unpacked and select <code className="rounded bg-primary-foreground/10 px-1">browser/application-assist</code>.</li><li><strong className="text-primary-foreground">3.</strong> Export a reviewed sync, import it in the extension, then Start Assist on the application tab.</li></ol>
+        <ol className="mt-5 space-y-3 text-sm leading-6 text-primary-foreground/80"><li><strong className="text-primary-foreground">1.</strong> Open browser extensions and enable developer mode.</li><li><strong className="text-primary-foreground">2.</strong> Choose Load unpacked and select <code className="rounded bg-primary-foreground/10 px-1">browser/application-assist</code>.</li><li><strong className="text-primary-foreground">3.</strong> Export an assist sync, import it in the extension, then Start Assist on the application tab.</li></ol>
         <p className="mt-5 border-t border-primary-foreground/15 pt-4 text-xs leading-5 text-primary-foreground/65">Active-tab access only. Passwords, uploads, attestations, demographic fields, and navigation controls are blocked.</p>
       </aside>
     </div>
-    {resume && <section className="mt-5 rounded-2xl border border-accent/50 bg-accent/10 p-5 sm:p-7" data-testid="resume-review-panel">
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start"><div><p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-accent-foreground">Review before saving</p><h2 className="mt-2 font-display text-2xl">{resume.fileName}</h2><p className="mt-1 text-sm leading-6 text-muted-foreground">Each proposal includes source context. Accept, edit, or reject individually. Nothing is saved until you choose Save reviewed proposals.</p></div><Button type="button" onClick={approveResume} data-testid="button-save-reviewed-resume"><Check size={16} /> Save reviewed proposals</Button></div>
-      <div className="mt-5 grid gap-3 lg:grid-cols-2">{resume.proposals.map((proposal) => <article key={proposal.id} className="rounded-xl border border-border bg-card p-4" data-testid={`resume-proposal-${proposal.id}`}><div className="flex items-start justify-between gap-3"><div><span className="font-mono-app text-[10px] uppercase tracking-wide text-primary">{proposal.section} · {proposal.field}</span><p className="mt-2 whitespace-pre-wrap text-sm leading-6">{proposal.value}</p></div><span className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase ${proposal.review === 'rejected' ? 'bg-destructive/10 text-destructive' : proposal.review === 'proposed' ? 'bg-secondary text-muted-foreground' : 'bg-primary/10 text-primary'}`}>{proposal.review}</span></div><p className="mt-3 border-t border-border pt-3 text-xs leading-5 text-muted-foreground">Source: {proposal.provenance.label}{proposal.provenance.page ? ` · page ${proposal.provenance.page}` : ''}{proposal.provenance.snippet ? ` · “${proposal.provenance.snippet}”` : ''}</p><div className="mt-3 flex flex-wrap gap-2"><Button type="button" variant={proposal.review === 'accepted' ? 'primary' : 'outline'} onClick={() => reviewProposal(proposal.id, 'accepted')}>Accept</Button><Button type="button" variant="quiet" onClick={() => editProposal(proposal)}>Edit</Button><Button type="button" variant="danger" onClick={() => reviewProposal(proposal.id, 'rejected')}>Reject</Button></div></article>)}</div>
-    </section>}
     {pendingSync && <section className="mt-5 rounded-2xl border border-accent/45 bg-accent/10 p-5" data-testid="assist-sync-conflict"><p className="font-bold">Incoming sync needs a choice</p><p className="mt-1 text-sm leading-6 text-muted-foreground">The incoming profile or answers differ from current work. Choose a side or merge unique entries; nothing is overwritten silently.</p><div className="mt-4 flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={() => applySync('keep-current')}>Keep current</Button><Button type="button" onClick={() => applySync('merge')}>Merge unique items</Button><Button type="button" onClick={() => applySync('use-incoming')}>Use incoming</Button></div></section>}
     <div className="mt-5"><AssistProgress session={session} /></div>
     <section className="mt-5 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-7"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-muted-foreground">Explicit milestone</p><h2 className="mt-2 font-display text-2xl">Record what you decided</h2><p className="mt-1 text-sm leading-6 text-muted-foreground">Observed pages are not applications. Choose an opportunity only when you personally want to record an applied milestone.</p></div><div className="flex gap-2"><select value={milestone} onChange={(event) => setMilestone(event.target.value)} data-testid="select-assist-milestone" className="max-w-[220px] rounded-lg border border-input bg-background px-3 py-2.5 text-sm"><option value="">Choose opportunity</option>{applications.filter((item) => item.status !== 'closed').map((item) => <option key={item.id} value={item.id}>{item.company} · {item.role}</option>)}</select><Button type="button" onClick={recordMilestone} disabled={!milestone} data-testid="button-record-assist-milestone">Record applied</Button></div></div>{session.pages.length > 0 && <div className="mt-6 space-y-2">{session.pages.map((page) => <div key={page.key} className="flex flex-col gap-1 rounded-lg bg-secondary/55 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"><span className="font-bold">{page.title || 'Application page'}</span><span className="text-xs text-muted-foreground">{page.status} · {page.filled} filled · {formatUpdated(page.scannedAt)}</span></div>)}</div>}</section>

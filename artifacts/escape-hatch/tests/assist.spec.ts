@@ -4,99 +4,111 @@ import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-test('imports a synthetic local resume into a review panel without auto-saving', async ({ page }) => {
+test('imports a synthetic local resume into the reusable profile with no review step', async ({ page }) => {
   const resumeText = [
     'Synthetic Candidate',
-    'Example City, NY | candidate@example.test',
+    '123 Main Street, Example City, NY 10001, United States | candidate@example.test | (555) 010-0101',
     'PROFESSIONAL SUMMARY',
     'Synthetic summary.',
     'CORE STRENGTHS',
-    'Automation',
+    'Automation • Testing',
+    'PROJECTS',
+    '• Deterministic Import — Builds reusable profile state.',
     'PROFESSIONAL EXPERIENCE',
     'Example Org — Example Role | 2024–Present',
     'EDUCATION',
     'Example Institute | Example Credential',
   ].join('\n');
+
   await page.goto('/assist');
   await page.locator('[data-testid="input-import-resume"]').setInputFiles({
     name: 'synthetic-resume.txt',
     mimeType: 'text/plain',
     buffer: Buffer.from(resumeText),
   });
-  await expect(page.locator('[data-testid="assist-feedback"]')).toContainText('Resume read locally', { timeout: 15_000 });
-  await expect(page.locator('[data-testid="resume-review-panel"]')).toBeVisible();
-  expect(await page.locator('[data-testid^="resume-proposal-"]').count()).toBeGreaterThan(2);
-  await expect(page.locator('[data-testid="assist-feedback"]')).toContainText('Review each proposal');
-});
-test('saves edited review proposals, applies location, rejects untouched fields, and survives reload', async ({ page }) => {
-  const resumeText = [
-    'Review Candidate',
-    'Review City, NY | source@example.test | (555) 010-0101 | https://linkedin.com/in/source | https://source.example.test',
-    'PROFESSIONAL SUMMARY',
-    'Original summary text.',
-    'CORE STRENGTHS',
-    'Original Skill',
-    'PROJECTS',
-    '• Original Project — Original project details.',
-    'PROFESSIONAL EXPERIENCE',
-    'Original Org — Original Role | 2020–Present',
-    'EDUCATION',
-    'Original Institute | Original Credential',
-  ].join('\n');
-  await page.goto('/assist');
-  const beforeReview = await page.evaluate(() => localStorage.getItem('escape-hatch-assist-profile'));
-  await page.locator('[data-testid="input-import-resume"]').setInputFiles({
-    name: 'synthetic-review.txt',
-    mimeType: 'text/plain',
-    buffer: Buffer.from(resumeText),
-  });
-  await expect(page.locator('[data-testid="resume-review-panel"]')).toBeVisible();
-  expect(await page.evaluate(() => localStorage.getItem('escape-hatch-assist-profile'))).toBe(beforeReview);
 
-  const edit = async (label: string, value: string) => {
-    const article = page.locator('[data-testid^="resume-proposal-"]').filter({ hasText: label }).first();
-    page.once('dialog', (dialog) => dialog.accept(value));
-    await article.getByRole('button', { name: 'Edit' }).click();
-  };
-  const accept = async (label: string) => {
-    await page.locator('[data-testid^="resume-proposal-"]').filter({ hasText: label }).first().getByRole('button', { name: 'Accept' }).click();
-  };
+  await expect(page.locator('[data-testid="assist-feedback"]')).toContainText('Resume parsed locally', { timeout: 15_000 });
+  await expect(page.locator('[data-testid="assist-feedback"]')).toContainText('no setup step');
+  await expect(page.locator('[data-testid="resume-review-panel"]')).toHaveCount(0);
 
-  await edit('contact · name', 'Reviewed Candidate');
-  await edit('contact · email', 'reviewed@example.test');
-  await edit('contact · location', 'Reviewed City, CA');
-  await edit('links · linkedin_url', 'https://linkedin.com/in/reviewed');
-  await edit('links · website', 'https://reviewed.example.test');
-  await edit('skills · skill', 'Reviewed Skill');
-  await edit('projects · project', 'Reviewed Project — Reviewed project details.');
-  await edit('experience · role', 'Reviewed Org — Reviewed Role | 2030–Present');
-  await edit('education · education', 'Reviewed Institute | Reviewed Credential');
-  await accept('contact · name');
-  await accept('contact · email');
-  await accept('contact · location');
-  await accept('links · linkedin_url');
-  await accept('links · website');
-  await accept('skills · skill');
-  await accept('projects · project');
-  await accept('experience · role');
-  await accept('education · education');
-  await page.locator('[data-testid^="resume-proposal-"]').filter({ hasText: 'contact · phone' }).first().getByRole('button', { name: 'Reject' }).click();
-  await page.locator('[data-testid="button-save-reviewed-resume"]').click();
-  await expect(page.locator('[data-testid="assist-feedback"]')).toContainText('saved locally');
   const saved = await page.evaluate(() => ({
     profile: JSON.parse(localStorage.getItem('escape-hatch-profile') ?? '{}'),
     assist: JSON.parse(localStorage.getItem('escape-hatch-assist-profile') ?? '{}'),
   }));
-  expect(saved.profile).toMatchObject({ first_name: 'Reviewed', last_name: 'Candidate', email: 'reviewed@example.test', city: 'Reviewed City', region: 'CA', phone: '' });
-  expect(saved.assist.contact).toMatchObject({ email: 'reviewed@example.test', city: 'Reviewed City', region: 'CA', phone: '' });
-  expect(saved.assist.skills).toContain('Reviewed Skill');
-  expect(saved.assist.projects.at(-1)).toMatchObject({ name: 'Reviewed Project', description: 'Reviewed project details.' });
-  expect(saved.assist.experience.at(-1)).toMatchObject({ company: 'Reviewed Org', title: 'Reviewed Role' });
-  expect(saved.assist.education.at(-1)).toMatchObject({ institution: 'Reviewed Institute', credential: 'Reviewed Credential' });
+  expect(saved.profile).toMatchObject({
+    first_name: 'Synthetic',
+    last_name: 'Candidate',
+    email: 'candidate@example.test',
+    phone: '(555) 010-0101',
+    street_address: '123 Main Street',
+    city: 'Example City',
+    region: 'NY',
+    postal_code: '10001',
+    country: 'United States',
+  });
+  expect(saved.assist.contact).toMatchObject(saved.profile);
+  expect(saved.assist.summary).toBe('Synthetic summary.');
+  expect(saved.assist.skills).toEqual(expect.arrayContaining(['Automation', 'Testing']));
+  expect(saved.assist.projects).toHaveLength(1);
+  expect(saved.assist.experience).toHaveLength(1);
+  expect(saved.assist.education).toHaveLength(1);
 
   await page.reload();
-  await expect(page.locator('[data-testid="resume-review-panel"]')).toHaveCount(0);
-  await expect(page.locator('text=reviewed@example.test')).toBeVisible();
+  await expect(page.getByText('candidate@example.test')).toBeVisible();
+});
+
+test('automatic resume intake preserves existing non-empty profile truth on conflict', async ({ page }) => {
+  await page.goto('/assist');
+  await page.evaluate(() => {
+    localStorage.setItem('escape-hatch-profile', JSON.stringify({
+      name_prefix: '',
+      first_name: 'Existing',
+      last_name: 'Candidate',
+      preferred_name: '',
+      email: 'keep@example.test',
+      phone: '',
+      phone_authority: '',
+      linkedin_url: '',
+      street_address: '',
+      city: '',
+      region: '',
+      postal_code: '',
+      country: '',
+    }));
+  });
+  await page.reload();
+
+  await page.locator('[data-testid="input-import-resume"]').setInputFiles({
+    name: 'conflicting-resume.txt',
+    mimeType: 'text/plain',
+    buffer: Buffer.from([
+      'Resume Candidate',
+      'Resume City, NJ | replace@example.test',
+      'PROFESSIONAL SUMMARY',
+      'Imported summary.',
+    ].join('\n')),
+  });
+
+  await expect(page.locator('[data-testid="assist-feedback"]')).toContainText('preserved because the resume disagreed');
+  const saved = await page.evaluate(() => ({
+    profile: JSON.parse(localStorage.getItem('escape-hatch-profile') ?? '{}'),
+    assist: JSON.parse(localStorage.getItem('escape-hatch-assist-profile') ?? '{}'),
+  }));
+  expect(saved.profile).toMatchObject({
+    first_name: 'Existing',
+    last_name: 'Candidate',
+    email: 'keep@example.test',
+    city: 'Resume City',
+    region: 'NJ',
+  });
+  expect(saved.assist.contact).toMatchObject({
+    first_name: 'Existing',
+    last_name: 'Candidate',
+    email: 'keep@example.test',
+    city: 'Resume City',
+    region: 'NJ',
+  });
+  expect(saved.assist.summary).toBe('Imported summary.');
 });
 
 test('explains unsupported PDF layouts without creating a review panel', async ({ page }) => {
@@ -216,7 +228,7 @@ test('keeps a multi-page application review-only through popup reopen', async ({
     const context = await browserType.launchPersistentContext(userDataDirectory, {
       baseURL,
       headless: true,
-      executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH ?? '/repl/tools/bin/chromium',
+      ...(process.env.PLAYWRIGHT_CHROMIUM_PATH ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH } : {}),
       args: [
         '--no-sandbox',
         '--disable-dev-shm-usage',

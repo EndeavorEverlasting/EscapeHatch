@@ -1,0 +1,35 @@
+{
+  "description": "Stale/closed verification retires from active routing while preserving evidence/history. Synthetic.",
+  "career_state": {
+    "schema_version": "escapehatch-career-state/v1",
+    "state_id": "state-batch-stale",
+    "revision": 4,
+    "updated_at": "2026-09-10T05:00:00-04:00",
+    "profile": {"id": "profile-primary", "headline": "Synthetic", "skills": ["Testing"], "source_artifacts": [], "career_objective": {"target_lane": "Agentic", "target_roles": ["AI Engineer"], "lead_capabilities": ["Testing"], "proof_artifacts": [{"owner": "user", "kind": "uri", "locator": "https://example.invalid/portfolio"}]}},
+    "opportunities": [
+      {"id": "opp-stale", "title": "Stale Role", "organization": "Example Employer", "status": "targeted", "priority": "high", "fit_score": 90, "requirements_gaps": [], "next_action": "Retire", "source": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/jobs/020"}, "apply_link": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/apply/020"}, "posting_snapshot": {"owner": "user", "kind": "relative_path", "locator": "opportunities/opp-stale/posting.txt"}, "captured_at": "2026-08-01T04:45:00-04:00", "verification": {"state": "STALE", "verified_at": "2026-09-09T04:50:00-04:00", "detail": "Provider reports STALE", "source": "https://example.invalid/jobs/020"}},
+      {"id": "opp-closed", "title": "Closed Role", "organization": "Example Employer Two", "status": "closed", "priority": "medium", "fit_score": 70, "requirements_gaps": [], "next_action": "Retire", "source": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/jobs/021"}, "apply_link": {"owner": "external", "kind": "uri", "locator": "https://example.invalid/apply/021"}, "posting_snapshot": {"owner": "user", "kind": "relative_path", "locator": "opportunities/opp-closed/posting.txt"}, "captured_at": "2026-08-01T04:45:00-04:00", "verification": {"state": "CLOSED", "verified_at": "2026-09-09T04:50:00-04:00", "detail": "Provider reports CLOSED", "source": "https://example.invalid/jobs/021"}}
+    ],
+    "resumes": [
+      {"id": "resume-stale", "profile_id": "profile-primary", "opportunity_id": "opp-stale", "artifact": {"owner": "user", "kind": "relative_path", "locator": "resumes/stale.pdf"}, "created_at": "2026-09-10T04:50:00-04:00"},
+      {"id": "resume-closed", "profile_id": "profile-primary", "opportunity_id": "opp-closed", "artifact": {"owner": "user", "kind": "relative_path", "locator": "resumes/closed.pdf"}, "created_at": "2026-09-10T04:50:00-04:00"}
+    ],
+    "applications": [
+      {"id": "app-stale", "opportunity_id": "opp-stale", "resume_id": "resume-stale", "status": "draft", "submitted_at": null, "external_reference": null, "execution": {"state": "READY_TO_APPLY", "channel": "web_form", "last_transition_at": "2026-09-10T05:00:00-04:00"}},
+      {"id": "app-closed", "opportunity_id": "opp-closed", "resume_id": "resume-closed", "status": "draft", "submitted_at": null, "external_reference": null, "execution": {"state": "FILLED", "channel": "web_form", "last_transition_at": "2026-09-10T05:00:00-04:00"}}
+    ],
+    "evidence": [],
+    "study_guidance": []
+  },
+  "provider_snapshot": {
+    "observed_at": "2026-09-10T07:00:00-04:00",
+    "provider_id": "synthetic-provider",
+    "read_back": true,
+    "opportunities": [
+      {"opportunity_id": "opp-stale", "verification": {"state": "STALE", "verified_at": "2026-09-10T06:00:00-04:00", "source": "https://example.invalid/jobs/020"}},
+      {"opportunity_id": "opp-closed", "verification": {"state": "CLOSED", "verified_at": "2026-09-10T06:00:00-04:00", "source": "https://example.invalid/jobs/021"}}
+    ],
+    "applications": []
+  },
+  "expected": {"stale_queue_active": false, "closed_queue_active": false, "retire": true, "history_preserved": true, "execution_target": "BLOCKED", "opportunity_count_preserved": 2}
+}

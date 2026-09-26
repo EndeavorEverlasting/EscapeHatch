@@ -767,3 +767,19 @@ Creating an A5 worktree/branch early is not itself a contract violation, but **A
 5. only then promote EH-A5 from `WAITING_WAVE_1`.
 
 This checkpoint strengthens proof interpretation only; it does not widen product authority or authorize automatic final submission.
+
+
+## 18. OpenCode crash recovery convergence
+
+**Recovery date:** 2026-09-24
+**Remote repaired floor:** `integration/replit-donor-b01f628-20260921@e5cc7b5a7204e318e243f91d4badda46f6489253`
+**Pushed pre-crash wave head:** `feat/eh-a6-20260923@d3767a6b43f1f192897dfca6adfe157cb53d500c`
+**Recovery candidate:** `recovery/eh-crash-align-20260924@61cea014518ee56f3c7fd4ccb0d9de8ebec7b82f` / PR #29.
+
+The local OpenCode/Bun process terminated after Wave 2-4 work had been committed/pushed but while local convergence repairs were still being validated. Recovery therefore treats the local checkout as separately owned/unknown and reconstructs only from durable provider evidence plus the captured crash transcript.
+
+The recovery candidate is a two-parent reconciliation. It preserves the later faithfulness-repaired A1/A2/A3 modules from merged PRs #23/#24/#25, carries the non-overlapping A4/U1/Q1/Q2/A6 surfaces from the pushed EH-A6 history, unions the shared Application Assist CI/modality contract, and restores the final pre-crash registry/profile-sync assertion repair without resetting or cleaning any operator worktree.
+
+The EH-A4 faithfulness requirement is no longer fixture-only in the candidate: `tests/test_application_assist_adversarial_runtime.mjs` executes adversarial claims against the production progression/account modules and is wired into both Application Assist workflows. This closes the structural A4 gap subject to exact-head CI.
+
+**Current gate:** PR #29 exact-head checks/reviews. The candidate must not be promoted to the integration branch until those checks are green and review findings are resolved. Main/release promotion remains separately gated by repository promotion policy and the EH-A6 live-workstation observation ceiling. No live employer ATS/provider acceptance is claimed by this recovery.

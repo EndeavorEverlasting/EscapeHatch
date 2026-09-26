@@ -1,0 +1,317 @@
+{
+  "schema": "escapehatch/application-assist-presence/v1",
+  "version": 1,
+  "mission": "Make active participation ambiently visible through a compact truth-driven companion beacon. Presence projects canonical application-assist session state; it does not own workflow, account, or progression decisions.",
+  "source_of_truth": "contracts/application-assist-session.v1.json + browser/application-assist/presence.js projection adapter",
+  "architecture": {
+    "projection": "projectPresence(canonicalState, lastEvent) -> PresenceSnapshot",
+    "render_boundary": "Shadow DOM isolated host; no employer CSS leakage; no profile values in snapshot",
+    "hard_rule": "No UI timer may promote one semantic state to another. Timers may only control presentation dwell/collapse after canonical state transition has already occurred."
+  },
+  "states": [
+    {
+      "id": "dormant",
+      "meaning": "no assist session owns the current page",
+      "default_visual": "hidden",
+      "copy": {
+        "short": "",
+        "detail": "",
+        "accessibility_label": "EscapeHatch companion — dormant"
+      },
+      "peek": { "allowed": false },
+      "persistence": "until session starts",
+      "animation": "none",
+      "aria_live": "off"
+    },
+    {
+      "id": "ready",
+      "meaning": "session is active but no operation is executing",
+      "default_visual": "small steady beacon",
+      "copy": {
+        "short": "Ready",
+        "detail": "Ready when you are.",
+        "accessibility_label": "EscapeHatch companion — ready"
+      },
+      "peek": { "allowed": false, "auto_collapse_ms": null },
+      "persistence": "persistent",
+      "animation": "none",
+      "aria_live": "off"
+    },
+    {
+      "id": "observing",
+      "meaning": "page is being classified/scanned",
+      "default_visual": "slow pulse",
+      "copy": {
+        "short": "Checking this page…",
+        "detail": "Checking this page…",
+        "accessibility_label": "EscapeHatch companion — checking this page"
+      },
+      "peek": { "allowed": true, "auto_collapse_ms": 2400 },
+      "persistence": "while true",
+      "animation": "slow_pulse_1400_2000ms",
+      "aria_live": "off"
+    },
+    {
+      "id": "working_fill",
+      "meaning": "approved fields are being written/re-gated",
+      "default_visual": "slow pulse",
+      "copy": {
+        "short": "Filling the details I know…",
+        "detail": "Filling the details I know…",
+        "accessibility_label": "EscapeHatch companion — filling"
+      },
+      "peek": { "allowed": true, "auto_collapse_ms": 2400 },
+      "persistence": "while true",
+      "animation": "slow_pulse_1400_2000ms",
+      "aria_live": "off"
+    },
+    {
+      "id": "working_account",
+      "meaning": "account bootstrap is executing",
+      "default_visual": "slow pulse",
+      "copy": {
+        "short": "Setting up the account…",
+        "detail": "Setting up the account…",
+        "accessibility_label": "EscapeHatch companion — setting up account"
+      },
+      "peek": { "allowed": true, "auto_collapse_ms": 2400 },
+      "persistence": "while true",
+      "animation": "slow_pulse_1400_2000ms",
+      "aria_live": "off"
+    },
+    {
+      "id": "working_advance",
+      "meaning": "a gated intermediate progression action is executing",
+      "default_visual": "slow pulse",
+      "copy": {
+        "short": "Moving to the next step…",
+        "detail": "Moving to the next step…",
+        "accessibility_label": "EscapeHatch companion — moving to next step"
+      },
+      "peek": { "allowed": true, "auto_collapse_ms": 2400 },
+      "persistence": "while true",
+      "animation": "slow_pulse_1400_2000ms",
+      "aria_live": "off"
+    },
+    {
+      "id": "waiting_user",
+      "meaning": "safe continuation requires operator input",
+      "default_visual": "steady ring + short label",
+      "copy": {
+        "short": "Your turn — this one needs you.",
+        "detail": "Your turn — this one needs you.",
+        "reason_prefix": "Needs you:",
+        "accessibility_label": "EscapeHatch companion — waiting for you"
+      },
+      "peek": { "allowed": true, "auto_collapse_ms": null, "persist_until_resolved": true },
+      "persistence": "until resolved",
+      "animation": "none",
+      "aria_live": "polite_once_per_transition"
+    },
+    {
+      "id": "blocked",
+      "meaning": "progression stopped because a gate failed or state is ambiguous",
+      "default_visual": "warning marker + label",
+      "copy": {
+        "short": "I stopped here so I don't guess.",
+        "detail": "I stopped here so I don't guess.",
+        "reason_prefix": "Reason:",
+        "accessibility_label": "EscapeHatch companion — stopped"
+      },
+      "peek": { "allowed": true, "auto_collapse_ms": null, "persist_until_resolved": true },
+      "persistence": "until resolved",
+      "animation": "none",
+      "aria_live": "polite_once_per_transition"
+    },
+    {
+      "id": "paused",
+      "meaning": "operator paused assist",
+      "default_visual": "hollow/static beacon",
+      "copy": {
+        "short": "Paused",
+        "detail": "Paused",
+        "accessibility_label": "EscapeHatch companion — paused"
+      },
+      "peek": { "allowed": false },
+      "persistence": "until resume",
+      "animation": "none",
+      "aria_live": "off"
+    },
+    {
+      "id": "step_complete",
+      "meaning": "a bounded step completed",
+      "default_visual": "check / gentle settle",
+      "copy": {
+        "short": "Done with this step.",
+        "detail": "Done with this step.",
+        "accessibility_label": "EscapeHatch companion — step complete"
+      },
+      "peek": { "allowed": true, "auto_collapse_ms": 1800 },
+      "persistence": "short dwell then ready",
+      "animation": "settle_once",
+      "aria_live": "off"
+    },
+    {
+      "id": "error",
+      "meaning": "operation failed unexpectedly",
+      "default_visual": "static error marker",
+      "copy": {
+        "short": "I couldn't finish that step.",
+        "detail": "I couldn't finish that step.",
+        "reason_prefix": "Details:",
+        "accessibility_label": "EscapeHatch companion — error"
+      },
+      "peek": { "allowed": true, "auto_collapse_ms": null, "persist_until_resolved": true },
+      "persistence": "until acknowledged/retry",
+      "animation": "none",
+      "aria_live": "polite_once_per_transition"
+    },
+    {
+      "id": "stopped",
+      "meaning": "emergency stop is latched",
+      "default_visual": "stopped marker",
+      "copy": {
+        "short": "Stopped",
+        "detail": "Stopped",
+        "accessibility_label": "EscapeHatch companion — stopped"
+      },
+      "peek": { "allowed": true, "auto_collapse_ms": null, "persist_until_resolved": true },
+      "persistence": "until new session",
+      "animation": "none",
+      "aria_live": "polite_once_per_transition"
+    }
+  ],
+  "snapshot_fields": {
+    "state": "one of 12 presence states",
+    "shortLabelKey": "copy key for short text; derived from state",
+    "reasonCode": "typed reason code or null; never raw stack/PII",
+    "startedAt": "ISO-8601 timestamp of state entry",
+    "lastCompletedActionKey": "metadata-only key of last completed bounded action or null",
+    "canExpand": "boolean — whether Companion Details may be opened",
+    "presentationPreference": "enum quiet | dot_only | hidden_for_session",
+    "sidePreference": "enum left | right"
+  },
+  "copy_constraints": {
+    "short_max_visible_chars": 48,
+    "peek_max_sentences": 1,
+    "forbidden": [
+      "punctuation_animation_like_Working...",
+      "rotating_fake_thinking_messages",
+      "random_copy_variants",
+      "raw_stack_traces_in_copy",
+      "employer_application_pii_in_generic_text",
+      "exclamation_heavy_copy",
+      "fake_urgency",
+      "nag_language"
+    ],
+    "typed_reasons_only": true,
+    "unknown_reason_fallback": "generic safe copy; never invent progress",
+    "no_profile_values": true,
+    "no_temporary_credentials": true
+  },
+  "hard_rules": [
+    "no_ui_timer_may_promote_semantic_state",
+    "timers_only_control_presentation_dwell_collapse",
+    "presence_is_projection_not_workflow_owner",
+    "no_final_submit_authority",
+    "no_network_requests_for_presence",
+    "no_telemetry_additions",
+    "no_dom_mutation_outside_isolated_host_except_canonical_pipeline"
+  ],
+  "persistence": {
+    "allowed_persisted_keys": [
+      "presentationPreference",
+      "sidePreference",
+      "details_manually_collapsed"
+    ],
+    "allowed_values": {
+      "presentationPreference": ["quiet", "dot_only", "hidden_for_session"],
+      "sidePreference": ["left", "right"]
+    },
+    "forbidden_persisted": [
+      "transient_working_state",
+      "lastEvent_raw_payload",
+      "profile_values",
+      "temporary_credentials"
+    ],
+    "reconstruction": "on reload/reconnect reconstruct presence from canonical session/runtime state; do not restore stale working_* from storage",
+    "hidden_for_session_semantics": "remains hidden through ordinary state changes; only new session or explicit user restore makes beacon visible again"
+  },
+  "presentation": {
+    "beacon": {
+      "collapsed_default": "compact circular/rounded indicator at edge anchor",
+      "working_animation": "one slow pulse/breath 1.4-2.0s low amplitude; static otherwise",
+      "reduced_motion": "prefers-reduced-motion reduces pulse to static ring/fill difference",
+      "touch_target_min_px": 44,
+      "safe_area_insets": "env(safe-area-inset-*) honored on phone layout",
+      "no_focus_theft": true,
+      "no_bounce_shake_flash": true
+    },
+    "peek": {
+      "rules": [
+        "allowed_after_material_state_transition",
+        "normal_working_peeks_auto_collapse_after_short_dwell",
+        "waiting_blocked_error_remain_legible_until_resolved_or_collapsed",
+        "repeated_identical_state_does_not_retrigger_peek",
+        "operator_collapse_suppresses_further_peeks_until_semantic_change",
+        "peeks_never_overlap_active_form_control_if_collision_detection_can_select_another_anchor"
+      ]
+    },
+    "details": {
+      "trigger": "intentional click/tap/keyboard only; no automatic open on state change",
+      "contents": ["Now — current state/action", "Why — only when waiting/blocked/error", "Last — last completed action metadata", "Controls — only existing semantic actions"],
+      "dismissal": ["Escape closes details", "click/tap outside closes details", "browser Back on phone returns prior surface", "dismissing does not pause/stop session"],
+      "focus": "deterministic focus return; no theft"
+    }
+  },
+  "anchor": {
+    "preferred_order": ["lower-right", "lower-left", "mid-right", "mid-left"],
+    "collision_test": "test small reserved rectangle at each candidate against visible high-priority fixed/sticky elements",
+    "fallback": "choose next candidate if preferred occupied; deterministic",
+    "user_choice_wins": "operator manual side selection wins over automatic for remainder of session",
+    "no_draggable_in_v1": true
+  },
+  "motion": {
+    "working_pulse_cycle_ms": [1400, 2000],
+    "reduced_motion_policy": "no pulse; use static ring/fill differences",
+    "completion_settle": "once then become ready; no burst/confetti"
+  },
+  "accessibility": {
+    "beacon_role": "button when interactive; otherwise status",
+    "accessible_name_template": "EscapeHatch companion — {state}",
+    "aria_live": "polite only for material waiting/blocked/error transitions; not every scanner/fill substep",
+    "keyboard": "open/dismiss and every control reachable via keyboard; Escape dismisses details without mutating session",
+    "high_contrast": "legible in forced-colors mode",
+    "no_color_only": "shape/icon/label semantics also differ"
+  },
+  "phone_rules": {
+    "collapsed_reachable_by_one_tap": true,
+    "details_is_edge_sheet_after_intentional_activation": true,
+    "min_tap_target_44px": true,
+    "safe_areas_honored": true,
+    "no_hover_dependency": true,
+    "no_long_press_required": true,
+    "no_swipe_required": true,
+    "no_text_input_autofocus": true,
+    "browser_back_dismisses_details_before_session_state": true,
+    "reduced_motion_disables_pulse": true
+  },
+  "invariants": [
+    "presence_projects_canonical_state_no_second_state_machine",
+    "no_ui_timer_promotes_semantic_state",
+    "timers_only_for_presentation_dwell",
+    "working_and_waiting_are_distinct",
+    "presence_never_auto_opens_details",
+    "hidden_for_session_never_reopens_itself",
+    "no_profile_or_credential_values_in_snapshot_or_dom",
+    "no_network_or_telemetry_for_presence",
+    "reduced_motion_disables_pulse"
+  ],
+  "proof_ceiling": [
+    "repository_contract_and_projection_unit_proof",
+    "dom_isolation_geometry_collision_fixture_proof",
+    "keyboard_touch_emulation_proof",
+    "reduced_motion_proof",
+    "no_secret_profile_leakage_proof"
+  ]
+}

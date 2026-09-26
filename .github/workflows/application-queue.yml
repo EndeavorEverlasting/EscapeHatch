@@ -1,0 +1,84 @@
+name: Application Queue Reconciliation Validation
+
+on:
+  push:
+    paths:
+      - "contracts/application-companion.v1.json"
+      - "scripts/batch_coordinator.py"
+      - "scripts/companion_reconciliation.py"
+      - "scripts/validate_application_companion.py"
+      - "artifacts/escape-hatch/src/lib/batch-coordinator.mjs"
+      - "artifacts/escape-hatch/src/lib/batch-coordinator.ts"
+      - "artifacts/escape-hatch/src/lib/companion-reconciliation.mjs"
+      - "artifacts/escape-hatch/src/lib/companion-reconciliation.ts"
+      - "tests/test_batch_coordinator.py"
+      - "tests/test_batch_coordinator.mjs"
+      - "tests/test_application_companion_reconciliation.py"
+      - "tests/test_application_companion_reconciliation.mjs"
+      - ".github/workflows/application-queue.yml"
+  pull_request:
+    paths:
+      - "contracts/application-companion.v1.json"
+      - "scripts/batch_coordinator.py"
+      - "scripts/companion_reconciliation.py"
+      - "scripts/validate_application_companion.py"
+      - "artifacts/escape-hatch/src/lib/batch-coordinator.mjs"
+      - "artifacts/escape-hatch/src/lib/batch-coordinator.ts"
+      - "artifacts/escape-hatch/src/lib/companion-reconciliation.mjs"
+      - "artifacts/escape-hatch/src/lib/companion-reconciliation.ts"
+      - "tests/test_batch_coordinator.py"
+      - "tests/test_batch_coordinator.mjs"
+      - "tests/test_application_companion_reconciliation.py"
+      - "tests/test_application_companion_reconciliation.mjs"
+      - ".github/workflows/application-queue.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate application companion contract
+        run: python scripts/validate_application_companion.py
+      - name: Test companion reconciliation Python
+        run: python tests/test_application_companion_reconciliation.py
+      - name: Test companion reconciliation JavaScript
+        run: node tests/test_application_companion_reconciliation.mjs
+      - name: Test batch coordinator Python
+        run: python tests/test_batch_coordinator.py
+      - name: Test batch coordinator JavaScript
+        run: node tests/test_batch_coordinator.mjs
+      - name: Compile Python owners
+        run: python -m py_compile scripts/batch_coordinator.py scripts/companion_reconciliation.py scripts/validate_application_companion.py tests/test_batch_coordinator.py tests/test_application_companion_reconciliation.py
+      - name: Parse JavaScript owners
+        run: |
+          node --check artifacts/escape-hatch/src/lib/batch-coordinator.mjs
+          node --check artifacts/escape-hatch/src/lib/companion-reconciliation.mjs
+          node --check tests/test_batch_coordinator.mjs
+          node --check tests/test_application_companion_reconciliation.mjs
+      - name: Check whitespace
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          if [ -n "$base" ] && [ "$base" != "0000000000000000000000000000000000000000" ] && git cat-file -e "$base^{commit}" 2>/dev/null; then
+            git diff --check "$base"...HEAD
+          elif git rev-parse HEAD^ >/dev/null 2>&1; then
+            git diff --check HEAD^ HEAD
+          else
+            git diff --check
+          fi

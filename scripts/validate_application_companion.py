@@ -159,6 +159,63 @@ def validate_contract(contract: dict) -> None:
     require(telemetry.get("profile_or_application_content") == "forbidden", "profile/application telemetry must be forbidden")
     require(telemetry.get("sync_is_not_telemetry") is True, "authorized sync must stay distinct from telemetry")
 
+    # EH-Q1: provider-agnostic reconciliation (additive, keeps existing fields compatible)
+    reconciliation = contract.get("reconciliation")
+    require(isinstance(reconciliation, dict), "reconciliation contract missing")
+    assert isinstance(reconciliation, dict)
+    require(reconciliation.get("mode") == "provider_agnostic", "reconciliation mode must be provider_agnostic")
+    inp = reconciliation.get("input")
+    require(isinstance(inp, dict), "reconciliation.input missing")
+    assert isinstance(inp, dict)
+    require(inp.get("canonical_career_state") == CAREER_SCHEMA, "reconciliation canonical state mismatch")
+    require(inp.get("provider_read_back_required_before_provider_sync_claim") is True, "provider read-back requirement missing")
+    provider_snapshot = inp.get("provider_snapshot")
+    require(isinstance(provider_snapshot, dict), "reconciliation provider_snapshot missing")
+    assert isinstance(provider_snapshot, dict)
+    require(provider_snapshot.get("credential_in_snapshot") == "forbidden", "provider snapshot must forbid credentials")
+    require(provider_snapshot.get("requires_provider_read_back") is True, "provider snapshot must require read-back")
+    out = reconciliation.get("output")
+    require(isinstance(out, dict), "reconciliation.output missing")
+    assert isinstance(out, dict)
+    require(out.get("schema") == "escapehatch/application-companion-reconciliation-result/v1", "reconciliation output schema mismatch")
+    required_out_fields = {"freshness_transition", "execution_transition", "evidence_binding", "conflict_preserved", "queue_active", "reconciled_at"}
+    require(required_out_fields.issubset(set(out.get("required_fields", []))), "reconciliation output required_fields missing")
+    require(out.get("idempotent") is True, "reconciliation must be idempotent")
+    freshness = out.get("freshness_transition")
+    require(isinstance(freshness, dict), "freshness_transition missing")
+    assert isinstance(freshness, dict)
+    require(freshness.get("stale_closed_deactivates_queue_without_erasing_history") is True, "stale/closed deactivation rule missing")
+    require(freshness.get("promotion_requires_live_verification") is True, "live verification promotion rule missing")
+    evidence_binding = out.get("evidence_binding")
+    require(isinstance(evidence_binding, dict), "evidence_binding missing")
+    assert isinstance(evidence_binding, dict)
+    require(evidence_binding.get("local_export_remains_local_until_reconciled") is True, "local evidence preservation rule missing")
+    conflict = out.get("conflict_preserved")
+    require(isinstance(conflict, dict), "conflict_preserved missing")
+    assert isinstance(conflict, dict)
+    require(conflict.get("silent_overwrite") == "forbidden", "conflict silent overwrite must be forbidden")
+    rules = set(reconciliation.get("rules", []))
+    for marker in {
+        "provider_read_back_required_before_claiming_provider_synchronization",
+        "live_posting_verification_promotes_freshness_to_LIVE_VERIFIED",
+        "stale_closed_evidence_deactivates_queue_execution_without_erasing_history",
+        "local_export_mutations_remain_typed_as_local_evidence_until_reconciled",
+        "provider_authorization_failure_produces_BLOCKED_or_AWAITING_OPERATOR_never_SUBMITTED",
+        "email_draft_requires_sent_outbox_provider_confirmation_or_operator_confirmed_evidence_before_submission_promotion",
+        "reconciliation_is_idempotent",
+        "preserve_conflicts_rather_than_silently_overwriting_stronger_evidence",
+    }:
+        require(marker in rules, f"reconciliation rule missing: {marker}")
+    guards = reconciliation.get("channel_guards", {})
+    require(isinstance(guards, dict) and "web_form" in guards and "email" in guards, "channel guards missing")
+    require("draft_not_equal_sent" in guards.get("email", ""), "email draft guard missing")
+    auth_guards = reconciliation.get("auth_guards", {})
+    require(isinstance(auth_guards, dict) and "provider_authorization_failure" in auth_guards, "auth guards missing")
+    require("BLOCKED_or_AWAITING_OPERATOR" in auth_guards.get("provider_authorization_failure", ""), "auth guard must forbid SUBMITTED")
+    freshness_guards = reconciliation.get("freshness_guards", {})
+    require(isinstance(freshness_guards, dict) and "LIVE_VERIFIED" in freshness_guards, "freshness guards missing")
+    require("removes_from_active_Batch_Apply" in freshness_guards.get("STALE", ""), "STALE deactivation guard missing")
+
 
 def validate_fixture(fixture: dict, contract: dict, career_fixture: dict) -> None:
     require(fixture.get("schema_version") == SESSION_SCHEMA, "session fixture schema mismatch")

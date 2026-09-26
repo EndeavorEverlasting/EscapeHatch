@@ -171,7 +171,7 @@
         "git diff --check"
       ],
       "convergence_owner": "EH-A5",
-      "status": "FAITHFULNESS_REPAIR_REQUIRED"
+      "status": "INTEGRATED_FAITHFULNESS_REPAIRED"
     },
     {
       "lane_id": "EH-A2",
@@ -217,7 +217,7 @@
         "git diff --check"
       ],
       "convergence_owner": "EH-A5",
-      "status": "FAITHFULNESS_REPAIR_REQUIRED"
+      "status": "INTEGRATED_FAITHFULNESS_REPAIRED"
     },
     {
       "lane_id": "EH-A3",
@@ -264,7 +264,7 @@
         "git diff --check"
       ],
       "convergence_owner": "EH-A5",
-      "status": "FAITHFULNESS_REPAIR_REQUIRED"
+      "status": "INTEGRATED_FAITHFULNESS_REPAIRED"
     },
     {
       "lane_id": "EH-A4",
@@ -309,7 +309,7 @@
         "git diff --check"
       ],
       "convergence_owner": "EH-A5",
-      "status": "FAITHFULNESS_REPAIR_REQUIRED"
+      "status": "RECOVERY_CANDIDATE_BEHAVIOR_BOUND_VALIDATION_PENDING"
     },
     {
       "lane_id": "EH-U1",
@@ -366,7 +366,7 @@
         "git diff --check"
       ],
       "convergence_owner": "EH-A5",
-      "status": "IMPLEMENTED_STATIC_REVIEW_PENDING_CONVERGENCE",
+      "status": "RECOVERY_CANDIDATE_INCLUDED_VALIDATION_PENDING",
       "research_evidence": [
         "OpenHands/OpenHands conversation-name-with-status + app-title execution-state patterns",
         "assistant-ui/assistant-ui runtime-driven Loading/StatusBar primitives",
@@ -421,7 +421,7 @@
         "git diff --check"
       ],
       "convergence_owner": "EH-Q2",
-      "status": "IMPLEMENTED_STATIC_REVIEW_PENDING_CONVERGENCE"
+      "status": "RECOVERY_CANDIDATE_INCLUDED_VALIDATION_PENDING"
     },
     {
       "lane_id": "EH-A5",
@@ -471,7 +471,7 @@
         "git diff --check"
       ],
       "convergence_owner": "EH-A5",
-      "status": "BLOCKED_WAVE1_FAITHFULNESS_REPAIRS"
+      "status": "RECOVERY_CANDIDATE_INCLUDED_VALIDATION_PENDING"
     },
     {
       "lane_id": "EH-Q2",
@@ -521,7 +521,7 @@
         "git diff --check"
       ],
       "convergence_owner": "EH-A6",
-      "status": "WAITING_EH_A5_AND_EH_Q1"
+      "status": "RECOVERY_CANDIDATE_INCLUDED_VALIDATION_PENDING"
     },
     {
       "lane_id": "EH-A6",
@@ -567,7 +567,7 @@
         "post-integration containment proof"
       ],
       "convergence_owner": "repository promotion owner",
-      "status": "WAITING_EH_Q2"
+      "status": "RECOVERY_CANDIDATE_INCLUDED_LIVE_ACCEPTANCE_BLOCKED"
     }
   ],
   "manifest_path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-application-assist-autopilot-20260923/manifest.json",
@@ -581,7 +581,7 @@
   "faithfulness_checkpoint": {
     "observed_at": "2026-09-23",
     "provider_floor": "b884b42fb95b633b2d97a87be5dee30a311e19dc",
-    "a5_hold": true,
+    "a5_hold": false,
     "required_repairs": {
       "EH-A1": "navigation execution seam/reachability required before convergence",
       "EH-A2": "positive loopback EscapeHatch cockpit identity required before profile read",
@@ -592,6 +592,19 @@
       "EH-U1",
       "EH-Q1"
     ],
-    "proof_ceiling": "provider/static faithfulness review; independent local clone unavailable due sandbox DNS boundary"
+    "proof_ceiling": "provider/static faithfulness review; independent local clone unavailable due sandbox DNS boundary",
+    "resolved_by": "recovery/eh-crash-align-20260924@61cea014518ee56f3c7fd4ccb0d9de8ebec7b82f",
+    "resolution": "A1/A2/A3 repaired heads preserved; A4 adversarial fixtures behavior-bound to production runtime; exact-head PR #29 validation still required before integration."
+  },
+  "recovery_checkpoint": {
+    "date": "2026-09-24",
+    "incident": "OpenCode/Bun process crash during local combined validation",
+    "remote_repaired_floor": "e5cc7b5a7204e318e243f91d4badda46f6489253",
+    "pushed_wave_head": "d3767a6b43f1f192897dfca6adfe157cb53d500c",
+    "recovery_candidate": "61cea014518ee56f3c7fd4ccb0d9de8ebec7b82f",
+    "pull_request": 29,
+    "local_worktree_disposition": "preserved_unknown_not_mutated",
+    "exact_head_validation": "PENDING",
+    "main_promotion": "BLOCKED_LIVE_WORKSTATION_ACCEPTANCE_AND_PROMOTION_POLICY"
   }
 }

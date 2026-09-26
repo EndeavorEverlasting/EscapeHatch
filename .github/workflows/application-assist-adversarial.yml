@@ -1,0 +1,97 @@
+name: Application Assist Adversarial Fixtures
+
+on:
+  push:
+    paths:
+      - "contracts/application-assist-session.v1.json"
+      - "fixtures/application-assist-adversarial/**"
+      - "tests/test_application_assist_adversarial_fixtures.py"
+      - "tests/test_application_assist_adversarial_runtime.mjs"
+      - "browser/application-assist/progression.js"
+      - "browser/application-assist/account-flow.js"
+      - "browser/application-assist/account-classifier.js"
+      - "tests/test_application_assist_session_contract.py"
+      - ".github/workflows/application-assist-adversarial.yml"
+      - ".github/workflows/application-assist.yml"
+  pull_request:
+    paths:
+      - "contracts/application-assist-session.v1.json"
+      - "fixtures/application-assist-adversarial/**"
+      - "tests/test_application_assist_adversarial_fixtures.py"
+      - "tests/test_application_assist_adversarial_runtime.mjs"
+      - "browser/application-assist/progression.js"
+      - "browser/application-assist/account-flow.js"
+      - "browser/application-assist/account-classifier.js"
+      - "tests/test_application_assist_session_contract.py"
+      - ".github/workflows/application-assist-adversarial.yml"
+      - ".github/workflows/application-assist.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate adversarial fixtures regression gate (EH-A4)
+        run: python tests/test_application_assist_adversarial_fixtures.py -v
+      - name: Validate adversarial fixtures against production runtime
+        run: node tests/test_application_assist_adversarial_runtime.mjs
+      - name: Validate assist session contract (oracle)
+        run: python tests/test_application_assist_session_contract.py
+      - name: Validate adversarial fixture JSON syntax
+        run: |
+          python -m json.tool fixtures/application-assist-adversarial/01-email-probe-login-create-account.json > /dev/null
+          python -m json.tool fixtures/application-assist-adversarial/02-account-creation-with-temporary-password.json > /dev/null
+          python -m json.tool fixtures/application-assist-adversarial/03-deterministic-identity-page.json > /dev/null
+          python -m json.tool fixtures/application-assist-adversarial/04-safe-intermediate-next.json > /dev/null
+          python -m json.tool fixtures/application-assist-adversarial/05-visible-validation-error.json > /dev/null
+          python -m json.tool fixtures/application-assist-adversarial/06-unknown-required-field-mismatch.json > /dev/null
+          python -m json.tool fixtures/application-assist-adversarial/07-file-upload-manual-gate.json > /dev/null
+          python -m json.tool fixtures/application-assist-adversarial/08-captcha-mfa-manual-gate.json > /dev/null
+          python -m json.tool fixtures/application-assist-adversarial/09-legal-attestation-manual-gate.json > /dev/null
+          python -m json.tool fixtures/application-assist-adversarial/10-final-review-submit-never-auto.json > /dev/null
+          python -m json.tool fixtures/application-assist-adversarial/11-spa-transition-loop-guard.json > /dev/null
+          python -m json.tool fixtures/application-assist-adversarial/12-user-edited-field-preserved.json > /dev/null
+      - name: Check no real data leakage in fixtures
+        run: |
+          python -c "
+          import pathlib, re, sys
+          root = pathlib.Path('fixtures/application-assist-adversarial')
+          forbidden = ['Richard Perez','rperez26@northwell','northwell.edu','CheeksMcClappeth']
+          for p in root.glob('*.json'):
+              t = p.read_text(encoding='utf-8')
+              for m in forbidden:
+                  if m in t:
+                      print(f'LEAK in {p}: {m}', file=sys.stderr)
+                      sys.exit(1)
+              if 'example.invalid' not in t:
+                  print(f'{p} missing synthetic hostname', file=sys.stderr)
+                  sys.exit(1)
+          print('No leakage detected: all fixtures use example.invalid')
+          "
+      - name: Check whitespace
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          if [ -n "$base" ] && [ "$base" != "0000000000000000000000000000000000000000" ] && git cat-file -e "$base^{commit}" 2>/dev/null; then
+            git diff --check "$base"...HEAD
+          elif git rev-parse HEAD^ >/dev/null 2>&1; then
+            git diff --check HEAD^ HEAD
+          else
+            git diff --check
+          fi

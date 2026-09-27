@@ -33,15 +33,14 @@
     "expression": "{OWNER-27 || OWNER-29-31 || OWNER-35 || EH-SURF0 || EH-ADAPT0 || EH-PEX0 || EH-QMEM0-ref || REPO-PROMOTION-ref} ; OWNER-27 + OWNER-35 -> EH-BOOT0 ; EH-QMEM0-ref -> EH-SEED0 ; OWNER-35 -> EH-D7-ref -> EH-KNOW1-ref ; EH-SURF0 + EH-ADAPT0 -> EH-TAL1-ref ; EH-SURF0 + EH-ADAPT0 -> EH-FORM1 ; EH-SURF0 + OWNER-29-31 -> EH-DOC1 ; EH-PEX0 -> {EH-PEX1 || EH-PEX3} ; EH-PEX1 -> {EH-PEX2 || EH-PEX5} ; EH-PEX0 + EH-PEX2 + EH-PEX3 -> EH-PEX4 ; EH-BOOT0 + OWNER-27 + EH-D7-ref + EH-KNOW1-ref -> EH-BOOT1 ; EH-QMEM0-ref -> EH-QMEM1-ref ; EH-SEED0 + OWNER-27 + EH-QMEM1-ref -> EH-SEED1 ; EH-TAL1-ref + EH-QMEM1-ref + EH-KNOW1-ref -> EH-CONV2-ref ; EH-PEX0 + REPO-PROMOTION-ref -> EH-PEX6 ; EH-BOOT1 + EH-TAL1-ref + EH-FORM1 + EH-DOC1 + EH-SEED1 + EH-KNOW1-ref + EH-D7-ref + EH-CONV2-ref + REPO-PROMOTION-ref -> EH-MAIN0 ; EH-PEX1 + EH-PEX2 + EH-PEX3 + EH-PEX4 + EH-PEX5 + EH-PEX6 -> EH-PEX7",
     "max_width": 4,
     "parallel_disposition": "REQUIRED_AFTER_IMPLEMENTATION_AUTHORIZATION",
-    "note": "Independent generic contract lanes EH-SURF0/EH-ADAPT0/EH-PEX0 may proceed while owner PR repairs run. Dependent bootstrap/runtime lanes remain explicitly gated."
+    "note": "Independent generic contract lanes EH-SURF0/EH-ADAPT0/EH-PEX0 may proceed while owner PR repairs run. Dependent bootstrap/runtime lanes remain explicitly gated. OWNER-27 superseded by integrated PR #40; route r\u00e9sum\u00e9/profile work to the integrated floor. EH-D4-V1 is the next career-import product lane."
   },
   "current_blockers": [
     {
-      "owner": "PR #27",
-      "state": "open; unresolved review; Web Cockpit Validation failing",
+      "owner": "PR #40 (PR #27 superseded)",
+      "state": "INTEGRATED; PR #27 CLOSED as SUPERSEDED BY PR #40 (candidate 0a9546c; merge 99d0725)",
       "blocks": [
-        "EH-BOOT1",
-        "work-history/profile convergence"
+        "none for r\u00e9sum\u00e9 intake ownership; remaining mainline gaps are Application Assist #29/#30/#31, EH-D4-V1, hydration, and main promotion"
       ]
     },
     {
@@ -86,7 +85,7 @@
     {
       "lane_id": "OWNER-27",
       "wave": 0,
-      "mission": "Repair and reconcile deterministic resume/profile intake PR #27 against current integration truth, resolving stale-profile, address/location, confidence, race, and failing validation issues.",
+      "mission": "Historical. PR #27 closed as SUPERSEDED BY integrated PR #40 r\u00e9sum\u00e9/profile intake floor. Do not open new writers against #27.",
       "dependencies": [],
       "owned_mutation_surfaces": [
         "existing PR #27 owned files"
@@ -120,7 +119,8 @@
         "git diff --check"
       ],
       "convergence_owner": "integration/replit-donor-b01f628-20260921",
-      "status": "REPAIR_REQUIRED"
+      "status": "SUPERSEDED_BY_PR40_INTEGRATED",
+      "successor": "integrated PR #40 / r\u00e9sum\u00e9 intake floor on integration"
     },
     {
       "lane_id": "OWNER-29-31",

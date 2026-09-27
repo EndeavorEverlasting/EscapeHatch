@@ -35,8 +35,11 @@ The required user flow is:
 Open work observed before this plan:
 
 - PR #27 `feat(resume): make profile intake deterministic and zero-config`
-  - touches `artifacts/escape-hatch/src/App.tsx`, `src/lib/resume-import.ts`, and persistence tests;
-  - **collision:** cockpit UI, import UX, file parsing, persistence tests.
+  - **SUPERSEDED / CLOSED** by integrated PR #40 (`feat/resume-zero-config-converged-20260924`, candidate `0a9546c`, integration merge `99d0725`);
+  - historical evidence only — not a dependency-ready writer for new résumé work.
+  - **Current résumé/profile intake floor:** integrated PR #40 surfaces (`resume-import.ts`, cockpit review wiring, related assist/persistence tests).
+- PR #41 `feat(store): add atomic local CareerStateStore` — **INTEGRATED** (candidate `0739f4c`, merge `3a3a8d2`); EH-D1 store floor.
+- PR #42 `feat(import): add JSON CSV XLSX tracker adapters` — **INTEGRATED** (candidate `69f5568`, merge `5563afa`); EH-D2 tabular adapter floor.
 - PR #29 `recovery: align EH-A6 convergence after OpenCode Bun crash`
   - broad recovery/convergence owner;
   - **collision:** application companion, batch coordinator, docs/manifest/release surfaces.
@@ -235,9 +238,9 @@ No prompt or skill may become the only implementation of parsing, mapping, dedup
 Before implementation dispatch:
 
 - refresh `integration/replit-donor-b01f628-20260921`;
-- resolve PRs #27, #29, #30, and #31;
+- treat PR #27 as historical (superseded by integrated PR #40); resolve remaining overlaps among PRs #29, #30, and #31;
 - inspect Issue #26 only for shared channel semantics;
-- verify the current `career-state`, `application-companion`, cockpit storage, batch coordinator, and resume-import floors;
+- verify the current `career-state`, `application-companion`, cockpit storage, batch coordinator, and integrated résumé-intake floors;
 - create isolated branches/worktrees per writer.
 
 No lane may start from the stale planning SHA recorded in an older plan.
@@ -326,11 +329,14 @@ Done gate:
 - row-level provenance is preserved;
 - malformed files produce no mutation.
 
-#### EH-D3 — Local document source adapters
+#### EH-D3 — Local document source adapters (V1.1 extension)
 
-Mission: locally decode TXT/Markdown/PDF/DOCX into reviewable opportunity proposals.
+Mission: locally decode TXT/Markdown/PDF/DOCX into reviewable opportunity proposals that extend the same orchestrator seam as tabular V1.
 
-Dependency: PR #27 must be integrated or explicitly reconciled so generic document decoding does not fork the resume parser.
+Dependencies:
+
+- integrated current résumé/shared decoder ownership (PR #40 floor) where applicable;
+- EH-D4-V1 orchestration seam so document proposals reuse preview/dedupe/commit rather than forking store semantics.
 
 Owned scope:
 
@@ -343,7 +349,8 @@ Forbidden:
 - OCR;
 - network upload;
 - direct state mutation;
-- modifying resume semantics unless the shared decoder extraction is explicitly owned by convergence.
+- modifying resume semantics unless the shared decoder extraction is explicitly owned by convergence;
+- blocking EH-D4-V1 on document adapters.
 
 Done gate:
 
@@ -353,13 +360,28 @@ Done gate:
 
 ### Wave 2 — import convergence
 
-#### EH-D4 — Import Orchestrator + Dedupe/Conflict Engine
+#### EH-D4-V1 — Tabular Import Orchestrator + Dedupe/Conflict Engine
 
-Mission: converge D1-D3 into one preview/commit pipeline.
+Mission: compose tabular decoder preview → deterministic dedupe/conflict → accepted transactional CareerStateStore commit → canonical validation → receipt.
+
+Dependencies:
+
+- EH-D0 contract floor;
+- EH-D1 complete/integrated;
+- EH-D2 complete/integrated.
+
+Supported V1 inputs:
+
+- `career_state_json`;
+- `legacy_workspace_json`;
+- `csv`;
+- `xlsx`.
+
+Must **not** depend on EH-D3. Document sources are V1.1.
 
 Owned scope:
 
-- `OpportunityImportPreview` application service;
+- `OpportunityImportPreview` application service for tabular/JSON sources;
 - dedupe/conflict classifier;
 - transactional commit coordinator;
 - import receipt;
@@ -369,14 +391,27 @@ Forbidden:
 
 - cockpit presentation;
 - batch/provider mutation;
-- silent merge on ambiguous identity.
+- silent merge on ambiguous identity;
+- requiring TXT/Markdown/PDF/DOCX before tabular commit works.
 
 Done gate:
 
-- NEW/UPDATE/DUPLICATE/CONFLICT/SKIP are deterministic;
+- NEW/UPDATE/DUPLICATE/CONFLICT/SKIP are deterministic for V1 sources;
 - commit requires accepted preview + current revision;
 - re-import is idempotent;
 - conflict leaves both truths preserved.
+
+#### EH-D4-V1.1 — Document Import Extension
+
+Mission: extend the same preview/orchestrator contract with confidence-bearing freeform document proposals (EH-D3 adapters).
+
+Dependencies:
+
+- EH-D4-V1 orchestration seam;
+- EH-D3 document adapters;
+- integrated résumé/shared decoder ownership where decoding is shared.
+
+Do not fork résumé decoder ownership.
 
 ### Wave 3 — two parallel consumers
 
@@ -384,7 +419,7 @@ Done gate:
 
 Mission: expose source import, mapping preview, conflict resolution, commit, and imported opportunity fields in the local cockpit.
 
-Dependency: PR #27 integrated; EH-D4 complete.
+Dependency: integrated résumé/profile intake floor (PR #40); EH-D4-V1 complete.
 
 Owned scope:
 
@@ -409,7 +444,7 @@ Done gate:
 
 Mission: make imported opportunities participate in the same Batch Apply, freshness, channel, evidence, and reconciliation semantics.
 
-Dependency: PRs #29/#30/#31 integrated; EH-D1 + EH-D4 complete.
+Dependency: PRs #29/#30/#31 integrated; EH-D1 + EH-D4-V1 complete.
 
 Owned scope:
 
@@ -462,23 +497,15 @@ Proof ceiling: repository tests + local browser runtime. Live Google Drive/provi
 
 ## 7. Parallel capability disposition
 
-Dependency graph width after EH-D0 is at least three: EH-D1, EH-D2, and EH-D3 are independently writable when their file ownership boundaries are honored.
+Post-integration floor (PR #40/#41/#42): EH-D0/D1/D2 and résumé intake are integrated. The next dependency-ready product lane is **EH-D4-V1** (tabular orchestrator). EH-D3 remains independently writable afterward as the V1.1 document extension and must not gate tabular V1.
 
-Implementation-time parallel execution is therefore **REQUIRED**.
+Historical planning width after EH-D0 was three (EH-D1 || EH-D2 || EH-D3). That parallel wave is complete for D1/D2; D3 is deferred to V1.1.
 
-Current planning-runtime adapter probe:
+Current next-sprint dispatch:
 
-1. native delegated/sub-agent writer API: not available in this chat runtime;
-2. repo/local agent runners: repository history and user workflow evidence OpenCode/Cursor-style execution, but no callable local agent runner is exposed here;
-3. connected provider/MCP: GitHub provider can mutate branches/files but does not independently execute bounded LLM implementation lanes;
-4. CI matrix: available for deterministic validation, not authoring implementation;
-5. local concurrent processes: container cannot clone/fetch GitHub in this runtime, so no safe independent repo writers can be launched here.
+`NEXT CRITICAL PATH: EH-D4-V1 — Tabular Import Orchestrator + Dedupe/Conflict Engine`
 
-Result for this planning pass:
-
-`PARALLEL EXECUTION: NOT_DISPATCHED — disposition is PLANNING_ONLY and no independent implementation-writer adapter is callable here.`
-
-After explicit implementation authorization in a local repo-agent environment, the first safe rung with >=3 writer slots must dispatch EH-D1 || EH-D2 || EH-D3 immediately after EH-D0 passes.
+Do not dispatch cockpit EH-D5, document EH-D3, or provider-submission semantics as part of the EH-D4-V1 slice.
 
 ## 8. Validation order
 

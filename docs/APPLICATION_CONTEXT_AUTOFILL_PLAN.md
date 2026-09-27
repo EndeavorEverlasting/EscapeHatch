@@ -20,9 +20,9 @@ This plan contains only sanitized product evidence. No real profile data, creden
 ## 2. Collision map
 
 - PR #29 remains the active Application Assist/A6 recovery owner.
-- PR #27 remains the deterministic resume/profile intake owner.
-- PR #35 is planning-only for the career-store/import pipeline.
-- This plan uses new paths and does not edit the parent autopilot plan while #29/#27 remain separately owned.
+- Integrated PR #40 is the current deterministic résumé/profile intake floor; PR #27 is historical/superseded and must not receive new résumé ownership.
+- PR #35 is planning-only for the career-store/import pipeline (EH-D1/D2 now integrated via PR #41/#42; next product lane is EH-D4-V1).
+- This plan uses new paths and does not edit the parent autopilot plan while #29 remains separately owned.
 - Runtime changes to progression, navigation, shared content, modality/presence, or A6 acceptance must refresh after #29 is merged, superseded, or explicitly reconciled.
 
 ## 3. Extended runtime model
@@ -317,7 +317,7 @@ Regressions include:
 
 | Contract | Owner | Status | Next transition |
 | --- | --- | --- | --- |
-| Parent autopilot | `docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md` | active / separately owned | reconcile pointer after #29/#27 settle |
+| Parent autopilot | `docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md` | active / separately owned | reconcile pointer after #29 settles; résumé intake now owned by integrated PR #40 |
 | Compensation semantics | EH-COMP0 | PLANNED | contract + provenance + taxonomy |
 | Action semantics | EH-ACT0 | PLANNED | ontology + negative fixtures |
 | Flow context | EH-CTX0 | PLANNED | topology/stage/section contract |
@@ -344,7 +344,7 @@ After implementation authorization and refreshed collision inspection:
 
 Owner: implementation coordinator.
 Dependency: explicit implementation authorization and refreshed provider floor.
-First action: refresh integration plus PR #29/#27 ownership, then dispatch EH-COMP0/EH-ACT0/EH-CTX0 in isolated lanes.
+First action: refresh integration plus PR #29 ownership and the integrated PR #40 résumé floor, then dispatch EH-COMP0/EH-ACT0/EH-CTX0 in isolated lanes.
 Expected proof: three versioned contracts with focused positive/negative fixtures and no private data.
 Completion gate: focused validators green and exact validated contract heads integrated without overwriting separately owned work.
 
@@ -699,7 +699,7 @@ Then:
 
 **Forbidden scope**
 - production DOM mutation;
-- résumé parser changes owned by PR #27;
+- résumé parser changes owned by the integrated PR #40 floor (PR #27 superseded);
 - user-specific work-history fixtures.
 
 ### EH-QMEM0 — Application Answer Memory Contract
@@ -772,7 +772,7 @@ Then:
 
 **Type:** conventional application logic
 
-**Dependencies:** EH-REC0; PR #27 merged/superseded/reconciled; refreshed Application Assist floor.
+**Dependencies:** EH-REC0; integrated PR #40 résumé/profile floor; refreshed Application Assist floor.
 
 **Goal:** repair native résumé/profile import mistakes without cross-record contamination.
 
@@ -1024,7 +1024,7 @@ When a résumé is available to EscapeHatch:
 
 “Resume present” means the user has already supplied or authorized access to the file through an EscapeHatch-owned/user-selected surface. Browser security is not bypassed to crawl arbitrary local files.
 
-PR #27 remains the current separately owned resume/profile implementation lane and must be repaired/reconciled rather than duplicated.
+Integrated PR #40 is the current résumé/profile implementation floor. PR #27 is historical/superseded and must not be duplicated as a live writer.
 
 ### 23.2 Job tracker as canonical-import input
 
@@ -1219,7 +1219,7 @@ A draft, local email file, or composed message is not submission proof.
 
 **Goal:** make profile/résumé/tracker hydration a default startup property rather than an optional configuration flow.
 
-**Dependencies:** PR #27 profile/resume owner; PR #35 career-store/import owner.
+**Dependencies:** integrated PR #40 profile/resume floor; integrated career-store/import floor (PR #41/#42; next EH-D4-V1).
 
 **Owns**
 - startup resolution/precedence contract;
@@ -1229,7 +1229,7 @@ A draft, local email file, or composed message is not submission proof.
 - focused fixtures/tests.
 
 **Does not own**
-- resume parser internals from PR #27;
+- resume parser internals from the integrated PR #40 floor;
 - tracker decoder/import internals from PR #35;
 - provider credentials.
 
@@ -1287,7 +1287,7 @@ A draft, local email file, or composed message is not submission proof.
 
 **Type:** conventional application logic
 
-**Dependencies:** EH-BOOT0; repaired/integrated PR #27; career-store convergence EH-D7; existing selected-opportunity hydration owner EH-KNOW1.
+**Dependencies:** EH-BOOT0; integrated PR #40 résumé floor; career-store convergence EH-D7; existing selected-opportunity hydration owner EH-KNOW1.
 
 **Goal:** compose already-canonical profile/resume/career-store/opportunity hydration into startup, with no normal-path JSON/file shuttling. EH-BOOT1 must not duplicate EH-KNOW1's selected-opportunity hydration service.
 

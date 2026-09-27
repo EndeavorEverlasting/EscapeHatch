@@ -4,7 +4,7 @@ These workflows implement `AGENTS.md`; they do not override governance.
 
 ## Workflow selection
 
-Use **Repository Location** for durable Windows checkout/worktree acquisition. Use **Task Pickup** for every writing sprint. Use **Application Form Intake** when application questions/pages are being mapped or automated. Use **Application Companion** when an installable/local client records career/application progress or synchronizes user-owned state. Use **Application Assist Session** when operating the browser extension control loop that fills deterministic allowed fields on a live application. Use **Resume Presentation** whenever an agent creates, refreshes, tailors, exports, or synchronizes a resume/CV. Use **Product Release Versioning** when establishing, bumping, tagging, or auditing the human-facing product release identity. Use **Repository Promotion** when advancing an exact validated candidate through the provider-bound promotion pipeline to an authorized merge/tag/deployment. Use **Failure Recovery** when a required command fails. Use **Handoff** before changing owners/chats or when an external blocker stops the lane.
+Use **Repository Location** for durable Windows checkout/worktree acquisition. Use **Task Pickup** for every writing sprint. Use **Application Opportunity Readiness** before recommending the next opportunity for manual application. Use **Application Form Intake** when application questions/pages are being mapped or automated. Use **Application Companion** when an installable/local client records career/application progress or synchronizes user-owned state. Use **Application Assist Session** when operating the browser extension control loop that fills deterministic allowed fields on a live application. Use **Resume Presentation** whenever an agent creates, refreshes, tailors, exports, or synchronizes a resume/CV. Use **Product Release Versioning** when establishing, bumping, tagging, or auditing the human-facing product release identity. Use **Repository Promotion** when advancing an exact validated candidate through the provider-bound promotion pipeline to an authorized merge/tag/deployment. Use **Failure Recovery** when a required command fails. Use **Handoff** before changing owners/chats or when an external blocker stops the lane.
 
 ## Repository Location
 
@@ -36,6 +36,23 @@ Temporary directories remain valid for disposable validator snapshots.
 7. Make the smallest mutation that advances the mission.
 8. Register new durable artifacts and update maps/workflows when authority changes.
 9. Run validation in manifest order before committing.
+
+## Application Opportunity Readiness
+
+Before naming an opportunity as the next manual application, resolve its application packet.
+
+1. Read `harness/contracts/application-opportunity-readiness.v1.json`, `harness/workflows/APPLICATION_OPPORTUNITY_READINESS.md`, and `skills/application-opportunity-readiness/SKILL.md`.
+2. Refresh current opportunity/tracker state and verify the apply/source destination.
+3. Resolve a qualifying opportunity-bound resume or an explicitly approved master reuse.
+4. If no qualifying resume exists, create the tailored private resume, validate presentation, create editable + PDF projections, synchronize/read back provider IDs, and repair tracker parity before proceeding.
+5. Determine whether a cover letter is required, optional, not requested, or unknown.
+6. Create and organize a cover letter before recommendation-ready when the opportunity requires one. Do not auto-generate optional letters without a strategy/user decision.
+7. Reuse the existing private company/opportunity workspace; do not create duplicate folders because an agent forgot prior state.
+8. Build one operator handoff with the apply link, artifact links, manual instructions, canonical record-these list, and screenshot guidance.
+9. Keep submission and attestations operator-controlled.
+10. Validate the harness contract with `python scripts/validate_application_opportunity_readiness.py` and `python tests/test_application_opportunity_readiness.py`.
+
+A fit score or interesting job description is not enough. `RECOMMENDATION_READY` is an artifact-and-instruction state.
 
 ## Application Form Intake
 

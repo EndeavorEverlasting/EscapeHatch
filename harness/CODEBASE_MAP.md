@@ -35,7 +35,9 @@ EscapeHatch has canonical governance, an operational harness, a portable career-
 | `harness/WORKFLOWS.md` | Task pickup, repo acquisition, application intake/companion, resume presentation, validation, failure, and handoff workflows. |
 | `harness/contracts/application-form-taxonomy.v1.json` | Employer/order-independent canonical application question taxonomy. |
 | `harness/contracts/application-preference-cache.v1.json` | User-owned browser-local preference persistence and portability policy. |
+| `harness/contracts/application-opportunity-readiness.v1.json` | Recommendation-readiness contract: verified source, durable resume, cover-letter disposition, artifact links, manual instructions, and record-these obligations. |
 | `harness/workflows/APPLICATION_FORM_INTAKE.md` | Modular application-question intake/mapping workflow. |
+| `harness/workflows/APPLICATION_OPPORTUNITY_READINESS.md` | Pre-recommendation workflow that resolves/creates application packet artifacts before operator handoff. |
 | `harness/reports/APPLICATION_FORM_AUTOMATION_STATE.md` | Human-readable application automation coverage and gaps. |
 | `harness/constraints/LUA_EMBEDDING.md` | Lua design constraints for future runtime work. |
 | `harness/reports/CURRENT_STATE.md` | Human-readable repository operational status. |
@@ -53,6 +55,7 @@ EscapeHatch has canonical governance, an operational harness, a portable career-
 | `tests/test_repository_promotion.py` | Fault-injection tests for promotion blocking paths. |
 | `skills/harness-operations/SKILL.md` | Repeatable repo harness operating procedure. |
 | `skills/application-form-mapping/SKILL.md` | Procedure for adding/reusing application question semantics safely. |
+| `skills/application-opportunity-readiness/SKILL.md` | Procedure for making a selected opportunity application-ready before recommending it to the operator. |
 
 ## Durable Windows repository root
 
@@ -81,6 +84,19 @@ The companion contract is surface-agnostic at the state boundary. Browser extens
 An application-autofill product lane may implement browser behavior, but harness contracts do not become product code. The harness defines semantic question IDs and preference boundaries so product implementations can remain modular across corporations, ATS vendors, page counts, and question order.
 
 The harness does not authorize scraping, automatic application submission, automatic navigation, or automatic certification/attestation.
+
+## Application opportunity readiness entry points
+
+- Contract: `harness/contracts/application-opportunity-readiness.v1.json`
+- Workflow: `harness/workflows/APPLICATION_OPPORTUNITY_READINESS.md`
+- Skill: `skills/application-opportunity-readiness/SKILL.md`
+- Operator report: `harness/reports/APPLICATION_OPPORTUNITY_READINESS.md`
+- Validator: `scripts/validate_application_opportunity_readiness.py`
+- Tests: `tests/test_application_opportunity_readiness.py`
+- Resume durability dependency: `contracts/application-resume-artifact-sync.v1.json`
+- Resume presentation dependency: `contracts/resume-presentation.v1.json`
+
+A job may be high-fit without being recommendation-ready. Before the operator is told to apply, the harness must resolve the exact application source, a durable opportunity-bound resume (or explicit master reuse), the cover-letter demand, required artifacts, exact links, manual instructions, and the evidence the operator should record. Missing artifacts route to creation rather than future advice. Real resumes and cover letters stay private outside Git.
 
 ## Application-question entry points
 
@@ -210,6 +226,7 @@ git diff --check
 - Application companion contract: `python scripts/validate_application_companion.py`
 - Application assist session: `python tests/test_application_assist_session_contract.py` and `node tests/test_application_assist_session.mjs`
 - Resume presentation contract: `python scripts/validate_resume_presentation.py`
+- Application opportunity readiness: `python scripts/validate_application_opportunity_readiness.py` and `python tests/test_application_opportunity_readiness.py`
 - Study-guidance adapter: `python tests/test_study_guidance_export.py`
 - Application harness: `python scripts/validate_application_harness.py`
 - Repository convergence: run validation commands above
@@ -227,10 +244,11 @@ Do not claim browser/ATS, Google Drive, Microsoft Store, or Play Store runtime p
 3. Read this map, `harness/manifest.v1.json`, and `ARTIFACT_REGISTRY.md`.
 4. On Windows, resolve durable repo state through `scripts/resolve_repo.ps1`.
 5. Select the workflow in `harness/WORKFLOWS.md`.
-6. For application pages/questions, read the taxonomy, preference policy, application workflow, and mapping skill before writing.
-7. For companion/runtime/state-sync work, read `contracts/application-companion.v1.json`, the career-state schema, and the Application Companion workflow before writing.
-8. For resume/CV creation, tailoring, export, or sync, read `contracts/resume-presentation.v1.json` and follow the Resume Presentation workflow before touching private resume content.
-9. Read Lua constraints only when scripting is in scope.
-10. Declare sprint scope before the first write.
-11. Run validators in manifest order before committing.
-12. Report only the proof actually observed.
+6. Before recommending the next manual application, run Application Opportunity Readiness and resolve/create the private application packet plus operator handoff.
+7. For application pages/questions, read the taxonomy, preference policy, application workflow, and mapping skill before writing.
+8. For companion/runtime/state-sync work, read `contracts/application-companion.v1.json`, the career-state schema, and the Application Companion workflow before writing.
+9. For resume/CV creation, tailoring, export, or sync, read `contracts/resume-presentation.v1.json` and follow the Resume Presentation workflow before touching private resume content.
+10. Read Lua constraints only when scripting is in scope.
+11. Declare sprint scope before the first write.
+12. Run validators in manifest order before committing.
+13. Report only the proof actually observed.

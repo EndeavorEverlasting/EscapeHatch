@@ -1,0 +1,43 @@
+{
+  "schema": "escapehatch/application-opportunity-readiness-receipt/v1",
+  "expected_valid": false,
+  "expected_error": "recommendation ready requires durable resume",
+  "status": "RECOMMENDATION_READY",
+  "opportunity": {
+    "id": "opp-example-002",
+    "organization": "Example Systems",
+    "role": "Data Analyst",
+    "apply_url": "https://example.invalid/jobs/data-analyst",
+    "source_verified": true
+  },
+  "resume": {
+    "disposition": "CREATE_TAILORED",
+    "state": "MISSING",
+    "doc_url": null,
+    "pdf_url": null,
+    "provider_read_back": false,
+    "tracker_parity": false
+  },
+  "cover_letter": {
+    "demand": "NOT_REQUESTED",
+    "state": "NOT_APPLICABLE",
+    "doc_url": null,
+    "pdf_url": null
+  },
+  "operator_handoff": {
+    "instructions": [
+      "Open the apply URL."
+    ],
+    "record_fields": [
+      "date_applied",
+      "submission_status_or_confirmation",
+      "application_or_reference_id_if_present",
+      "resume_artifact_identity",
+      "cover_letter_artifact_identity_if_used",
+      "compensation_or_rate_entered_if_asked",
+      "nontrivial_questions_and_final_answers",
+      "stated_next_step_or_response_timeline"
+    ],
+    "artifact_links": []
+  }
+}

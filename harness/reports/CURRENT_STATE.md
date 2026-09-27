@@ -1,6 +1,6 @@
 # EscapeHatch Current State
 
-**Verified `main` floor before this resume-presentation sprint:** `4f31a74dbc83da5c162d6910f23bfe55c0dfda2a`, after the local-first application-companion contract merged.
+**Verified integration floor before this P01 opportunity-readiness harness sprint:** `c4bd3b2be8475dcae03b853c0dbe01401a592b5b`.
 
 ## Working
 

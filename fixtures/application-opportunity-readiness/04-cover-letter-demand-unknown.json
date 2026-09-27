@@ -1,0 +1,46 @@
+{
+  "schema": "escapehatch/application-opportunity-readiness-receipt/v1",
+  "expected_valid": false,
+  "expected_error": "cover letter demand must be resolved",
+  "status": "RECOMMENDATION_READY",
+  "opportunity": {
+    "id": "opp-example-004",
+    "organization": "Example Data",
+    "role": "Operations Analyst",
+    "apply_url": "https://example.invalid/jobs/operations-analyst",
+    "source_verified": true
+  },
+  "resume": {
+    "disposition": "MASTER_REUSE_EXPLICITLY_APPROVED",
+    "state": "DURABLE_READY",
+    "doc_url": "https://docs.google.com/document/d/EXAMPLE_MASTER_DOC/edit",
+    "pdf_url": "https://drive.google.com/file/d/EXAMPLE_MASTER_PDF/view",
+    "provider_read_back": true,
+    "tracker_parity": true
+  },
+  "cover_letter": {
+    "demand": "UNKNOWN",
+    "state": "BLOCKED",
+    "doc_url": null,
+    "pdf_url": null
+  },
+  "operator_handoff": {
+    "instructions": [
+      "Inspect the application form to determine whether a cover letter is required."
+    ],
+    "record_fields": [
+      "date_applied",
+      "submission_status_or_confirmation",
+      "application_or_reference_id_if_present",
+      "resume_artifact_identity",
+      "cover_letter_artifact_identity_if_used",
+      "compensation_or_rate_entered_if_asked",
+      "nontrivial_questions_and_final_answers",
+      "stated_next_step_or_response_timeline"
+    ],
+    "artifact_links": [
+      "https://docs.google.com/document/d/EXAMPLE_MASTER_DOC/edit",
+      "https://drive.google.com/file/d/EXAMPLE_MASTER_PDF/view"
+    ]
+  }
+}

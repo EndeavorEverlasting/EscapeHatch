@@ -1,9 +1,10 @@
 # EscapeHatch — Compensation + Answer Memory Program Design
 
 **Disposition:** DESIGNED / prototyped seams — not full COMP0/QMEM0 product implementation
-**Floor:** `integration/replit-donor-b01f628-20260921@82ba80a1304756bce81bfda39abf7f68b0b4674c` (contains PR #44 application-proof protocol)
+**Floor:** design/prototype floor PR #46 merged at `1fa7406e21e092f60495b7296df401f541f7c097`; P04 refreshed execution floor is `integration/replit-donor-b01f628-20260921@200389612008ee89eddc24206631cb4b0cce644c` after PR #47
 **Canonical product plan owner:** `docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md`
-**Design branch:** `design/eh-comp-qmem-seams-20260927`
+**Design branch:** historical `design/eh-comp-qmem-seams-20260927` (merged via PR #46)
+**P04 execution projection:** `docs/plans/EH_COMP0_PROOF_LOOP_P04_2026-09-27.md`
 **Private evidence boundary:** Drive tracker/proof/receipts stay private; Git receives sanitized structure only (PR #44 protocol).
 
 ## 0. Mission boundary
@@ -158,12 +159,17 @@ EEO / signature observation
 | QMEM0 label heuristics are a floor, not taxonomy | Promote only via taxonomy ids + sanitized fixtures; heuristics stay prototype-only |
 | Website/portfolio gap | Explicitly deferred — do not invent under COMP/QMEM |
 
-## 8. Unresolved decisions (build-owned)
+## 8. P04-settled COMP0 build decisions
 
-1. Exact career-state JSON shape for nested vs flat typed compensation fields.
-2. Freshness TTL default and per-source override policy.
-3. Whether monthly/weekly periods ship in COMP0 or remain `unknown`→review until needed.
-4. QMEM0 contract path name and whether capability-tenure shares preference storage or a sibling key.
+The 2026-09-27 P04 pass resolves the COMP0 decisions so the local implementation lane does not need to redesign architecture:
+
+1. Career-state uses an optional nested `opportunity.compensation` object referencing a dedicated schema definition; existing `compensation_text` stays display/legacy only.
+2. Provenance requires explicit `currency`, `period`, `source` (existing artifactRef), `verified_at`, and positive `freshness_ttl_hours`, plus at least one of numeric `minimum` or `maximum`.
+3. The schema carries no hidden/default TTL. Producers choose an explicit TTL; stale/absent provenance fails closed later.
+4. Stored periods may be `annual | hourly | monthly | weekly | unknown`, but no cross-period conversion is authorized. `unknown` never authorizes autofill.
+5. General question precedence remains `session_confirmation > opportunity_override > profile_preference`. Compensation adds a dedicated resolution order `session_confirmation > opportunity_override > verified_posted_maximum > profile_preference`.
+6. `verified_posted_maximum` is a derived opportunity-local resolution source, not an ordinary reusable user preference.
+7. QMEM0 contract naming/storage remains successor-owned after COMP0 releases the shared taxonomy/preference files; QMEM1 stays blocked on QMEM0 + PR #29 reconciliation.
 
 ## 9. Proof ceiling
 
@@ -172,14 +178,14 @@ Repository design + prototype unit proof. Not: live autofill on employer sites, 
 ## 10. Implementation seam for next build sprint (EH-COMP0)
 
 **Owner:** local Cursor implementation sprint
-**Base:** refreshed `upstream/integration/replit-donor-b01f628-20260921` containing `82ba80a`
+**Base:** refresh `upstream/integration/replit-donor-b01f628-20260921` at execution time; it must contain at least `200389612008ee89eddc24206631cb4b0cce644c` plus the P04 projection
 **Forbidden:** private Drive content; PR #29/#45 owned surfaces; QMEM1 runtime; website field; silent pay conversion
 
 **First mutations:**
 
 1. Extend `contracts/career-state.v1.schema.json` (+ fixtures/validator) with typed opportunity compensation provenance.
 2. Expand `harness/contracts/application-form-taxonomy.v1.json` compensation families/aliases (desired annual/hourly, current, minimum, history; currency/period as needed).
-3. Insert `verified_posted_maximum` into `harness/contracts/application-preference-cache.v1.json` precedence.
+3. Add a compensation-specific precedence `session_confirmation > opportunity_override > verified_posted_maximum > profile_preference` while preserving the ordinary-question precedence.
 4. Port prototype tests into owned COMP0 validator/unit floor (retire `.prototype` suffix when production module lands — COMP1 owns `compensation.js`).
 5. Keep prototype module as reference until COMP1 wiring lands, or fold pure resolver into a non-DOM shared module consumed by COMP1.
 

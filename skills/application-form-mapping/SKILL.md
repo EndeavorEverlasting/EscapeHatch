@@ -19,8 +19,8 @@ Do not use or commit real selected answers as mapping fixtures.
 ## Procedure
 
 1. If the input came from a private proof/receipt, strip personal answer values, credentials, signatures, and raw screenshot content before repository use; preserve only the minimum structural observation needed to reproduce matching.
-3. Normalize the prompt text using the taxonomy matching rules.
-2. Search aliases for an existing canonical question ID.
+2. Normalize the prompt text using the taxonomy matching rules.
+3. Search aliases for an existing canonical question ID.
 4. Prefer semantic reuse over employer-specific IDs.
 5. Verify family, sensitivity, answer scope, automation policy, and confirmation policy.
 6. If the question is known, record only a generic alias when necessary.

@@ -1,11 +1,11 @@
 # EscapeHatch Default Autofill + Windows Installer + Extension Action Popup Plan
 
-**Status:** P95 DESIGN / IMPLEMENTATION-READY PLAN — product mutation not performed by this planning pass  
-**Plan date:** 2026-09-27  
-**Repository:** `EndeavorEverlasting/EscapeHatch`  
-**Fresh design floor:** `integration/replit-donor-b01f628-20260921@79e42c7ec0eb3eb059ea7f992cca343da19328e8`  
-**Planning branch:** `plan/application-assist-autofill-installer-popup-20260927`  
-**Primary product owners:** `browser/application-assist/*`, `contracts/application-assist-session.v1.json`, `contracts/application-assist-modality.v1.json`, Windows runtime lifecycle surfaces  
+**Status:** P95 DESIGN / IMPLEMENTATION-READY PLAN — product mutation not performed by this planning pass
+**Plan date:** 2026-09-27
+**Repository:** `EndeavorEverlasting/EscapeHatch`
+**Fresh design floor:** `integration/replit-donor-b01f628-20260921@79e42c7ec0eb3eb059ea7f992cca343da19328e8`
+**Planning branch:** `plan/application-assist-autofill-installer-popup-20260927`
+**Primary product owners:** `browser/application-assist/*`, `contracts/application-assist-session.v1.json`, `contracts/application-assist-modality.v1.json`, Windows runtime lifecycle surfaces
 **Method:** P95 — Program Design & Call-Stack Prototype Architect, recovered from Prompt Kit source `registry/prompts/spec-architecture-prompts.v1.json` at blob `5926a198a14567de55110ed19e922fc444b4dec7`
 
 ## 1. Operator outcomes

@@ -436,6 +436,7 @@ async function resumeAssist() {
   }
   const next = api.resumeSession(session, tabOrigin(tab));
   await saveSession(next);
+  if (modality.clearRecentInvokes) modality.clearRecentInvokes("fill_allowed");
   setStatus("Assist resumed on the same application origin.");
 }
 
@@ -446,6 +447,7 @@ async function emergencyStop() {
     return;
   }
   await saveSession(api.stopSession(session));
+  if (modality.clearRecentInvokes) modality.clearRecentInvokes("fill_allowed");
   setStatus("Emergency Stop latched. Future fills are cancelled until you Start Assist again.");
 }
 

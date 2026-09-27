@@ -356,6 +356,11 @@ test('keeps a multi-page application review-only through popup reopen', async ({
       ).toBe(0);
 
       await activateApplicationTab(popup);
+      await popup.bringToFront();
+      await popup.evaluate(() => {
+        const status = document.getElementById('status');
+        if (status) status.textContent = 'Awaiting page-two fill';
+      });
       await popup.locator('#fillAllowed').click();
       // Require a fresh page-two fill (stale "Filled 3…" from page one previously masked failures).
       await expect(popup.locator('#status')).toContainText('Filled 1 ', { timeout: 20_000 });

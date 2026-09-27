@@ -63,8 +63,8 @@
     },
     phone: {
       autocomplete: ["tel", "tel-national"],
-      labels: ["phone", "phone number", "telephone", "mobile phone", "mobile number", "primary number", "primary phone number"],
-      names: ["phone", "phonenumber", "phone_number", "telephone", "mobile", "mobilenumber", "primarynumber", "primary_number", "primaryphonenumber", "primary_phone_number"]
+      labels: ["phone", "phone number", "telephone", "mobile phone", "mobile number", "primary phone number"],
+      names: ["phone", "phonenumber", "phone_number", "telephone", "mobile", "mobilenumber", "primaryphonenumber", "primary_phone_number"]
     },
     linkedin_url: {
       autocomplete: [],

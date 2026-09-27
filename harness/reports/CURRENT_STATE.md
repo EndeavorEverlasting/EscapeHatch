@@ -22,6 +22,7 @@
 - Resume presentation validation is fail-closed and includes negative cases for two-column layout, sub-10 pt body text, sidebars, layout tables, semantic icons, image text, typography flattening, loss of agentic-project prominence, non-extractable PDF policy, missing render QA, unstable Drive projection identity, private contact tracking, universal ATS guarantees, and semantic color use.
 - Study-guidance export to StudySyndicate exists and has dedicated product CI.
 - Base harness maps, workflows, registry, hooks, skill, operator report, validators, and CI exist.
+- Application opportunity recommendations are now gated by `harness/contracts/application-opportunity-readiness.v1.json`: before telling the operator what to apply to next, an agent must verify the source, resolve/create a durable resume, resolve/create any required cover letter, reconcile provider/tracker artifact identity, and return exact links + manual instructions + the record-these list.
 - The durable Windows repository resolver preserves durable work under `Desktop\Dev`, not temporary storage.
 - Application question semantics are modeled independently of employer, ATS vendor, page number, and field order.
 - Application preference persistence is user-owned browser-local state with explicit Save/Export/Import/Clear controls and no repository tracking; browser storage is one adapter rather than the whole companion architecture.
@@ -85,6 +86,16 @@ The contract separates aesthetics from parser-sensitive structure. Color is deco
 Private content remains outside Git. When a real resume is available to the executing agent, its DOCX must be rendered to page images and every page inspected for clipping, overlap, broken glyphs, hierarchy, spacing, and balance; accessibility auditing should run when supported; the PDF must retain extractable text; and current DOCX/PDF/Drive projections must carry consistent contact/content identity. Replacing a current Drive projection should preserve its existing Drive file ID when possible so application-tracker links remain valid.
 
 Repository validation proves the presentation rules are registered and regression-tested. It does not prove that a private resume artifact was rendered correctly unless that artifact was actually inspected, and it does not guarantee universal ATS parsing, recruiter preference, or application success.
+
+## Application recommendation readiness boundary
+
+`harness/contracts/application-opportunity-readiness.v1.json` owns the transition from an interesting/high-fit opportunity to an operator-ready manual application packet. Fit, priority, or a live apply URL alone do not satisfy this boundary.
+
+Recommendation-ready requires a verified source, a durable opportunity-bound resume or explicit master-reuse decision, provider read-back and tracker parity, a resolved cover-letter demand, any required cover-letter artifacts, exact artifact links, ordered manual instructions, and the canonical submission details the operator should record.
+
+Missing artifacts route to creation rather than advice. Private resumes and cover letters remain outside Git and should be organized in the existing user-owned company/opportunity workspace; the public repository stores only contracts, workflow logic, synthetic fixtures, and safe locators. Final submission and attestations remain operator-controlled. Screenshots are evidence on demand for ambiguity or final proof, not a required capture mechanism for every routine application page.
+
+Repository validators prove the readiness rules and synthetic regressions. They do not prove a specific live Google Drive artifact, protected ATS cover-letter requirement, or application submission.
 
 ## Product release versioning boundary
 

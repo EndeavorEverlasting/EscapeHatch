@@ -315,9 +315,9 @@ test('keeps a multi-page application review-only through popup reopen', async ({
       await expect(popup.locator('#status')).toContainText('Assist session started');
 
       await activateApplicationTab(popup);
+      await popup.bringToFront();
       await expect(popup.locator('#fillAllowed')).toBeVisible();
       await popup.locator('#fillAllowed').click();
-      await expect(popup.locator('#status')).not.toHaveText('Assist session started for this application origin. Navigate pages manually.', { timeout: 20_000 });
       // Reject "Filled 0 …" which previously masked wrong-tab fills on CI.
       await expect(popup.locator('#status')).toContainText(/Filled [1-9]/, { timeout: 20_000 });
 

@@ -114,6 +114,30 @@
       ],
       "notes": [
         "Notes"
+      ],
+      "tracker_status": [
+        "Status"
+      ],
+      "applied": [
+        "Applied?"
+      ],
+      "date_applied": [
+        "Date Applied"
+      ],
+      "resume_doc": [
+        "Resume Doc"
+      ],
+      "resume_pdf": [
+        "Resume PDF"
+      ],
+      "study_concepts": [
+        "Study Concepts"
+      ],
+      "study_resources": [
+        "Books / Study Resources"
+      ],
+      "study_guidance": [
+        "StudySyndicate Guidance"
       ]
     },
     "unknown_header_policy": "retain_unmapped_in_preview",

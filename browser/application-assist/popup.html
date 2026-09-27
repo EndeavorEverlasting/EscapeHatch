@@ -24,28 +24,33 @@
       font: 14px/1.4 "Segoe UI", system-ui, sans-serif;
       margin: 0;
       padding: calc(12px + var(--safe-top)) calc(12px + var(--safe-right)) calc(12px + var(--safe-bottom)) calc(12px + var(--safe-left));
-      min-width: 320px;
-      max-width: 440px;
+      width: 380px;
+      min-width: 360px;
+      max-width: 400px;
       color: var(--ink);
       background:
         radial-gradient(1200px 240px at 0% 0%, #d9efe9 0%, transparent 55%),
         linear-gradient(180deg, #f8f5f0 0%, var(--bg) 100%);
     }
-    h1 { font-size: 1.15rem; margin: 0 0 4px; letter-spacing: -0.02em; }
-    .lede { margin: 0 0 10px; color: var(--muted); font-size: 12px; }
-    .mode-chip {
-      display: inline-flex;
-      gap: 6px;
-      align-items: center;
-      margin: 0 0 10px;
-      padding: 4px 8px;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      background: var(--panel);
-      font-size: 11px;
-      color: var(--muted);
+    .chrome-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 0 0 8px;
     }
-    #sessionState, #status {
+    h1 {
+      font-size: 1.15rem;
+      margin: 0;
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+    }
+    .session-pill {
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    #sessionState {
       min-height: 1.3em;
       margin: 0 0 10px;
       padding: 8px 10px;
@@ -53,18 +58,44 @@
       border-radius: 10px;
       background: var(--panel);
     }
+    .autofill-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 0 0 12px;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+    }
+    .autofill-row label {
+      font-weight: 600;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .autofill-row input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      min-height: 18px;
+    }
     .actions, .sheet {
       display: grid;
       gap: 8px;
       margin: 0 0 12px;
     }
-    .actions {
+    .actions.primary-actions {
+      grid-template-columns: 1fr;
+    }
+    .actions.secondary-actions {
       grid-template-columns: 1fr 1fr;
     }
     button, .sheet-btn {
       font: inherit;
-      min-height: 44px;
-      padding: 10px 12px;
+      min-height: 40px;
+      padding: 8px 12px;
       border: 1px solid var(--line);
       border-radius: 12px;
       background: var(--panel);
@@ -77,15 +108,17 @@
       outline: 2px solid var(--accent);
       outline-offset: 2px;
     }
-    #startAssist, #fillAllowed, .sheet-btn[data-action="start_assist"], .sheet-btn[data-action="fill_allowed"] {
-      grid-column: 1 / -1;
+    #startAssist, .sheet-btn[data-action="start_assist"] {
       font-weight: 700;
       background: #0f766e;
       color: #fff;
       border-color: #0f766e;
+      min-height: 44px;
+    }
+    #fillAllowed, .sheet-btn[data-action="fill_allowed"] {
+      font-weight: 600;
     }
     #emergencyStop, .sheet-btn[data-action="emergency_stop"] {
-      grid-column: 1 / -1;
       color: #fff;
       background: var(--danger);
       border-color: var(--danger);
@@ -103,11 +136,11 @@
       grid-template-columns: 1fr 1fr;
       gap: 8px 10px;
     }
-    label { display: grid; gap: 3px; font-weight: 600; font-size: 12px; }
+    label.field { display: grid; gap: 3px; font-weight: 600; font-size: 12px; }
     input, select {
       font: inherit;
       padding: 9px 10px;
-      min-height: 44px;
+      min-height: 40px;
       min-width: 0;
       border: 1px solid var(--line);
       border-radius: 10px;
@@ -130,6 +163,57 @@
       text-transform: uppercase;
       color: var(--muted);
     }
+    .profile-summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin: 0 0 12px;
+    }
+    .profile-summary #profileReady {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    details.advanced {
+      margin: 0 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      padding: 8px 10px;
+    }
+    details.advanced > summary {
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    details.advanced[open] > summary { margin-bottom: 8px; }
+    .mode-chip {
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+      margin: 0 0 8px;
+      padding: 4px 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .lede {
+      display: none;
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    #status {
+      min-height: 1.3em;
+      margin: 0 0 10px;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+    }
     #commandPalette {
       display: none;
       position: sticky;
@@ -143,10 +227,7 @@
       padding: 10px;
     }
     #commandPalette.open { display: block; }
-    #commandQuery {
-      width: 100%;
-      margin-bottom: 8px;
-    }
+    #commandQuery { width: 100%; margin-bottom: 8px; }
     #commandList {
       display: grid;
       gap: 6px;
@@ -156,22 +237,37 @@
     .kbd-hint { font-size: 11px; color: var(--muted); margin: 0 0 8px; }
     html.modality-phone .mouse-actions { display: none; }
     html.modality-phone .profile-panel { display: none; }
+    html.modality-phone .profile-summary { display: none; }
+    html.modality-phone .autofill-row { display: flex; }
     html.modality-phone.profile-open .profile-panel { display: block; }
     html.modality-phone.profile-open .phone-sheet { display: none; }
     html:not(.modality-phone) .phone-sheet { display: none; }
+    html:not(.modality-phone) .profile-panel { display: none; }
+    html:not(.modality-phone).profile-open .profile-panel { display: block; }
     html.modality-phone body {
+      width: auto;
       min-width: 0;
       max-width: none;
     }
     html.modality-phone .grid { grid-template-columns: 1fr; }
     html.modality-phone .actions { grid-template-columns: 1fr; }
+    html.modality-phone .lede { display: block; }
   </style>
 </head>
 <body>
-  <h1>EscapeHatch Application Assist</h1>
+  <div class="chrome-row">
+    <h1>EscapeHatch</h1>
+    <span class="session-pill" id="sessionPill" aria-live="polite">Ready</span>
+  </div>
   <p class="lede">Same semantic session controls for mouse, keyboard, and phone. Phone lands on commands first — not a shrunken desktop form.</p>
-  <div class="mode-chip" id="modeChip" aria-live="polite">Mode: detecting</div>
   <div id="sessionState" role="status" aria-live="polite">Session: idle</div>
+
+  <div class="autofill-row">
+    <label for="autofillToggle">Autofill
+      <input id="autofillToggle" type="checkbox" checked>
+    </label>
+    <span id="autofillStateLabel" aria-live="polite">ON</span>
+  </div>
 
   <div id="commandPalette" role="dialog" aria-label="Command palette" aria-modal="true">
     <p class="kbd-hint">Type to filter. Enter runs the action. Esc closes without changing session state.</p>
@@ -189,57 +285,71 @@
   </section>
 
   <section class="panel mouse-actions" aria-label="Direct session controls">
-    <h2>Session controls</h2>
-    <div class="actions">
+    <div class="actions primary-actions">
       <button id="startAssist" type="button" title="Shortcut: S" data-action="start_assist">Start Assist</button>
-      <button id="fillAllowed" type="button" title="Shortcut: F" data-action="fill_allowed">Fill Allowed Fields</button>
+    </div>
+    <div class="actions secondary-actions">
+      <button id="fillAllowed" type="button" title="Shortcut: F" data-action="fill_allowed">Fill now</button>
       <button id="pause" type="button" title="Shortcut: P" data-action="pause_session">Pause</button>
       <button id="resume" type="button" title="Shortcut: R" data-action="resume_session">Resume</button>
       <button id="undoLast" type="button" title="Shortcut: U" data-action="undo_last_fill">Undo Last Fill</button>
-      <button id="emergencyStop" type="button" title="Shortcut: Shift+Esc or !" data-action="emergency_stop">Emergency Stop</button>
-      <button id="recordConfirmation" type="button" title="Shortcut: C" data-action="record_confirmation">Record Confirmation Evidence</button>
-      <button id="openCommands" type="button" title="Shortcut: / or Ctrl+K" data-action="open_command_palette">Commands…</button>
     </div>
   </section>
+
+  <div class="profile-summary">
+    <span>Profile <strong id="profileReady">checking…</strong></span>
+    <button id="openProfileDesktop" type="button" data-action="open_profile_panel" title="Shortcut: G">Manage profile</button>
+  </div>
+
+  <details class="advanced" id="advancedPanel">
+    <summary>More commands…</summary>
+    <div class="mode-chip" id="modeChip" aria-live="polite">Mode: detecting</div>
+    <div class="actions" style="grid-template-columns: 1fr;">
+      <button id="recordConfirmation" type="button" title="Shortcut: C" data-action="record_confirmation">Record Confirmation Evidence</button>
+      <button id="openCommands" type="button" title="Shortcut: / or Ctrl+K" data-action="open_command_palette">Commands…</button>
+      <button id="emergencyStop" type="button" title="Shortcut: Shift+Esc or !" data-action="emergency_stop">Emergency Stop</button>
+    </div>
+  </details>
 
   <section class="panel profile-panel" id="profilePanel" aria-label="Profile destination">
     <h2>Profile</h2>
     <div class="grid">
-      <label>Title / prefix <input id="name_prefix" autocomplete="honorific-prefix"></label>
-      <label>Preferred name <input id="preferred_name" autocomplete="nickname"></label>
-      <label>First name <input id="first_name" autocomplete="given-name"></label>
-      <label>Last name <input id="last_name" autocomplete="family-name"></label>
-      <label>Email <input id="email" type="email" autocomplete="email"></label>
-      <label>Phone <input id="phone" type="tel" autocomplete="tel"></label>
-      <label>Phone authority
+      <label class="field">Title / prefix <input id="name_prefix" autocomplete="honorific-prefix"></label>
+      <label class="field">Preferred name <input id="preferred_name" autocomplete="nickname"></label>
+      <label class="field">First name <input id="first_name" autocomplete="given-name"></label>
+      <label class="field">Last name <input id="last_name" autocomplete="family-name"></label>
+      <label class="field">Email <input id="email" type="email" autocomplete="email"></label>
+      <label class="field">Phone <input id="phone" type="tel" autocomplete="tel"></label>
+      <label class="field">Phone authority
         <select id="phone_authority">
           <option value="unconfirmed">Do not fill — not explicitly confirmed</option>
           <option value="user_confirmed_primary">Primary career number I control</option>
           <option value="secondary_or_forwarded">Secondary / forwarding / other</option>
         </select>
       </label>
-      <label class="wide">LinkedIn <input id="linkedin_url" type="url"></label>
-      <label class="wide">Street address <input id="street_address" autocomplete="street-address"></label>
-      <label>City <input id="city" autocomplete="address-level2"></label>
-      <label>State / region <input id="region" autocomplete="address-level1"></label>
-      <label>ZIP / postal code <input id="postal_code" autocomplete="postal-code"></label>
-      <label>Country <input id="country" autocomplete="country-name"></label>
+      <label class="field wide">LinkedIn <input id="linkedin_url" type="url"></label>
+      <label class="field wide">Street address <input id="street_address" autocomplete="street-address"></label>
+      <label class="field">City <input id="city" autocomplete="address-level2"></label>
+      <label class="field">State / region <input id="region" autocomplete="address-level1"></label>
+      <label class="field">ZIP / postal code <input id="postal_code" autocomplete="postal-code"></label>
+      <label class="field">Country <input id="country" autocomplete="country-name"></label>
     </div>
-    <div class="actions" style="margin-top: 10px;">
+    <div class="actions" style="margin-top: 10px; grid-template-columns: 1fr 1fr;">
       <button id="syncFromCockpit" type="button" data-action="sync_from_cockpit">Sync from EscapeHatch</button>
       <button id="save" type="button" data-action="save_profile">Save Profile</button>
       <button id="clear" type="button" data-action="clear_profile">Clear Profile</button>
       <button id="export" type="button" data-action="export_profile">Export Profile</button>
       <button id="import" type="button" data-action="import_profile">Import Profile</button>
     </div>
-    <p class="privacy" style="font-size: 11px; margin-top: 6px;">One-action cockpit sync uses activeTab + scripting + storage to read a validated profile from your open EscapeHatch cockpit tab when possible — no file shuttling and no local agent in the normal path. Recovery import/export remains available (capped 64 KiB, schema-checked). Generated distributable artifacts belong under <code>Outputs/application-assist/</code>.</p>
+    <p class="privacy">One-action cockpit sync uses activeTab + scripting + storage when possible. Recovery import/export remains available (capped 64 KiB, schema-checked).</p>
   </section>
 
   <input id="importFile" type="file" accept="application/json,.json">
   <div id="status" role="status" aria-live="polite"></div>
-  <p class="privacy">User-owned browser-local state. Writes go through a canonical Fill Plan and policy gate. Phone is withheld unless explicitly marked as the primary career number you control. Never auto-submits, never clicks Next/Continue, never attests.</p>
+  <p class="privacy">Writes go through a canonical Fill Plan and policy gate. Never auto-submits.</p>
   <script src="assist-core.js"></script>
   <script src="modality.js"></script>
+  <script src="user-settings.js"></script>
   <script src="profile-sync.js"></script>
   <script src="popup.js"></script>
 </body>

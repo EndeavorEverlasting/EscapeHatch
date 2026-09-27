@@ -3,7 +3,13 @@
   "version": 1,
   "product_surface": "browser/application-assist",
   "session_contract": "contracts/application-assist-session.v1.json",
-  "mission": "Provide mouse, keyboard, and phone-native interaction languages over one Application Assist semantic model without resizing desktop chrome into a fake mobile experience.",
+  "mission": "Provide mouse, keyboard, and phone-native interaction languages over one Application Assist semantic model without classifying a narrow desktop action popup as a phone.",
+  "classification_seams": {
+    "SurfaceContext": ["EXTENSION_ACTION_POPUP", "IN_PAGE_COMPANION", "COCKPIT"],
+    "InputModality": ["mouse", "keyboard", "phone"],
+    "LayoutDensity": ["compact", "regular"],
+    "rule": "SurfaceContext != InputModality != LayoutDensity. Viewport width may change LayoutDensity only; it must not select phone InputModality."
+  },
   "semantic_pipeline": [
     "capability",
     "semantic_action",
@@ -31,11 +37,24 @@
   "mode_detection": {
     "phone": [
       "pointer_coarse",
-      "max_width_640px",
       "standalone_display_mode"
     ],
     "keyboard": "always_available_when_document_focused",
-    "mouse": "default_when_fine_pointer_and_wider_layout"
+    "mouse": "default_when_fine_pointer_and_not_standalone",
+    "layout_density": {
+      "compact": "viewport_max_width_640px_or_action_popup_geometry",
+      "regular": "wider_viewport",
+      "forbidden": "narrow_viewport_must_not_force_phone_modality"
+    },
+    "permanent_regression": {
+      "id": "narrow_desktop_action_popup_fine_pointer",
+      "surface": "EXTENSION_ACTION_POPUP",
+      "pointer": "fine",
+      "viewport": "narrow",
+      "expected_modality": "mouse",
+      "expected_density": "compact",
+      "forbidden": "phone_interaction_language"
+    }
   },
   "capabilities": [
     {

@@ -6,6 +6,8 @@ Canonical planning owner for this work: `docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md`
 
 **2026-09-27 installer successor:** `docs/APPLICATION_ASSIST_AUTOFILL_INSTALL_UI_PLAN.md` defines the user-facing `Install-EscapeHatch.cmd` → installed executable program. Installer/package work must consume this lifecycle manager for start/stop/status/restart and must not create a second process-identity or listener-termination owner.
 
+**2026-09-27 packaging selection (Candidate 1):** `Install-EscapeHatch.cmd` → `scripts/windows/Install-EscapeHatch.ps1` installs a thin native `EscapeHatch.exe` built from `scripts/windows/launcher/EscapeHatch.Launcher.cs`. The exe only delegates to `EscapeHatch-Runtime.ps1`. CMD-only shims remain adapters, not the finished launch artifact. Proof: `tests/windows/Test-EscapeHatch-Install.ps1`.
+
 ## Evidence floor
 
 - Provider repository: `EndeavorEverlasting/EscapeHatch`.

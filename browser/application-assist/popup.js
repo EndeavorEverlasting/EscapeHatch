@@ -371,6 +371,98 @@ async function runPageCommand(command, profile, session, preferenceStore) {
   return result;
 }
 
+const userSettingsApi = globalThis.EscapeHatchAssistUserSettings;
+let lastAutofillDedupeKey = "";
+let lastAutofillDedupeAt = 0;
+
+async function loadUserSettings() {
+  const stored = await chrome.storage.local.get(userSettingsApi.STORAGE_KEY);
+  return userSettingsApi.normalizeSettings(stored[userSettingsApi.STORAGE_KEY]);
+}
+
+async function saveUserSettings(settings) {
+  const next = {
+    schema: userSettingsApi.SCHEMA,
+    autofill_enabled: !!settings.autofill_enabled
+  };
+  await chrome.storage.local.set({ [userSettingsApi.STORAGE_KEY]: next });
+  return next;
+}
+
+function projectAutofillToggle(settings, note) {
+  const toggle = document.getElementById("autofillToggle");
+  const label = document.getElementById("autofillStateLabel");
+  if (toggle) toggle.checked = !!settings.autofill_enabled;
+  if (label) label.textContent = settings.autofill_enabled ? "ON" : "OFF";
+  if (note) setStatus(note);
+}
+
+function autofillDedupeKey(session, trigger) {
+  const origin = session && session.origin ? session.origin : "";
+  const tabId = session && session.tab_id != null ? String(session.tab_id) : "";
+  return `${trigger}|${origin}|${tabId}`;
+}
+
+function shouldSkipAutofillTrigger(session, trigger) {
+  const key = autofillDedupeKey(session, trigger);
+  const now = Date.now();
+  if (key && key === lastAutofillDedupeKey && now - lastAutofillDedupeAt < modality.DEDUPE_MS) {
+    return true;
+  }
+  lastAutofillDedupeKey = key;
+  lastAutofillDedupeAt = now;
+  return false;
+}
+
+/** Shared Fill Plan path for manual Fill now and Candidate A autofill. */
+async function executeCanonicalFill(options) {
+  const opts = options || {};
+  const storedProfile = await chrome.storage.local.get(PROFILE_KEY);
+  const profile = sanitizeProfile(storedProfile[PROFILE_KEY] || readForm());
+  if (!hasProfileValues(profile)) {
+    setStatus(opts.missingProfileStatus || "No saved profile. Save or import one first.");
+    return { ok: false, reason: "no_profile" };
+  }
+  let session = await loadStoredSession();
+  if (!session) {
+    setStatus("Start Assist on the application before filling.");
+    return { ok: false, reason: "no_session" };
+  }
+  setStatus(opts.progressStatus || "Filling allowed fields…");
+  const prefStored = await chrome.storage.local.get(api.PREFERENCE_STORAGE_KEY);
+  const preferenceStore = prefStored[api.PREFERENCE_STORAGE_KEY] || null;
+  const result = await runPageCommand("fill", profile, session, preferenceStore);
+  if (result.skipped_reason === "emergency_stop") {
+    setStatus("Emergency Stop is latched. No fields were written.");
+    return { ok: false, reason: "emergency_stop", result };
+  }
+  if (result.skipped_reason) {
+    setStatus(`Fill blocked (${result.skipped_reason}). Resume or start a new session.`);
+    return { ok: false, reason: result.skipped_reason, result };
+  }
+  setStatus(
+    `Filled ${result.filled} allowed field(s) via Fill Plan r${result.plan_revision}. Review, navigate manually, then submit yourself.`
+  );
+  return { ok: true, result };
+}
+
+async function maybeAutofillAfterStart(session) {
+  const loaded = await loadUserSettings();
+  projectAutofillToggle(loaded.settings, loaded.note);
+  if (!loaded.settings.autofill_enabled) {
+    setStatus("Assist session started. Autofill is OFF — use Fill now when ready.");
+    return;
+  }
+  if (shouldSkipAutofillTrigger(session, "SESSION_STARTED")) {
+    setStatus("Assist session started. Skipped duplicate autofill trigger.");
+    return;
+  }
+  await executeCanonicalFill({
+    missingProfileStatus: "Assist session started. Profile/sync required before autofill can write fields.",
+    progressStatus: "Assist started — filling allowed fields…"
+  });
+}
+
 async function startAssist() {
   const tab = await activeTab();
   const origin = tabOrigin(tab);
@@ -384,36 +476,12 @@ async function startAssist() {
   });
   session.tab_id = tab.id;
   await saveSession(session);
-  setStatus("Assist session started for this application origin. Navigate pages manually.");
+  // Candidate A: chain one canonical fill after Start Assist when AutofillPreference allows.
+  await maybeAutofillAfterStart(session);
 }
 
 async function fillAllowedFields() {
-  const storedProfile = await chrome.storage.local.get(PROFILE_KEY);
-  const profile = sanitizeProfile(storedProfile[PROFILE_KEY] || readForm());
-  if (!hasProfileValues(profile)) {
-    setStatus("No saved profile. Save or import one first.");
-    return;
-  }
-  let session = await loadStoredSession();
-  if (!session) {
-    setStatus("Start Assist on the application before filling.");
-    return;
-  }
-  setStatus("Filling allowed fields…");
-  const prefStored = await chrome.storage.local.get(api.PREFERENCE_STORAGE_KEY);
-  const preferenceStore = prefStored[api.PREFERENCE_STORAGE_KEY] || null;
-  const result = await runPageCommand("fill", profile, session, preferenceStore);
-  if (result.skipped_reason === "emergency_stop") {
-    setStatus("Emergency Stop is latched. No fields were written.");
-    return;
-  }
-  if (result.skipped_reason) {
-    setStatus(`Fill blocked (${result.skipped_reason}). Resume or start a new session.`);
-    return;
-  }
-  setStatus(
-    `Filled ${result.filled} allowed field(s) via Fill Plan r${result.plan_revision}. Review, navigate manually, then submit yourself.`
-  );
+  await executeCanonicalFill();
 }
 
 async function pauseAssist() {
@@ -637,6 +705,7 @@ function bindDirectControls() {
     ["emergencyStop", "emergency_stop"],
     ["recordConfirmation", "record_confirmation"],
     ["openCommands", "open_command_palette"],
+    ["openProfileDesktop", "open_profile_panel"],
     ["save", "save_profile"],
     ["clear", "clear_profile"],
     ["export", "export_profile"],
@@ -663,13 +732,32 @@ function bindDirectControls() {
       invokeAction("dismiss_overlay", "click").catch((error) => setStatus(error.message));
     });
   }
+  const autofillToggle = document.getElementById("autofillToggle");
+  if (autofillToggle) {
+    autofillToggle.addEventListener("change", () => {
+      saveUserSettings({ autofill_enabled: !!autofillToggle.checked })
+        .then((settings) => {
+          projectAutofillToggle(settings, null);
+          setStatus(
+            settings.autofill_enabled
+              ? "Autofill ON. Future Start Assist / page triggers may fill allowed fields."
+              : "Autofill OFF. Already-filled values are unchanged; Fill now remains available."
+          );
+        })
+        .catch((error) => setStatus(error.message));
+    });
+  }
 }
 
 function applyMode() {
   const env = modality.readEnvironment(window);
   activeMode = modality.detectMode(env);
-  modality.applyDocumentMode(document, activeMode);
-  if (modeChip) modeChip.textContent = `Mode: ${activeMode}`;
+  const density = modality.detectDensity(env);
+  const surface = modality.detectSurface(env);
+  modality.applyDocumentMode(document, activeMode, env);
+  if (modeChip) {
+    modeChip.textContent = `Mode: ${activeMode} · ${density} · ${surface}`;
+  }
   if (activeMode === "phone") {
     setProfileOpen(false);
     renderPhoneSheet();
@@ -677,6 +765,23 @@ function applyMode() {
       document.activeElement.blur();
     }
   }
+}
+
+function projectSessionPill(session) {
+  const pill = document.getElementById("sessionPill");
+  if (!pill) return;
+  if (!session) {
+    pill.textContent = "Ready";
+    return;
+  }
+  const status = String(session.status || "active");
+  pill.textContent = status === "active" ? "Active" : status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+function projectProfileReady(profile) {
+  const node = document.getElementById("profileReady");
+  if (!node) return;
+  node.textContent = hasProfileValues(profile) ? "Ready" : "Needs attention";
 }
 
 importFile.addEventListener("change", () => {
@@ -710,13 +815,17 @@ document.addEventListener("keydown", (event) => {
 
 window.matchMedia("(pointer: coarse)").addEventListener("change", applyMode);
 window.matchMedia("(max-width: 640px)").addEventListener("change", applyMode);
+window.matchMedia("(display-mode: standalone)").addEventListener("change", applyMode);
 
 bindSemanticHandlers();
 bindDirectControls();
 applyMode();
 
-Promise.all([loadStoredProfile(), loadStoredSession()])
-  .then(() => {
+Promise.all([loadStoredProfile(), loadStoredSession(), loadUserSettings()])
+  .then(([profile, session, settingsLoaded]) => {
+    projectAutofillToggle(settingsLoaded.settings, settingsLoaded.note);
+    projectSessionPill(session);
+    projectProfileReady(profile);
     if (activeMode === "phone" && document.activeElement && modality.isEditableTarget(document.activeElement)) {
       document.activeElement.blur();
     }

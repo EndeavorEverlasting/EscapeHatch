@@ -165,7 +165,7 @@ The 2026-09-27 P04 pass resolves the COMP0 decisions so the local implementation
 
 1. Career-state uses an optional nested `opportunity.compensation` object referencing a dedicated schema definition; existing `compensation_text` stays display/legacy only.
 2. Provenance requires explicit `currency`, `period`, `source` (existing artifactRef), `verified_at`, and positive `freshness_ttl_hours`, plus at least one of numeric `minimum` or `maximum`.
-3. The schema carries no hidden/default TTL. Producers choose an explicit TTL; stale/absent provenance fails closed later.
+3. The schema carries no hidden/default TTL. Producers choose an explicit TTL; stale/absent provenance fails closed later. A `verified_at` timestamp later than the resolver/validator clock is invalid for autofill and must fail closed rather than being treated as fresh.
 4. Stored periods may be `annual | hourly | monthly | weekly | unknown`, but no cross-period conversion is authorized. `unknown` never authorizes autofill.
 5. General question precedence remains `session_confirmation > opportunity_override > profile_preference`. Compensation adds a dedicated resolution order `session_confirmation > opportunity_override > verified_posted_maximum > profile_preference`.
 6. `verified_posted_maximum` is a derived opportunity-local resolution source, not an ordinary reusable user preference.
@@ -183,10 +183,10 @@ Repository design + prototype unit proof. Not: live autofill on employer sites, 
 
 **First mutations:**
 
-1. Extend `contracts/career-state.v1.schema.json` (+ fixtures/validator) with typed opportunity compensation provenance.
+1. Extend `contracts/career-state.v1.schema.json` plus both validation owners (`scripts/validate_career_state.py` and `artifacts/escape-hatch/src/lib/career-store.ts`) and their fixtures/tests with typed opportunity compensation provenance.
 2. Expand `harness/contracts/application-form-taxonomy.v1.json` compensation families/aliases (desired annual/hourly, current, minimum, history; currency/period as needed).
 3. Add a compensation-specific precedence `session_confirmation > opportunity_override > verified_posted_maximum > profile_preference` while preserving the ordinary-question precedence.
-4. Port prototype tests into owned COMP0 validator/unit floor (retire `.prototype` suffix when production module lands — COMP1 owns `compensation.js`).
+4. Port prototype tests into owned COMP0 validator/unit floor and add a future-`verified_at` negative case before treating the prototype as production evidence (retire `.prototype` suffix when production module lands — COMP1 owns `compensation.js`).
 5. Keep prototype module as reference until COMP1 wiring lands, or fold pure resolver into a non-DOM shared module consumed by COMP1.
 
 **Completion gate:** focused compensation validators green; `validate_career_state` + `validate_application_harness` green; exact head integrable without overwriting separately owned work.

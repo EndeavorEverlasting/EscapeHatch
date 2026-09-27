@@ -23,13 +23,14 @@ Use this skill for any EscapeHatch repository sprint that writes files, validate
 4. Resolve canonical artifact owners before creating files.
 5. Search existing contracts/helpers/validators/skills before replacing or duplicating them.
 6. For application-form work, read the application taxonomy, preference-cache contract, workflow, mapping skill, and operator report before writing.
-7. Declare the sprint fields required by governance.
-8. Keep one writer per branch and isolate parallel lanes.
-9. Implement only owned scope.
-10. Never commit real application preference values; use sanitized question/option evidence only.
-11. Run validation in manifest order plus product checks relevant to changed scope.
-12. Record exact results, skipped checks, proof ceiling, commit SHA, push/PR state, gaps, risks, and preserved parallel work.
-13. End with one executable next command that advances the first remaining unproven state.
+7. For opportunity recommendation/manual-application handoff work, read `harness/contracts/application-opportunity-readiness.v1.json`, `harness/workflows/APPLICATION_OPPORTUNITY_READINESS.md`, and `skills/application-opportunity-readiness/SKILL.md`; resolve/create the private packet before calling an opportunity recommendation-ready.
+8. Declare the sprint fields required by governance.
+9. Keep one writer per branch and isolate parallel lanes.
+10. Implement only owned scope.
+11. Never commit real application preference values; use sanitized question/option evidence only.
+12. Run validation in manifest order plus product checks relevant to changed scope.
+13. Record exact results, skipped checks, proof ceiling, commit SHA, push/PR state, gaps, risks, and preserved parallel work.
+14. End with one executable next command that advances the first remaining unproven state.
 
 ## Failure behavior
 

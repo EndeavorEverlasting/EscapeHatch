@@ -29,7 +29,7 @@ No real selected answers from the observed application are tracked in the reposi
 - Unknown questions fail closed to mapping rather than guessed answers.
 - `scripts/validate_application_harness.py` checks observed coverage, privacy boundaries, references, automation policies, and negative fixtures.
 - The Windows durable-root resolver from the superseded harness lane is preserved as `scripts/resolve_repo.ps1`.
-- Current-main Application Assist Session (`browser/application-assist`, `contracts/application-assist-session.v1.json`) ports the proven identity/contact fill matching into a persistent same-application control loop with Fill Plan → policy gate → DOM writer, Pause/Resume/Stop/Undo, and confirmation-evidence metadata.
+- Current Application Assist Session (`browser/application-assist`, `contracts/application-assist-session.v1.json`) ports the proven identity/contact fill matching into a persistent same-application control loop with Fill Plan → policy gate → DOM writer, Pause/Resume/Stop/Undo, and confirmation-evidence metadata.
 
 
 ## 2026-09-27 manual-proof observation round

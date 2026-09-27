@@ -39,7 +39,7 @@ It does **not**:
 
 | Term | Owns / decides |
 |---|---|
-| **OpportunityCompensationProvenance** | Typed min/max/currency/period/source/verified_at/freshness for one opportunity |
+| **OpportunityCompensationProvenance** | One typed min/max/currency/period/source/verified_at/freshness entry; an opportunity may preserve multiple entries for independently published periods |
 | **CompensationFamily** | `desired` \| `current` \| `history` \| `minimum_acceptable` \| `unknown` |
 | **PayPeriod** | `annual` \| `hourly` \| `monthly` \| `weekly` \| `unknown` |
 | **verified_posted_maximum** | Preference/resolution source between override and profile |
@@ -163,10 +163,10 @@ EEO / signature observation
 
 The 2026-09-27 P04 pass resolves the COMP0 decisions so the local implementation lane does not need to redesign architecture:
 
-1. Career-state uses an optional nested `opportunity.compensation` object referencing a dedicated schema definition; existing `compensation_text` stays display/legacy only.
-2. Provenance requires explicit `currency`, `period`, `source` (existing artifactRef), `verified_at`, and positive `freshness_ttl_hours`, plus at least one of numeric `minimum` or `maximum`.
-3. The schema carries no hidden/default TTL. Producers choose an explicit TTL; stale/absent provenance fails closed later. A `verified_at` timestamp later than the resolver/validator clock is invalid for autofill and must fail closed rather than being treated as fresh.
-4. Stored periods may be `annual | hourly | monthly | weekly | unknown`, but no cross-period conversion is authorized. `unknown` never authorizes autofill.
+1. Career-state uses an optional `opportunity.compensation` array of dedicated typed range/provenance entries; existing `compensation_text` stays display/legacy only. Multiple explicit published periods (for example annual + hourly) must coexist without lossy overwrite.
+2. Every compensation entry requires explicit `currency`, `period`, `source` (existing artifactRef), `verified_at`, and positive `freshness_ttl_hours`, plus at least one nonnegative numeric `minimum` or `maximum`; if both exist then `minimum <= maximum`, and duplicate same-period/source identities are rejected.
+3. The schema carries no hidden/default TTL. Producers choose an explicit TTL; stale/absent provenance fails closed later. Future timestamps use one explicit 300-second clock-skew tolerance: more than 300 seconds ahead fails closed as `future_verified_at`; within tolerance is age zero.
+4. Stored periods may be `annual | hourly | monthly | weekly | unknown`, but no cross-period conversion is authorized. `unknown` never authorizes autofill. When multiple period entries exist, only the destination-compatible entry is eligible.
 5. General question precedence remains `session_confirmation > opportunity_override > profile_preference`. Compensation adds a dedicated resolution order `session_confirmation > opportunity_override > verified_posted_maximum > profile_preference`.
 6. `verified_posted_maximum` is a derived opportunity-local resolution source, not an ordinary reusable user preference.
 7. QMEM0 contract naming/storage remains successor-owned after COMP0 releases the shared taxonomy/preference files; QMEM1 stays blocked on QMEM0 + PR #29 reconciliation.
@@ -174,6 +174,10 @@ The 2026-09-27 P04 pass resolves the COMP0 decisions so the local implementation
 ## 9. Proof ceiling
 
 Repository design + prototype unit proof. Not: live autofill on employer sites, mainline deployment, Drive access, or observed questionnaire acceptance.
+
+## 9.1 Prototype correctness caveat
+
+PR #46 proves the call-stack decomposition, not all production semantics. The current prototype's non-desired-family branch can still consume `profile_preference`, which conflicts with the settled fail-closed/manual policy for current/history/minimum compensation. EH-COMP0 must repair that branch and add preference-present negative fixtures before any prototype code is promoted or reused by COMP1. The same repair pass owns multi-range selection, future-timestamp tolerance, and bound validation.
 
 ## 10. Implementation seam for next build sprint (EH-COMP0)
 

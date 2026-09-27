@@ -38,8 +38,9 @@ A private application-proof corpus now covers multiple completion routes: multi-
 
 ### Aliases promoted from repeated/observed structure
 
-- `identity.phone`: add `Primary Number` / `Primary Phone Number` as aliases of the existing primary contact-phone semantic. Runtime matching is pinned by Application Assist session tests; the existing phone-authority gate still requires `user_confirmed_primary`.
-- `education.highest_completed_level`: add `Highest Level of Education Obtained` as a semantic alias. Questionnaire runtime support remains a separate unproven transition.
+- `identity.phone`: `Primary Phone Number` is promoted as a narrow alias of the existing primary contact-phone semantic. Runtime matching is pinned by Application Assist session tests; the existing phone-authority gate still requires `user_confirmed_primary`.
+- Bare `Primary Number` is intentionally **not** a global alias: it needs stronger context (for example a phone-specific name/autocomplete and applicant-contact page semantics) before it can be filled safely.
+- `Highest Level of Education Obtained` is recorded as an observed candidate for `education.highest_completed_level`, but alias promotion is deferred until the questionnaire/runtime owner can actually consume the canonical question.
 
 ### Observed gaps that must not be papered over with loose aliases
 

@@ -470,7 +470,7 @@
       ],
       "forbidden_surfaces": [
         "production DOM mutation",
-        "PR #27 resume-parser implementation",
+        "integrated PR #40 resume-parser implementation",
         "real user work history"
       ],
       "posture": "isolated writer",
@@ -689,7 +689,7 @@
       "mission": "Implement native donor autofill repair with repeated work-history record matching and readable responsibility formatting.",
       "dependencies": [
         "EH-REC0",
-        "PR #27 merged/superseded/reconciled",
+        "integrated PR #40 r\u00e9sum\u00e9 floor",
         "refreshed Application Assist floor"
       ],
       "owned_mutation_surfaces": [

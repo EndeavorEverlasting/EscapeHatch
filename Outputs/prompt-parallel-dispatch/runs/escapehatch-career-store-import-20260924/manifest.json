@@ -20,14 +20,15 @@
     "planning_head_at_pr_creation": "d453df2ebf7f99a6705b6f94ec35a283896cc500"
   },
   "graph": {
-    "expression": "G0 -> EH-D0 -> { EH-D1 || EH-D2 || EH-D3 } -> EH-D4 -> { EH-D5 || EH-D6 } -> EH-D7",
+    "expression": "G0 -> EH-D0 -> { EH-D1 || EH-D2 } -> EH-D4-V1 -> { EH-D5 || EH-D6 } -> EH-D7 ; EH-D3 extends EH-D4-V1 as EH-D4-V1.1",
     "initial_width_after_contract_floor": 3,
     "max_width": 3,
-    "parallel_disposition": "REQUIRED_AFTER_EH_D0"
+    "parallel_disposition": "REQUIRED_AFTER_EH_D0",
+    "note": "EH-D4-V1 (tabular) must not depend on EH-D3. Document adapters are V1.1 after the tabular orchestrator seam exists. EH-D1/D2 are INTEGRATED via PR #41/#42."
   },
-  "status": "PLANNED_NOT_DISPATCHED_PR35_TRACKED",
+  "status": "D1_D2_INTEGRATED_NEXT_EH_D4_V1",
   "blockers": [
-    "Planning-only disposition does not authorize product/runtime implementation dispatch in this pass; PR #35 tracks the complete plan/manifest.",
+    "EH-D1 (PR #41) and EH-D2 (PR #42) are integrated; next implementation slice is EH-D4-V1. Document EH-D3 remains V1.1 and must not gate tabular V1.",
     "PRs #27, #29, #30, and #31 overlap cockpit import, persistence, batch, and companion surfaces and must be integrated or explicitly reconciled before their dependent lanes write.",
     "The inspected integration floor does not contain harness/contracts/prompt-parallel-dispatch.v1.json or scripts/prompt_parallel_dispatch.py, so canonical manifest CLI validation/receipt proof is unavailable.",
     "The generic Outputs/prompt-parallel-dispatch/manifest.json target is not established on the inspected floor; the repository already uses run-scoped manifests for application-assist planning.",
@@ -135,7 +136,9 @@
         "git diff --check"
       ],
       "convergence_owner": "EH-D4",
-      "status": "WAITING_EH_D0"
+      "status": "INTEGRATED_PR41",
+      "integrated_candidate": "0739f4c42fe173a302f0ad43154f2c429d7c9ffc",
+      "integration_merge": "3a3a8d2dcd4e2ffcd9f5bc8e3c81002aa8c9e20d"
     },
     {
       "lane_id": "EH-D2",
@@ -186,15 +189,18 @@
         "git diff --check"
       ],
       "convergence_owner": "EH-D4",
-      "status": "WAITING_EH_D0"
+      "status": "INTEGRATED_PR42",
+      "integrated_candidate": "69f5568d4cf6fa421d639e71f1f898a370d1b9ef",
+      "integration_merge": "5563afa86528c1dad07e8f1d0320d4dce28ae00a"
     },
     {
       "lane_id": "EH-D3",
-      "wave": 1,
+      "wave": "1.1",
       "mission": "Implement local TXT/Markdown/PDF/DOCX document decoding and reviewable opportunity proposal extraction, reusing the shared document-decoding seam rather than forking resume intake.",
       "dependencies": [
         "EH-D0",
-        "PR #27 integrated or explicitly reconciled"
+        "integrated PR #40 r\u00e9sum\u00e9/shared decoder floor",
+        "EH-D4-V1 orchestration seam"
       ],
       "owned_mutation_surfaces": [
         "new generic local document-text decoder/extractor",
@@ -234,17 +240,17 @@
         "bounded input/timeout tests where applicable",
         "git diff --check"
       ],
-      "convergence_owner": "EH-D4",
-      "status": "WAITING_EH_D0_AND_PR27"
+      "convergence_owner": "EH-D4-V1.1",
+      "status": "WAITING_EH_D4_V1_FOR_V1_1"
     },
     {
-      "lane_id": "EH-D4",
+      "lane_id": "EH-D4-V1",
       "wave": 2,
-      "mission": "Converge store and import adapters into one preview/dedupe/conflict/transactional-commit application service.",
+      "mission": "Compose tabular/JSON decoder preview -> deterministic dedupe/conflict -> accepted transactional CareerStateStore commit -> canonical validation -> receipt. Must not depend on EH-D3.",
       "dependencies": [
+        "EH-D0",
         "EH-D1",
-        "EH-D2",
-        "EH-D3"
+        "EH-D2"
       ],
       "owned_mutation_surfaces": [
         "OpportunityImportPreview application service",
@@ -268,7 +274,7 @@
         "mode": "runtime_tool",
         "operation": "converge_validate_integrate",
         "arguments": {
-          "sprint": "EH-D4",
+          "sprint": "EH-D4-V1",
           "plan": "docs/CAREER_STORE_IMPORT_PLAN.md"
         }
       },
@@ -280,21 +286,22 @@
         "conflict preservation proof"
       ],
       "validation": [
-        "all EH-D1/D2/D3 focused tests",
-        "import orchestration integration tests",
+        "EH-D1/D2 focused tests",
+        "import orchestration integration tests for career_state_json/legacy_workspace_json/csv/xlsx",
         "python scripts/validate_career_state.py",
+        "python scripts/validate_opportunity_import.py",
         "git diff --check"
       ],
       "convergence_owner": "EH-D7",
-      "status": "WAITING_WAVE1"
+      "status": "NEXT_DEPENDENCY_READY"
     },
     {
       "lane_id": "EH-D5",
       "wave": 3,
       "mission": "Expose local source import, mapping preview, conflict review, transactional commit, and canonical export in the cockpit.",
       "dependencies": [
-        "EH-D4",
-        "PR #27 integrated or explicitly reconciled"
+        "EH-D4-V1",
+        "integrated PR #40 r\u00e9sum\u00e9/profile floor"
       ],
       "owned_mutation_surfaces": [
         "artifacts/escape-hatch/src/App.tsx",
@@ -337,7 +344,7 @@
         "git diff --check"
       ],
       "convergence_owner": "EH-D7",
-      "status": "WAITING_EH_D4_AND_PR27"
+      "status": "WAITING_EH_D4_V1"
     },
     {
       "lane_id": "EH-D6",
@@ -345,7 +352,7 @@
       "mission": "Wire the canonical local CareerStateStore into batch/companion projections so imported opportunities use the same freshness, channel, evidence, and transition semantics.",
       "dependencies": [
         "EH-D1",
-        "EH-D4",
+        "EH-D4-V1",
         "PRs #29/#30/#31 integrated or explicitly reconciled"
       ],
       "owned_mutation_surfaces": [
@@ -447,6 +454,27 @@
       ],
       "convergence_owner": "repository promotion owner",
       "status": "WAITING_WAVE3"
+    },
+    {
+      "lane_id": "EH-D4-V1.1",
+      "wave": "2.1",
+      "mission": "Extend EH-D4-V1 orchestrator with EH-D3 document proposals (TXT/Markdown/text PDF/DOCX) without forking r\u00e9sum\u00e9 decoder ownership.",
+      "dependencies": [
+        "EH-D4-V1",
+        "EH-D3",
+        "integrated PR #40 r\u00e9sum\u00e9/shared decoder floor"
+      ],
+      "owned_mutation_surfaces": [
+        "document proposal adapters wired into OpportunityImportPreview"
+      ],
+      "forbidden_surfaces": [
+        "blocking tabular V1",
+        "forking resume parser ownership",
+        "OCR"
+      ],
+      "posture": "extension after tabular V1",
+      "status": "WAITING_EH_D4_V1_AND_EH_D3",
+      "convergence_owner": "EH-D7"
     }
   ],
   "manifest_path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-career-store-import-20260924/manifest.json",

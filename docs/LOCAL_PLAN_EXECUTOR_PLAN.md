@@ -22,8 +22,8 @@ Provider truth at planning time:
 - default branch: \`main@0824535b9dc1341def885a79a098d297df770ac8\`;
 - integration branch: \`integration/replit-donor-b01f628-20260921@fb888ae5611e8242883d7a6134259f2dd9c03110\`;
 - integration is 129 commits ahead / 0 behind main;
-- open product/recovery owners include PR #27, #29, #30, #31, and planning PR #35;
-- PR #27 currently has unresolved review findings and failing Web Cockpit Validation;
+- open product/recovery owners include integrated résumé floor (PR #40; PR #27 superseded), PRs #29/#30/#31, and planning PR #35 (EH-D1/D2 integrated via #41/#42);
+- PR #27 is closed as SUPERSEDED BY PR #40 — do not route new résumé work there;
 - PR #29 currently has unresolved review findings and multiple failing required workflows;
 - PR #30 remains a stacked repair with an unresolved submission-evidence review finding and failing application-queue workflow;
 - PR #31 is green on observed workflows but still has unresolved timestamp/read-back review findings;
@@ -205,7 +205,7 @@ For every open PR in the graph:
 7. re-fetch exact PR head and required checks;
 8. merge only when current gates pass.
 
-PR #27/#29/#30/#31/#35 are current priority blockers because later application/bootstrap/import lanes depend on them.
+PR #29/#30/#31 remain current Application Assist priority blockers. Résumé intake is integrated via PR #40 (PR #27 superseded). Career-store EH-D1/D2 are integrated via PR #41/#42; next import product lane is EH-D4-V1.
 
 ## 10. Local execution adapter
 
@@ -310,7 +310,7 @@ A loop iteration may end with BLOCKED work; it may not silently call blocked wor
 
 Priority repair/convergence before new product feature lanes:
 
-1. repair/reconcile PR #27;
+1. treat PR #27 as superseded by integrated PR #40; do not reopen it as a résumé writer;
 2. repair/reconcile PR #29 and its stacked #30/#31 repairs in dependency order;
 3. repair PR #35 planning defects and pin its current floor;
 4. converge the required owners to the refreshed integration floor;

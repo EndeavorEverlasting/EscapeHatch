@@ -1,12 +1,12 @@
 # EscapeHatch — P04 EH-COMP0 + Application Proof Loop Sprint Map
 
-**Disposition:** P04 FACTORED / DURABLE — product implementation remains P07 successor work  
-**Canonical program owner:** `docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md`  
-**Execution projection:** this file is a bounded sprint map, not a second product-plan authority  
-**Provider floor refreshed:** `integration/replit-donor-b01f628-20260921@200389612008ee89eddc24206631cb4b0cce644c`  
-**Provider default branch:** `main@0824535b9dc1341def885a79a098d297df770ac8`  
-**Design/prototype floor:** PR #46 merged as `1fa7406e21e092f60495b7296df401f541f7c097`  
-**Latest adjacent runtime floor:** PR #47 merged as `200389612008ee89eddc24206631cb4b0cce644c`  
+**Disposition:** P04 FACTORED / DURABLE — product implementation remains P07 successor work
+**Canonical program owner:** `docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md`
+**Execution projection:** this file is a bounded sprint map, not a second product-plan authority
+**Provider floor refreshed:** `integration/replit-donor-b01f628-20260921@200389612008ee89eddc24206631cb4b0cce644c`
+**Provider default branch:** `main@0824535b9dc1341def885a79a098d297df770ac8`
+**Design/prototype floor:** PR #46 merged as `1fa7406e21e092f60495b7296df401f541f7c097`
+**Latest adjacent runtime floor:** PR #47 merged as `200389612008ee89eddc24206631cb4b0cce644c`
 **Proof-protocol floor:** PR #44 merged as `82ba80a1304756bce81bfda39abf7f68b0b4674c`
 
 ## 0. Launch order first
@@ -142,8 +142,8 @@ The only repository-consumable product evidence from a completed application is 
 
 ## 5. Sprint panel — EH-COMP0
 
-**Disposition:** READY FOR P07  
-**Type:** product contract + validation  
+**Disposition:** READY FOR P07
+**Type:** product contract + validation
 **Base:** refresh the integration branch at execution time; it must contain at least `200389612008ee89eddc24206631cb4b0cce644c` and this P04 plan commit.
 
 ### Mission

@@ -20,6 +20,16 @@ COMPONENTS = {
     "application_resume_artifact_sync_negative_fixture": "fixtures/application-resume-artifact-sync/02-local-only-negative.json",
     "application_resume_artifact_sync_validator": "scripts/validate_application_resume_artifact_sync.py",
     "application_resume_artifact_sync_tests": "tests/test_application_resume_artifact_sync.py",
+    "application_opportunity_readiness_contract": "harness/contracts/application-opportunity-readiness.v1.json",
+    "application_opportunity_readiness_workflow": "harness/workflows/APPLICATION_OPPORTUNITY_READINESS.md",
+    "application_opportunity_readiness_skill": "skills/application-opportunity-readiness/SKILL.md",
+    "application_opportunity_readiness_report": "harness/reports/APPLICATION_OPPORTUNITY_READINESS.md",
+    "application_opportunity_readiness_positive_fixture": "fixtures/application-opportunity-readiness/01-existing-resume-ready.json",
+    "application_opportunity_readiness_missing_resume_fixture": "fixtures/application-opportunity-readiness/02-missing-resume-blocked.json",
+    "application_opportunity_readiness_missing_cover_letter_fixture": "fixtures/application-opportunity-readiness/03-required-cover-letter-missing.json",
+    "application_opportunity_readiness_unknown_cover_letter_fixture": "fixtures/application-opportunity-readiness/04-cover-letter-demand-unknown.json",
+    "application_opportunity_readiness_validator": "scripts/validate_application_opportunity_readiness.py",
+    "application_opportunity_readiness_tests": "tests/test_application_opportunity_readiness.py",
     "product_version_validator": "scripts/validate_product_version.py",
     "product_version_authority": "VERSION",
     "product_release_contract": "contracts/product-release.v1.json",
@@ -52,20 +62,25 @@ VALIDATION_ORDER = [
     "python scripts/validate_application_companion.py",
     "python scripts/validate_resume_presentation.py",
     "python scripts/validate_application_resume_artifact_sync.py",
+    "python scripts/validate_application_opportunity_readiness.py",
+    "python tests/test_application_opportunity_readiness.py",
     "python scripts/validate_harness.py",
     "python scripts/validate_career_state.py",
     "python scripts/validate_local_runtime_lifecycle.py",
     "git diff --check",
 ]
 MARKERS = {
-    "harness/CODEBASE_MAP.md": ("## Repository floor","## Structure","## Durable Windows repository root","## Product entry points","## Product release versioning entry points","## Repository promotion entry points","## Application-question entry points","## Application companion entry points","## Resume presentation entry points","## Validation commands","## Build, test, and deploy commands","## Fresh-agent path"),
-    "harness/WORKFLOWS.md": ("## Repository Location","## Task Pickup","## Application Form Intake","## Application Companion","## Resume Presentation","## Product Release Versioning","## Repository Promotion","## Pre-commit validation","## Failure Recovery","## Artifact discipline","## Handoff","## Product-runtime introduction gate"),
+    "harness/CODEBASE_MAP.md": ("## Repository floor","## Structure","## Durable Windows repository root","## Product entry points","## Product release versioning entry points","## Repository promotion entry points","## Application opportunity readiness entry points","## Application-question entry points","## Application companion entry points","## Resume presentation entry points","## Validation commands","## Build, test, and deploy commands","## Fresh-agent path"),
+    "harness/WORKFLOWS.md": ("## Repository Location","## Task Pickup","## Application Opportunity Readiness","## Application Form Intake","## Application Companion","## Resume Presentation","## Product Release Versioning","## Repository Promotion","## Pre-commit validation","## Failure Recovery","## Artifact discipline","## Handoff","## Product-runtime introduction gate"),
     "ARTIFACT_REGISTRY.md": ("## Naming rules","## Registered artifacts","## User-owned local artifacts","## Validation output","## Product artifact gate"),
+    "harness/workflows/APPLICATION_OPPORTUNITY_READINESS.md": ("## Trigger","## Authorities","## Workflow","## Failure handling","## Handoff"),
     "harness/workflows/APPLICATION_FORM_INTAKE.md": ("## Trigger","## Authorities","## Order-independent intake","## Preference resolution","## Sensitivity and freshness","## Learning a new form","## Failure handling","## Handoff"),
     "skills/harness-operations/SKILL.md": ("## Trigger","## Required inputs","## Procedure","## Failure behavior","## Expected outputs"),
     "skills/application-form-mapping/SKILL.md": ("## Trigger","## Required inputs","## Procedure","## Failure behavior","## Expected outputs"),
+    "skills/application-opportunity-readiness/SKILL.md": ("## Trigger","## Required inputs","## Procedure","## Failure behavior","## Expected outputs"),
     "harness/reports/CURRENT_STATE.md": ("## Working","## Broken","## Missing / intentionally not yet established","## Career escape-route boundary","## Local-first companion boundary","## Resume presentation quality boundary","## Product release versioning boundary","## Repository promotion boundary","## Application automation boundary","## Validation floor","## Principal risks"),
     "harness/reports/APPLICATION_FORM_AUTOMATION_STATE.md": ("## Evidence reviewed","## Working","## Broken","## Missing / intentionally not yet established","## Principal risks","## Validation","## Proof ceiling"),
+    "harness/reports/APPLICATION_OPPORTUNITY_READINESS.md": ("## Evidence reviewed","## Working","## Broken","## Missing / intentionally not yet established","## Principal risks","## Validation","## Proof ceiling"),
     "harness/constraints/LUA_EMBEDDING.md": ("## Host owns the application","## State isolation","## Error boundary","## Sandboxing","## Execution model","## Type discipline","## Conceptual integrity"),
 }
 REQUIRED_REGISTRY = {
@@ -88,6 +103,12 @@ REQUIRED_REGISTRY = {
     "Application resume artifact durability contract": "contracts/application-resume-artifact-sync.v1.json",
     "Application resume artifact durability validator": "scripts/validate_application_resume_artifact_sync.py",
     "Application resume artifact durability tests": "tests/test_application_resume_artifact_sync.py",
+    "Application opportunity readiness contract": "harness/contracts/application-opportunity-readiness.v1.json",
+    "Application opportunity readiness workflow": "harness/workflows/APPLICATION_OPPORTUNITY_READINESS.md",
+    "Application opportunity readiness skill": "skills/application-opportunity-readiness/SKILL.md",
+    "Application opportunity readiness report": "harness/reports/APPLICATION_OPPORTUNITY_READINESS.md",
+    "Application opportunity readiness validator": "scripts/validate_application_opportunity_readiness.py",
+    "Application opportunity readiness tests": "tests/test_application_opportunity_readiness.py",
     "Local runtime lifecycle contract": "contracts/local-runtime-lifecycle.v1.json",
     "Local runtime lifecycle example fixture": "fixtures/local-runtime-lifecycle.v1.example.json",
     "Local runtime lifecycle validator": "scripts/validate_local_runtime_lifecycle.py",
@@ -199,7 +220,7 @@ def validate_resolver() -> None:
 
 def validate_ci() -> None:
     text = read(".github/workflows/harness.yml")
-    for marker in ("name: Harness Validation","push:","pull_request:","name: Validate governance","run: python scripts/validate_governance.py","name: Validate product version","run: python scripts/validate_product_version.py","name: Test product version","run: python tests/test_product_version.py","name: Validate repository promotion","run: python scripts/validate_repository_promotion.py","name: Test promotion guard","run: python tests/test_repository_promotion.py","name: Validate application harness","run: python scripts/validate_application_harness.py","name: Validate application companion","run: python scripts/validate_application_companion.py","name: Validate resume presentation","run: python scripts/validate_resume_presentation.py","name: Validate application resume artifact sync","run: python scripts/validate_application_resume_artifact_sync.py","name: Test application resume artifact sync","run: python tests/test_application_resume_artifact_sync.py","name: Validate harness","run: python scripts/validate_harness.py","name: Validate career-state contract","run: python scripts/validate_career_state.py","name: Validate local runtime lifecycle","run: python scripts/validate_local_runtime_lifecycle.py","git diff --check","windows-location:","scripts/resolve_repo.ps1 -ResolveOnly","WINDOWS_REPO_ROOT=PASS"):
+    for marker in ("name: Harness Validation","push:","pull_request:","name: Validate governance","run: python scripts/validate_governance.py","name: Validate product version","run: python scripts/validate_product_version.py","name: Test product version","run: python tests/test_product_version.py","name: Validate repository promotion","run: python scripts/validate_repository_promotion.py","name: Test promotion guard","run: python tests/test_repository_promotion.py","name: Validate application harness","run: python scripts/validate_application_harness.py","name: Validate application companion","run: python scripts/validate_application_companion.py","name: Validate resume presentation","run: python scripts/validate_resume_presentation.py","name: Validate application resume artifact sync","run: python scripts/validate_application_resume_artifact_sync.py","name: Test application resume artifact sync","run: python tests/test_application_resume_artifact_sync.py","name: Validate application opportunity readiness","run: python scripts/validate_application_opportunity_readiness.py","name: Test application opportunity readiness","run: python tests/test_application_opportunity_readiness.py","name: Validate harness","run: python scripts/validate_harness.py","name: Validate career-state contract","run: python scripts/validate_career_state.py","name: Validate local runtime lifecycle","run: python scripts/validate_local_runtime_lifecycle.py","git diff --check","windows-location:","scripts/resolve_repo.ps1 -ResolveOnly","WINDOWS_REPO_ROOT=PASS"):
         if marker not in text:
             raise HarnessError(f"CI missing active marker: {marker}")
     # Promotion workflow must exist and have correct triggers
@@ -236,7 +257,7 @@ def self_tests(manifest: dict) -> int:
 def main() -> int:
     try:
         manifest = load_manifest(); validate_markers(); rows = parse_registry(); validate_hooks(); validate_resolver(); validate_ci()
-        run_validator("scripts/validate_governance.py"); run_validator("scripts/validate_product_version.py"); run_validator("scripts/validate_repository_promotion.py"); run_validator("scripts/validate_application_harness.py"); run_validator("scripts/validate_application_companion.py"); run_validator("scripts/validate_resume_presentation.py"); run_validator("scripts/validate_application_resume_artifact_sync.py"); run_validator("scripts/validate_local_runtime_lifecycle.py")
+        run_validator("scripts/validate_governance.py"); run_validator("scripts/validate_product_version.py"); run_validator("scripts/validate_repository_promotion.py"); run_validator("scripts/validate_application_harness.py"); run_validator("scripts/validate_application_companion.py"); run_validator("scripts/validate_resume_presentation.py"); run_validator("scripts/validate_application_resume_artifact_sync.py"); run_validator("scripts/validate_application_opportunity_readiness.py"); run_validator("scripts/validate_local_runtime_lifecycle.py")
         negatives = self_tests(manifest)
     except HarnessError as exc:
         print(f"HARNESS_VALIDATION: FAIL: {exc}", file=sys.stderr); return 1
@@ -252,6 +273,7 @@ def main() -> int:
     print("application_companion_validator=PASS")
     print("resume_presentation_validator=PASS")
     print("application_resume_artifact_sync_validator=PASS")
+    print("application_opportunity_readiness_validator=PASS")
     print("local_runtime_lifecycle_validator=PASS")
     return 0
 

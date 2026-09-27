@@ -361,7 +361,13 @@ async function runPageCommand(command, profile, session, preferenceStore) {
   if (!result || result.status !== "ok") {
     throw new Error((result && result.message) || "Assist could not run on this page.");
   }
-  if (result.session) await saveSession(result.session);
+  if (result.session) {
+    const nextSession = { ...result.session };
+    if (typeof session.tab_id === "number" && typeof nextSession.tab_id !== "number") {
+      nextSession.tab_id = session.tab_id;
+    }
+    await saveSession(nextSession);
+  }
   return result;
 }
 

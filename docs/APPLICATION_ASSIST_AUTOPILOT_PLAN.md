@@ -8,6 +8,8 @@
 **Run-scoped dispatch manifest:** `Outputs/prompt-parallel-dispatch/runs/escapehatch-application-assist-autopilot-20260923/manifest.json`
 **Generic dispatch target:** reserved by the active Windows lifecycle graph; this plan does not rebind it.
 
+**2026-09-27 P95 successor refinement:** `docs/APPLICATION_ASSIST_AUTOFILL_INSTALL_UI_PLAN.md` owns the new default-on autofill preference/orchestration design and the extension action-popup convergence requirements. It extends this plan without replacing the existing Fill Plan, progression, account-bootstrap, queue/evidence, or final-submit safety owners.
+
 ## 1. Execution frame
 
 - **Repository:** `EndeavorEverlasting/EscapeHatch`

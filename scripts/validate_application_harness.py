@@ -58,6 +58,7 @@ def validate_taxonomy(data: dict) -> dict:
         raise ContractError("questions/page_archetypes must be non-empty arrays")
     ids = []
     by_id = {}
+    alias_owner = {}
     for index, question in enumerate(questions):
         if not isinstance(question, dict):
             raise ContractError(f"questions[{index}] must be object")
@@ -75,6 +76,12 @@ def validate_taxonomy(data: dict) -> dict:
         aliases = question["aliases"]
         if not isinstance(aliases, list) or not aliases or any(not isinstance(a, str) or not a.strip() for a in aliases):
             raise ContractError(f"{qid} aliases invalid")
+        for alias in aliases:
+            normalized_alias = " ".join(alias.lower().split())
+            owner = alias_owner.get(normalized_alias)
+            if owner and owner != qid:
+                raise ContractError(f"alias {alias!r} collides between {owner} and {qid}")
+            alias_owner[normalized_alias] = qid
         ids.append(qid); by_id[qid] = question
     if len(ids) != len(set(ids)):
         raise ContractError("question IDs must be unique")
@@ -135,6 +142,7 @@ def self_tests(taxonomy: dict, preferences: dict) -> int:
     item = copy.deepcopy(taxonomy); next(q for q in item["questions"] if q["id"]=="attestation.truth_accuracy")["automation_policy"]="fill_if_explicit_preference"; negatives.append((item, preferences))
     item = copy.deepcopy(taxonomy); next(q for q in item["questions"] if q["id"]=="legal.non_compete_blocking")["confirmation_policy"]="until_changed"; negatives.append((item, preferences))
     item = copy.deepcopy(taxonomy); item["questions"][0]["preferred_answer"]="synthetic"; negatives.append((item, preferences))
+    item = copy.deepcopy(taxonomy); item["questions"][1]["aliases"].append(item["questions"][0]["aliases"][0].upper()); negatives.append((item, preferences))
     pref = copy.deepcopy(preferences); pref["storage"]["controls"].remove("Clear Preferences"); negatives.append((taxonomy, pref))
     count = 0
     for tax, pref in negatives:

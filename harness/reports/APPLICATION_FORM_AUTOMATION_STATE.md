@@ -29,7 +29,29 @@ No real selected answers from the observed application are tracked in the reposi
 - Unknown questions fail closed to mapping rather than guessed answers.
 - `scripts/validate_application_harness.py` checks observed coverage, privacy boundaries, references, automation policies, and negative fixtures.
 - The Windows durable-root resolver from the superseded harness lane is preserved as `scripts/resolve_repo.ps1`.
-- Current-main Application Assist Session (`browser/application-assist`, `contracts/application-assist-session.v1.json`) ports the proven identity/contact fill matching into a persistent same-application control loop with Fill Plan → policy gate → DOM writer, Pause/Resume/Stop/Undo, and confirmation-evidence metadata.
+- Current Application Assist Session (`browser/application-assist`, `contracts/application-assist-session.v1.json`) ports the proven identity/contact fill matching into a persistent same-application control loop with Fill Plan → policy gate → DOM writer, Pause/Resume/Stop/Undo, and confirmation-evidence metadata.
+
+
+## 2026-09-27 manual-proof observation round
+
+A private application-proof corpus now covers multiple completion routes: multi-step ATS confirmation, custom application confirmation, and direct-email submission evidence. Raw screenshots and selected answers remain outside the repository. The repository receives only sanitized structural observations.
+
+### Aliases promoted from repeated/observed structure
+
+- `identity.phone`: `Primary Phone Number` is promoted as a narrow alias of the existing primary contact-phone semantic. Runtime matching is pinned by Application Assist session tests; the existing phone-authority gate still requires `user_confirmed_primary`.
+- Bare `Primary Number` is intentionally **not** a global alias: it needs stronger context (for example a phone-specific name/autocomplete and applicant-contact page semantics) before it can be filled safely.
+- `Highest Level of Education Obtained` is recorded as an observed candidate for `education.highest_completed_level`, but alias promotion is deferred until the questionnaire/runtime owner can actually consume the canonical question.
+
+### Observed gaps that must not be papered over with loose aliases
+
+- personal website / portfolio URL is common profile information but has no current canonical profile/runtime field in Application Assist;
+- a desired-compensation field that explicitly accepts annual **or** hourly input needs the unit-aware compensation resolver; do not force it into `compensation.desired_annual_salary`;
+- age-threshold, essential-functions, capability-tenure, product-tenure, scripting-language, and detailed veteran subcategory questions need their own canonical policy/Answer Memory decisions where semantics are stable;
+- final confirmation screenshots can support submission evidence only through the existing evidence contract; review pages, drafts, signatures, and screenshots are not reusable authority to submit or sign.
+
+### Durable operating protocol
+
+`harness/workflows/APPLICATION_FORM_INTAKE.md` owns the manual-proof capture -> sanitized observation -> canonical alias/question workflow. `skills/application-form-mapping/SKILL.md` is the agent-facing reusable procedure. The private proof ledger and per-application receipts stay outside Git; the tracker/career state is the operational index.
 
 ## Broken
 

@@ -56,6 +56,63 @@ When a new corporation or ATS changes wording/order:
 7. Run `python scripts/validate_application_harness.py` and `python scripts/validate_harness.py`.
 8. Update `harness/reports/APPLICATION_FORM_AUTOMATION_STATE.md` with coverage/gap state, not personal answers.
 
+## Manual application proof capture and evidence-to-alias bridge
+
+A manually completed application is both an employment event and a source of structural product evidence. Preserve those two concerns separately.
+
+### Private proof owner
+
+The user's private proof store may contain screenshots, provider confirmations, sent-message/outbox evidence, detailed per-application receipts, and the user's actual submitted answers. That store is **not** a repository fixture source of truth.
+
+For every manually completed application:
+
+1. preserve the strongest available completion evidence: provider confirmation, application-received page, sent-message/outbox proof, or equivalent;
+2. reconcile the job tracker/application ledger with company, role, route, application date, provider/surface, and proof reference;
+3. when the flow contains reusable form evidence, preserve a detailed private receipt or screenshot sequence;
+4. classify the submission state using the existing Application Assist / Companion evidence contract; a filled form, review page, saved draft, composed email, or screenshot without a qualifying confirmation is not enough to promote to submitted;
+5. keep credentials, signatures, sensitive answers, and raw private screenshots out of Git.
+
+### Sanitized structural observation
+
+A private proof artifact may be distilled into repository-safe observations containing only what is needed to improve matching:
+
+- normalized field label/prompt;
+- associated sanitized name/id/placeholder when materially useful;
+- control type;
+- sanitized option labels;
+- page/stage archetype;
+- action-control wording and semantic class;
+- application surface/vendor as a non-canonical hint;
+- whether the observation confirmed an existing canonical question, added a safe alias, or exposed a missing semantic owner.
+
+Do **not** copy the user's selected value into the structural observation.
+
+### Alias admission rule
+
+Different wording may map to one canonical question only when the meanings are equivalent under the same sensitivity, scope, freshness, automation, and confirmation policy.
+
+Examples:
+
+- `Phone Number` and `Primary Phone Number` may map to `identity.phone`; bare `Primary Number` is context-dependent and stays unresolved unless stronger page/name/autocomplete evidence proves it is the applicant contact phone;
+- `Highest Level of Education Obtained` is a candidate semantic equivalent of `education.highest_completed_level`, but do not promote a new alias as runtime-ready until the owning questionnaire/runtime seam can consume that canonical question safely;
+- a field that can accept either annual or hourly desired pay must **not** be collapsed into an annual-only compensation semantic merely because its label contains “salary”;
+- `Current Salary`, `Minimum Acceptable Salary`, and `Desired Salary` remain different semantics;
+- `Review and Submit` as a step label is not proof that a nearby control is a final submit action.
+
+If equivalence is not safe, leave the observation unresolved and route it to the canonical plan/taxonomy owner instead of broadening aliases until they become ambiguous.
+
+### Agent discovery / rework prevention
+
+Before asking the operator to re-document a manual application, agents should recover in this order:
+
+1. current application tracker/career-state entry;
+2. current private proof ledger or linked per-application receipt when access is available;
+3. current application-form taxonomy and this workflow;
+4. current automation-state report for already-known gaps;
+5. only then request new evidence that is genuinely missing.
+
+The repository stores the **protocol and sanitized semantics**, not private application proof. The private proof store remains the evidentiary source; the tracker/career state remains the operational index.
+
 ## Failure handling
 
 - Ambiguous match: leave blank and report the competing canonical IDs.

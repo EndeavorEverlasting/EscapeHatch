@@ -35,5 +35,7 @@ jobs:
         run: npx --prefix artifacts/escape-hatch tsx --test artifacts/escape-hatch/src/lib/opportunity-tabular-import.test.ts
       - name: Validate import contract
         run: python scripts/validate_opportunity_import.py
+      - name: Validate career-state contract
+        run: python scripts/validate_career_state.py
       - name: Check whitespace
         run: git diff --check

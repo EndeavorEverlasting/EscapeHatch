@@ -53,7 +53,17 @@
   "graph": {
     "expression": "PROOF-LOOP-0[COMPLETE] ; EH-COMP0 -> { EH-COMP1 ; EH-QMEM0 } ; EH-QMEM0 + PR29_RECONCILED -> EH-QMEM1",
     "unfinished_mutation_width": 1,
-    "parallel_disposition": "NOT_APPLICABLE_IMMEDIATE_NEXT_TRANSITION_SHARED_OWNER_SERIALIZATION"
+    "parallel_disposition": "NOT_APPLICABLE_WITHIN_BOUNDED_COMP_QMEM_SUBGRAPH",
+    "scope": "BOUNDED_COMP_QMEM_SUBGRAPH_ONLY",
+    "external_parallel_lanes_preserved": [
+      "EH-ACT0",
+      "EH-CTX0",
+      "EH-REC0",
+      "EH-CRED0",
+      "EH-ART0",
+      "EH-REV0"
+    ],
+    "external_parallel_authority": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
   },
   "canonical_target_disposition": {
     "requested_target": "Outputs/prompt-parallel-dispatch/manifest.json",
@@ -97,7 +107,7 @@
     {
       "lane_id": "EH-COMP0",
       "wave": 1,
-      "mission": "Implement canonical typed opportunity compensation provenance, explicit compensation taxonomy families, compensation-specific resolution precedence, and focused validators/fixtures from the PR #46 executable prototype seam.",
+      "mission": "Implement canonical multi-range typed opportunity compensation provenance, explicit compensation taxonomy families, compensation-specific resolution precedence, repaired pure resolver semantics, and focused validators/fixtures from the PR #46 exercised architecture seam.",
       "dependencies": [
         "PR #46 merged",
         "PR #44 proof protocol integrated",
@@ -140,7 +150,7 @@
         "python scripts/validate_career_state.py",
         "focused career-store TypeScript tests",
         "python scripts/validate_application_harness.py",
-        "focused compensation tests including future verified_at rejection",
+        "focused compensation tests including multi-range, future verified_at, bounds, and non-desired preference leakage",
         "python scripts/validate_harness.py",
         "git diff --check",
         "required provider CI on exact head"
@@ -148,9 +158,12 @@
       "convergence_owner": "P04/P07 coordinator on integration/replit-donor-b01f628-20260921",
       "status": "READY_FOR_P07",
       "expected_artifacts": [
-        "backward-compatible typed opportunity compensation provenance",
+        "backward-compatible multi-range opportunity compensation provenance",
+        "annual + hourly coexistence proof",
         "Python + TypeScript career-state validator parity",
-        "future verified_at fail-closed proof",
+        "300-second future timestamp tolerance with fail-closed proof",
+        "nonnegative and ordered bound validation",
+        "non-desired profile-preference leakage regression proof",
         "explicit desired/current/history/minimum taxonomy separation",
         "compensation-specific resolution precedence"
       ]

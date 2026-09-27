@@ -280,6 +280,10 @@
     const name = compactSignal(field.name);
     const id = compactSignal(field.id);
     const placeholder = normalizeSignal(field.placeholder);
+    const type = String(field.type || "text").toLowerCase();
+    const primaryPhoneAlias = label === "primary phone number" || placeholder === "primary phone number";
+    const corroboratesPhone = type === "tel" || autocomplete.some((token) => token === "tel" || token === "tel-national") || name.includes("phone") || id.includes("phone");
+    if (primaryPhoneAlias && !corroboratesPhone) return null;
     let best = null;
     let bestScore = 0;
     for (const key of PROFILE_KEYS) {

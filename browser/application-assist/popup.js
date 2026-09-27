@@ -251,12 +251,39 @@ async function syncFromCockpit() {
   return profile;
 }
 
-async function activeTab() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab || typeof tab.id !== "number") {
-    throw new Error("No active browser tab is available.");
+function isApplicationTab(tab) {
+  return typeof tab?.id === "number" && typeof tab?.url === "string" && /^https?:\/\//i.test(tab.url);
+}
+
+async function activeTab(preferredOrigin) {
+  const current = await chrome.tabs.query({ active: true, currentWindow: true });
+  const focused = current.find(isApplicationTab);
+  if (focused) {
+    if (!preferredOrigin) return focused;
+    try {
+      if (new URL(focused.url).origin === preferredOrigin) return focused;
+    } catch (_error) {
+      // Fall through to a preferred-origin match below.
+    }
   }
-  return tab;
+
+  const all = await chrome.tabs.query({ currentWindow: true });
+  const httpTabs = all.filter(isApplicationTab);
+  if (preferredOrigin) {
+    const matched = httpTabs.filter((tab) => {
+      try {
+        return new URL(tab.url).origin === preferredOrigin;
+      } catch (_error) {
+        return false;
+      }
+    });
+    matched.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
+    if (matched[0]) return matched[0];
+  }
+  if (focused) return focused;
+  httpTabs.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
+  if (httpTabs[0]) return httpTabs[0];
+  throw new Error("No active browser tab is available.");
 }
 
 function tabOrigin(tab) {
@@ -268,7 +295,7 @@ function tabOrigin(tab) {
 }
 
 async function runPageCommand(command, profile, session, preferenceStore) {
-  const tab = await activeTab();
+  const tab = await activeTab(session && session.origin ? session.origin : undefined);
   const origin = tabOrigin(tab);
   session = api.observeOrigin(session, origin);
   await saveSession(session);
@@ -276,30 +303,45 @@ async function runPageCommand(command, profile, session, preferenceStore) {
   const runtimeFiles = command === "advance"
     ? ["assist-core.js", "progression.js", "navigation-adapter.js"]
     : ["assist-core.js"];
-  await chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    files: runtimeFiles
-  });
-  const injected = await chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    func: (payload) => {
-      globalThis.__ESCAPEHATCH_ASSIST_COMMAND__ = payload;
-    },
-    args: [{ type: command, profile, session, preferenceStore: preferenceStore || null, sessionStorageKey: SESSION_KEY }]
-  });
-  if (!injected) {
-    throw new Error("Assist command injection failed.");
+  let timeoutId = 0;
+  const inject = async () => {
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: runtimeFiles
+    });
+    const injected = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: (payload) => {
+        globalThis.__ESCAPEHATCH_ASSIST_COMMAND__ = payload;
+      },
+      args: [{ type: command, profile, session, preferenceStore: preferenceStore || null, sessionStorageKey: SESSION_KEY }]
+    });
+    if (!injected) {
+      throw new Error("Assist command injection failed.");
+    }
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ["content.js"]
+    });
+    return results && results[0] ? results[0].result : null;
+  };
+  try {
+    const result = await Promise.race([
+      inject(),
+      new Promise((_, reject) => {
+        timeoutId = window.setTimeout(() => {
+          reject(new Error(`Assist ${command} timed out on the application tab.`));
+        }, 15_000);
+      })
+    ]);
+    if (!result || result.status !== "ok") {
+      throw new Error((result && result.message) || "Assist could not run on this page.");
+    }
+    if (result.session) await saveSession(result.session);
+    return result;
+  } finally {
+    if (timeoutId) window.clearTimeout(timeoutId);
   }
-  const results = await chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    files: ["content.js"]
-  });
-  const result = results && results[0] ? results[0].result : null;
-  if (!result || result.status !== "ok") {
-    throw new Error((result && result.message) || "Assist could not run on this page.");
-  }
-  if (result.session) await saveSession(result.session);
-  return result;
 }
 
 async function startAssist() {
@@ -329,6 +371,7 @@ async function fillAllowedFields() {
     setStatus("Start Assist on the application before filling.");
     return;
   }
+  setStatus("Filling allowed fields…");
   const prefStored = await chrome.storage.local.get(api.PREFERENCE_STORAGE_KEY);
   const preferenceStore = prefStored[api.PREFERENCE_STORAGE_KEY] || null;
   const result = await runPageCommand("fill", profile, session, preferenceStore);

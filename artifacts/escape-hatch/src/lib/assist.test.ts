@@ -171,6 +171,9 @@ test('resume location parsing requires address evidence and recognizes explicit 
   ].join('\n'), 'ambiguous-header.txt');
   assert.equal(ambiguous.profilePatch.city, undefined);
   assert.equal(ambiguous.profilePatch.region, undefined);
+  assert.equal(ambiguous.profilePatch.first_name, 'Jane');
+  assert.equal(ambiguous.profilePatch.last_name, 'Doe');
+  assert.equal(ambiguous.proposals.some((proposal) => proposal.field === 'name' && proposal.confidence === 'high'), true);
 
   const canada = parseResumeText([
     'Alex Example',
@@ -179,6 +182,73 @@ test('resume location parsing requires address evidence and recognizes explicit 
   assert.equal(canada.profilePatch.city, 'Toronto');
   assert.equal(canada.profilePatch.region, 'ON');
   assert.equal(canada.profilePatch.country, 'Canada');
+});
+
+test('resume intake withholds generic headers, parses international locations, and keeps multi-column role/education columns distinct', () => {
+  const generic = parseResumeText([
+    'Resume',
+    'candidate@example.test',
+  ].join('\n'), 'generic-header.txt');
+  assert.equal(generic.profilePatch.first_name, undefined);
+  assert.equal(generic.proposals.some((proposal) => proposal.field === 'name' && proposal.confidence === 'high'), false);
+
+  const curriculum = parseResumeText([
+    'Curriculum Vitae',
+    'candidate@example.test',
+  ].join('\n'), 'cv-header.txt');
+  assert.equal(curriculum.profilePatch.first_name, undefined);
+
+  const london = parseResumeText([
+    'Alex Example',
+    'London, United Kingdom | alex@example.test',
+  ].join('\n'), 'london.txt');
+  assert.equal(london.profilePatch.city, 'London');
+  assert.equal(london.profilePatch.region, undefined);
+  assert.equal(london.profilePatch.country, 'United Kingdom');
+  assert.equal(london.proposals.some((proposal) => proposal.field === 'location' && proposal.value === 'London, United Kingdom'), true);
+
+  const dublin = parseResumeText([
+    'Alex Example',
+    'Dublin, Ireland | alex@example.test',
+  ].join('\n'), 'dublin.txt');
+  assert.equal(dublin.profilePatch.city, 'Dublin');
+  assert.equal(dublin.profilePatch.country, 'Ireland');
+
+  const multiColumn = parseResumeText([
+    'Alex Example',
+    'Metro City, NY | alex@example.test',
+    'PROFESSIONAL EXPERIENCE',
+    'Example Co — Product Engineer | City, ST | 2024–Present',
+    '• Built accessible workflow tooling.',
+    'EDUCATION',
+    'Example University | B.S. Computer Science | 2020',
+  ].join('\n'), 'multi-column.txt');
+  assert.equal(multiColumn.experience[0]?.company, 'Example Co');
+  assert.equal(multiColumn.experience[0]?.title, 'Product Engineer');
+  assert.equal(multiColumn.experience[0]?.location, 'City, ST');
+  assert.equal(multiColumn.experience[0]?.dates, '2024–Present');
+  assert.equal(multiColumn.proposals.find((proposal) => proposal.field === 'role')?.confidence, 'high');
+  assert.equal(multiColumn.education[0]?.institution, 'Example University');
+  assert.equal(multiColumn.education[0]?.credential, 'B.S. Computer Science');
+  assert.equal(multiColumn.education[0]?.dates, '2020');
+  assert.equal(multiColumn.proposals.find((proposal) => proposal.field === 'education')?.confidence, 'high');
+
+  const shifted = parseResumeText([
+    'Alex Example',
+    'Metro City, NY | alex@example.test',
+    'PROFESSIONAL EXPERIENCE',
+    'Broken Co — Role | City, ST | Extra | 2024–Present',
+    'EDUCATION',
+    'School | Degree | Honors | 2020 | Extra',
+  ].join('\n'), 'withheld-columns.txt');
+  assert.equal(shifted.experience[0]?.dates, '');
+  assert.notEqual(shifted.experience[0]?.dates, 'City, ST');
+  assert.equal(shifted.proposals.find((proposal) => proposal.field === 'role')?.confidence, 'medium');
+  assert.equal(shifted.education[0]?.dates, '');
+  assert.equal(shifted.proposals.find((proposal) => proposal.field === 'education')?.confidence, 'medium');
+  const withheld = applyDeterministicResumeImport(shifted, emptyAssistProfile(emptyProfile));
+  assert.equal(withheld.profile.experience.some((role) => role.company === 'Broken Co'), false);
+  assert.equal(withheld.profile.education.some((item) => item.institution === 'School'), false);
 });
 
 test('deterministic resume intake excludes medium-confidence ambiguous structured records', () => {

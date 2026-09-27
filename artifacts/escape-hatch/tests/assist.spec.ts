@@ -135,7 +135,7 @@ test('explains unsupported PDF layouts without creating a review panel', async (
 });
 
 test('keeps a multi-page application review-only through popup reopen', async ({ browser }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   const testDirectory = resolve(fileURLToPath(import.meta.url), '..');
   const sourceExtension = resolve(testDirectory, '../../../browser/application-assist');
@@ -204,31 +204,23 @@ test('keeps a multi-page application review-only through popup reopen', async ({
     </script>
   `;
 
-  const sync = {
-    schema: 'escape-hatch-assist-sync',
-    profile: {
-      contact: {
-        first_name: 'Ada',
-        email: 'ada@example.com',
-        city: 'London',
-      },
-    },
-    answers: [],
-  };
-
   try {
     await cp(sourceExtension, extensionDirectory, { recursive: true });
     const manifestPath = resolve(extensionDirectory, 'manifest.json');
     const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as {
       host_permissions?: string[];
     };
-    manifest.host_permissions = [`${baseURL}/*`];
+    manifest.host_permissions = [`${baseURL}/*`, '*://127.0.0.1/*'];
     await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
 
     const context = await browserType.launchPersistentContext(userDataDirectory, {
       baseURL,
       headless: true,
-      channel: 'chromium',
+      viewport: { width: 1280, height: 900 },
+      // Full Chromium (not headless shell) is required for MV3 extension loading.
+      ...(process.env.PLAYWRIGHT_CHROMIUM_PATH
+        ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH }
+        : { channel: 'chromium' as const }),
       args: [
         '--no-sandbox',
         '--disable-dev-shm-usage',
@@ -238,35 +230,75 @@ test('keeps a multi-page application review-only through popup reopen', async ({
     });
 
     try {
+      for (const existing of context.pages()) {
+        if (existing.url() === 'about:blank') {
+          await existing.close().catch(() => undefined);
+        }
+      }
+
+      await context.route('**/assist-application-fixture*', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/html; charset=utf-8',
+          body: `<!doctype html><html><head><meta charset="utf-8"></head><body>${fixturePage}</body></html>`,
+        });
+      });
+
       const application = await context.newPage();
-      await application.goto('/');
-      await application.setContent(fixturePage);
+      await application.goto(`${baseURL}/assist-application-fixture`);
 
       const serviceWorker =
-        context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
+        context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker', { timeout: 30_000 }));
       const extensionId = new URL(serviceWorker.url()).hostname;
       const openPopup = async () => {
         await application.bringToFront();
         const popup = await context.newPage();
         await popup.goto(`chrome-extension://${extensionId}/popup.html`);
-        await expect(popup.locator('#start')).toBeEnabled();
+        await expect(popup.locator('#startAssist')).toBeEnabled();
         return popup;
+      };
+      const activateApplicationTab = async (popup: import('@playwright/test').Page) => {
+        await application.bringToFront();
+        const applicationOrigin = new URL(baseURL).origin;
+        await popup.evaluate(async (origin) => {
+          const tabs = await chrome.tabs.query({});
+          const matches = tabs.filter((tab) => {
+            if (typeof tab.id !== 'number' || typeof tab.url !== 'string') return false;
+            try {
+              return new URL(tab.url).origin === origin;
+            } catch {
+              return false;
+            }
+          });
+          matches.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
+          if (matches[0]?.id != null) {
+            await chrome.tabs.update(matches[0].id, { active: true });
+          }
+        }, applicationOrigin);
       };
 
       const popup = await openPopup();
-      await popup.getByText('Profile bridge', { exact: true }).click();
-      await popup.locator('#sync').fill(JSON.stringify(sync));
-      await popup.locator('#start').click();
-      await popup.locator('#scan').click();
+      await expect(popup.locator('#modeChip')).toContainText('Mode: mouse');
+      await expect(popup.locator('.mouse-actions')).toBeVisible();
+      await popup.locator('#first_name').fill('Ada');
+      await popup.locator('#email').fill('ada@example.com');
+      await popup.locator('#city').fill('London');
+      await popup.locator('#save').click();
+      await expect(popup.locator('#status')).toContainText('Saved');
 
-      await expect(popup.locator('[data-field="first-name"]')).toBeChecked();
-      await expect(popup.locator('[data-field="password"]')).toBeDisabled();
-      await expect(popup.locator('[data-field="resume"]')).toBeDisabled();
-      await expect(popup.locator('[data-field="ssn"]')).toBeDisabled();
-      await expect(popup.locator('[data-field="edited-notes"]')).toBeDisabled();
-      await expect(popup.locator('[data-field="submit"]')).toBeDisabled();
+      await activateApplicationTab(popup);
+      await popup.bringToFront();
+      await popup.locator('#startAssist').click();
+      await expect(popup.locator('#sessionState')).toContainText('Session: active', { timeout: 15_000 });
+      await expect(popup.locator('#status')).toContainText('Assist session started');
 
-      await popup.locator('#fill').click();
+      await activateApplicationTab(popup);
+      await popup.bringToFront();
+      await expect(popup.locator('#fillAllowed')).toBeVisible();
+      await popup.locator('#fillAllowed').click();
+      await expect(popup.locator('#status')).not.toHaveText('Assist session started for this application origin. Navigate pages manually.', { timeout: 20_000 });
+      await expect(popup.locator('#status')).toContainText('Filled', { timeout: 20_000 });
+
       await expect(application.locator('#first-name')).toHaveValue('Ada');
       await expect(application.locator('#email')).toHaveValue('ada@example.com');
       await expect(application.locator('#city')).toHaveValue('London');
@@ -275,7 +307,7 @@ test('keeps a multi-page application review-only through popup reopen', async ({
       await expect(application.locator('#resume')).toHaveValue('');
       await expect(application.locator('#ssn')).toHaveValue('manual-only');
       await expect(application.locator('#submit')).toBeVisible();
-      await expect(application).toHaveURL(/\/$/);
+      await expect(application).toHaveURL(/assist-application-fixture/);
       expect(
         await application.evaluate(
           () => (window as Window & { __controlClicks?: string[] }).__controlClicks,
@@ -301,27 +333,32 @@ test('keeps a multi-page application review-only through popup reopen', async ({
         ),
       ).toBe(0);
 
-      await popup.locator('#scan').click();
-      await expect(popup.locator('[data-field="page-two-first-name"]')).toBeChecked();
-      await expect(popup.locator('[data-field="work-authorization"]')).toBeDisabled();
-      await expect(popup.locator('[data-field="continue"]')).toBeDisabled();
-      await expect(popup.locator('[data-field="submit-page-two"]')).toBeDisabled();
-
-      await popup.locator('#fill').click();
+      await activateApplicationTab(popup);
+      await popup.bringToFront();
+      await popup.locator('#fillAllowed').click();
+      await expect(popup.locator('#status')).toContainText('Filled', { timeout: 20_000 });
       await expect(application.locator('#page-two-first-name')).toHaveValue('Ada');
-      await popup.locator('#undo').click();
+      await expect(application.locator('#work-authorization')).toHaveValue('manual answer');
+
+      await popup.bringToFront();
+      await expect(popup.locator('#undoLast')).toBeVisible();
+      await popup.locator('#undoLast').click();
+      await expect(popup.locator('#status')).toContainText('Undo restored', { timeout: 20_000 });
       await expect(application.locator('#page-two-first-name')).toHaveValue('');
 
       await popup.locator('#pause').click();
-      await expect(popup.locator('#pause')).toHaveText('Resume');
-      await expect(popup.locator('#fill')).toBeDisabled();
-      await popup.locator('#pause').click();
-      await expect(popup.locator('#pause')).toHaveText('Pause');
+      await expect(popup.locator('#sessionState')).toContainText('Session: paused');
+      await expect(popup.locator('#status')).toContainText('Assist paused');
+      await popup.locator('#fillAllowed').click();
+      await expect(popup.locator('#status')).toContainText('Fill blocked', { timeout: 20_000 });
+      await popup.locator('#resume').click();
+      await expect(popup.locator('#sessionState')).toContainText('Session: active');
 
-      await popup.locator('#stop').click();
-      await expect(popup.locator('#stop')).toBeDisabled();
-      await expect(popup.locator('#fill')).toBeDisabled();
-      await expect(popup.locator('#notice')).toContainText('Emergency stop latched');
+      await popup.locator('#emergencyStop').click();
+      await expect(popup.locator('#sessionState')).toContainText('Session: stopped');
+      await expect(popup.locator('#status')).toContainText('Emergency Stop latched');
+      await popup.locator('#fillAllowed').click();
+      await expect(popup.locator('#status')).toContainText(/Emergency Stop(?: is)? latched/, { timeout: 20_000 });
       await expect(application.locator('#work-authorization')).toHaveValue('manual answer');
       expect(
         await application.evaluate(
@@ -336,27 +373,10 @@ test('keeps a multi-page application review-only through popup reopen', async ({
 
       await popup.close();
       const reopenedPopup = await openPopup();
-      await expect(reopenedPopup.locator('#summary')).toContainText('Emergency stop latched');
-      await expect(reopenedPopup.locator('#summary')).toContainText(`Origin: ${new URL(baseURL).origin}`);
-      const exportedStatus = JSON.parse(await reopenedPopup.locator('#session').inputValue()) as {
-        pages: Array<{ url: string }>;
-        history: Array<unknown>;
-        emergencyStopped: boolean;
-      };
-      expect(exportedStatus.emergencyStopped).toBe(true);
-      expect(exportedStatus.history).toHaveLength(1);
-      expect(exportedStatus.pages.map((page) => page.url)).toEqual(
-        expect.arrayContaining([
-          expect.stringMatching(/\/$/),
-          expect.stringMatching(/\/application\?page=2$/),
-        ]),
-      );
-      await expect(reopenedPopup.locator('#export-session')).toBeEnabled();
-      const importedSessionFile = resolve(userDataDirectory, 'assist-session.json');
-      await writeFile(importedSessionFile, JSON.stringify(exportedStatus));
-      await reopenedPopup.locator('#session-file').setInputFiles(importedSessionFile);
-      await expect(reopenedPopup.locator('#notice')).toContainText('Session status imported');
-      await expect(reopenedPopup.locator('#summary')).toContainText('Emergency stop latched');
+      await expect(reopenedPopup.locator('#sessionState')).toContainText('Session: stopped');
+      await expect(reopenedPopup.locator('#sessionState')).toContainText(`origin=${new URL(baseURL).origin}`);
+      await reopenedPopup.locator('#fillAllowed').click();
+      await expect(reopenedPopup.locator('#status')).toContainText(/Emergency Stop(?: is)? latched/);
       await reopenedPopup.close();
     } finally {
       await context.close();

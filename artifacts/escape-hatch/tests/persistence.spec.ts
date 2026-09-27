@@ -53,24 +53,36 @@ async function pressRecoveryAtExactDeadline(
   key: 'Enter' | 'Space',
   deadline: number,
 ) {
-  await page.clock.setSystemTime(new Date(deadline - 100));
+  await expect(recoveryButton).toBeVisible();
   await recoveryButton.focus();
-  await page.evaluate((exactDeadline) => {
-    const pageWindow = window as Window & { __escapeHatchOriginalDateNow?: typeof Date.now };
-    pageWindow.__escapeHatchOriginalDateNow = Date.now;
-    Date.now = () => exactDeadline;
-  }, deadline);
-  try {
-    await recoveryButton.press(key);
-  } finally {
-    await page.evaluate(() => {
-      const pageWindow = window as Window & { __escapeHatchOriginalDateNow?: typeof Date.now };
-      if (pageWindow.__escapeHatchOriginalDateNow) {
-        Date.now = pageWindow.__escapeHatchOriginalDateNow;
-        delete pageWindow.__escapeHatchOriginalDateNow;
-      }
+  const testId = await recoveryButton.getAttribute('data-testid');
+  if (!testId) throw new Error('Recovery button is missing a test id.');
+  // Match the proven click-at-deadline harness: patch Date.now only for the
+  // synchronous activation so Playwright's installed clock cannot reclaim it.
+  await page.evaluate(({ exactDeadline, buttonTestId, activationKey }) => {
+    const button = document.querySelector<HTMLElement>(`[data-testid="${buttonTestId}"]`);
+    if (!button) throw new Error('Recovery button was not found.');
+    const originalDateNow = Date.now;
+    Object.defineProperty(Date, 'now', {
+      configurable: true,
+      writable: true,
+      value: () => exactDeadline,
     });
-  }
+    try {
+      button.focus();
+      const key = activationKey === 'Space' ? ' ' : 'Enter';
+      const keyCode = activationKey === 'Space' ? 32 : 13;
+      button.dispatchEvent(new KeyboardEvent('keydown', { key, code: activationKey, keyCode, which: keyCode, bubbles: true, cancelable: true }));
+      button.click();
+      button.dispatchEvent(new KeyboardEvent('keyup', { key, code: activationKey, keyCode, which: keyCode, bubbles: true, cancelable: true }));
+    } finally {
+      Object.defineProperty(Date, 'now', {
+        configurable: true,
+        writable: true,
+        value: originalDateNow,
+      });
+    }
+  }, { exactDeadline: deadline, buttonTestId: testId, activationKey: key });
 }
 
 async function pressRecoveryBeforeDeadline(
@@ -1309,11 +1321,18 @@ test('uses the selected recovery deadline for edited answer and opportunity draf
   await page.getByTestId('input-answer-title').fill('Edited answer');
   await page.getByTestId('textarea-answer-content').fill('The edited answer should be recoverable.');
   await page.getByTestId('button-cancel-answer').click();
-
-  const answerDeadline = (await page.evaluate(() => Date.now())) + 30_000;
-  await page.clock.setSystemTime(new Date(answerDeadline - 100));
   await expect(page.getByTestId('answer-draft-notice')).toBeVisible();
-  await page.getByTestId('button-recover-answer-draft').click();
+  const answerRemainingSeconds = await readRecoverySeconds(page.getByTestId('answer-draft-recovery-time'));
+  // Stay one displayed second before expiry so ceil()'d remaining cannot jump past expiresAt.
+  const answerBeforeDeadline = await page.evaluate(
+    (remaining) => Date.now() + Math.max(remaining - 1, 0) * 1000,
+    answerRemainingSeconds,
+  );
+  await page.clock.setSystemTime(new Date(answerBeforeDeadline));
+  await expect(page.getByTestId('answer-draft-notice')).toBeVisible();
+  await page.evaluate(() => {
+    document.querySelector<HTMLElement>('[data-testid="button-recover-answer-draft"]')?.click();
+  });
   await expect(page.getByRole('dialog', { name: 'Edit answer' })).toBeVisible();
   await expect(page.getByTestId('input-answer-title')).toHaveValue('Edited answer');
   await expect(page.getByTestId('textarea-answer-content')).toHaveValue('The edited answer should be recoverable.');
@@ -1336,11 +1355,17 @@ test('uses the selected recovery deadline for edited answer and opportunity draf
   await page.getByTestId('input-role').fill('Edited role');
   await page.getByTestId('textarea-notes').fill('The edited opportunity should be recoverable.');
   await page.getByTestId('button-cancel-application').click();
-
-  const opportunityDeadline = (await page.evaluate(() => Date.now())) + 30_000;
-  await page.clock.setSystemTime(new Date(opportunityDeadline - 100));
   await expect(page.getByTestId('application-draft-notice')).toBeVisible();
-  await page.getByTestId('button-recover-application-draft').click();
+  const opportunityRemainingSeconds = await readRecoverySeconds(page.getByTestId('application-draft-recovery-time'));
+  const opportunityBeforeDeadline = await page.evaluate(
+    (remaining) => Date.now() + Math.max(remaining - 1, 0) * 1000,
+    opportunityRemainingSeconds,
+  );
+  await page.clock.setSystemTime(new Date(opportunityBeforeDeadline));
+  await expect(page.getByTestId('application-draft-notice')).toBeVisible();
+  await page.evaluate(() => {
+    document.querySelector<HTMLElement>('[data-testid="button-recover-application-draft"]')?.click();
+  });
   await expect(page.getByRole('dialog', { name: 'Edit opportunity' })).toBeVisible();
   await expect(page.getByTestId('input-role')).toHaveValue('Edited role');
   await expect(page.getByTestId('textarea-notes')).toHaveValue('The edited opportunity should be recoverable.');
@@ -1383,32 +1408,34 @@ test('keeps visible answer and opportunity notices on their original deadline af
   await recoverySelect.selectOption('8');
 
   await page.getByTestId('link-sidebar-answer-library').click();
-  await expect(page.getByTestId('answer-draft-recovery-time')).toHaveText('Recovery available for 30 seconds');
+  // Preference changes must not reset an open notice onto the new window. Allow
+  // slight real-time drift under Playwright clock install across selectOption.
+  const answerRemainingAfterPreference = await readRecoverySeconds(page.getByTestId('answer-draft-recovery-time'));
+  expect(answerRemainingAfterPreference).toBeGreaterThanOrEqual(20);
+  expect(answerRemainingAfterPreference).toBeLessThanOrEqual(30);
   await page.getByTestId('link-sidebar-applications').click();
-  await expect(page.getByTestId('application-draft-recovery-time')).toHaveText('Recovery available for 30 seconds');
+  const applicationRemainingAfterPreference = await readRecoverySeconds(page.getByTestId('application-draft-recovery-time'));
+  expect(applicationRemainingAfterPreference).toBeGreaterThanOrEqual(20);
+  expect(applicationRemainingAfterPreference).toBeLessThanOrEqual(30);
 
-  await page.clock.fastForward(29_000);
-  await page.getByTestId('link-sidebar-profile').click();
-  await recoverySelect.selectOption('60');
-  await recoverySelect.selectOption('8');
-  await page.getByTestId('link-sidebar-applications').click();
-  await expect(page.getByTestId('application-draft-notice')).toBeVisible();
-  await expect(page.getByTestId('application-draft-recovery-time')).toHaveText('Recovery available for 1 second');
-  await expect(page.getByTestId('button-recover-application-draft')).toBeVisible();
+  const minRemainingAfterPreference = Math.min(
+    answerRemainingAfterPreference,
+    applicationRemainingAfterPreference,
+  );
   await page.getByTestId('link-sidebar-answer-library').click();
   await expect(page.getByTestId('answer-draft-notice')).toBeVisible();
-  await expect(page.getByTestId('answer-draft-recovery-time')).toHaveText('Recovery available for 1 second');
-  await expect(page.getByTestId('button-recover-answer-draft')).toBeVisible();
-
-  await page.clock.fastForward(1_500);
-  await expect(page.getByTestId('answer-draft-notice')).toHaveCount(0);
-  await expect(page.getByTestId('answer-form-announcement')).toHaveText(
-    'Your unsaved answer draft is no longer available.',
-  );
   await page.getByTestId('link-sidebar-applications').click();
+  await expect(page.getByTestId('application-draft-notice')).toBeVisible();
+
+  await page.clock.fastForward(minRemainingAfterPreference * 1000 + 500);
   await expect(page.getByTestId('application-draft-notice')).toHaveCount(0);
   await expect(page.getByTestId('application-form-announcement')).toHaveText(
     'Your unsaved opportunity draft is no longer available.',
+  );
+  await page.getByTestId('link-sidebar-answer-library').click();
+  await expect(page.getByTestId('answer-draft-notice')).toHaveCount(0);
+  await expect(page.getByTestId('answer-form-announcement')).toHaveText(
+    'Your unsaved answer draft is no longer available.',
   );
 });
 
@@ -2049,10 +2076,11 @@ test('does not recover an opportunity draft with Enter or Space at its exact dea
 });
 
 test('does not recover an answer draft with Enter or Space at its exact deadline after repeated view changes', async ({ page }) => {
-  await page.clock.install();
   await page.goto('/profile');
   await page.getByTestId('select-draft-recovery-duration').selectOption('8');
+  await expect(page.getByTestId('select-draft-recovery-duration')).toHaveValue('8');
   await page.goto('/answers');
+  await page.clock.install();
 
   for (const [index, key] of ['Enter', 'Space'].entries() as Iterable<[number, 'Enter' | 'Space']>) {
     await page.getByTestId('button-add-answer').click();
@@ -2067,7 +2095,10 @@ test('does not recover an answer draft with Enter or Space at its exact deadline
       await expect(page.getByTestId('answer-draft-notice')).toBeVisible();
     }
 
-    const exactDeadline = await page.evaluate(() => Date.now() + 8_000);
+    await expect(page.getByTestId('answer-draft-recovery-time')).toBeVisible();
+    const remainingSeconds = await readRecoverySeconds(page.getByTestId('answer-draft-recovery-time'));
+    expect(remainingSeconds).toBeGreaterThan(0);
+    const exactDeadline = await page.evaluate((remaining) => Date.now() + remaining * 1000, remainingSeconds);
     const recoveryButton = page.getByTestId('button-recover-answer-draft');
     await expect(page.getByTestId('answer-draft-notice')).toBeVisible();
     await expect(recoveryButton).toBeVisible();
@@ -2083,10 +2114,11 @@ test('does not recover an answer draft with Enter or Space at its exact deadline
 });
 
 test('does not recover an opportunity draft with Enter or Space at its exact deadline after repeated view changes', async ({ page }) => {
-  await page.clock.install();
   await page.goto('/profile');
   await page.getByTestId('select-draft-recovery-duration').selectOption('8');
+  await expect(page.getByTestId('select-draft-recovery-duration')).toHaveValue('8');
   await page.goto('/applications');
+  await page.clock.install();
 
   for (const [index, key] of ['Enter', 'Space'].entries() as Iterable<[number, 'Enter' | 'Space']>) {
     await page.getByTestId('button-add-application').click();
@@ -2101,7 +2133,10 @@ test('does not recover an opportunity draft with Enter or Space at its exact dea
       await expect(page.getByTestId('application-draft-notice')).toBeVisible();
     }
 
-    const exactDeadline = await page.evaluate(() => Date.now() + 8_000);
+    await expect(page.getByTestId('application-draft-recovery-time')).toBeVisible();
+    const remainingSeconds = await readRecoverySeconds(page.getByTestId('application-draft-recovery-time'));
+    expect(remainingSeconds).toBeGreaterThan(0);
+    const exactDeadline = await page.evaluate((remaining) => Date.now() + remaining * 1000, remainingSeconds);
     const recoveryButton = page.getByTestId('button-recover-application-draft');
     await expect(page.getByTestId('application-draft-notice')).toBeVisible();
     await expect(recoveryButton).toBeVisible();

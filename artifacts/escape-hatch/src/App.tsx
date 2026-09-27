@@ -140,7 +140,10 @@ function useDraftRecoverySeconds(expiresAt: number | null) {
       setRemainingMs(0);
       return;
     }
-    const update = () => setRemainingMs(Math.max(0, expiresAt - Date.now()));
+    const update = () => {
+      const next = Math.max(0, expiresAt - Date.now());
+      setRemainingMs((previous) => (previous === next ? previous : next));
+    };
     update();
     const interval = window.setInterval(update, 250);
     document.addEventListener('visibilitychange', update);
@@ -1253,6 +1256,8 @@ function Router() {
       document.removeEventListener('visibilitychange', expire);
       window.removeEventListener('focus', expire);
     };
+    // Re-check on preference changes so already-elapsed drafts expire without
+    // rewriting expiresAt (open notices keep their original deadline).
   }, [dismissedAnswerDraft, draftRecoverySeconds]);
   useEffect(() => {
     if (!dismissedApplicationDraft) return;

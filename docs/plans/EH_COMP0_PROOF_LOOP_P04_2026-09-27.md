@@ -69,7 +69,7 @@ Required when the object exists:
 - `currency`: non-empty string, normalized by consumers to uppercase;
 - `period`: `annual | hourly | monthly | weekly | unknown`;
 - `source`: existing `artifactRef` shape;
-- `verified_at`: ISO date-time;
+- `verified_at`: ISO date-time that must not be in the future at resolution/validation time;
 - `freshness_ttl_hours`: positive integer.
 
 Optional numeric bounds:
@@ -155,6 +155,8 @@ Turn the proven compensation prototype into the canonical production contract fl
 - `contracts/career-state.v1.schema.json`
 - `fixtures/career-state.v1.example.json`
 - `scripts/validate_career_state.py`
+- `artifacts/escape-hatch/src/lib/career-store.ts`
+- `artifacts/escape-hatch/tests/career-store.spec.ts`
 - `harness/contracts/application-form-taxonomy.v1.json`
 - `harness/contracts/application-preference-cache.v1.json`
 - `scripts/validate_application_harness.py`
@@ -186,14 +188,16 @@ Turn the proven compensation prototype into the canonical production contract fl
 
 1. Add the optional typed `opportunity.compensation` schema/definition exactly as settled above.
 2. Extend the example fixture with synthetic annual and/or hourly compensation provenance sufficient to validate the contract.
-3. Update `validate_career_state.py` with positive and negative cases:
+3. Update both career-state validation owners — `scripts/validate_career_state.py` and `artifacts/escape-hatch/src/lib/career-store.ts` — plus their focused tests with positive and negative cases:
    - valid annual range;
    - valid hourly range;
    - missing source / verified_at / TTL;
    - invalid period;
    - no min or max;
    - malformed date-time;
+   - future `verified_at` must fail closed / surface review and must never authorize posted-max fill;
    - backward-compatible opportunity without `compensation`.
+   The TypeScript validator must accept the same optional `opportunity.compensation` shape as the canonical schema instead of rejecting it as an unknown property.
 4. Add explicit compensation question IDs/aliases without collapsing desired/current/history/minimum semantics.
 5. Add compensation-specific precedence to the preference contract while keeping ordinary question precedence unchanged.
 6. Strengthen `validate_application_harness.py` so:
@@ -211,6 +215,7 @@ Turn the proven compensation prototype into the canonical production contract fl
 
 Minimum:
 - `python scripts/validate_career_state.py`
+- focused `artifacts/escape-hatch/tests/career-store.spec.ts` validation through the repository's existing test command
 - `python scripts/validate_application_harness.py`
 - focused compensation prototype/contract tests
 - `python scripts/validate_harness.py`
@@ -224,7 +229,7 @@ EH-COMP0 is complete only when:
 - typed opportunity compensation provenance is canonical and backward-compatible;
 - desired/current/history/minimum families cannot cross-contaminate;
 - the compensation-specific precedence is machine-validated;
-- all negative fixtures fail for the expected reason;
+- all negative fixtures fail for the expected reason, including future-dated `verified_at` and TypeScript-validator parity;
 - exact candidate checks are green;
 - no unresolved review thread remains;
 - provider read-back proves the exact integrated commit contains the contract.

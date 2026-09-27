@@ -77,18 +77,15 @@ try {
     # Status may be inactive in a clean environment; process should still exit managedly.
     Assert-True ($LASTEXITCODE -eq 0 -or $LASTEXITCODE -eq 1 -or $LASTEXITCODE -eq 2) "status exit unexpected: $LASTEXITCODE / $status"
 
-    if (Test-Path -LiteralPath $ForeignFixture -PathType Leaf) {
-        Write-Case "installer/uninstall does not terminate foreign listener"
-        $foreignPort = 21997
-        $foreignProcess = Start-Process -FilePath 'node' -ArgumentList @($ForeignFixture, "$foreignPort") -PassThru -WindowStyle Hidden
-        Start-Sleep -Seconds 1
-        Assert-True (-not $foreignProcess.HasExited) "foreign listener failed to start"
-        & $Installer -Action Repair -SourceRoot $RepoRoot -InstallRoot $installRoot -NoLaunch | Out-Null
-        Start-Sleep -Milliseconds 500
-        Assert-True (-not $foreignProcess.HasExited) "foreign listener was terminated by installer"
-    } else {
-        Write-Host "SKIP foreign-listener case: fixture missing"
-    }
+    Write-Case "installer/uninstall does not terminate unrelated foreign process"
+    $foreignProcess = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-Command','Start-Sleep -Seconds 120') -PassThru -WindowStyle Hidden
+    Start-Sleep -Milliseconds 500
+    $foreignProcess.Refresh()
+    Assert-True (-not $foreignProcess.HasExited) "foreign process failed to start"
+    & $Installer -Action Repair -SourceRoot $RepoRoot -InstallRoot $installRoot -NoLaunch | Out-Null
+    Start-Sleep -Milliseconds 500
+    $foreignProcess.Refresh()
+    Assert-True (-not $foreignProcess.HasExited) "foreign process was terminated by installer"
 
     Write-Case "uninstall removes product artifacts and preserves marker file"
     # Simulate user-owned profile data under LOCALAPPDATA EscapeHatch\profile

@@ -18,7 +18,7 @@
 5. **WAIT — EH-QMEM1.** Requires EH-QMEM0 and explicit reconciliation of PR #29 ownership.
 6. **CONVERGE.** Coordinator refreshes provider truth, validates exact heads, updates canonical program status, and integrates through the repository's existing promotion rules.
 
-**Current unfinished mutation graph width:** 1. Parallel product dispatch is **NOT APPLICABLE** for the immediate next transition because EH-COMP0 is the single ready writer and QMEM0 shares taxonomy/preference owners. The proof-capture operational lane is independent but already complete in the current runtime.
+**Current COMP/QMEM subgraph unfinished mutation width:** 1. Parallel mutation is **NOT APPLICABLE inside this bounded COMP/QMEM projection** for the immediate next transition because EH-COMP0 is the single ready writer and QMEM0 shares taxonomy/preference owners. The broader canonical application plan still contains other independent contract lanes (including EH-ACT0, EH-CTX0, EH-REC0, EH-CRED0, EH-ART0, and EH-REV0); this projection neither cancels nor serializes those owners. Any repository-wide executor must retain them from `docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md` and refresh their current blockers independently.
 
 ## 1. Compact P04 preflight
 
@@ -59,31 +59,35 @@ Provider access and host runtime are separate facts: provider write capability d
 
 ## 3. Recovered decisions that bind the next lane
 
-The PR #46 prototypes have already proved the success/failure seams. P07 must not redesign them.
+PR #46 exercised the intended success/failure call-stack **architecture**, but it is not production-safe semantic proof. P07 must preserve the architecture while repairing the known prototype defects explicitly listed in this plan; it must not copy the prototype wholesale or redesign around those defects.
 
 ### 3.1 Career-state compensation shape
 
-Add an **optional**, backward-compatible `opportunity.compensation` object referencing a new `$defs.opportunityCompensation`.
+Add an **optional**, backward-compatible `opportunity.compensation` **array** of typed range/provenance entries so independently published annual and hourly ranges are both preserved instead of one overwriting the other.
 
-Required when the object exists:
+Each entry requires:
 - `currency`: non-empty string, normalized by consumers to uppercase;
 - `period`: `annual | hourly | monthly | weekly | unknown`;
 - `source`: existing `artifactRef` shape;
-- `verified_at`: ISO date-time that must not be in the future at resolution/validation time;
+- `verified_at`: ISO date-time;
 - `freshness_ttl_hours`: positive integer.
 
-Optional numeric bounds:
-- `minimum`;
-- `maximum`.
+Each entry may contain:
+- `minimum`: nonnegative number;
+- `maximum`: nonnegative number.
 
-At least one numeric bound must be present. `compensation_text` remains a legacy/display projection and is **not** fill-time provenance.
+At least one numeric bound must be present. When both exist, `minimum <= maximum`. Duplicate entries for the same normalized `currency + period + source` identity are rejected rather than resolved by last-write-wins behavior. `compensation_text` remains a legacy/display projection and is **not** fill-time provenance.
 
 No implicit freshness default is encoded in the schema. Producers must write an explicit TTL so hidden policy cannot drift between importers.
+
+**Future timestamp rule:** define one shared tolerance of **300 seconds (5 minutes)**. A `verified_at` value more than 300 seconds ahead of the evaluation clock fails closed as `future_verified_at`; a value within the tolerance is treated as age zero for freshness calculation. The Python validator, TypeScript validator, pure resolver, and focused fixtures must agree on this rule.
 
 ### 3.2 Unit policy
 
 - No annual↔hourly/monthly/weekly conversion in COMP0 or COMP1.
 - Exact period match is required for verified-posted-max autofill.
+- If a posting publishes both annual and hourly ranges, both entries are retained; COMP1 selects the entry matching the destination period.
+- If the destination explicitly accepts either and an annual range is explicitly published, prefer that explicit annual entry as already required by the canonical plan; do not derive an annual value from hourly data.
 - `unknown` may be stored as provenance but can never authorize a fill.
 - A form that accepts annual **or** hourly compensation must expose enough destination-period context before COMP1 may use the posted maximum.
 
@@ -186,7 +190,7 @@ Turn the proven compensation prototype into the canonical production contract fl
 
 ### Tasks
 
-1. Add the optional typed `opportunity.compensation` schema/definition exactly as settled above.
+1. Add the optional typed `opportunity.compensation[]` schema/definition exactly as settled above, preserving multiple independently published period/currency ranges.
 2. Extend the example fixture with synthetic annual and/or hourly compensation provenance sufficient to validate the contract.
 3. Update both career-state validation owners — `scripts/validate_career_state.py` and `artifacts/escape-hatch/src/lib/career-store.ts` — plus their focused tests with positive and negative cases:
    - valid annual range;
@@ -195,7 +199,12 @@ Turn the proven compensation prototype into the canonical production contract fl
    - invalid period;
    - no min or max;
    - malformed date-time;
-   - future `verified_at` must fail closed / surface review and must never authorize posted-max fill;
+   - future `verified_at` > 300 seconds ahead must fail closed as `future_verified_at` and must never authorize posted-max fill;
+   - `verified_at` within the 300-second tolerance is treated as age zero consistently;
+   - negative minimum/maximum;
+   - inverted bounds (`minimum > maximum`);
+   - duplicate same-period/source entries;
+   - annual + hourly ranges preserved simultaneously;
    - backward-compatible opportunity without `compensation`.
    The TypeScript validator must accept the same optional `opportunity.compensation` shape as the canonical schema instead of rejecting it as an unknown property.
 4. Add explicit compensation question IDs/aliases without collapsing desired/current/history/minimum semantics.
@@ -205,9 +214,12 @@ Turn the proven compensation prototype into the canonical production contract fl
    - posted-max source is allowed only in compensation-specific precedence;
    - manual/fail-closed semantics for current/history/minimum cannot be silently weakened;
    - cross-question alias collision protection remains intact.
-7. Reconcile the prototype with the production contract:
-   - keep it as executable reference if COMP1 will consume it later; or
-   - move only pure, non-DOM resolution types/helpers into a production-neutral shared module if that is needed to prevent contract/test duplication.
+7. Repair and reconcile the prototype before it can become a production reference:
+   - non-desired families (`current`, `history`, `minimum_acceptable`) must **not** fill from `profile_preference`; add preference-present negative tests proving they stay manual/fail-closed;
+   - reject `future_verified_at` beyond the shared 300-second tolerance and test the tolerated-skew boundary;
+   - select among multiple compensation entries only by explicit destination-period compatibility;
+   - reject negative/inverted bounds before any maximum can reach a fill decision;
+   - keep the repaired prototype as executable reference if COMP1 will consume it later, or move only the pure non-DOM resolver into a production-neutral shared module;
    - Do **not** wire the browser runtime in COMP0.
 8. Update only the lane status/evidence section reserved by the coordinator after tests pass; do not rewrite canonical architecture to make an implementation convenient.
 
@@ -226,8 +238,10 @@ Then run repository CI required by the touched files and inspect exact-head revi
 ### Completion proof
 
 EH-COMP0 is complete only when:
-- typed opportunity compensation provenance is canonical and backward-compatible;
-- desired/current/history/minimum families cannot cross-contaminate;
+- typed multi-range opportunity compensation provenance is canonical and backward-compatible;
+- annual and hourly ranges can coexist without loss;
+- negative/inverted/duplicate/future-dated provenance fails closed;
+- desired/current/history/minimum families cannot cross-contaminate, including when a non-desired `profile_preference` exists;
 - the compensation-specific precedence is machine-validated;
 - all negative fixtures fail for the expected reason, including future-dated `verified_at` and TypeScript-validator parity;
 - exact candidate checks are green;

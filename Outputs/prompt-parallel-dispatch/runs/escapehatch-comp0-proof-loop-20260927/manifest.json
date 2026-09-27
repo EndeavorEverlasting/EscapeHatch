@@ -1,0 +1,239 @@
+{
+  "schema_version": "prompt-parallel-dispatch/v1",
+  "run_id": "escapehatch-comp0-proof-loop-20260927",
+  "repository": "EndeavorEverlasting/EscapeHatch",
+  "canonical_plan_owner": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md",
+  "p04_projection": "docs/plans/EH_COMP0_PROOF_LOOP_P04_2026-09-27.md",
+  "base_ref": {
+    "provider_default_branch": "main",
+    "provider_default_head": "0824535b9dc1341def885a79a098d297df770ac8",
+    "provider_integration_branch": "integration/replit-donor-b01f628-20260921",
+    "provider_integration_head": "200389612008ee89eddc24206631cb4b0cce644c",
+    "planning_branch": "plan/p04-comp0-proof-loop-20260927",
+    "local_path": "UNKNOWN_IN_CONNECTED_PROVIDER_RUNTIME",
+    "local_status": "UNKNOWN_REQUIRES_P07_PREFLIGHT",
+    "worktrees": "UNKNOWN_REQUIRES_P07_PREFLIGHT",
+    "freshness": "PROVIDER_REFRESHED_2026-09-27_POST_PR47"
+  },
+  "runtime_partition": {
+    "current_chat_runtime": {
+      "status": "EXECUTED_HERE",
+      "owns": [
+        "P04 recovery",
+        "provider refresh",
+        "factoring",
+        "durable planning",
+        "Drive proof-loop synchronization"
+      ]
+    },
+    "connected_provider": {
+      "status": "AVAILABLE",
+      "providers": [
+        "GitHub",
+        "Google Drive"
+      ]
+    },
+    "local_agent_runtime": {
+      "status": "SUCCESSOR",
+      "owns": [
+        "P07 EH-COMP0 implementation"
+      ],
+      "preflight_required": true
+    },
+    "ci_or_remote_runner": {
+      "status": "SUCCESSOR_VALIDATION"
+    },
+    "operator_or_physical_runtime": {
+      "status": "NOT_REQUIRED_FOR_COMP0"
+    },
+    "unknown_runtime": {
+      "status": "MUST_DISCOVER_UNPUSHED_OR_DIRTY_STATE"
+    }
+  },
+  "graph": {
+    "expression": "PROOF-LOOP-0[COMPLETE] ; EH-COMP0 -> { EH-COMP1 ; EH-QMEM0 } ; EH-QMEM0 + PR29_RECONCILED -> EH-QMEM1",
+    "unfinished_mutation_width": 1,
+    "parallel_disposition": "NOT_APPLICABLE_WITHIN_BOUNDED_COMP_QMEM_SUBGRAPH",
+    "scope": "BOUNDED_COMP_QMEM_SUBGRAPH_ONLY",
+    "external_parallel_lanes_preserved": [
+      "EH-ACT0",
+      "EH-CTX0",
+      "EH-REC0",
+      "EH-CRED0",
+      "EH-ART0",
+      "EH-REV0"
+    ],
+    "external_parallel_authority": "docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md"
+  },
+  "canonical_target_disposition": {
+    "requested_target": "Outputs/prompt-parallel-dispatch/manifest.json",
+    "status": "BLOCKED_DO_NOT_OVERWRITE_SHARED_ROOT_TARGET",
+    "blockers": [
+      "harness/contracts/prompt-parallel-dispatch.v1.json absent on refreshed integration floor",
+      "scripts/prompt_parallel_dispatch.py absent on refreshed integration floor",
+      "existing root-target block/collision record belongs to the Windows lifecycle graph"
+    ],
+    "run_scoped_manifest": "Outputs/prompt-parallel-dispatch/runs/escapehatch-comp0-proof-loop-20260927/manifest.json"
+  },
+  "lanes": [
+    {
+      "lane_id": "PROOF-LOOP-0",
+      "wave": 0,
+      "mission": "Preserve qualifying manual-application evidence in the private Drive proof ledger, reconcile tracker state, and expose only sanitized structural observations to EscapeHatch.",
+      "dependencies": [],
+      "owned_mutation_surfaces": [
+        "private Google Drive Application Proof ledger",
+        "per-application receipt links",
+        "tracker evidence references"
+      ],
+      "forbidden_surfaces": [
+        "raw proof in Git",
+        "credentials",
+        "signatures",
+        "protected-class answers",
+        "silent submission promotion"
+      ],
+      "adapter": {
+        "kind": "connected_google_drive_provider",
+        "rung": 1
+      },
+      "status": "COMPLETE_CURRENT_RUNTIME",
+      "evidence": [
+        "central proof ledger capture checklist present",
+        "AuraOne detailed receipt linked",
+        "PR #44 proof-to-sanitized-observation protocol integrated"
+      ]
+    },
+    {
+      "lane_id": "EH-COMP0",
+      "wave": 1,
+      "mission": "Implement canonical multi-range typed opportunity compensation provenance, explicit compensation taxonomy families, compensation-specific resolution precedence, repaired pure resolver semantics, and focused validators/fixtures from the PR #46 exercised architecture seam.",
+      "dependencies": [
+        "PR #46 merged",
+        "PR #44 proof protocol integrated",
+        "refreshed integration floor"
+      ],
+      "owned_mutation_surfaces": [
+        "contracts/career-state.v1.schema.json",
+        "fixtures/career-state.v1.example.json",
+        "scripts/validate_career_state.py",
+        "artifacts/escape-hatch/src/lib/career-store.ts",
+        "artifacts/escape-hatch/tests/career-store.spec.ts",
+        "harness/contracts/application-form-taxonomy.v1.json",
+        "harness/contracts/application-preference-cache.v1.json",
+        "scripts/validate_application_harness.py",
+        "focused COMP0 tests/fixtures"
+      ],
+      "forbidden_surfaces": [
+        "Application Assist DOM compensation runtime",
+        "browser popup/install/modality surfaces",
+        "PR #29/#30/#31 recovery files",
+        "QMEM0/QMEM1 implementation",
+        "private Drive proof",
+        "salary unit conversion",
+        "final submit/sign/attestation automation"
+      ],
+      "posture": "single isolated writer",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "launch": {
+        "mode": "handoff_to_P07",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-COMP0",
+          "plan": "docs/plans/EH_COMP0_PROOF_LOOP_P04_2026-09-27.md"
+        }
+      },
+      "validation": [
+        "python scripts/validate_career_state.py",
+        "focused career-store TypeScript tests",
+        "python scripts/validate_application_harness.py",
+        "focused compensation tests including multi-range, future verified_at, bounds, and non-desired preference leakage",
+        "python scripts/validate_harness.py",
+        "git diff --check",
+        "required provider CI on exact head"
+      ],
+      "convergence_owner": "P04/P07 coordinator on integration/replit-donor-b01f628-20260921",
+      "status": "READY_FOR_P07",
+      "expected_artifacts": [
+        "backward-compatible multi-range opportunity compensation provenance",
+        "annual + hourly coexistence proof",
+        "Python + TypeScript career-state validator parity",
+        "300-second future timestamp tolerance with fail-closed proof",
+        "nonnegative and ordered bound validation",
+        "non-desired profile-preference leakage regression proof",
+        "explicit desired/current/history/minimum taxonomy separation",
+        "compensation-specific resolution precedence"
+      ]
+    },
+    {
+      "lane_id": "EH-COMP1",
+      "wave": 2,
+      "mission": "Wire the proven compensation resolver into Application Assist through a bounded compensation adapter and canonical Fill Plan.",
+      "dependencies": [
+        "EH-COMP0"
+      ],
+      "owned_mutation_surfaces": [
+        "bounded compensation runtime module",
+        "smallest Fill Plan integration",
+        "focused runtime tests"
+      ],
+      "forbidden_surfaces": [
+        "taxonomy redesign",
+        "unit conversion",
+        "final submission",
+        "QMEM runtime"
+      ],
+      "posture": "single isolated writer after COMP0",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "status": "WAITING_EH_COMP0"
+    },
+    {
+      "lane_id": "EH-QMEM0",
+      "wave": 2,
+      "mission": "Turn the PR #46 Answer Memory scope prototype into the production contract/fixtures after COMP0 releases shared taxonomy/preference owners.",
+      "dependencies": [
+        "EH-COMP0"
+      ],
+      "owned_mutation_surfaces": [
+        "Answer Memory contract",
+        "sanitized fixtures",
+        "taxonomy/preference changes not already owned by COMP0",
+        "focused validators"
+      ],
+      "forbidden_surfaces": [
+        "QMEM1 runtime",
+        "real answers",
+        "protected-class inference",
+        "persistent raw screenshots"
+      ],
+      "posture": "single isolated writer after COMP0",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "status": "WAITING_EH_COMP0_SHARED_OWNER"
+    },
+    {
+      "lane_id": "EH-QMEM1",
+      "wave": 3,
+      "mission": "Implement explicit-answer capture and safe semantic reuse only after the contract floor and recovery-stack ownership are reconciled.",
+      "dependencies": [
+        "EH-QMEM0",
+        "PR #29 merged/superseded/reconciled"
+      ],
+      "posture": "isolated runtime writer",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2
+      },
+      "status": "WAITING"
+    }
+  ],
+  "proof_ceiling": "P04 planning/factoring durability and provider truth only. No claim that EH-COMP0 product code has been implemented or that live ATS compensation autofill works."
+}

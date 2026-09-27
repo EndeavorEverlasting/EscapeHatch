@@ -8,6 +8,8 @@
 **Execution dependency:** EH-A0 contract floor
 **Disposition of this document:** detailed implementation plan and handoff; no runtime behavior is changed merely by this plan.
 
+**2026-09-27 popup-surface refinement:** `docs/APPLICATION_ASSIST_AUTOFILL_INSTALL_UI_PLAN.md` owns the browser extension **action popup** polish and the required separation of `SurfaceContext`, `InputModality`, and `LayoutDensity`. EH-U1 remains the canonical in-page ambient-presence owner; popup polish must not fork the presence state machine.
+
 ## 1. Product problem
 
 EscapeHatch can participate in an application session without making that participation legible enough. The current browser-assist experience is concentrated in the extension popup and status text. Once the operator returns to the employer page, the app largely disappears from perception.

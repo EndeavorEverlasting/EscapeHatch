@@ -256,8 +256,8 @@ function isApplicationTab(tab) {
 }
 
 async function activeTab(preferredOrigin) {
-  // Prefer the session's application origin. Popup pages are not reliable
-  // "active" tabs under Playwright persistent-context extension loads.
+  // Prefer the session's application origin. When several tabs share the origin
+  // (cockpit + fixture), prefer the most recently accessed HTTP tab.
   const current = await chrome.tabs.query({ active: true, currentWindow: true });
   const focused = current.find(isApplicationTab);
   if (focused) {
@@ -279,7 +279,22 @@ async function activeTab(preferredOrigin) {
         return false;
       }
     });
-    matched.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
+    // Prefer non-root cockpit paths last: application fixtures/forms usually have a path.
+    matched.sort((a, b) => {
+      const pathScore = (url) => {
+        try {
+          const pathname = new URL(url).pathname;
+          if (pathname.includes('assist-application-fixture') || pathname.includes('application')) return 2;
+          if (pathname === '/' || pathname === '') return 0;
+          return 1;
+        } catch (_error) {
+          return 0;
+        }
+      };
+      const scoreDiff = pathScore(b.url) - pathScore(a.url);
+      if (scoreDiff !== 0) return scoreDiff;
+      return (b.lastAccessed || 0) - (a.lastAccessed || 0);
+    });
     if (matched[0]) return matched[0];
   }
   if (focused) return focused;
@@ -297,7 +312,26 @@ function tabOrigin(tab) {
 }
 
 async function runPageCommand(command, profile, session, preferenceStore) {
-  const tab = await activeTab(session && session.origin ? session.origin : undefined);
+  let tab = null;
+  if (session && typeof session.tab_id === "number") {
+    try {
+      const pinned = await chrome.tabs.get(session.tab_id);
+      if (isApplicationTab(pinned)) {
+        try {
+          if (!session.origin || new URL(pinned.url).origin === session.origin) {
+            tab = pinned;
+          }
+        } catch (_error) {
+          tab = null;
+        }
+      }
+    } catch (_error) {
+      tab = null;
+    }
+  }
+  if (!tab) {
+    tab = await activeTab(session && session.origin ? session.origin : undefined);
+  }
   const origin = tabOrigin(tab);
   session = api.observeOrigin(session, origin);
   await saveSession(session);
@@ -342,6 +376,7 @@ async function startAssist() {
     application_id: origin,
     started_at: new Date().toISOString()
   });
+  session.tab_id = tab.id;
   await saveSession(session);
   setStatus("Assist session started for this application origin. Navigate pages manually.");
 }

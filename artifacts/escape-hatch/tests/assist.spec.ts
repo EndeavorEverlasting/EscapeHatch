@@ -268,22 +268,35 @@ test('keeps a multi-page application review-only through popup reopen', async ({
       };
       const activateApplicationTab = async (popup: import('@playwright/test').Page) => {
         await application.bringToFront();
-        const applicationOrigin = new URL(baseURL).origin;
-        await popup.evaluate(async (origin) => {
+        const applicationUrl = application.url();
+        await popup.evaluate(async (targetUrl) => {
           const tabs = await chrome.tabs.query({});
-          const matches = tabs.filter((tab) => {
+          const matches = tabs.filter((tab) => typeof tab.id === 'number' && tab.url === targetUrl);
+          if (matches[0]?.id != null) {
+            await chrome.tabs.update(matches[0].id, { active: true });
+            return;
+          }
+          // Fallback: exact pathname match on same origin (history.pushState may differ slightly).
+          let target: URL;
+          try {
+            target = new URL(targetUrl);
+          } catch {
+            return;
+          }
+          const samePath = tabs.filter((tab) => {
             if (typeof tab.id !== 'number' || typeof tab.url !== 'string') return false;
             try {
-              return new URL(tab.url).origin === origin;
+              const candidate = new URL(tab.url);
+              return candidate.origin === target.origin && candidate.pathname === target.pathname;
             } catch {
               return false;
             }
           });
-          matches.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
-          if (matches[0]?.id != null) {
-            await chrome.tabs.update(matches[0].id, { active: true });
+          samePath.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
+          if (samePath[0]?.id != null) {
+            await chrome.tabs.update(samePath[0].id, { active: true });
           }
-        }, applicationOrigin);
+        }, applicationUrl);
       };
 
       const popup = await openPopup();

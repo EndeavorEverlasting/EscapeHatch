@@ -256,6 +256,8 @@ function isApplicationTab(tab) {
 }
 
 async function activeTab(preferredOrigin) {
+  // Prefer the session's application origin. Popup pages are not reliable
+  // "active" tabs under Playwright persistent-context extension loads.
   const current = await chrome.tabs.query({ active: true, currentWindow: true });
   const focused = current.find(isApplicationTab);
   if (focused) {
@@ -263,11 +265,11 @@ async function activeTab(preferredOrigin) {
     try {
       if (new URL(focused.url).origin === preferredOrigin) return focused;
     } catch (_error) {
-      // Fall through to a preferred-origin match below.
+      // Fall through to origin scan below.
     }
   }
 
-  const all = await chrome.tabs.query({ currentWindow: true });
+  const all = await chrome.tabs.query({});
   const httpTabs = all.filter(isApplicationTab);
   if (preferredOrigin) {
     const matched = httpTabs.filter((tab) => {
@@ -303,45 +305,30 @@ async function runPageCommand(command, profile, session, preferenceStore) {
   const runtimeFiles = command === "advance"
     ? ["assist-core.js", "progression.js", "navigation-adapter.js"]
     : ["assist-core.js"];
-  let timeoutId = 0;
-  const inject = async () => {
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      files: runtimeFiles
-    });
-    const injected = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: (payload) => {
-        globalThis.__ESCAPEHATCH_ASSIST_COMMAND__ = payload;
-      },
-      args: [{ type: command, profile, session, preferenceStore: preferenceStore || null, sessionStorageKey: SESSION_KEY }]
-    });
-    if (!injected) {
-      throw new Error("Assist command injection failed.");
-    }
-    const results = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      files: ["content.js"]
-    });
-    return results && results[0] ? results[0].result : null;
-  };
-  try {
-    const result = await Promise.race([
-      inject(),
-      new Promise((_, reject) => {
-        timeoutId = window.setTimeout(() => {
-          reject(new Error(`Assist ${command} timed out on the application tab.`));
-        }, 15_000);
-      })
-    ]);
-    if (!result || result.status !== "ok") {
-      throw new Error((result && result.message) || "Assist could not run on this page.");
-    }
-    if (result.session) await saveSession(result.session);
-    return result;
-  } finally {
-    if (timeoutId) window.clearTimeout(timeoutId);
+  await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    files: runtimeFiles
+  });
+  const injected = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (payload) => {
+      globalThis.__ESCAPEHATCH_ASSIST_COMMAND__ = payload;
+    },
+    args: [{ type: command, profile, session, preferenceStore: preferenceStore || null, sessionStorageKey: SESSION_KEY }]
+  });
+  if (!injected) {
+    throw new Error("Assist command injection failed.");
   }
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    files: ["content.js"]
+  });
+  const result = results && results[0] ? results[0].result : null;
+  if (!result || result.status !== "ok") {
+    throw new Error((result && result.message) || "Assist could not run on this page.");
+  }
+  if (result.session) await saveSession(result.session);
+  return result;
 }
 
 async function startAssist() {
@@ -371,7 +358,6 @@ async function fillAllowedFields() {
     setStatus("Start Assist on the application before filling.");
     return;
   }
-  setStatus("Filling allowed fields…");
   const prefStored = await chrome.storage.local.get(api.PREFERENCE_STORAGE_KEY);
   const preferenceStore = prefStored[api.PREFERENCE_STORAGE_KEY] || null;
   const result = await runPageCommand("fill", profile, session, preferenceStore);

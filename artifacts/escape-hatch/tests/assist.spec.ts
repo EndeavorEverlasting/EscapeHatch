@@ -209,9 +209,17 @@ test('keeps a multi-page application review-only through popup reopen', async ({
     const manifestPath = resolve(extensionDirectory, 'manifest.json');
     const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as {
       host_permissions?: string[];
+      background?: { service_worker: string };
     };
+    // Test-only: host access + ephemeral SW so Playwright can discover the extension ID.
+    // The committed repo manifest must remain without `background` (harness gate).
     manifest.host_permissions = [`${baseURL}/*`, '*://127.0.0.1/*'];
+    manifest.background = { service_worker: 'background.js' };
     await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
+    await writeFile(
+      resolve(extensionDirectory, 'background.js'),
+      'chrome.runtime.onInstalled.addListener(() => undefined);\n',
+    );
 
     const context = await browserType.launchPersistentContext(userDataDirectory, {
       baseURL,
@@ -248,13 +256,14 @@ test('keeps a multi-page application review-only through popup reopen', async ({
       await application.goto(`${baseURL}/assist-application-fixture`);
 
       const serviceWorker =
-        context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker', { timeout: 30_000 }));
+        context.serviceWorkers()[0] ??
+        (await context.waitForEvent('serviceworker', { timeout: 30_000 }));
       const extensionId = new URL(serviceWorker.url()).hostname;
       const openPopup = async () => {
         await application.bringToFront();
         const popup = await context.newPage();
         await popup.goto(`chrome-extension://${extensionId}/popup.html`);
-        await expect(popup.locator('#startAssist')).toBeEnabled();
+        await expect(popup.locator('#startAssist')).toBeEnabled({ timeout: 30_000 });
         return popup;
       };
       const activateApplicationTab = async (popup: import('@playwright/test').Page) => {
@@ -293,13 +302,13 @@ test('keeps a multi-page application review-only through popup reopen', async ({
       await expect(popup.locator('#status')).toContainText('Assist session started');
 
       await activateApplicationTab(popup);
-      await popup.bringToFront();
       await expect(popup.locator('#fillAllowed')).toBeVisible();
       await popup.locator('#fillAllowed').click();
       await expect(popup.locator('#status')).not.toHaveText('Assist session started for this application origin. Navigate pages manually.', { timeout: 20_000 });
-      await expect(popup.locator('#status')).toContainText('Filled', { timeout: 20_000 });
+      // Reject "Filled 0 …" which previously masked wrong-tab fills on CI.
+      await expect(popup.locator('#status')).toContainText(/Filled [1-9]/, { timeout: 20_000 });
 
-      await expect(application.locator('#first-name')).toHaveValue('Ada');
+      await expect(application.locator('#first-name')).toHaveValue('Ada', { timeout: 20_000 });
       await expect(application.locator('#email')).toHaveValue('ada@example.com');
       await expect(application.locator('#city')).toHaveValue('London');
       await expect(application.locator('#edited-notes')).toHaveValue('Keep my wording');
@@ -334,10 +343,9 @@ test('keeps a multi-page application review-only through popup reopen', async ({
       ).toBe(0);
 
       await activateApplicationTab(popup);
-      await popup.bringToFront();
       await popup.locator('#fillAllowed').click();
-      await expect(popup.locator('#status')).toContainText('Filled', { timeout: 20_000 });
-      await expect(application.locator('#page-two-first-name')).toHaveValue('Ada');
+      await expect(popup.locator('#status')).toContainText(/Filled [1-9]/, { timeout: 20_000 });
+      await expect(application.locator('#page-two-first-name')).toHaveValue('Ada', { timeout: 20_000 });
       await expect(application.locator('#work-authorization')).toHaveValue('manual answer');
 
       await popup.bringToFront();

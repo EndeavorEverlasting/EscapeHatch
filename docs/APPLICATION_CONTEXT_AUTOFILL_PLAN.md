@@ -1318,3 +1318,18 @@ A draft, local email file, or composed message is not submission proof.
 **Goal:** converge exact validated product heads and promote through the canonical repository-promotion owner to refreshed \`main\`.
 
 **Completion gate:** mainline containment plus owning validators; no feature is called complete merely because it exists on integration.
+
+
+## 25. 2026-09-27 P04 execution checkpoint — proof loop + COMP0
+
+**Provider refresh:** integration is now `200389612008ee89eddc24206631cb4b0cce644c` after merged PR #47. PR #46 already merged the executable COMP/QMEM design seams and is not COMP0 completion.
+
+**Durable bounded projection:** `docs/plans/EH_COMP0_PROOF_LOOP_P04_2026-09-27.md`.
+
+**Run-scoped dispatch manifest:** `Outputs/prompt-parallel-dispatch/runs/escapehatch-comp0-proof-loop-20260927/manifest.json`.
+
+**Immediate transition:** P07 executes **EH-COMP0 only**. The private Drive proof-ledger capture checklist is already complete and PR #44 owns proof→sanitized-observation semantics; do not create a second proof protocol. EH-COMP1 and EH-QMEM0 wait for COMP0, and QMEM0 is serialized because it shares taxonomy/preference owners. EH-QMEM1 still waits for QMEM0 plus PR #29 reconciliation.
+
+**Parallel disposition:** unfinished mutation width is 1; no honest parallel product dispatch exists for this immediate transition.
+
+**Canonical dispatch limitation:** the integration tree still lacks `harness/contracts/prompt-parallel-dispatch.v1.json` and `scripts/prompt_parallel_dispatch.py`, so this pass does not claim root-manifest validation or dispatch-receipt proof.

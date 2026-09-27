@@ -149,6 +149,8 @@ Graph width is 3 at the contract floor and up to 4 in the implementation/validat
 
 ### EH-COMP0 — Compensation provenance & resolution contract
 
+Program-design seams and executable call-stack prototypes (not product completion): `docs/EH_COMP_QMEM_PROGRAM_DESIGN.md` plus `artifacts/escape-hatch/src/lib/compensation-resolution.prototype.ts` and `answer-memory-scope.prototype.ts` on design branch `design/eh-comp-qmem-seams-20260927` (floor `82ba80a`).
+
 Owns compensation provenance in career-state, compensation question families/aliases, preference precedence, and focused synthetic validation.
 
 Acceptance:

@@ -578,7 +578,10 @@ function renderPhoneSheet() {
 
 async function invokeAction(actionId, source) {
   const outcome = modality.invokeSemantic(actionId, source);
-  if (outcome && outcome.deduped) return outcome;
+  if (outcome && outcome.deduped) {
+    setStatus(`Ignored duplicate ${actionId} within ${modality.DEDUPE_MS}ms.`);
+    return outcome;
+  }
   if (outcome && outcome.result && typeof outcome.result.then === "function") {
     await outcome.result;
   }

@@ -361,7 +361,8 @@ test('keeps a multi-page application review-only through popup reopen', async ({
         const status = document.getElementById('status');
         if (status) status.textContent = 'Awaiting page-two fill';
       });
-      await popup.locator('#fillAllowed').click();
+      // Keyboard 'f' routes fill_allowed without click dual-dispatch dedupe races on CI.
+      await popup.keyboard.press('f');
       // Require a fresh page-two fill (stale "Filled 3…" from page one previously masked failures).
       await expect(popup.locator('#status')).toContainText('Filled 1 ', { timeout: 20_000 });
       await expect(application.locator('#page-two-first-name')).toHaveValue('Ada', { timeout: 20_000 });

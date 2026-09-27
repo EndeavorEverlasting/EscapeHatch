@@ -1,9 +1,9 @@
 # EscapeHatch — Compensation + Answer Memory Program Design
 
-**Disposition:** DESIGNED / prototyped seams — not full COMP0/QMEM0 product implementation  
-**Floor:** `integration/replit-donor-b01f628-20260921@82ba80a1304756bce81bfda39abf7f68b0b4674c` (contains PR #44 application-proof protocol)  
-**Canonical product plan owner:** `docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md`  
-**Design branch:** `design/eh-comp-qmem-seams-20260927`  
+**Disposition:** DESIGNED / prototyped seams — not full COMP0/QMEM0 product implementation
+**Floor:** `integration/replit-donor-b01f628-20260921@82ba80a1304756bce81bfda39abf7f68b0b4674c` (contains PR #44 application-proof protocol)
+**Canonical product plan owner:** `docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md`
+**Design branch:** `design/eh-comp-qmem-seams-20260927`
 **Private evidence boundary:** Drive tracker/proof/receipts stay private; Git receives sanitized structure only (PR #44 protocol).
 
 ## 0. Mission boundary
@@ -171,9 +171,9 @@ Repository design + prototype unit proof. Not: live autofill on employer sites, 
 
 ## 10. Implementation seam for next build sprint (EH-COMP0)
 
-**Owner:** local Cursor implementation sprint  
-**Base:** refreshed `upstream/integration/replit-donor-b01f628-20260921` containing `82ba80a`  
-**Forbidden:** private Drive content; PR #29/#45 owned surfaces; QMEM1 runtime; website field; silent pay conversion  
+**Owner:** local Cursor implementation sprint
+**Base:** refreshed `upstream/integration/replit-donor-b01f628-20260921` containing `82ba80a`
+**Forbidden:** private Drive content; PR #29/#45 owned surfaces; QMEM1 runtime; website field; silent pay conversion
 
 **First mutations:**
 

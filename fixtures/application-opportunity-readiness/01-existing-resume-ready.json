@@ -1,0 +1,48 @@
+{
+  "schema": "escapehatch/application-opportunity-readiness-receipt/v1",
+  "expected_valid": true,
+  "status": "RECOMMENDATION_READY",
+  "opportunity": {
+    "id": "opp-example-001",
+    "organization": "Example Health",
+    "role": "Project Coordinator",
+    "apply_url": "https://example.invalid/jobs/project-coordinator",
+    "source_verified": true
+  },
+  "resume": {
+    "disposition": "TAILORED_EXISTING",
+    "state": "DURABLE_READY",
+    "doc_url": "https://docs.google.com/document/d/EXAMPLE_RESUME_DOC/edit",
+    "pdf_url": "https://drive.google.com/file/d/EXAMPLE_RESUME_PDF/view",
+    "provider_read_back": true,
+    "tracker_parity": true
+  },
+  "cover_letter": {
+    "demand": "NOT_REQUESTED",
+    "state": "NOT_APPLICABLE",
+    "doc_url": null,
+    "pdf_url": null
+  },
+  "operator_handoff": {
+    "instructions": [
+      "Open the verified apply URL.",
+      "Use the registered resume PDF.",
+      "Send only nontrivial or ambiguous questions for review.",
+      "Submit manually after reviewing the final application."
+    ],
+    "record_fields": [
+      "date_applied",
+      "submission_status_or_confirmation",
+      "application_or_reference_id_if_present",
+      "resume_artifact_identity",
+      "cover_letter_artifact_identity_if_used",
+      "compensation_or_rate_entered_if_asked",
+      "nontrivial_questions_and_final_answers",
+      "stated_next_step_or_response_timeline"
+    ],
+    "artifact_links": [
+      "https://docs.google.com/document/d/EXAMPLE_RESUME_DOC/edit",
+      "https://drive.google.com/file/d/EXAMPLE_RESUME_PDF/view"
+    ]
+  }
+}

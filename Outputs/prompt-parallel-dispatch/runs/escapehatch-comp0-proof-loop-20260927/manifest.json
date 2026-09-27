@@ -107,6 +107,8 @@
         "contracts/career-state.v1.schema.json",
         "fixtures/career-state.v1.example.json",
         "scripts/validate_career_state.py",
+        "artifacts/escape-hatch/src/lib/career-store.ts",
+        "artifacts/escape-hatch/tests/career-store.spec.ts",
         "harness/contracts/application-form-taxonomy.v1.json",
         "harness/contracts/application-preference-cache.v1.json",
         "scripts/validate_application_harness.py",
@@ -136,14 +138,22 @@
       },
       "validation": [
         "python scripts/validate_career_state.py",
+        "focused career-store TypeScript tests",
         "python scripts/validate_application_harness.py",
-        "focused compensation tests",
+        "focused compensation tests including future verified_at rejection",
         "python scripts/validate_harness.py",
         "git diff --check",
         "required provider CI on exact head"
       ],
       "convergence_owner": "P04/P07 coordinator on integration/replit-donor-b01f628-20260921",
-      "status": "READY_FOR_P07"
+      "status": "READY_FOR_P07",
+      "expected_artifacts": [
+        "backward-compatible typed opportunity compensation provenance",
+        "Python + TypeScript career-state validator parity",
+        "future verified_at fail-closed proof",
+        "explicit desired/current/history/minimum taxonomy separation",
+        "compensation-specific resolution precedence"
+      ]
     },
     {
       "lane_id": "EH-COMP1",

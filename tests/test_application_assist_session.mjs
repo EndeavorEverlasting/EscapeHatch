@@ -12,7 +12,6 @@ const cases = [
   [{ label: "Preferred Name *", type: "text" }, "preferred_name"],
   [{ label: "Email *", type: "email" }, "email"],
   [{ label: "Phone Number *", type: "tel" }, "phone"],
-  [{ label: "Primary Number", type: "tel" }, "phone"],
   [{ label: "Primary Phone Number", type: "tel" }, "phone"],
   [{ label: "LinkedIn Profile", type: "url" }, "linkedin_url"],
   [{ label: "Home Street Address *", type: "text" }, "street_address"],
@@ -28,6 +27,7 @@ for (const [descriptor, expected] of cases) {
 }
 
 for (const descriptor of [
+  { label: "Primary Number", type: "tel" },
   { label: "Are you legally authorized to work?", type: "text" },
   { label: "Why do you want this job?", tag: "textarea", type: "text" },
   { label: "Resume", type: "file" },

@@ -1,0 +1,99 @@
+{
+  "schema": "escapehatch/application-opportunity-readiness/v1",
+  "version": 1,
+  "mission": "An opportunity may be recommended for manual application only after EscapeHatch resolves the application packet, required artifacts, operator instructions, and recording obligations.",
+  "trigger_conditions": [
+    "agent_selects_next_opportunity_for_manual_application",
+    "agent_recommends_opportunity_to_operator",
+    "operator_asks_which_opportunity_to_apply_to_next"
+  ],
+  "authorities": {
+    "opportunity_state": "contracts/career-state.v1.schema.json",
+    "resume_quality": "contracts/resume-presentation.v1.json",
+    "resume_durability": "contracts/application-resume-artifact-sync.v1.json",
+    "artifact_registry": "ARTIFACT_REGISTRY.md"
+  },
+  "receipt_schema": "escapehatch/application-opportunity-readiness-receipt/v1",
+  "readiness_states": [
+    "DISCOVERED",
+    "SOURCE_VERIFIED",
+    "RESUME_REQUIRED",
+    "COVER_LETTER_REQUIRED",
+    "PACKET_READY",
+    "RECOMMENDATION_READY",
+    "BLOCKED"
+  ],
+  "resume_dispositions": [
+    "TAILORED_EXISTING",
+    "MASTER_REUSE_EXPLICITLY_APPROVED",
+    "CREATE_TAILORED",
+    "BLOCKED"
+  ],
+  "cover_letter_demand": [
+    "REQUIRED",
+    "OPTIONAL",
+    "NOT_REQUESTED",
+    "UNKNOWN"
+  ],
+  "cover_letter_states": [
+    "DURABLE_READY",
+    "NOT_APPLICABLE",
+    "BLOCKED"
+  ],
+  "required_when_recommendation_ready": [
+    "opportunity.id",
+    "opportunity.organization",
+    "opportunity.role",
+    "opportunity.apply_url",
+    "opportunity.source_verified",
+    "resume.disposition",
+    "resume.state",
+    "resume.doc_url",
+    "resume.pdf_url",
+    "resume.provider_read_back",
+    "resume.tracker_parity",
+    "cover_letter.demand",
+    "cover_letter.state",
+    "operator_handoff.instructions",
+    "operator_handoff.record_fields",
+    "operator_handoff.artifact_links"
+  ],
+  "operator_handoff_required_record_fields": [
+    "date_applied",
+    "submission_status_or_confirmation",
+    "application_or_reference_id_if_present",
+    "resume_artifact_identity",
+    "cover_letter_artifact_identity_if_used",
+    "compensation_or_rate_entered_if_asked",
+    "nontrivial_questions_and_final_answers",
+    "stated_next_step_or_response_timeline"
+  ],
+  "invariants": [
+    "recommendation_ready_requires_verified_apply_source",
+    "recommendation_ready_requires_opportunity_bound_resume_or_explicit_master_reuse",
+    "resume_state_must_be_durable_ready_before_recommendation_ready",
+    "resume_provider_read_back_and_tracker_parity_required",
+    "missing_resume_routes_to_creation_before_recommendation",
+    "required_cover_letter_routes_to_creation_before_recommendation",
+    "unknown_cover_letter_demand_blocks_recommendation_ready_until_resolved_or_operator_gate_is_explicit",
+    "optional_or_not_requested_cover_letter_does_not_require_generation",
+    "real_resume_and_cover_letter_content_remain_private_outside_git",
+    "existing_company_workspace_is_reused_before_creating_another",
+    "operator_handoff_must_include_clickable_artifact_links",
+    "operator_handoff_must_include_manual_application_steps",
+    "operator_handoff_must_include_what_to_record",
+    "submission_remains_operator_controlled",
+    "screenshots_are_evidence_on_demand_not_required_for_every_page"
+  ],
+  "artifact_organization": {
+    "public_repo": "stores contracts, workflow, validators, synthetic fixtures, and locator rules only",
+    "private_packet": "organize under the existing user-owned company/opportunity workspace and reconcile provider IDs with the job tracker/career state",
+    "provider_preference": "reuse existing Google Drive workspace when evidenced; do not create duplicate company workspaces"
+  },
+  "proof_ceiling": [
+    "repository_contract_and_fixture_validation",
+    "provider_read_back_must_be separately observed for real artifacts",
+    "no live application submission proof",
+    "no private resume_or_cover_letter_content_in_repository"
+  ]
+}

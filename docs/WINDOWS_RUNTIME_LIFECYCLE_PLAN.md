@@ -4,6 +4,8 @@ Status: TRACKED PLAN — EH-R0 through EH-R2 integrated on the candidate; EH-R3/
 
 Canonical planning owner for this work: `docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md`.
 
+**2026-09-27 installer successor:** `docs/APPLICATION_ASSIST_AUTOFILL_INSTALL_UI_PLAN.md` defines the user-facing `Install-EscapeHatch.cmd` → installed executable program. Installer/package work must consume this lifecycle manager for start/stop/status/restart and must not create a second process-identity or listener-termination owner.
+
 ## Evidence floor
 
 - Provider repository: `EndeavorEverlasting/EscapeHatch`.

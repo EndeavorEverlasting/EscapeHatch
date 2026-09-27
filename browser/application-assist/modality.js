@@ -129,6 +129,16 @@
     return mode !== "phone";
   }
 
+  function clearRecentInvokes(actionId) {
+    if (actionId) {
+      delete recentInvokes[actionId];
+      return;
+    }
+    for (const key of Object.keys(recentInvokes)) {
+      delete recentInvokes[key];
+    }
+  }
+
   root.EscapeHatchAssistModality = {
     ACTIONS: ACTIONS,
     DEDUPE_MS: DEDUPE_MS,
@@ -136,6 +146,7 @@
     readEnvironment: readEnvironment,
     registerHandler: registerHandler,
     invokeSemantic: invokeSemantic,
+    clearRecentInvokes: clearRecentInvokes,
     isEditableTarget: isEditableTarget,
     shortcutAction: shortcutAction,
     phoneHomeActions: phoneHomeActions,

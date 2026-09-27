@@ -423,6 +423,7 @@ async function pauseAssist() {
     return;
   }
   await saveSession(api.pauseSession(session, "user_pause"));
+  if (modality.clearRecentInvokes) modality.clearRecentInvokes("fill_allowed");
   setStatus("Assist paused. No DOM writes will run until Resume.");
 }
 

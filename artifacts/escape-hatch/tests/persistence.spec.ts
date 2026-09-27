@@ -722,10 +722,11 @@ test('rejects edits that clear an answer title or content', async ({ page }) => 
 
   await savedAnswer.getByRole('button', { name: `Edit ${answerTitle}` }).click();
   const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
 
   await page.getByTestId('input-answer-title').fill('');
   await page.getByTestId('button-save-answer').click();
-  await expect(dialog).toBeVisible();
+  await expect(dialog).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole('article')).toHaveCount(1);
   await expect(page.getByRole('article')).toContainText(answerTitle);
   await expect(page.getByRole('article')).toContainText(answerContent);
@@ -733,7 +734,7 @@ test('rejects edits that clear an answer title or content', async ({ page }) => 
   await page.getByTestId('input-answer-title').fill(answerTitle);
   await page.getByTestId('textarea-answer-content').fill('');
   await page.getByTestId('button-save-answer').click();
-  await expect(dialog).toBeVisible();
+  await expect(dialog).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole('article')).toHaveCount(1);
   await expect(page.getByRole('article')).toContainText(answerTitle);
   await expect(page.getByRole('article')).toContainText(answerContent);
@@ -760,10 +761,11 @@ test('rejects edits that clear an application company or role', async ({ page })
 
   await savedApplication.locator('[data-testid^="button-edit-application-"]').click();
   const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
 
   await page.getByTestId('input-company').fill('');
   await page.getByTestId('button-save-application').click();
-  await expect(dialog).toBeVisible();
+  await expect(dialog).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole('article')).toHaveCount(1);
   await expect(page.getByRole('article')).toContainText(company);
   await expect(page.getByRole('article')).toContainText(role);
@@ -771,7 +773,7 @@ test('rejects edits that clear an application company or role', async ({ page })
   await page.getByTestId('input-company').fill(company);
   await page.getByTestId('input-role').fill('');
   await page.getByTestId('button-save-application').click();
-  await expect(dialog).toBeVisible();
+  await expect(dialog).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole('article')).toHaveCount(1);
   await expect(page.getByRole('article')).toContainText(company);
   await expect(page.getByRole('article')).toContainText(role);

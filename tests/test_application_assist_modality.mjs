@@ -5,7 +5,23 @@ const require = createRequire(import.meta.url);
 const modality = require("../browser/application-assist/modality.js");
 
 assert.equal(modality.detectMode({ coarsePointer: true }), "phone");
-assert.equal(modality.detectMode({ narrowViewport: true }), "phone");
+assert.equal(modality.detectMode({ standalone: true }), "phone");
+// Narrow desktop action popup must NOT become phone (SurfaceContext/LayoutDensity != InputModality).
+assert.equal(
+  modality.detectMode({
+    narrowViewport: true,
+    coarsePointer: false,
+    standalone: false,
+    surfaceContext: modality.SURFACE_EXTENSION_ACTION_POPUP
+  }),
+  "mouse"
+);
+assert.equal(modality.detectDensity({ narrowViewport: true }), "compact");
+assert.equal(modality.detectDensity({ narrowViewport: false }), "regular");
+assert.equal(
+  modality.detectSurface({ surfaceContext: modality.SURFACE_EXTENSION_ACTION_POPUP }),
+  "EXTENSION_ACTION_POPUP"
+);
 assert.equal(modality.detectMode({}), "mouse");
 assert.equal(modality.detectMode({ keyboardFirst: true }), "keyboard");
 assert.equal(modality.shouldAutofocusText("phone"), false);

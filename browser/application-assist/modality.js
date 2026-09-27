@@ -28,21 +28,53 @@
   const recentInvokes = Object.create(null);
   const DEDUPE_MS = 700;
 
+  const SURFACE_EXTENSION_ACTION_POPUP = "EXTENSION_ACTION_POPUP";
+  const SURFACE_IN_PAGE_COMPANION = "IN_PAGE_COMPANION";
+  const SURFACE_COCKPIT = "COCKPIT";
+  const COMPACT_VIEWPORT_MAX_PX = 640;
+
+  /**
+   * Input modality is independent of layout width.
+   * Phone language requires coarse pointer and/or standalone display —
+   * a narrow desktop action popup must remain mouse/keyboard.
+   */
   function detectMode(env) {
     const coarse = !!(env && env.coarsePointer);
-    const narrow = !!(env && env.narrowViewport);
     const standalone = !!(env && env.standalone);
-    if (coarse || narrow || standalone) return "phone";
+    if (coarse || standalone) return "phone";
     if (env && env.keyboardFirst) return "keyboard";
     return "mouse";
+  }
+
+  function detectDensity(env) {
+    if (env && env.density) return env.density === "regular" ? "regular" : "compact";
+    const narrow = !!(env && env.narrowViewport);
+    return narrow ? "compact" : "regular";
+  }
+
+  function detectSurface(env) {
+    const surface = env && env.surfaceContext;
+    if (
+      surface === SURFACE_EXTENSION_ACTION_POPUP ||
+      surface === SURFACE_IN_PAGE_COMPANION ||
+      surface === SURFACE_COCKPIT
+    ) {
+      return surface;
+    }
+    return SURFACE_EXTENSION_ACTION_POPUP;
   }
 
   function readEnvironment(win) {
     const w = win || root;
     const mq = w.matchMedia ? w.matchMedia("(pointer: coarse)").matches : false;
-    const narrow = !!(w.matchMedia && w.matchMedia("(max-width: 640px)").matches);
+    const narrow = !!(w.matchMedia && w.matchMedia("(max-width: " + COMPACT_VIEWPORT_MAX_PX + "px)").matches);
     const standalone = !!(w.matchMedia && w.matchMedia("(display-mode: standalone)").matches);
-    return { coarsePointer: mq, narrowViewport: narrow, standalone: standalone };
+    return {
+      coarsePointer: mq,
+      narrowViewport: narrow,
+      standalone: standalone,
+      surfaceContext: SURFACE_EXTENSION_ACTION_POPUP
+    };
   }
 
   function registerHandler(actionId, fn) {
@@ -117,12 +149,18 @@
     });
   }
 
-  function applyDocumentMode(doc, mode) {
+  function applyDocumentMode(doc, mode, options) {
     if (!doc || !doc.documentElement) return;
+    const density = detectDensity(options || {});
+    const surface = detectSurface(options || {});
     doc.documentElement.setAttribute("data-modality", mode);
+    doc.documentElement.setAttribute("data-density", density);
+    doc.documentElement.setAttribute("data-surface", surface);
     doc.documentElement.classList.toggle("modality-phone", mode === "phone");
     doc.documentElement.classList.toggle("modality-mouse", mode === "mouse");
     doc.documentElement.classList.toggle("modality-keyboard", mode === "keyboard");
+    doc.documentElement.classList.toggle("density-compact", density === "compact");
+    doc.documentElement.classList.toggle("density-regular", density === "regular");
   }
 
   function shouldAutofocusText(mode) {
@@ -142,7 +180,13 @@
   root.EscapeHatchAssistModality = {
     ACTIONS: ACTIONS,
     DEDUPE_MS: DEDUPE_MS,
+    COMPACT_VIEWPORT_MAX_PX: COMPACT_VIEWPORT_MAX_PX,
+    SURFACE_EXTENSION_ACTION_POPUP: SURFACE_EXTENSION_ACTION_POPUP,
+    SURFACE_IN_PAGE_COMPANION: SURFACE_IN_PAGE_COMPANION,
+    SURFACE_COCKPIT: SURFACE_COCKPIT,
     detectMode: detectMode,
+    detectDensity: detectDensity,
+    detectSurface: detectSurface,
     readEnvironment: readEnvironment,
     registerHandler: registerHandler,
     invokeSemantic: invokeSemantic,

@@ -72,6 +72,26 @@ class ApplicationAssistModalityTests(unittest.TestCase):
         self.assertIn("phoneHomeActions", self.popup)
         self.assertIn("setProfileOpen(false)", self.popup)
 
+    def test_narrow_viewport_is_density_not_phone_authority(self) -> None:
+        detection = self.contract["mode_detection"]
+        self.assertNotIn("max_width_640px", detection["phone"])
+        self.assertIn("pointer_coarse", detection["phone"])
+        self.assertIn("standalone_display_mode", detection["phone"])
+        self.assertEqual(
+            detection["layout_density"]["forbidden"],
+            "narrow_viewport_must_not_force_phone_modality",
+        )
+        regression = detection["permanent_regression"]
+        self.assertEqual(regression["surface"], "EXTENSION_ACTION_POPUP")
+        self.assertEqual(regression["expected_modality"], "mouse")
+        self.assertEqual(regression["expected_density"], "compact")
+        self.assertIn("detectDensity", self.modality)
+        # Adapter must not treat narrow alone as phone.
+        self.assertNotIn("if (coarse || narrow || standalone)", self.modality)
+        self.assertIn("if (coarse || standalone)", self.modality)
+        self.assertIn('id="autofillToggle"', self.html)
+        self.assertIn("width: 380px", self.html)
+
     def test_keyboard_grammar_and_escape_policy(self) -> None:
         kb = self.contract["grammars"]["keyboard"]
         self.assertEqual(kb["direct"]["escape"], "dismiss_overlay")

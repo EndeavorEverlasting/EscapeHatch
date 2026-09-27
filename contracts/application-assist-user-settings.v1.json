@@ -1,0 +1,36 @@
+{
+  "schema": "escapehatch/application-assist-user-settings/v1",
+  "version": 1,
+  "storage_key": "escapeHatch.applicationAssistUserSettings.v1",
+  "product_surface": "browser/application-assist",
+  "mission": "Persist AutofillPreference independently of question answers and session state.",
+  "defaults": {
+    "autofill_enabled": true
+  },
+  "semantics": {
+    "missing_setting": "autofill_enabled defaults to true",
+    "explicit_false": "autofill_enabled remains false until user re-enables",
+    "malformed_value": "fail open to autofill_enabled=true and surface recoverable status note",
+    "manual_fill": "always available regardless of autofill_enabled",
+    "opt_out_does_not_undo": "disabling autofill does not erase already-written field values",
+    "fill_pipeline": [
+      "profile_or_preferences",
+      "FillPlan",
+      "field_policy_gate",
+      "allowed_empty_fields",
+      "DOM_writer"
+    ],
+    "trigger_prototype": "Candidate A — Start Assist chains one canonical fill; page-lifecycle Candidate B deferred pending permission evidence"
+  },
+  "fields": {
+    "autofill_enabled": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "invariants": [
+    "no_bypass_of_fill_plan_or_policy_gate",
+    "no_overload_of_applicationQuestionPreferences",
+    "final_submit_remains_manual"
+  ]
+}

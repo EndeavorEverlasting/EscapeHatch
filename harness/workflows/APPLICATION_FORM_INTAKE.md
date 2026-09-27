@@ -93,8 +93,8 @@ Different wording may map to one canonical question only when the meanings are e
 
 Examples:
 
-- `Phone Number`, `Primary Number`, and `Primary Phone Number` may map to `identity.phone` when the control is actually the primary contact phone field;
-- `Highest Level of Completed Education` and `Highest Level of Education Obtained` may map to `education.highest_completed_level`;
+- `Phone Number` and `Primary Phone Number` may map to `identity.phone`; bare `Primary Number` is context-dependent and stays unresolved unless stronger page/name/autocomplete evidence proves it is the applicant contact phone;
+- `Highest Level of Education Obtained` is a candidate semantic equivalent of `education.highest_completed_level`, but do not promote a new alias as runtime-ready until the owning questionnaire/runtime seam can consume that canonical question safely;
 - a field that can accept either annual or hourly desired pay must **not** be collapsed into an annual-only compensation semantic merely because its label contains “salary”;
 - `Current Salary`, `Minimum Acceptable Salary`, and `Desired Salary` remain different semantics;
 - `Review and Submit` as a step label is not proof that a nearby control is a final submit action.

@@ -28,6 +28,7 @@ for (const [descriptor, expected] of cases) {
 
 for (const descriptor of [
   { label: "Primary Number", type: "tel" },
+  { label: "Primary Phone Number", type: "text" },
   { label: "Are you legally authorized to work?", type: "text" },
   { label: "Why do you want this job?", tag: "textarea", type: "text" },
   { label: "Resume", type: "file" },

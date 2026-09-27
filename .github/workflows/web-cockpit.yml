@@ -1,7 +1,7 @@
 name: Web Cockpit Validation
 on:
   pull_request:
-    branches: [main]
+    branches: [main, integration/replit-donor-b01f628-20260921]
     paths:
       - 'artifacts/escape-hatch/**'
       - 'docs/plans/**'

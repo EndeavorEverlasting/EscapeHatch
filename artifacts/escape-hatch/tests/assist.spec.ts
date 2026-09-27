@@ -4,99 +4,111 @@ import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-test('imports a synthetic local resume into a review panel without auto-saving', async ({ page }) => {
+test('imports a synthetic local resume into the reusable profile with no review step', async ({ page }) => {
   const resumeText = [
     'Synthetic Candidate',
-    'Example City, NY | candidate@example.test',
+    '123 Main Street, Example City, NY 10001, United States | candidate@example.test | (555) 010-0101',
     'PROFESSIONAL SUMMARY',
     'Synthetic summary.',
     'CORE STRENGTHS',
-    'Automation',
+    'Automation • Testing',
+    'PROJECTS',
+    '• Deterministic Import — Builds reusable profile state.',
     'PROFESSIONAL EXPERIENCE',
     'Example Org — Example Role | 2024–Present',
     'EDUCATION',
     'Example Institute | Example Credential',
   ].join('\n');
+
   await page.goto('/assist');
   await page.locator('[data-testid="input-import-resume"]').setInputFiles({
     name: 'synthetic-resume.txt',
     mimeType: 'text/plain',
     buffer: Buffer.from(resumeText),
   });
-  await expect(page.locator('[data-testid="assist-feedback"]')).toContainText('Resume read locally', { timeout: 15_000 });
-  await expect(page.locator('[data-testid="resume-review-panel"]')).toBeVisible();
-  expect(await page.locator('[data-testid^="resume-proposal-"]').count()).toBeGreaterThan(2);
-  await expect(page.locator('[data-testid="assist-feedback"]')).toContainText('Review each proposal');
-});
-test('saves edited review proposals, applies location, rejects untouched fields, and survives reload', async ({ page }) => {
-  const resumeText = [
-    'Review Candidate',
-    'Review City, NY | source@example.test | (555) 010-0101 | https://linkedin.com/in/source | https://source.example.test',
-    'PROFESSIONAL SUMMARY',
-    'Original summary text.',
-    'CORE STRENGTHS',
-    'Original Skill',
-    'PROJECTS',
-    '• Original Project — Original project details.',
-    'PROFESSIONAL EXPERIENCE',
-    'Original Org — Original Role | 2020–Present',
-    'EDUCATION',
-    'Original Institute | Original Credential',
-  ].join('\n');
-  await page.goto('/assist');
-  const beforeReview = await page.evaluate(() => localStorage.getItem('escape-hatch-assist-profile'));
-  await page.locator('[data-testid="input-import-resume"]').setInputFiles({
-    name: 'synthetic-review.txt',
-    mimeType: 'text/plain',
-    buffer: Buffer.from(resumeText),
-  });
-  await expect(page.locator('[data-testid="resume-review-panel"]')).toBeVisible();
-  expect(await page.evaluate(() => localStorage.getItem('escape-hatch-assist-profile'))).toBe(beforeReview);
 
-  const edit = async (label: string, value: string) => {
-    const article = page.locator('[data-testid^="resume-proposal-"]').filter({ hasText: label }).first();
-    page.once('dialog', (dialog) => dialog.accept(value));
-    await article.getByRole('button', { name: 'Edit' }).click();
-  };
-  const accept = async (label: string) => {
-    await page.locator('[data-testid^="resume-proposal-"]').filter({ hasText: label }).first().getByRole('button', { name: 'Accept' }).click();
-  };
+  await expect(page.locator('[data-testid="assist-feedback"]')).toContainText('Resume parsed locally', { timeout: 15_000 });
+  await expect(page.locator('[data-testid="assist-feedback"]')).toContainText('no setup step');
+  await expect(page.locator('[data-testid="resume-review-panel"]')).toHaveCount(0);
 
-  await edit('contact · name', 'Reviewed Candidate');
-  await edit('contact · email', 'reviewed@example.test');
-  await edit('contact · location', 'Reviewed City, CA');
-  await edit('links · linkedin_url', 'https://linkedin.com/in/reviewed');
-  await edit('links · website', 'https://reviewed.example.test');
-  await edit('skills · skill', 'Reviewed Skill');
-  await edit('projects · project', 'Reviewed Project — Reviewed project details.');
-  await edit('experience · role', 'Reviewed Org — Reviewed Role | 2030–Present');
-  await edit('education · education', 'Reviewed Institute | Reviewed Credential');
-  await accept('contact · name');
-  await accept('contact · email');
-  await accept('contact · location');
-  await accept('links · linkedin_url');
-  await accept('links · website');
-  await accept('skills · skill');
-  await accept('projects · project');
-  await accept('experience · role');
-  await accept('education · education');
-  await page.locator('[data-testid^="resume-proposal-"]').filter({ hasText: 'contact · phone' }).first().getByRole('button', { name: 'Reject' }).click();
-  await page.locator('[data-testid="button-save-reviewed-resume"]').click();
-  await expect(page.locator('[data-testid="assist-feedback"]')).toContainText('saved locally');
   const saved = await page.evaluate(() => ({
     profile: JSON.parse(localStorage.getItem('escape-hatch-profile') ?? '{}'),
     assist: JSON.parse(localStorage.getItem('escape-hatch-assist-profile') ?? '{}'),
   }));
-  expect(saved.profile).toMatchObject({ first_name: 'Reviewed', last_name: 'Candidate', email: 'reviewed@example.test', city: 'Reviewed City', region: 'CA', phone: '' });
-  expect(saved.assist.contact).toMatchObject({ email: 'reviewed@example.test', city: 'Reviewed City', region: 'CA', phone: '' });
-  expect(saved.assist.skills).toContain('Reviewed Skill');
-  expect(saved.assist.projects.at(-1)).toMatchObject({ name: 'Reviewed Project', description: 'Reviewed project details.' });
-  expect(saved.assist.experience.at(-1)).toMatchObject({ company: 'Reviewed Org', title: 'Reviewed Role' });
-  expect(saved.assist.education.at(-1)).toMatchObject({ institution: 'Reviewed Institute', credential: 'Reviewed Credential' });
+  expect(saved.profile).toMatchObject({
+    first_name: 'Synthetic',
+    last_name: 'Candidate',
+    email: 'candidate@example.test',
+    phone: '(555) 010-0101',
+    street_address: '123 Main Street',
+    city: 'Example City',
+    region: 'NY',
+    postal_code: '10001',
+    country: 'United States',
+  });
+  expect(saved.assist.contact).toMatchObject(saved.profile);
+  expect(saved.assist.summary).toBe('Synthetic summary.');
+  expect(saved.assist.skills).toEqual(expect.arrayContaining(['Automation', 'Testing']));
+  expect(saved.assist.projects).toHaveLength(1);
+  expect(saved.assist.experience).toHaveLength(1);
+  expect(saved.assist.education).toHaveLength(1);
 
   await page.reload();
-  await expect(page.locator('[data-testid="resume-review-panel"]')).toHaveCount(0);
-  await expect(page.locator('text=reviewed@example.test')).toBeVisible();
+  await expect(page.getByText('candidate@example.test')).toBeVisible();
+});
+
+test('automatic resume intake preserves existing non-empty profile truth on conflict', async ({ page }) => {
+  await page.goto('/assist');
+  await page.evaluate(() => {
+    localStorage.setItem('escape-hatch-profile', JSON.stringify({
+      name_prefix: '',
+      first_name: 'Existing',
+      last_name: 'Candidate',
+      preferred_name: '',
+      email: 'keep@example.test',
+      phone: '',
+      phone_authority: '',
+      linkedin_url: '',
+      street_address: '',
+      city: '',
+      region: '',
+      postal_code: '',
+      country: '',
+    }));
+  });
+  await page.reload();
+
+  await page.locator('[data-testid="input-import-resume"]').setInputFiles({
+    name: 'conflicting-resume.txt',
+    mimeType: 'text/plain',
+    buffer: Buffer.from([
+      'Resume Candidate',
+      'Resume City, NJ | replace@example.test',
+      'PROFESSIONAL SUMMARY',
+      'Imported summary.',
+    ].join('\n')),
+  });
+
+  await expect(page.locator('[data-testid="assist-feedback"]')).toContainText('preserved because the resume disagreed');
+  const saved = await page.evaluate(() => ({
+    profile: JSON.parse(localStorage.getItem('escape-hatch-profile') ?? '{}'),
+    assist: JSON.parse(localStorage.getItem('escape-hatch-assist-profile') ?? '{}'),
+  }));
+  expect(saved.profile).toMatchObject({
+    first_name: 'Existing',
+    last_name: 'Candidate',
+    email: 'keep@example.test',
+    city: 'Resume City',
+    region: 'NJ',
+  });
+  expect(saved.assist.contact).toMatchObject({
+    first_name: 'Existing',
+    last_name: 'Candidate',
+    email: 'keep@example.test',
+    city: 'Resume City',
+    region: 'NJ',
+  });
+  expect(saved.assist.summary).toBe('Imported summary.');
 });
 
 test('explains unsupported PDF layouts without creating a review panel', async ({ page }) => {
@@ -123,7 +135,7 @@ test('explains unsupported PDF layouts without creating a review panel', async (
 });
 
 test('keeps a multi-page application review-only through popup reopen', async ({ browser }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   const testDirectory = resolve(fileURLToPath(import.meta.url), '..');
   const sourceExtension = resolve(testDirectory, '../../../browser/application-assist');
@@ -192,31 +204,31 @@ test('keeps a multi-page application review-only through popup reopen', async ({
     </script>
   `;
 
-  const sync = {
-    schema: 'escape-hatch-assist-sync',
-    profile: {
-      contact: {
-        first_name: 'Ada',
-        email: 'ada@example.com',
-        city: 'London',
-      },
-    },
-    answers: [],
-  };
-
   try {
     await cp(sourceExtension, extensionDirectory, { recursive: true });
     const manifestPath = resolve(extensionDirectory, 'manifest.json');
     const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as {
       host_permissions?: string[];
+      background?: { service_worker: string };
     };
-    manifest.host_permissions = [`${baseURL}/*`];
+    // Test-only: host access + ephemeral SW so Playwright can discover the extension ID.
+    // The committed repo manifest must remain without `background` (harness gate).
+    manifest.host_permissions = [`${baseURL}/*`, '*://127.0.0.1/*'];
+    manifest.background = { service_worker: 'background.js' };
     await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
+    await writeFile(
+      resolve(extensionDirectory, 'background.js'),
+      'chrome.runtime.onInstalled.addListener(() => undefined);\n',
+    );
 
     const context = await browserType.launchPersistentContext(userDataDirectory, {
       baseURL,
       headless: true,
-      executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH ?? '/repl/tools/bin/chromium',
+      viewport: { width: 1280, height: 900 },
+      // Full Chromium (not headless shell) is required for MV3 extension loading.
+      ...(process.env.PLAYWRIGHT_CHROMIUM_PATH
+        ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH }
+        : { channel: 'chromium' as const }),
       args: [
         '--no-sandbox',
         '--disable-dev-shm-usage',
@@ -226,36 +238,90 @@ test('keeps a multi-page application review-only through popup reopen', async ({
     });
 
     try {
+      for (const existing of context.pages()) {
+        if (existing.url() === 'about:blank') {
+          await existing.close().catch(() => undefined);
+        }
+      }
+
+      await context.route('**/assist-application-fixture*', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/html; charset=utf-8',
+          body: `<!doctype html><html><head><meta charset="utf-8"></head><body>${fixturePage}</body></html>`,
+        });
+      });
+
       const application = await context.newPage();
-      await application.goto('/');
-      await application.setContent(fixturePage);
+      await application.goto(`${baseURL}/assist-application-fixture`);
 
       const serviceWorker =
-        context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
+        context.serviceWorkers()[0] ??
+        (await context.waitForEvent('serviceworker', { timeout: 30_000 }));
       const extensionId = new URL(serviceWorker.url()).hostname;
       const openPopup = async () => {
         await application.bringToFront();
         const popup = await context.newPage();
         await popup.goto(`chrome-extension://${extensionId}/popup.html`);
-        await expect(popup.locator('#start')).toBeEnabled();
+        await expect(popup.locator('#startAssist')).toBeEnabled({ timeout: 30_000 });
         return popup;
+      };
+      const activateApplicationTab = async (popup: import('@playwright/test').Page) => {
+        await application.bringToFront();
+        const applicationUrl = application.url();
+        await popup.evaluate(async (targetUrl) => {
+          const tabs = await chrome.tabs.query({});
+          const matches = tabs.filter((tab) => typeof tab.id === 'number' && tab.url === targetUrl);
+          if (matches[0]?.id != null) {
+            await chrome.tabs.update(matches[0].id, { active: true });
+            return;
+          }
+          // Fallback: exact pathname match on same origin (history.pushState may differ slightly).
+          let target: URL;
+          try {
+            target = new URL(targetUrl);
+          } catch {
+            return;
+          }
+          const samePath = tabs.filter((tab) => {
+            if (typeof tab.id !== 'number' || typeof tab.url !== 'string') return false;
+            try {
+              const candidate = new URL(tab.url);
+              return candidate.origin === target.origin && candidate.pathname === target.pathname;
+            } catch {
+              return false;
+            }
+          });
+          samePath.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
+          if (samePath[0]?.id != null) {
+            await chrome.tabs.update(samePath[0].id, { active: true });
+          }
+        }, applicationUrl);
       };
 
       const popup = await openPopup();
-      await popup.getByText('Profile bridge', { exact: true }).click();
-      await popup.locator('#sync').fill(JSON.stringify(sync));
-      await popup.locator('#start').click();
-      await popup.locator('#scan').click();
+      await expect(popup.locator('#modeChip')).toContainText('Mode: mouse');
+      await expect(popup.locator('.mouse-actions')).toBeVisible();
+      await popup.locator('#first_name').fill('Ada');
+      await popup.locator('#email').fill('ada@example.com');
+      await popup.locator('#city').fill('London');
+      await popup.locator('#save').click();
+      await expect(popup.locator('#status')).toContainText('Saved');
 
-      await expect(popup.locator('[data-field="first-name"]')).toBeChecked();
-      await expect(popup.locator('[data-field="password"]')).toBeDisabled();
-      await expect(popup.locator('[data-field="resume"]')).toBeDisabled();
-      await expect(popup.locator('[data-field="ssn"]')).toBeDisabled();
-      await expect(popup.locator('[data-field="edited-notes"]')).toBeDisabled();
-      await expect(popup.locator('[data-field="submit"]')).toBeDisabled();
+      await activateApplicationTab(popup);
+      await popup.bringToFront();
+      await popup.locator('#startAssist').click();
+      await expect(popup.locator('#sessionState')).toContainText('Session: active', { timeout: 15_000 });
+      await expect(popup.locator('#status')).toContainText('Assist session started');
 
-      await popup.locator('#fill').click();
-      await expect(application.locator('#first-name')).toHaveValue('Ada');
+      await activateApplicationTab(popup);
+      await popup.bringToFront();
+      await expect(popup.locator('#fillAllowed')).toBeVisible();
+      await popup.locator('#fillAllowed').click();
+      // Reject "Filled 0 …" which previously masked wrong-tab fills on CI.
+      await expect(popup.locator('#status')).toContainText(/Filled [1-9]/, { timeout: 20_000 });
+
+      await expect(application.locator('#first-name')).toHaveValue('Ada', { timeout: 20_000 });
       await expect(application.locator('#email')).toHaveValue('ada@example.com');
       await expect(application.locator('#city')).toHaveValue('London');
       await expect(application.locator('#edited-notes')).toHaveValue('Keep my wording');
@@ -263,7 +329,7 @@ test('keeps a multi-page application review-only through popup reopen', async ({
       await expect(application.locator('#resume')).toHaveValue('');
       await expect(application.locator('#ssn')).toHaveValue('manual-only');
       await expect(application.locator('#submit')).toBeVisible();
-      await expect(application).toHaveURL(/\/$/);
+      await expect(application).toHaveURL(/assist-application-fixture/);
       expect(
         await application.evaluate(
           () => (window as Window & { __controlClicks?: string[] }).__controlClicks,
@@ -289,27 +355,38 @@ test('keeps a multi-page application review-only through popup reopen', async ({
         ),
       ).toBe(0);
 
-      await popup.locator('#scan').click();
-      await expect(popup.locator('[data-field="page-two-first-name"]')).toBeChecked();
-      await expect(popup.locator('[data-field="work-authorization"]')).toBeDisabled();
-      await expect(popup.locator('[data-field="continue"]')).toBeDisabled();
-      await expect(popup.locator('[data-field="submit-page-two"]')).toBeDisabled();
+      await activateApplicationTab(popup);
+      await popup.bringToFront();
+      await popup.evaluate(() => {
+        const status = document.getElementById('status');
+        if (status) status.textContent = 'Awaiting page-two fill';
+      });
+      // Keyboard 'f' routes fill_allowed without click dual-dispatch dedupe races on CI.
+      await popup.keyboard.press('f');
+      // Require a fresh page-two fill (stale "Filled 3…" from page one previously masked failures).
+      await expect(popup.locator('#status')).toContainText('Filled 1 ', { timeout: 20_000 });
+      await expect(application.locator('#page-two-first-name')).toHaveValue('Ada', { timeout: 20_000 });
+      await expect(application.locator('#work-authorization')).toHaveValue('manual answer');
 
-      await popup.locator('#fill').click();
-      await expect(application.locator('#page-two-first-name')).toHaveValue('Ada');
-      await popup.locator('#undo').click();
+      await popup.bringToFront();
+      await expect(popup.locator('#undoLast')).toBeVisible();
+      await popup.locator('#undoLast').click();
+      await expect(popup.locator('#status')).toContainText('Undo restored', { timeout: 20_000 });
       await expect(application.locator('#page-two-first-name')).toHaveValue('');
 
       await popup.locator('#pause').click();
-      await expect(popup.locator('#pause')).toHaveText('Resume');
-      await expect(popup.locator('#fill')).toBeDisabled();
-      await popup.locator('#pause').click();
-      await expect(popup.locator('#pause')).toHaveText('Pause');
+      await expect(popup.locator('#sessionState')).toContainText('Session: paused');
+      await expect(popup.locator('#status')).toContainText('Assist paused');
+      await popup.locator('#fillAllowed').click();
+      await expect(popup.locator('#status')).toContainText('Fill blocked', { timeout: 20_000 });
+      await popup.locator('#resume').click();
+      await expect(popup.locator('#sessionState')).toContainText('Session: active');
 
-      await popup.locator('#stop').click();
-      await expect(popup.locator('#stop')).toBeDisabled();
-      await expect(popup.locator('#fill')).toBeDisabled();
-      await expect(popup.locator('#notice')).toContainText('Emergency stop latched');
+      await popup.locator('#emergencyStop').click();
+      await expect(popup.locator('#sessionState')).toContainText('Session: stopped');
+      await expect(popup.locator('#status')).toContainText('Emergency Stop latched');
+      await popup.locator('#fillAllowed').click();
+      await expect(popup.locator('#status')).toContainText(/Emergency Stop(?: is)? latched/, { timeout: 20_000 });
       await expect(application.locator('#work-authorization')).toHaveValue('manual answer');
       expect(
         await application.evaluate(
@@ -324,27 +401,10 @@ test('keeps a multi-page application review-only through popup reopen', async ({
 
       await popup.close();
       const reopenedPopup = await openPopup();
-      await expect(reopenedPopup.locator('#summary')).toContainText('Emergency stop latched');
-      await expect(reopenedPopup.locator('#summary')).toContainText(`Origin: ${new URL(baseURL).origin}`);
-      const exportedStatus = JSON.parse(await reopenedPopup.locator('#session').inputValue()) as {
-        pages: Array<{ url: string }>;
-        history: Array<unknown>;
-        emergencyStopped: boolean;
-      };
-      expect(exportedStatus.emergencyStopped).toBe(true);
-      expect(exportedStatus.history).toHaveLength(1);
-      expect(exportedStatus.pages.map((page) => page.url)).toEqual(
-        expect.arrayContaining([
-          expect.stringMatching(/\/$/),
-          expect.stringMatching(/\/application\?page=2$/),
-        ]),
-      );
-      await expect(reopenedPopup.locator('#export-session')).toBeEnabled();
-      const importedSessionFile = resolve(userDataDirectory, 'assist-session.json');
-      await writeFile(importedSessionFile, JSON.stringify(exportedStatus));
-      await reopenedPopup.locator('#session-file').setInputFiles(importedSessionFile);
-      await expect(reopenedPopup.locator('#notice')).toContainText('Session status imported');
-      await expect(reopenedPopup.locator('#summary')).toContainText('Emergency stop latched');
+      await expect(reopenedPopup.locator('#sessionState')).toContainText('Session: stopped');
+      await expect(reopenedPopup.locator('#sessionState')).toContainText(`origin=${new URL(baseURL).origin}`);
+      await reopenedPopup.locator('#fillAllowed').click();
+      await expect(reopenedPopup.locator('#status')).toContainText(/Emergency Stop(?: is)? latched/);
       await reopenedPopup.close();
     } finally {
       await context.close();

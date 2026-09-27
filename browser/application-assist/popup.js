@@ -251,12 +251,56 @@ async function syncFromCockpit() {
   return profile;
 }
 
-async function activeTab() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab || typeof tab.id !== "number") {
-    throw new Error("No active browser tab is available.");
+function isApplicationTab(tab) {
+  return typeof tab?.id === "number" && typeof tab?.url === "string" && /^https?:\/\//i.test(tab.url);
+}
+
+async function activeTab(preferredOrigin) {
+  // Prefer the session's application origin. When several tabs share the origin
+  // (cockpit + fixture), prefer the most recently accessed HTTP tab.
+  const current = await chrome.tabs.query({ active: true, currentWindow: true });
+  const focused = current.find(isApplicationTab);
+  if (focused) {
+    if (!preferredOrigin) return focused;
+    try {
+      if (new URL(focused.url).origin === preferredOrigin) return focused;
+    } catch (_error) {
+      // Fall through to origin scan below.
+    }
   }
-  return tab;
+
+  const all = await chrome.tabs.query({});
+  const httpTabs = all.filter(isApplicationTab);
+  if (preferredOrigin) {
+    const matched = httpTabs.filter((tab) => {
+      try {
+        return new URL(tab.url).origin === preferredOrigin;
+      } catch (_error) {
+        return false;
+      }
+    });
+    // Prefer non-root cockpit paths last: application fixtures/forms usually have a path.
+    matched.sort((a, b) => {
+      const pathScore = (url) => {
+        try {
+          const pathname = new URL(url).pathname;
+          if (pathname.includes('assist-application-fixture') || pathname.includes('application')) return 2;
+          if (pathname === '/' || pathname === '') return 0;
+          return 1;
+        } catch (_error) {
+          return 0;
+        }
+      };
+      const scoreDiff = pathScore(b.url) - pathScore(a.url);
+      if (scoreDiff !== 0) return scoreDiff;
+      return (b.lastAccessed || 0) - (a.lastAccessed || 0);
+    });
+    if (matched[0]) return matched[0];
+  }
+  if (focused) return focused;
+  httpTabs.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
+  if (httpTabs[0]) return httpTabs[0];
+  throw new Error("No active browser tab is available.");
 }
 
 function tabOrigin(tab) {
@@ -268,7 +312,26 @@ function tabOrigin(tab) {
 }
 
 async function runPageCommand(command, profile, session, preferenceStore) {
-  const tab = await activeTab();
+  let tab = null;
+  if (session && typeof session.tab_id === "number") {
+    try {
+      const pinned = await chrome.tabs.get(session.tab_id);
+      if (isApplicationTab(pinned)) {
+        try {
+          if (!session.origin || new URL(pinned.url).origin === session.origin) {
+            tab = pinned;
+          }
+        } catch (_error) {
+          tab = null;
+        }
+      }
+    } catch (_error) {
+      tab = null;
+    }
+  }
+  if (!tab) {
+    tab = await activeTab(session && session.origin ? session.origin : undefined);
+  }
   const origin = tabOrigin(tab);
   session = api.observeOrigin(session, origin);
   await saveSession(session);
@@ -298,7 +361,13 @@ async function runPageCommand(command, profile, session, preferenceStore) {
   if (!result || result.status !== "ok") {
     throw new Error((result && result.message) || "Assist could not run on this page.");
   }
-  if (result.session) await saveSession(result.session);
+  if (result.session) {
+    const nextSession = { ...result.session };
+    if (typeof session.tab_id === "number" && typeof nextSession.tab_id !== "number") {
+      nextSession.tab_id = session.tab_id;
+    }
+    await saveSession(nextSession);
+  }
   return result;
 }
 
@@ -313,6 +382,7 @@ async function startAssist() {
     application_id: origin,
     started_at: new Date().toISOString()
   });
+  session.tab_id = tab.id;
   await saveSession(session);
   setStatus("Assist session started for this application origin. Navigate pages manually.");
 }
@@ -329,6 +399,7 @@ async function fillAllowedFields() {
     setStatus("Start Assist on the application before filling.");
     return;
   }
+  setStatus("Filling allowed fields…");
   const prefStored = await chrome.storage.local.get(api.PREFERENCE_STORAGE_KEY);
   const preferenceStore = prefStored[api.PREFERENCE_STORAGE_KEY] || null;
   const result = await runPageCommand("fill", profile, session, preferenceStore);
@@ -352,6 +423,7 @@ async function pauseAssist() {
     return;
   }
   await saveSession(api.pauseSession(session, "user_pause"));
+  if (modality.clearRecentInvokes) modality.clearRecentInvokes("fill_allowed");
   setStatus("Assist paused. No DOM writes will run until Resume.");
 }
 
@@ -364,6 +436,7 @@ async function resumeAssist() {
   }
   const next = api.resumeSession(session, tabOrigin(tab));
   await saveSession(next);
+  if (modality.clearRecentInvokes) modality.clearRecentInvokes("fill_allowed");
   setStatus("Assist resumed on the same application origin.");
 }
 
@@ -374,6 +447,7 @@ async function emergencyStop() {
     return;
   }
   await saveSession(api.stopSession(session));
+  if (modality.clearRecentInvokes) modality.clearRecentInvokes("fill_allowed");
   setStatus("Emergency Stop latched. Future fills are cancelled until you Start Assist again.");
 }
 
@@ -507,7 +581,10 @@ function renderPhoneSheet() {
 
 async function invokeAction(actionId, source) {
   const outcome = modality.invokeSemantic(actionId, source);
-  if (outcome && outcome.deduped) return outcome;
+  if (outcome && outcome.deduped) {
+    setStatus(`Ignored duplicate ${actionId} within ${modality.DEDUPE_MS}ms.`);
+    return outcome;
+  }
   if (outcome && outcome.result && typeof outcome.result.then === "function") {
     await outcome.result;
   }

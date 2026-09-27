@@ -8,7 +8,7 @@ import {
   parseSyncPayload,
   serializeSyncPayload,
 } from './assist-contract';
-import { applyAcceptedResumeImport, extractResumeText, parseResumeText, UNSUPPORTED_RESUME_PDF_MESSAGE } from './resume-import';
+import { applyAcceptedResumeImport, applyDeterministicResumeImport, extractResumeText, parseResumeText, UNSUPPORTED_RESUME_PDF_MESSAGE } from './resume-import';
 import { classifyQuestion } from './assist-policy';
 
 const provenance = { source: 'user' as const, label: 'test', capturedAt: '2026-09-20T00:00:00.000Z' };
@@ -86,6 +86,187 @@ test('resume text maps representable sections into reviewable proposals without 
   assert.equal(saved.contact.email, 'alex@example.test');
   assert.equal(saved.summary.includes('reliable tools'), true);
   assert.equal(profile.contact.email, '');
+});
+
+test('deterministic resume intake auto-projects explicit facts, preserves conflicts, and is idempotent', () => {
+  const named = parseResumeText([
+    'Dr. Alex “Lex” Example',
+    'Metro City, NY | alex@example.test',
+  ].join('\n'), 'named.txt');
+  assert.equal(named.profilePatch.name_prefix, 'Dr');
+  assert.equal(named.profilePatch.first_name, 'Alex');
+  assert.equal(named.profilePatch.last_name, 'Example');
+  assert.equal(named.profilePatch.preferred_name, 'Lex');
+  const namedProjected = applyDeterministicResumeImport(named, emptyAssistProfile(emptyProfile));
+  assert.equal(namedProjected.profile.contact.name_prefix, 'Dr');
+  assert.equal(namedProjected.profile.contact.preferred_name, 'Lex');
+
+  const imported = parseResumeText([
+    'Alex Example',
+    '123 Main Street, Metro City, NY 10001, United States | alex@example.test | (555) 010-0101',
+    'PROFESSIONAL SUMMARY',
+    'Resume-owned summary.',
+    'CORE STRENGTHS',
+    'TypeScript • Python',
+    'PROJECTS',
+    '• Atlas — Built a deterministic workflow.',
+    'PROFESSIONAL EXPERIENCE',
+    'Example Co — Product Engineer | 2024–Present',
+    'EDUCATION',
+    'Example University | B.S. Computer Science',
+  ].join('\n'), 'deterministic.txt');
+
+  assert.deepEqual(
+    {
+      street_address: imported.profilePatch.street_address,
+      city: imported.profilePatch.city,
+      region: imported.profilePatch.region,
+      postal_code: imported.profilePatch.postal_code,
+      country: imported.profilePatch.country,
+    },
+    {
+      street_address: '123 Main Street',
+      city: 'Metro City',
+      region: 'NY',
+      postal_code: '10001',
+      country: 'United States',
+    },
+  );
+
+  const existing = emptyAssistProfile({ ...emptyProfile, email: 'keep@example.test', phone_authority: 'user_confirmed_primary' });
+  existing.summary = 'Keep this explicit summary.';
+  const first = applyDeterministicResumeImport(imported, existing);
+  assert.ok(first.accepted.length > 5);
+  assert.ok(first.accepted.every((proposal) => proposal.review === 'accepted'));
+  assert.equal(first.profile.contact.email, 'keep@example.test');
+  assert.equal(first.profile.contact.street_address, '123 Main Street');
+  assert.equal(first.profile.contact.city, 'Metro City');
+  assert.equal(first.profile.contact.postal_code, '10001');
+  assert.equal(first.profile.contact.country, 'United States');
+  assert.equal(first.profile.contact.phone_authority, 'user_confirmed_primary');
+  assert.equal(first.contactPatch.phone_authority, undefined);
+  assert.equal(first.profile.summary, 'Keep this explicit summary.');
+
+  const emptyAssist = emptyAssistProfile(emptyProfile);
+  const canonicalBaseContact = { ...emptyProfile, first_name: 'Canonical', last_name: 'Person', email: 'canonical@example.test' };
+  const reconciled = applyDeterministicResumeImport(imported, emptyAssist, canonicalBaseContact);
+  assert.equal(reconciled.profile.contact.first_name, 'Canonical');
+  assert.equal(reconciled.profile.contact.last_name, 'Person');
+  assert.equal(reconciled.profile.contact.email, 'canonical@example.test');
+  assert.equal(reconciled.profile.contact.city, 'Metro City');
+
+  const second = applyDeterministicResumeImport(imported, first.profile);
+  assert.equal(second.profile.projects.length, first.profile.projects.length);
+  assert.equal(second.profile.experience.length, first.profile.experience.length);
+  assert.equal(second.profile.education.length, first.profile.education.length);
+  assert.equal(second.profile.links.length, first.profile.links.length);
+  assert.equal(second.profile.proposals.length, first.profile.proposals.length);
+});
+
+test('resume location parsing requires address evidence and recognizes explicit Canada country', () => {
+  const ambiguous = parseResumeText([
+    'Doe, Jane',
+    'Senior Engineer, Platform',
+    'candidate@example.test',
+  ].join('\n'), 'ambiguous-header.txt');
+  assert.equal(ambiguous.profilePatch.city, undefined);
+  assert.equal(ambiguous.profilePatch.region, undefined);
+  assert.equal(ambiguous.profilePatch.first_name, 'Jane');
+  assert.equal(ambiguous.profilePatch.last_name, 'Doe');
+  assert.equal(ambiguous.proposals.some((proposal) => proposal.field === 'name' && proposal.confidence === 'high'), true);
+
+  const canada = parseResumeText([
+    'Alex Example',
+    'Toronto, ON, Canada | alex@example.test',
+  ].join('\n'), 'canada.txt');
+  assert.equal(canada.profilePatch.city, 'Toronto');
+  assert.equal(canada.profilePatch.region, 'ON');
+  assert.equal(canada.profilePatch.country, 'Canada');
+});
+
+test('resume intake withholds generic headers, parses international locations, and keeps multi-column role/education columns distinct', () => {
+  const generic = parseResumeText([
+    'Resume',
+    'candidate@example.test',
+  ].join('\n'), 'generic-header.txt');
+  assert.equal(generic.profilePatch.first_name, undefined);
+  assert.equal(generic.proposals.some((proposal) => proposal.field === 'name' && proposal.confidence === 'high'), false);
+
+  const curriculum = parseResumeText([
+    'Curriculum Vitae',
+    'candidate@example.test',
+  ].join('\n'), 'cv-header.txt');
+  assert.equal(curriculum.profilePatch.first_name, undefined);
+
+  const london = parseResumeText([
+    'Alex Example',
+    'London, United Kingdom | alex@example.test',
+  ].join('\n'), 'london.txt');
+  assert.equal(london.profilePatch.city, 'London');
+  assert.equal(london.profilePatch.region, undefined);
+  assert.equal(london.profilePatch.country, 'United Kingdom');
+  assert.equal(london.proposals.some((proposal) => proposal.field === 'location' && proposal.value === 'London, United Kingdom'), true);
+
+  const dublin = parseResumeText([
+    'Alex Example',
+    'Dublin, Ireland | alex@example.test',
+  ].join('\n'), 'dublin.txt');
+  assert.equal(dublin.profilePatch.city, 'Dublin');
+  assert.equal(dublin.profilePatch.country, 'Ireland');
+
+  const multiColumn = parseResumeText([
+    'Alex Example',
+    'Metro City, NY | alex@example.test',
+    'PROFESSIONAL EXPERIENCE',
+    'Example Co — Product Engineer | City, ST | 2024–Present',
+    '• Built accessible workflow tooling.',
+    'EDUCATION',
+    'Example University | B.S. Computer Science | 2020',
+  ].join('\n'), 'multi-column.txt');
+  assert.equal(multiColumn.experience[0]?.company, 'Example Co');
+  assert.equal(multiColumn.experience[0]?.title, 'Product Engineer');
+  assert.equal(multiColumn.experience[0]?.location, 'City, ST');
+  assert.equal(multiColumn.experience[0]?.dates, '2024–Present');
+  assert.equal(multiColumn.proposals.find((proposal) => proposal.field === 'role')?.confidence, 'high');
+  assert.equal(multiColumn.education[0]?.institution, 'Example University');
+  assert.equal(multiColumn.education[0]?.credential, 'B.S. Computer Science');
+  assert.equal(multiColumn.education[0]?.dates, '2020');
+  assert.equal(multiColumn.proposals.find((proposal) => proposal.field === 'education')?.confidence, 'high');
+
+  const shifted = parseResumeText([
+    'Alex Example',
+    'Metro City, NY | alex@example.test',
+    'PROFESSIONAL EXPERIENCE',
+    'Broken Co — Role | City, ST | Extra | 2024–Present',
+    'EDUCATION',
+    'School | Degree | Honors | 2020 | Extra',
+  ].join('\n'), 'withheld-columns.txt');
+  assert.equal(shifted.experience[0]?.dates, '');
+  assert.notEqual(shifted.experience[0]?.dates, 'City, ST');
+  assert.equal(shifted.proposals.find((proposal) => proposal.field === 'role')?.confidence, 'medium');
+  assert.equal(shifted.education[0]?.dates, '');
+  assert.equal(shifted.proposals.find((proposal) => proposal.field === 'education')?.confidence, 'medium');
+  const withheld = applyDeterministicResumeImport(shifted, emptyAssistProfile(emptyProfile));
+  assert.equal(withheld.profile.experience.some((role) => role.company === 'Broken Co'), false);
+  assert.equal(withheld.profile.education.some((item) => item.institution === 'School'), false);
+});
+
+test('deterministic resume intake excludes medium-confidence ambiguous structured records', () => {
+  const imported = parseResumeText([
+    'Alex Example',
+    'Metro City, NY | alex@example.test',
+    'PROJECTS',
+    '• Ambiguous project without a separator',
+    'PROFESSIONAL EXPERIENCE',
+    'Ambiguous employer line without role/date structure',
+    'EDUCATION',
+    'Ambiguous school without a credential delimiter',
+  ].join('\n'), 'ambiguous-structure.txt');
+  const deterministic = applyDeterministicResumeImport(imported, emptyAssistProfile(emptyProfile));
+  assert.equal(deterministic.accepted.some((proposal) => proposal.confidence === 'medium'), false);
+  assert.equal(deterministic.profile.projects.some((project) => project.name.includes('Ambiguous project')), false);
+  assert.equal(deterministic.profile.experience.some((role) => role.company.includes('Ambiguous employer')), false);
+  assert.equal(deterministic.profile.education.some((item) => item.institution.includes('Ambiguous school')), false);
 });
 
 test('accepted resume edits drive every reviewed field while rejected contact data stays unchanged', () => {

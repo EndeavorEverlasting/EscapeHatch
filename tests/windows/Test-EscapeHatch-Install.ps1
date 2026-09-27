@@ -15,7 +15,7 @@ $Installer = Join-Path $RepoRoot 'scripts\windows\Install-EscapeHatch.ps1'
 $Uninstaller = Join-Path $RepoRoot 'scripts\windows\Uninstall-EscapeHatch.ps1'
 $CmdAdapter = Join-Path $RepoRoot 'Install-EscapeHatch.cmd'
 $LauncherSrc = Join-Path $RepoRoot 'scripts\windows\launcher\EscapeHatch.Launcher.cs'
-$ForeignFixture = Join-Path $PSScriptRoot 'fixtures\foreign-listener.mjs'
+$ForeignFixture = Join-Path $RepoRoot 'tests\windows\fixtures\foreign-listener.mjs'
 $caseCount = 0
 $foreignProcess = $null
 

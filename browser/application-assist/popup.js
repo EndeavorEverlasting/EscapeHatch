@@ -399,6 +399,7 @@ async function fillAllowedFields() {
     setStatus("Start Assist on the application before filling.");
     return;
   }
+  setStatus("Filling allowed fields…");
   const prefStored = await chrome.storage.local.get(api.PREFERENCE_STORAGE_KEY);
   const preferenceStore = prefStored[api.PREFERENCE_STORAGE_KEY] || null;
   const result = await runPageCommand("fill", profile, session, preferenceStore);

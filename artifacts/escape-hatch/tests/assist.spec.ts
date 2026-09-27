@@ -357,7 +357,8 @@ test('keeps a multi-page application review-only through popup reopen', async ({
 
       await activateApplicationTab(popup);
       await popup.locator('#fillAllowed').click();
-      await expect(popup.locator('#status')).toContainText(/Filled [1-9]/, { timeout: 20_000 });
+      // Require a fresh page-two fill (stale "Filled 3…" from page one previously masked failures).
+      await expect(popup.locator('#status')).toContainText('Filled 1 ', { timeout: 20_000 });
       await expect(application.locator('#page-two-first-name')).toHaveValue('Ada', { timeout: 20_000 });
       await expect(application.locator('#work-authorization')).toHaveValue('manual answer');
 

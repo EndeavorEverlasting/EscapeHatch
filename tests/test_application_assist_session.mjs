@@ -12,6 +12,8 @@ const cases = [
   [{ label: "Preferred Name *", type: "text" }, "preferred_name"],
   [{ label: "Email *", type: "email" }, "email"],
   [{ label: "Phone Number *", type: "tel" }, "phone"],
+  [{ label: "Primary Number", type: "tel" }, "phone"],
+  [{ label: "Primary Phone Number", type: "tel" }, "phone"],
   [{ label: "LinkedIn Profile", type: "url" }, "linkedin_url"],
   [{ label: "Home Street Address *", type: "text" }, "street_address"],
   [{ label: "City / Municipality *", type: "text" }, "city"],

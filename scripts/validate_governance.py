@@ -59,6 +59,13 @@ REQUIRED_BY_SECTION = {
         "A commit SHA exists",
         "Push state and pull-request state",
         "Exactly one actionable next command is provided",
+        "Terminal sprint closeout",
+        "**CHANGED**",
+        "**PROVED**",
+        "**UNPROVEN**",
+        "**INTEGRATED SHA**",
+        "**NEXT LIVE GATE**",
+        "one coordinator must refresh provider truth",
     ),
     REQUIRED_HEADINGS[5]: (
         "Acknowledgment without mutation",
@@ -88,6 +95,14 @@ PRECEDENCE = (
     "This governance contract.",
     "Task-specific prompts and sprint instructions.",
     "Generic agent defaults or conventions.",
+)
+
+TERMINAL_CLOSEOUT = (
+    "CHANGED",
+    "PROVED",
+    "UNPROVEN",
+    "INTEGRATED SHA",
+    "NEXT LIVE GATE",
 )
 
 
@@ -154,6 +169,29 @@ def validate_text(text: str) -> None:
             "instruction precedence must contain exactly the four canonical entries in order"
         )
 
+    completion_body = sections[REQUIRED_HEADINGS[4]]
+    closeout_match = re.search(
+        r"(?ms)^### Terminal sprint closeout\s*$\n(?P<body>.*?)(?=^### |\Z)",
+        completion_body,
+    )
+    if closeout_match is None:
+        raise GovernanceError("missing Terminal sprint closeout subsection")
+
+    closeout_order = [
+        match.group(1).strip()
+        for line in closeout_match.group("body").splitlines()
+        if (
+            match := re.fullmatch(
+                r"\d+\.\s+\*\*([^*]+)\*\*.*",
+                line.strip(),
+            )
+        )
+    ]
+    if tuple(closeout_order) != TERMINAL_CLOSEOUT:
+        raise GovernanceError(
+            "terminal sprint closeout must contain exactly the five canonical entries in order"
+        )
+
 
 def remove_section(text: str, heading: str) -> str:
     lines = text.splitlines()
@@ -197,6 +235,14 @@ def run_self_tests(text: str) -> int:
         "reordered precedence",
         text.replace(f"1. {first}", f"1. {fourth}", 1).replace(
             f"4. {fourth}", f"4. {first}", 1
+        ),
+    )
+    count += 1
+
+    expect_invalid(
+        "reordered terminal closeout",
+        text.replace("1. **CHANGED**", "1. **PROVED**", 1).replace(
+            "2. **PROVED**", "2. **CHANGED**", 1
         ),
     )
     count += 1

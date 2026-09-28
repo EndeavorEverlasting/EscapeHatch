@@ -1,11 +1,21 @@
 # EscapeHatch Contextual Autofill & Navigation Plan
 
 **Parent plan:** `docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md`
+**Convergence control:** `docs/ESCAPEHATCH_CONVERGENCE_CONTROL_PLAN.md`
+**Ambient zero-click successor:** `docs/AMBIENT_APPLICATION_ASSIST_PLAN.md`
 **Scoped owner:** `docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md`
 **Plan date:** 2026-09-24
 **Planning floor:** `integration/replit-donor-b01f628-20260921@f3d40c1238f76957ae71519be8e628b48ef83047`
 **Disposition:** planning only; no runtime implementation is authorized by this pass.
 **Dispatch manifest:** `Outputs/prompt-parallel-dispatch/runs/escapehatch-contextual-autofill-navigation-20260924/manifest.json`
+
+## 0. Current convergence note
+
+The current provider integration branch has advanced beyond this plan's original 2026-09-24 floor. Program-level status is reconciled in `docs/ESCAPEHATCH_CONVERGENCE_CONTROL_PLAN.md`.
+
+PR #47 implemented default-on Start Assist autofill, compact action-popup behavior, and the Windows executable installer. That implementation does **not** prove the newer zero-click/background requirement. The stronger scheduled-profile-hydration + event-driven browser-observer successor is owned by `docs/AMBIENT_APPLICATION_ASSIST_PLAN.md`.
+
+This file remains the canonical contextual-autofill product plan for compensation/action/context semantics; the convergence and ambient plans coordinate successor execution without replacing those domain owners.
 
 ## 1. Live evidence and problem statement
 

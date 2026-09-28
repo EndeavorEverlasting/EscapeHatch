@@ -79,6 +79,22 @@ A writing task is complete only when all applicable conditions below are satisfi
 
 A green local check does not prove deployment, production behavior, third-party service behavior, or a platform-specific runtime that was not exercised.
 
+### Terminal sprint closeout
+
+A lane-local report is evidence for the program coordinator; it is not automatically the program's authoritative status.
+
+The terminal operator-facing closeout for serious repository work must collapse transient execution chatter into durable outcome truth in exactly this order:
+
+1. **CHANGED** — durable product, contract, documentation, or workflow outcomes; not a process diary.
+2. **PROVED** — validation that actually ran plus exact commit/PR identity.
+3. **UNPROVEN** — required live/runtime/operator evidence still outside the proof ceiling.
+4. **INTEGRATED SHA** — merge/integration identity and whether the refreshed integration/default target contains it.
+5. **NEXT LIVE GATE** — the single first executable transition that advances the next unproven program state.
+
+Recovered or transient orchestration chatter—stale "lanes are running" notices, probe failures, retries, file-lock noise, intermediate harness iterations, or worker bookkeeping—must not compete with the terminal outcome unless it survives as an unresolved blocker, materially changes risk, or invalidates proof.
+
+After parallel work, one coordinator must refresh provider truth, locate each exact lane result, classify its strongest evidence state, reconcile collisions/dependencies/supersession, and update one convergence view before reporting program status to the operator.
+
 ## 6. Forbidden Behaviors
 
 The following are prohibited:

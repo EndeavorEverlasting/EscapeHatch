@@ -1,6 +1,6 @@
 # EscapeHatch Current State
 
-**Verified integration floor before this P01 opportunity-readiness harness sprint:** `c4bd3b2be8475dcae03b853c0dbe01401a592b5b`.
+**Verified integration floor for this convergence-control pass:** `e83f3a231acd0f748bd70792c906d30f3578d842`.
 
 ## Working
 
@@ -60,6 +60,18 @@
 - Automatic truth/accuracy certification or signature.
 - Broad scraping/discovery automation.
 - Broad Lua runtime.
+
+## Convergence control boundary
+
+`docs/ESCAPEHATCH_CONVERGENCE_CONTROL_PLAN.md` is the current coordination owner for reconciling parallel lane results against refreshed provider truth. It does not replace domain plans; it classifies their strongest proven state, dependencies, collisions, and next transition.
+
+The current merged provider spine contains PR #46 (COMP/QMEM design), PR #47 (default autofill + compact popup + Windows executable installer), PR #48 (P04 COMP0/proof-loop factoring), and PR #49 (application-packet recommendation readiness), ending at integration `e83f3a231acd0f748bd70792c906d30f3578d842` at this checkpoint.
+
+PR #45 is historical/superseded planning evidence. PR #29/#30/#31 remain open recovery owners and must be explicitly reconciled before successor runtime work that collides with them.
+
+`docs/AMBIENT_APPLICATION_ASSIST_PLAN.md` owns the zero-click successor: scheduled profile hydration plus event-driven application-page autofill. It is DESIGNED only. PR #47's default-on Start Assist behavior is the baseline, not proof of background page observation.
+
+Provider state does not prove the operator's local checkout cleanliness, Windows installer experience, or Chrome/Edge observation. Those remain local/operator proof surfaces.
 
 ## Career escape-route boundary
 

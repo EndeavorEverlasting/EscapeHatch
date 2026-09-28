@@ -1,11 +1,11 @@
 # EscapeHatch Convergence Control Plan — 2026-09-27
 
-**Status:** ACTIVE CONVERGENCE CONTROL  
-**Canonical integration branch:** `integration/replit-donor-b01f628-20260921`  
-**Fresh provider tip at plan creation:** `e83f3a231acd0f748bd70792c906d30f3578d842`  
-**Provider default branch at plan creation:** `main@0824535b9dc1341def885a79a098d297df770ac8`  
-**Operator-reported primary local path:** `C:\Users\pa_rperez26\OneDrive - Northwell Health\OG Laptop Backup\Desktop\dev\EscapeHatch\`  
-**Local truth:** NOT provider-verifiable; refresh before every local write  
+**Status:** ACTIVE CONVERGENCE CONTROL
+**Canonical integration branch:** `integration/replit-donor-b01f628-20260921`
+**Fresh provider tip at plan creation:** `e83f3a231acd0f748bd70792c906d30f3578d842`
+**Provider default branch at plan creation:** `main@0824535b9dc1341def885a79a098d297df770ac8`
+**Operator-reported primary local path:** `C:\Users\pa_rperez26\OneDrive - Northwell Health\OG Laptop Backup\Desktop\dev\EscapeHatch\`
+**Local truth:** NOT provider-verifiable; refresh before every local write
 **Purpose:** turn parallel agent/lane output into one operator-usable product state and one dependency-aware continuation map.
 
 ## 1. Why this plan exists
@@ -147,9 +147,9 @@ The operator owns:
 
 #### A1. LOCAL LIVE PROOF — P95 acceptance
 
-**Owner:** local Windows/operator lane  
-**Mutation:** none required unless proof exposes a defect  
-**Dependency:** current integration contains PR #47  
+**Owner:** local Windows/operator lane
+**Mutation:** none required unless proof exposes a defect
+**Dependency:** current integration contains PR #47
 **Goal:** close the two remaining P95 live gates.
 
 Proof:
@@ -163,9 +163,9 @@ If a live defect appears, open a new bounded repair lane. Do not rewrite history
 
 #### A2. LOCAL MUTATION — EH-COMP0
 
-**Owner:** one isolated local writer  
-**Dependency:** current integration contains #46/#47/#48/#49  
-**Canonical plan:** `docs/plans/EH_COMP0_PROOF_LOOP_P04_2026-09-27.md`  
+**Owner:** one isolated local writer
+**Dependency:** current integration contains #46/#47/#48/#49
+**Canonical plan:** `docs/plans/EH_COMP0_PROOF_LOOP_P04_2026-09-27.md`
 **Goal:** production compensation provenance + taxonomy semantics + compensation-specific precedence + focused validation.
 
 This is the **next ready product mutation** in the COMP/QMEM subgraph.
@@ -176,12 +176,12 @@ Do not start QMEM0 simultaneously because COMP0 and QMEM0 share taxonomy/prefere
 
 #### B1. REMOTE — Convergence coordinator
 
-**Owner:** connected-provider coordinator  
+**Owner:** connected-provider coordinator
 **Goal:** review A1/A2 outputs after push/evidence; update this matrix from provider truth; integrate only exact green heads.
 
 #### B2. REMOTE — Ambient Application Assist design floor
 
-**Owner:** this plan / `docs/AMBIENT_APPLICATION_ASSIST_PLAN.md`  
+**Owner:** this plan / `docs/AMBIENT_APPLICATION_ASSIST_PLAN.md`
 **Goal:** preserve the zero-click successor architecture and prevent accidental implementation as a DOM-polling cron loop.
 
 Broad implementation waits for the AA0 prototype gate defined in that plan.
@@ -336,8 +336,8 @@ That is the program judgment.
 
 ## 13. Closeout of this control-plan pass
 
-**CHANGED:** one convergence owner now reconciles #46/#47/#48/#49, recovery PRs, local proof, COMP0, and Ambient Assist.  
-**PROVED:** provider integration tip and PR states were refreshed before authoring this plan.  
-**UNPROVEN:** local dirty-tree state, live Windows/browser gates, COMP0 implementation, ambient implementation, and main promotion.  
-**INTEGRATED SHA:** this plan is not integrated until its own PR lands; after merge, replace this sentence in provider truth by containment evidence rather than hand-editing historical facts.  
+**CHANGED:** one convergence owner now reconciles #46/#47/#48/#49, recovery PRs, local proof, COMP0, and Ambient Assist.
+**PROVED:** provider integration tip and PR states were refreshed before authoring this plan.
+**UNPROVEN:** local dirty-tree state, live Windows/browser gates, COMP0 implementation, ambient implementation, and main promotion.
+**INTEGRATED SHA:** this plan is not integrated until its own PR lands; after merge, replace this sentence in provider truth by containment evidence rather than hand-editing historical facts.
 **NEXT LIVE GATE:** local preflight above, followed by parallel P95 live acceptance + one EH-COMP0 writer.

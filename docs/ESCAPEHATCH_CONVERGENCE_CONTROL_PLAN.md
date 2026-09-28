@@ -285,8 +285,29 @@ Run this before either local lane writes anything:
 
 ```powershell
 $repo = "C:\Users\pa_rperez26\OneDrive - Northwell Health\OG Laptop Backup\Desktop\dev\EscapeHatch"
+$integrationBranch = "integration/replit-donor-b01f628-20260921"
+
 git -C $repo fetch --all --prune --tags
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+$remotes = @(git -C $repo remote)
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+$remote = git -C $repo config --get "branch.$integrationBranch.remote" 2>$null
+if ($remote) { $remote = $remote.Trim() }
+if (-not $remote -or $remote -eq ".") {
+    if ($remotes -contains "upstream") {
+        $remote = "upstream"
+    } elseif ($remotes -contains "origin") {
+        $remote = "origin"
+    } else {
+        throw "No usable Git remote found for $integrationBranch."
+    }
+}
+$integrationRef = "$remote/$integrationBranch"
+
+git -C $repo show-ref --verify --quiet "refs/remotes/$integrationRef"
+if ($LASTEXITCODE -ne 0) { throw "Missing refreshed integration ref: $integrationRef" }
 
 git -C $repo status --short --branch
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -294,10 +315,10 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 git -C $repo worktree list
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-git -C $repo log --oneline --decorate -12 upstream/integration/replit-donor-b01f628-20260921
+git -C $repo log --oneline --decorate -12 $integrationRef
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-git -C $repo merge-base --is-ancestor e83f3a231acd0f748bd70792c906d30f3578d842 upstream/integration/replit-donor-b01f628-20260921
+git -C $repo merge-base --is-ancestor e83f3a231acd0f748bd70792c906d30f3578d842 $integrationRef
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 ```
 
@@ -311,7 +332,7 @@ After the preflight proves the current integration floor and no branch collision
 
 ```powershell
 $root = Split-Path -Parent $repo
-git -C $repo worktree add "$root\EscapeHatch-live-acceptance" upstream/integration/replit-donor-b01f628-20260921
+git -C $repo worktree add "$root\EscapeHatch-live-acceptance" $integrationRef
 ```
 
 Use this as a disposable proof checkout only; do not turn it into a mutation lane unless a live defect is found.

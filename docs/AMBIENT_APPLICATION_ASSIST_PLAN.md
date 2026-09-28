@@ -472,7 +472,11 @@ Owns:
 
 ### AA2 — browser ambient observer
 
-Depends on AA0 permission + bridge decisions.
+Depends on:
+- AA0 permission + bridge decisions; and
+- refreshed reconciliation of the canonical ambient-presence/content integration owner in `docs/APPLICATION_ASSIST_AMBIENT_COMPANION_PLAN.md` (EH-U1 / EH-A5).
+
+AA2 may add lifecycle-triggered autofill observation, but it may not create a second presence/session observer or independently take over shared `content.js` integration.
 
 Owns:
 - extension background/service-worker or equivalent;
@@ -515,6 +519,21 @@ Potential collision:
 - Application Assist fill triggers.
 
 PR #47 is the baseline. AA2 extends it; it must not fork a second fill engine.
+
+### Shared with Ambient Companion (EH-U1 / EH-A5)
+
+Canonical owner:
+
+`docs/APPLICATION_ASSIST_AMBIENT_COMPANION_PLAN.md`
+
+EH-U1 owns the in-page ambient-presence projection and requires one presence state machine. EH-A5 owns convergence into shared `content.js`, `popup.js`, `popup.html`, and cockpit integration when application-logic lanes collide.
+
+Therefore:
+- AA2 must consume the existing canonical presence/session state rather than inventing another observer-owned status model;
+- before AA2 mutates shared content/session integration, refresh the actual EH-U1/EH-A5 implementation state;
+- if the canonical presence module/runtime already exists, extend/reuse it;
+- if shared integration is still successor work, AA2 stops at its isolated observer/adapter seam and hands shared integration to the same EH-A5-style convergence owner;
+- only one writer may own shared `content.js` / session-event integration at a time.
 
 ### Shared with recovery PR #29
 

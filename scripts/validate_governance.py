@@ -59,6 +59,13 @@ REQUIRED_BY_SECTION = {
         "A commit SHA exists",
         "Push state and pull-request state",
         "Exactly one actionable next command is provided",
+        "Terminal sprint closeout",
+        "**CHANGED**",
+        "**PROVED**",
+        "**UNPROVEN**",
+        "**INTEGRATED SHA**",
+        "**NEXT LIVE GATE**",
+        "one coordinator must refresh provider truth",
     ),
     REQUIRED_HEADINGS[5]: (
         "Acknowledgment without mutation",

@@ -1,9 +1,9 @@
 # Ambient Application Assist — Scheduled Profile Hydration + Zero-Click Autofill
 
-**Status:** SUCCESSOR DESIGN / NOT IMPLEMENTED  
-**Parent product owner:** `docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md`  
-**Convergence owner:** `docs/ESCAPEHATCH_CONVERGENCE_CONTROL_PLAN.md`  
-**Baseline implementation:** PR #47 on the integration branch  
+**Status:** SUCCESSOR DESIGN / NOT IMPLEMENTED
+**Parent product owner:** `docs/APPLICATION_CONTEXT_AUTOFILL_PLAN.md`
+**Convergence owner:** `docs/ESCAPEHATCH_CONVERGENCE_CONTROL_PLAN.md`
+**Baseline implementation:** PR #47 on the integration branch
 **Operator outcome:** EscapeHatch keeps application data current in the background and fills safe fields on eligible application pages without the user opening the extension popup or pressing Start Assist.
 
 ## 1. Scope correction
@@ -445,7 +445,7 @@ This should support local debugging and user-visible status without becoming beh
 
 ### AA0 — contracts + executable seams
 
-**Runtime:** local implementation/prototype lane, remotely reviewed  
+**Runtime:** local implementation/prototype lane, remotely reviewed
 **Owns:**
 - snapshot contract;
 - scheduler contract;

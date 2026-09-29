@@ -136,6 +136,8 @@ test('explains unsupported PDF layouts without creating a review panel', async (
 
 test('hydrates the app-owned resume profile and keeps a multi-page application review-only through popup reopen', async ({ browser }) => {
   test.setTimeout(120_000);
+  const mark = (stage: string) => console.log(`ASSIST_LIVE_CERT:${stage}`);
+  mark('BEGIN');
 
   const testDirectory = resolve(fileURLToPath(import.meta.url), '..');
   const sourceExtension = resolve(testDirectory, '../../../browser/application-assist');
@@ -221,6 +223,7 @@ test('hydrates the app-owned resume profile and keeps a multi-page application r
       'chrome.runtime.onInstalled.addListener(() => undefined);\n',
     );
 
+    mark('LAUNCH_CONTEXT');
     const context = await browserType.launchPersistentContext(userDataDirectory, {
       baseURL,
       headless: true,
@@ -238,6 +241,7 @@ test('hydrates the app-owned resume profile and keeps a multi-page application r
     });
 
     try {
+      mark('CONTEXT_READY');
       for (const existing of context.pages()) {
         if (existing.url() === 'about:blank') {
           await existing.close().catch(() => undefined);
@@ -252,6 +256,7 @@ test('hydrates the app-owned resume profile and keeps a multi-page application r
         });
       });
 
+      mark('IMPORT_RESUME');
       const cockpit = await context.newPage();
       await cockpit.goto(`${baseURL}/assist`);
       await cockpit.locator('[data-testid="input-import-resume"]').setInputFiles({
@@ -268,14 +273,17 @@ test('hydrates the app-owned resume profile and keeps a multi-page application r
       });
       await expect(cockpit.locator('[data-testid="assist-feedback"]')).toContainText('Resume parsed locally');
       await expect(cockpit.locator('[data-testid="assist-feedback"]')).toContainText('no setup step');
+      mark('RESUME_READY');
 
       const application = await context.newPage();
       await application.goto(`${baseURL}/assist-application-fixture`);
 
+      mark('WAIT_EXTENSION');
       const serviceWorker =
         context.serviceWorkers()[0] ??
         (await context.waitForEvent('serviceworker', { timeout: 30_000 }));
       const extensionId = new URL(serviceWorker.url()).hostname;
+      mark('EXTENSION_READY');
       const openPopup = async (activePage = application) => {
         await activePage.bringToFront();
         const popup = await context.newPage();
@@ -316,6 +324,7 @@ test('hydrates the app-owned resume profile and keeps a multi-page application r
         }, applicationUrl);
       };
 
+      mark('OPEN_POPUP_ON_COCKPIT');
       const popup = await openPopup(cockpit);
       await expect(popup.locator('#modeChip')).toContainText('Mode: mouse');
       await expect(popup.locator('.mouse-actions')).toBeVisible();
@@ -324,14 +333,17 @@ test('hydrates the app-owned resume profile and keeps a multi-page application r
       await expect(popup.locator('#first_name')).toHaveValue('Ada');
       await expect(popup.locator('#email')).toHaveValue('ada@example.com');
       await expect(popup.locator('#city')).toHaveValue('London');
+      mark('PROFILE_HYDRATED');
 
       await activateApplicationTab(popup);
       await popup.bringToFront();
+      mark('START_ASSIST');
       await popup.locator('#startAssist').click();
       await expect(popup.locator('#sessionState')).toContainText('Session: active', { timeout: 15_000 });
       // Start Assist is the normal fill trigger: no extension profile typing/save,
       // JSON shuttle, explicit refresh, or Fill now setup step is allowed here.
       await expect(popup.locator('#status')).toContainText(/Filled [1-9]/, { timeout: 20_000 });
+      mark('FIRST_FILL_DONE');
 
       await expect(application.locator('#first-name')).toHaveValue('Ada', { timeout: 20_000 });
       await expect(application.locator('#email')).toHaveValue('ada@example.com');
@@ -353,6 +365,7 @@ test('hydrates the app-owned resume profile and keeps a multi-page application r
         ),
       ).toBe(0);
 
+      mark('FIRST_PAGE_VERIFIED');
       await application.locator('#next').click();
       await expect(application).toHaveURL(/\/application\?page=2$/);
       await expect(application.locator('#page-two-first-name')).toBeVisible();
@@ -379,12 +392,15 @@ test('hydrates the app-owned resume profile and keeps a multi-page application r
       await expect(popup.locator('#status')).toContainText('Filled 1 ', { timeout: 20_000 });
       await expect(application.locator('#page-two-first-name')).toHaveValue('Ada', { timeout: 20_000 });
       await expect(application.locator('#work-authorization')).toHaveValue('manual answer');
+      mark('STOP_PROVEN');
+      mark('SECOND_FILL_DONE');
 
       await popup.bringToFront();
       await expect(popup.locator('#undoLast')).toBeVisible();
       await popup.locator('#undoLast').click();
       await expect(popup.locator('#status')).toContainText('Undo restored', { timeout: 20_000 });
       await expect(application.locator('#page-two-first-name')).toHaveValue('');
+      mark('UNDO_DONE');
 
       await popup.locator('#pause').click();
       await expect(popup.locator('#sessionState')).toContainText('Session: paused');
@@ -412,12 +428,14 @@ test('hydrates the app-owned resume profile and keeps a multi-page application r
       ).toBe(0);
 
       await popup.close();
+      mark('REOPEN_POPUP');
       const reopenedPopup = await openPopup();
       await expect(reopenedPopup.locator('#sessionState')).toContainText('Session: stopped');
       await expect(reopenedPopup.locator('#sessionState')).toContainText(`origin=${new URL(baseURL).origin}`);
       await reopenedPopup.locator('#fillAllowed').click();
       await expect(reopenedPopup.locator('#status')).toContainText(/Emergency Stop(?: is)? latched/);
       await reopenedPopup.close();
+      mark('COMPLETE');
     } finally {
       await context.close();
     }

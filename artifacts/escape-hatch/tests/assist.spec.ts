@@ -134,7 +134,7 @@ test('explains unsupported PDF layouts without creating a review panel', async (
   }
 });
 
-test('keeps a multi-page application review-only through popup reopen', async ({ browser }) => {
+test('hydrates the app-owned resume profile and keeps a multi-page application review-only through popup reopen', async ({ browser }) => {
   test.setTimeout(120_000);
 
   const testDirectory = resolve(fileURLToPath(import.meta.url), '..');
@@ -252,6 +252,23 @@ test('keeps a multi-page application review-only through popup reopen', async ({
         });
       });
 
+      const cockpit = await context.newPage();
+      await cockpit.goto(`${baseURL}/assist`);
+      await cockpit.locator('[data-testid="input-import-resume"]').setInputFiles({
+        name: 'live-cert-resume.txt',
+        mimeType: 'text/plain',
+        buffer: Buffer.from([
+          'Ada Lovelace',
+          '1 Test Street, London, NY 10001, United States | ada@example.com',
+          'PROFESSIONAL SUMMARY',
+          'Deterministic application profile.',
+          'CORE STRENGTHS',
+          'Automation • Testing',
+        ].join('\n')),
+      });
+      await expect(cockpit.locator('[data-testid="assist-feedback"]')).toContainText('Resume parsed locally');
+      await expect(cockpit.locator('[data-testid="assist-feedback"]')).toContainText('no setup step');
+
       const application = await context.newPage();
       await application.goto(`${baseURL}/assist-application-fixture`);
 
@@ -259,8 +276,8 @@ test('keeps a multi-page application review-only through popup reopen', async ({
         context.serviceWorkers()[0] ??
         (await context.waitForEvent('serviceworker', { timeout: 30_000 }));
       const extensionId = new URL(serviceWorker.url()).hostname;
-      const openPopup = async () => {
-        await application.bringToFront();
+      const openPopup = async (activePage = application) => {
+        await activePage.bringToFront();
         const popup = await context.newPage();
         await popup.goto(`chrome-extension://${extensionId}/popup.html`);
         await expect(popup.locator('#startAssist')).toBeEnabled({ timeout: 30_000 });
@@ -299,26 +316,21 @@ test('keeps a multi-page application review-only through popup reopen', async ({
         }, applicationUrl);
       };
 
-      const popup = await openPopup();
+      const popup = await openPopup(cockpit);
       await expect(popup.locator('#modeChip')).toContainText('Mode: mouse');
       await expect(popup.locator('.mouse-actions')).toBeVisible();
-      await popup.locator('#first_name').fill('Ada');
-      await popup.locator('#email').fill('ada@example.com');
-      await popup.locator('#city').fill('London');
-      await popup.locator('#save').click();
-      await expect(popup.locator('#status')).toContainText('Saved');
+      await expect(popup.locator('#profileReady')).toHaveText('Ready', { timeout: 20_000 });
+      await expect(popup.locator('#status')).toContainText('Profile hydrated automatically from EscapeHatch app', { timeout: 20_000 });
+      await expect(popup.locator('#first_name')).toHaveValue('Ada');
+      await expect(popup.locator('#email')).toHaveValue('ada@example.com');
+      await expect(popup.locator('#city')).toHaveValue('London');
 
       await activateApplicationTab(popup);
       await popup.bringToFront();
       await popup.locator('#startAssist').click();
       await expect(popup.locator('#sessionState')).toContainText('Session: active', { timeout: 15_000 });
-      await expect(popup.locator('#status')).toContainText('Assist session started');
-
-      await activateApplicationTab(popup);
-      await popup.bringToFront();
-      await expect(popup.locator('#fillAllowed')).toBeVisible();
-      await popup.locator('#fillAllowed').click();
-      // Reject "Filled 0 …" which previously masked wrong-tab fills on CI.
+      // Start Assist is the normal fill trigger: no extension profile typing/save,
+      // JSON shuttle, explicit refresh, or Fill now setup step is allowed here.
       await expect(popup.locator('#status')).toContainText(/Filled [1-9]/, { timeout: 20_000 });
 
       await expect(application.locator('#first-name')).toHaveValue('Ada', { timeout: 20_000 });

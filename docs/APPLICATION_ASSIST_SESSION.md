@@ -34,7 +34,7 @@ No navigation may bypass the Progression Plan. The invariant `no_dom_write_may_b
 | Fill Allowed Fields | Builds a Fill Plan, re-gates live fields, writes only allowed empty identity/contact controls |
 | Pause | Blocks future writes until Resume |
 | Resume | Allowed only while the tab origin still matches the session |
-| Emergency Stop | Latches stopped status and cancels future writes until a new Start Assist |
+| Emergency Stop | Latches stopped status and cancels future writes until a new Start Assist; remains directly visible for mouse users and available from phone/keyboard |
 | Undo Last Fill | Restores only untouched EscapeHatch-inserted values from the last batch |
 | Record Confirmation Evidence | Stores metadata-only confirmation and downloads a companion-compatible progress export; never submits |
 

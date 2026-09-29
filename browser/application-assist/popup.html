@@ -297,8 +297,8 @@
   </section>
 
   <div class="profile-summary">
-    <span>Profile <strong id="profileReady">checking…</strong></span>
-    <button id="openProfileDesktop" type="button" data-action="open_profile_panel" title="Shortcut: G">Manage profile</button>
+    <span>App profile <strong id="profileReady">checking…</strong></span>
+    <button id="openProfileDesktop" type="button" data-action="open_profile_panel" title="Shortcut: G">Recovery profile…</button>
   </div>
 
   <details class="advanced" id="advancedPanel">
@@ -312,7 +312,7 @@
   </details>
 
   <section class="panel profile-panel" id="profilePanel" aria-label="Profile destination">
-    <h2>Profile</h2>
+    <h2>Recovery profile</h2>
     <div class="grid">
       <label class="field">Title / prefix <input id="name_prefix" autocomplete="honorific-prefix"></label>
       <label class="field">Preferred name <input id="preferred_name" autocomplete="nickname"></label>
@@ -335,13 +335,13 @@
       <label class="field">Country <input id="country" autocomplete="country-name"></label>
     </div>
     <div class="actions" style="margin-top: 10px; grid-template-columns: 1fr 1fr;">
-      <button id="syncFromCockpit" type="button" data-action="sync_from_cockpit">Sync from EscapeHatch</button>
+      <button id="syncFromCockpit" type="button" data-action="sync_from_cockpit">Refresh from EscapeHatch app</button>
       <button id="save" type="button" data-action="save_profile">Save Profile</button>
       <button id="clear" type="button" data-action="clear_profile">Clear Profile</button>
       <button id="export" type="button" data-action="export_profile">Export Profile</button>
       <button id="import" type="button" data-action="import_profile">Import Profile</button>
     </div>
-    <p class="privacy">One-action cockpit sync uses activeTab + scripting + storage when possible. Recovery import/export remains available (capped 64 KiB, schema-checked).</p>
+    <p class="privacy">Normal configuration comes from the EscapeHatch app and hydrates automatically when this popup is opened on the cockpit. These controls are recovery-only. Import/export remains capped at 64 KiB and schema-checked.</p>
   </section>
 
   <input id="importFile" type="file" accept="application/json,.json">

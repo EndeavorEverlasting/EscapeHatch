@@ -175,6 +175,11 @@ class ApplicationAssistSessionContractTests(unittest.TestCase):
         self.assertIn("escapehatch-application-assist-profile/v1", self.popup)
         self.assertIn('id="phone_authority"', self.html)
         self.assertIn("user_confirmed_primary", self.popup)
+        self.assertLess(
+            self.html.index('id="emergencyStop"'),
+            self.html.index('<details class="advanced"'),
+            "desktop Emergency Stop must stay directly visible and must not be buried in More commands",
+        )
         self.assertIn('const runtimeFiles = command === "advance"', self.popup)
         self.assertIn('["assist-core.js", "progression.js", "navigation-adapter.js"]', self.popup)
         self.assertIn(': ["assist-core.js"];', self.popup)

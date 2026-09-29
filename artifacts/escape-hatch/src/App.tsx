@@ -1204,14 +1204,14 @@ function AssistPage({
         </div>
         <div className="mt-6 border-t border-border pt-5">
           <p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-muted-foreground">Bridge recovery</p>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">Sync is user initiated and validated. If the extension is unavailable, export this JSON and import it from its Profile bridge panel later.</p>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">The extension hydrates this app-owned profile automatically when its popup is opened on the EscapeHatch cockpit. Export/import below is recovery-only.</p>
        <div className="mt-4 flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={exportSync}>Export assist sync</Button><label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm font-bold hover:bg-secondary"><FileUp size={16} /> Import assist sync<input type="file" accept="application/json,.json" onChange={importSync} className="hidden" data-testid="input-import-assist-sync" /></label></div>
         </div>
       </section>
       <aside className="h-fit rounded-2xl border border-border bg-primary p-5 text-primary-foreground shadow-sm sm:p-6">
         <p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-primary-foreground/65">Load unpacked</p>
         <h2 className="mt-2 font-display text-2xl">Use the active tab, not automation.</h2>
-        <ol className="mt-5 space-y-3 text-sm leading-6 text-primary-foreground/80"><li><strong className="text-primary-foreground">1.</strong> Open browser extensions and enable developer mode.</li><li><strong className="text-primary-foreground">2.</strong> Choose Load unpacked and select <code className="rounded bg-primary-foreground/10 px-1">browser/application-assist</code>.</li><li><strong className="text-primary-foreground">3.</strong> Export an assist sync, import it in the extension, then Start Assist on the application tab.</li></ol>
+        <ol className="mt-5 space-y-3 text-sm leading-6 text-primary-foreground/80"><li><strong className="text-primary-foreground">1.</strong> Open browser extensions and enable developer mode.</li><li><strong className="text-primary-foreground">2.</strong> Choose Load unpacked and select <code className="rounded bg-primary-foreground/10 px-1">browser/application-assist</code>.</li><li><strong className="text-primary-foreground">3.</strong> Import your resume here, open the extension once while this cockpit tab is active so it hydrates automatically, then use Start Assist on the application tab.</li></ol>
         <p className="mt-5 border-t border-primary-foreground/15 pt-4 text-xs leading-5 text-primary-foreground/65">Active-tab access only. Passwords, uploads, attestations, demographic fields, and navigation controls are blocked.</p>
       </aside>
     </div>

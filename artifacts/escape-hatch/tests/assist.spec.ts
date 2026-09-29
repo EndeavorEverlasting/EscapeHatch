@@ -134,8 +134,10 @@ test('explains unsupported PDF layouts without creating a review panel', async (
   }
 });
 
-test('keeps a multi-page application review-only through popup reopen', async ({ browser }) => {
+test('hydrates the app-owned resume profile and keeps a multi-page application review-only through popup reopen', async ({ browser }) => {
   test.setTimeout(120_000);
+  const mark = (stage: string) => console.log(`ASSIST_LIVE_CERT:${stage}`);
+  mark('BEGIN');
 
   const testDirectory = resolve(fileURLToPath(import.meta.url), '..');
   const sourceExtension = resolve(testDirectory, '../../../browser/application-assist');
@@ -221,6 +223,7 @@ test('keeps a multi-page application review-only through popup reopen', async ({
       'chrome.runtime.onInstalled.addListener(() => undefined);\n',
     );
 
+    mark('LAUNCH_CONTEXT');
     const context = await browserType.launchPersistentContext(userDataDirectory, {
       baseURL,
       headless: true,
@@ -238,6 +241,7 @@ test('keeps a multi-page application review-only through popup reopen', async ({
     });
 
     try {
+      mark('CONTEXT_READY');
       for (const existing of context.pages()) {
         if (existing.url() === 'about:blank') {
           await existing.close().catch(() => undefined);
@@ -252,15 +256,36 @@ test('keeps a multi-page application review-only through popup reopen', async ({
         });
       });
 
+      mark('IMPORT_RESUME');
+      const cockpit = await context.newPage();
+      await cockpit.goto(`${baseURL}/assist`);
+      await cockpit.locator('[data-testid="input-import-resume"]').setInputFiles({
+        name: 'live-cert-resume.txt',
+        mimeType: 'text/plain',
+        buffer: Buffer.from([
+          'Ada Lovelace',
+          '1 Test Street, London, NY 10001, United States | ada@example.com',
+          'PROFESSIONAL SUMMARY',
+          'Deterministic application profile.',
+          'CORE STRENGTHS',
+          'Automation • Testing',
+        ].join('\n')),
+      });
+      await expect(cockpit.locator('[data-testid="assist-feedback"]')).toContainText('Resume parsed locally');
+      await expect(cockpit.locator('[data-testid="assist-feedback"]')).toContainText('no setup step');
+      mark('RESUME_READY');
+
       const application = await context.newPage();
       await application.goto(`${baseURL}/assist-application-fixture`);
 
+      mark('WAIT_EXTENSION');
       const serviceWorker =
         context.serviceWorkers()[0] ??
         (await context.waitForEvent('serviceworker', { timeout: 30_000 }));
       const extensionId = new URL(serviceWorker.url()).hostname;
-      const openPopup = async () => {
-        await application.bringToFront();
+      mark('EXTENSION_READY');
+      const openPopup = async (activePage = application) => {
+        await activePage.bringToFront();
         const popup = await context.newPage();
         await popup.goto(`chrome-extension://${extensionId}/popup.html`);
         await expect(popup.locator('#startAssist')).toBeEnabled({ timeout: 30_000 });
@@ -299,27 +324,26 @@ test('keeps a multi-page application review-only through popup reopen', async ({
         }, applicationUrl);
       };
 
-      const popup = await openPopup();
+      mark('OPEN_POPUP_ON_COCKPIT');
+      const popup = await openPopup(cockpit);
       await expect(popup.locator('#modeChip')).toContainText('Mode: mouse');
       await expect(popup.locator('.mouse-actions')).toBeVisible();
-      await popup.locator('#first_name').fill('Ada');
-      await popup.locator('#email').fill('ada@example.com');
-      await popup.locator('#city').fill('London');
-      await popup.locator('#save').click();
-      await expect(popup.locator('#status')).toContainText('Saved');
+      await expect(popup.locator('#profileReady')).toHaveText('Ready', { timeout: 20_000 });
+      await expect(popup.locator('#status')).toContainText('Profile hydrated automatically from EscapeHatch app', { timeout: 20_000 });
+      await expect(popup.locator('#first_name')).toHaveValue('Ada');
+      await expect(popup.locator('#email')).toHaveValue('ada@example.com');
+      await expect(popup.locator('#city')).toHaveValue('London');
+      mark('PROFILE_HYDRATED');
 
       await activateApplicationTab(popup);
       await popup.bringToFront();
+      mark('START_ASSIST');
       await popup.locator('#startAssist').click();
       await expect(popup.locator('#sessionState')).toContainText('Session: active', { timeout: 15_000 });
-      await expect(popup.locator('#status')).toContainText('Assist session started');
-
-      await activateApplicationTab(popup);
-      await popup.bringToFront();
-      await expect(popup.locator('#fillAllowed')).toBeVisible();
-      await popup.locator('#fillAllowed').click();
-      // Reject "Filled 0 …" which previously masked wrong-tab fills on CI.
+      // Start Assist is the normal fill trigger: no extension profile typing/save,
+      // JSON shuttle, explicit refresh, or Fill now setup step is allowed here.
       await expect(popup.locator('#status')).toContainText(/Filled [1-9]/, { timeout: 20_000 });
+      mark('FIRST_FILL_DONE');
 
       await expect(application.locator('#first-name')).toHaveValue('Ada', { timeout: 20_000 });
       await expect(application.locator('#email')).toHaveValue('ada@example.com');
@@ -341,6 +365,7 @@ test('keeps a multi-page application review-only through popup reopen', async ({
         ),
       ).toBe(0);
 
+      mark('FIRST_PAGE_VERIFIED');
       await application.locator('#next').click();
       await expect(application).toHaveURL(/\/application\?page=2$/);
       await expect(application.locator('#page-two-first-name')).toBeVisible();
@@ -367,27 +392,43 @@ test('keeps a multi-page application review-only through popup reopen', async ({
       await expect(popup.locator('#status')).toContainText('Filled 1 ', { timeout: 20_000 });
       await expect(application.locator('#page-two-first-name')).toHaveValue('Ada', { timeout: 20_000 });
       await expect(application.locator('#work-authorization')).toHaveValue('manual answer');
+      mark('SECOND_FILL_DONE');
 
       await popup.bringToFront();
       await expect(popup.locator('#undoLast')).toBeVisible();
       await popup.locator('#undoLast').click();
       await expect(popup.locator('#status')).toContainText('Undo restored', { timeout: 20_000 });
       await expect(application.locator('#page-two-first-name')).toHaveValue('');
+      mark('UNDO_DONE');
 
+      mark('PAUSE_BEGIN');
       await popup.locator('#pause').click();
       await expect(popup.locator('#sessionState')).toContainText('Session: paused');
       await expect(popup.locator('#status')).toContainText('Assist paused');
+      mark('PAUSE_DONE');
+
+      mark('PAUSED_FILL_BEGIN');
       await popup.locator('#fillAllowed').click();
       await expect(popup.locator('#status')).toContainText('Fill blocked', { timeout: 20_000 });
+      mark('PAUSED_FILL_DONE');
+
+      mark('RESUME_BEGIN');
       await popup.locator('#resume').click();
       await expect(popup.locator('#sessionState')).toContainText('Session: active');
+      mark('RESUME_DONE');
 
+      mark('STOP_BEGIN');
       await popup.locator('#emergencyStop').click();
       await expect(popup.locator('#sessionState')).toContainText('Session: stopped');
       await expect(popup.locator('#status')).toContainText('Emergency Stop latched');
+      mark('STOP_DONE');
+
+      mark('STOPPED_FILL_BEGIN');
       await popup.locator('#fillAllowed').click();
       await expect(popup.locator('#status')).toContainText(/Emergency Stop(?: is)? latched/, { timeout: 20_000 });
+      mark('STOPPED_FILL_DONE');
       await expect(application.locator('#work-authorization')).toHaveValue('manual answer');
+      mark('STOP_PROVEN');
       expect(
         await application.evaluate(
           () => (window as Window & { __controlClicks?: string[] }).__controlClicks,
@@ -400,12 +441,14 @@ test('keeps a multi-page application review-only through popup reopen', async ({
       ).toBe(0);
 
       await popup.close();
+      mark('REOPEN_POPUP');
       const reopenedPopup = await openPopup();
       await expect(reopenedPopup.locator('#sessionState')).toContainText('Session: stopped');
       await expect(reopenedPopup.locator('#sessionState')).toContainText(`origin=${new URL(baseURL).origin}`);
       await reopenedPopup.locator('#fillAllowed').click();
       await expect(reopenedPopup.locator('#status')).toContainText(/Emergency Stop(?: is)? latched/);
       await reopenedPopup.close();
+      mark('COMPLETE');
     } finally {
       await context.close();
     }

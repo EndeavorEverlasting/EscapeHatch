@@ -95,6 +95,7 @@ async function loadStoredProfile() {
   const stored = await chrome.storage.local.get([PROFILE_KEY, LEGACY_PROFILE_KEY]);
   const profile = stored[PROFILE_KEY] || stored[LEGACY_PROFILE_KEY] || {};
   writeForm(profile);
+  return profile;
 }
 
 async function loadStoredSession() {
@@ -189,7 +190,8 @@ async function importProfile(file) {
   setStatus(`Imported ${countProfileValues(profile)} profile fields locally.`);
 }
 
-async function syncFromCockpit() {
+async function syncFromCockpit(options) {
+  const opts = options || {};
   const syncApi = globalThis.EscapeHatchProfileSync;
   if (!syncApi) throw new Error("Profile sync unavailable. Reload the extension.");
   const tab = await activeTab();
@@ -243,12 +245,40 @@ async function syncFromCockpit() {
     [syncApi.PROFILE_STORAGE_KEY]: profile
   });
   writeForm(profile);
-  if (!profile.email) {
-    setStatus(`Synced ${syncApi.countProfileValues(profile)} field(s) from EscapeHatch cockpit — add an email in the cockpit to enable application fill without file import.`);
+  const count = syncApi.countProfileValues(profile);
+  if (opts.automatic) {
+    setStatus(
+      profile.email
+        ? `Profile hydrated automatically from EscapeHatch app (${count} field${count === 1 ? "" : "s"}).`
+        : `Profile hydrated automatically from EscapeHatch app (${count} field${count === 1 ? "" : "s"}); email is still missing in the app.`
+    );
+  } else if (!profile.email) {
+    setStatus(`Refreshed ${count} field(s) from EscapeHatch app — add an email in the app to enable application fill.`);
   } else {
-    setStatus(`Synced ${syncApi.countProfileValues(profile)} field(s) from EscapeHatch cockpit. Email is now available without file archaeology.`);
+    setStatus(`Refreshed ${count} field(s) from EscapeHatch app.`);
   }
+  projectProfileReady(profile);
   return profile;
+}
+
+async function tryAutoHydrateFromActiveCockpit() {
+  const syncApi = globalThis.EscapeHatchProfileSync;
+  if (!syncApi) return null;
+  let tab;
+  try {
+    tab = await activeTab();
+  } catch (_error) {
+    return null;
+  }
+  if (!syncApi.isTrustedCockpitUrl(tab.url || "")) return null;
+  try {
+    return await syncFromCockpit({ automatic: true });
+  } catch (error) {
+    setStatus(
+      `EscapeHatch app profile was not hydrated automatically: ${error instanceof Error ? error.message : String(error)}`
+    );
+    return null;
+  }
 }
 
 function isApplicationTab(tab) {
@@ -680,7 +710,7 @@ function bindSemanticHandlers() {
   modality.registerHandler("open_profile_panel", () => {
     closeCommandPalette();
     setProfileOpen(true);
-    setStatus("Profile destination open. Text entry is intentional here.");
+    setStatus("Recovery profile controls open. Normal profile configuration comes from the EscapeHatch app.");
   });
   modality.registerHandler("dismiss_overlay", () => {
     if (paletteOpen) {
@@ -822,10 +852,11 @@ bindDirectControls();
 applyMode();
 
 Promise.all([loadStoredProfile(), loadStoredSession(), loadUserSettings()])
-  .then(([profile, session, settingsLoaded]) => {
+  .then(async ([profile, session, settingsLoaded]) => {
     projectAutofillToggle(settingsLoaded.settings, settingsLoaded.note);
     projectSessionPill(session);
     projectProfileReady(profile);
+    await tryAutoHydrateFromActiveCockpit();
     if (activeMode === "phone" && document.activeElement && modality.isEditableTarget(document.activeElement)) {
       document.activeElement.blur();
     }

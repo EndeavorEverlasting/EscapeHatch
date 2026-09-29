@@ -293,12 +293,13 @@
       <button id="pause" type="button" title="Shortcut: P" data-action="pause_session">Pause</button>
       <button id="resume" type="button" title="Shortcut: R" data-action="resume_session">Resume</button>
       <button id="undoLast" type="button" title="Shortcut: U" data-action="undo_last_fill">Undo Last Fill</button>
+      <button id="emergencyStop" type="button" title="Shortcut: Shift+Esc or !" data-action="emergency_stop">Emergency Stop</button>
     </div>
   </section>
 
   <div class="profile-summary">
-    <span>Profile <strong id="profileReady">checking…</strong></span>
-    <button id="openProfileDesktop" type="button" data-action="open_profile_panel" title="Shortcut: G">Manage profile</button>
+    <span>App profile <strong id="profileReady">checking…</strong></span>
+    <button id="openProfileDesktop" type="button" data-action="open_profile_panel" title="Shortcut: G">Recovery profile…</button>
   </div>
 
   <details class="advanced" id="advancedPanel">
@@ -307,12 +308,11 @@
     <div class="actions" style="grid-template-columns: 1fr;">
       <button id="recordConfirmation" type="button" title="Shortcut: C" data-action="record_confirmation">Record Confirmation Evidence</button>
       <button id="openCommands" type="button" title="Shortcut: / or Ctrl+K" data-action="open_command_palette">Commands…</button>
-      <button id="emergencyStop" type="button" title="Shortcut: Shift+Esc or !" data-action="emergency_stop">Emergency Stop</button>
     </div>
   </details>
 
   <section class="panel profile-panel" id="profilePanel" aria-label="Profile destination">
-    <h2>Profile</h2>
+    <h2>Recovery profile</h2>
     <div class="grid">
       <label class="field">Title / prefix <input id="name_prefix" autocomplete="honorific-prefix"></label>
       <label class="field">Preferred name <input id="preferred_name" autocomplete="nickname"></label>
@@ -335,13 +335,13 @@
       <label class="field">Country <input id="country" autocomplete="country-name"></label>
     </div>
     <div class="actions" style="margin-top: 10px; grid-template-columns: 1fr 1fr;">
-      <button id="syncFromCockpit" type="button" data-action="sync_from_cockpit">Sync from EscapeHatch</button>
+      <button id="syncFromCockpit" type="button" data-action="sync_from_cockpit">Refresh from EscapeHatch app</button>
       <button id="save" type="button" data-action="save_profile">Save Profile</button>
       <button id="clear" type="button" data-action="clear_profile">Clear Profile</button>
       <button id="export" type="button" data-action="export_profile">Export Profile</button>
       <button id="import" type="button" data-action="import_profile">Import Profile</button>
     </div>
-    <p class="privacy">One-action cockpit sync uses activeTab + scripting + storage when possible. Recovery import/export remains available (capped 64 KiB, schema-checked).</p>
+    <p class="privacy">Normal configuration comes from the EscapeHatch app and hydrates automatically when this popup is opened on the cockpit. These controls are recovery-only. Import/export remains capped at 64 KiB and schema-checked.</p>
   </section>
 
   <input id="importFile" type="file" accept="application/json,.json">

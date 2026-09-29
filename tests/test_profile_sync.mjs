@@ -40,6 +40,13 @@ const popupSource = fs.readFileSync(new URL("../browser/application-assist/popup
 assert.ok(popupSource.includes("isTrustedCockpitUrl"), "popup must restrict sync to trusted loopback cockpit URL");
 assert.ok(popupSource.includes("__escapehatch_cockpit__"), "popup must verify cockpit document identity before importing localStorage");
 assert.ok(popupSource.includes("values: out"), "cockpit injection must return the nested values shape consumed by syncFromCockpit");
+assert.ok(popupSource.includes("tryAutoHydrateFromActiveCockpit"), "popup must auto-hydrate app-owned profile on the trusted cockpit");
+assert.ok(popupSource.includes("syncFromCockpit({ automatic: true })"), "automatic hydration must reuse the validated cockpit sync seam");
+assert.ok(popupSource.includes("await tryAutoHydrateFromActiveCockpit()"), "popup startup must attempt app-owned profile hydration");
+assert.ok(popupSource.includes("return profile;"), "stored-profile load must return the profile used by readiness projection");
+const popupHtml = readText("browser/application-assist/popup.html");
+assert.ok(popupHtml.includes("Recovery profile"), "manual profile controls must be labeled recovery-only");
+assert.ok(popupHtml.includes("hydrates automatically"), "popup must explain app-owned automatic hydration");
 
 assert.equal(typeof sync.sanitizeProfile, "function", "sanitizeProfile must exist");
 assert.equal(typeof sync.acceptOnlyKnownProfileKeys, "function");
@@ -261,7 +268,7 @@ assert.equal(syncSource.includes("Outputs/application-assist/"), true);
   assert.equal(merged.preferences["identity.email"].scope, "profile_preference");
 }
 
-// 8. Popup wiring: one-action Sync from EscapeHatch using activeTab + scripting + storage, no broad host perms, recovery still capped
+// 8. Popup wiring: automatic active-cockpit hydration using activeTab + scripting + storage, no broad host perms, recovery still capped
 {
   const popup = readText("browser/application-assist/popup.js");
   assert.equal(popup.includes("syncFromCockpit"), true, "popup must expose syncFromCockpit");
@@ -271,7 +278,7 @@ assert.equal(syncSource.includes("Outputs/application-assist/"), true);
   assert.equal(popup.includes("chrome.storage.local.set"), true, "sync must persist to storage");
   assert.equal(popup.includes("parseCockpitDump"), true, "popup must validate via parseCockpitDump");
   assert.equal(popup.includes("projectProfileToPreferenceStore"), true, "popup must project to preference store");
-  assert.equal(popup.includes("Sync from EscapeHatch"), true, "popup status must mention Sync from EscapeHatch");
+  assert.equal(popup.includes("Profile hydrated automatically from EscapeHatch app"), true, "popup status must prove automatic app-owned hydration");
   assert.equal(popup.includes("hasProfileValues"), true);
   assert.equal(popup.includes("PROFILE_KEYS"), true);
   assert.equal(popup.includes("MAX_IMPORT_BYTES"), true);
@@ -293,7 +300,7 @@ assert.equal(syncSource.includes("Outputs/application-assist/"), true);
 {
   const html = readText("browser/application-assist/popup.html");
   assert.equal(html.includes('id="syncFromCockpit"'), true, "popup.html must have sync button");
-  assert.equal(html.includes("Sync from EscapeHatch"), true);
+  assert.equal(html.includes("Refresh from EscapeHatch app"), true);
   assert.equal(html.includes('src="profile-sync.js"'), true, "popup.html must load profile-sync.js");
   // Order: assist-core before modality before profile-sync before popup
   const idxCore = html.indexOf('src="assist-core.js"');
@@ -320,7 +327,7 @@ assert.equal(syncSource.includes("Outputs/application-assist/"), true);
 {
   const docs = readText("docs/APPLICATION_ASSIST_SESSION.md");
   for (const marker of [
-    "Sync from EscapeHatch",
+    "automatic active-cockpit hydration",
     "activeTab + scripting + storage",
     "Outputs/application-assist/",
     "CANONICAL_OUTPUT_ROOT",

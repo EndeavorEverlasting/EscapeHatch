@@ -132,11 +132,11 @@ questions. Unknown fields stay blank.
 
 ## Profile bootstrap and path hygiene (EH-A2)
 
-EscapeHatch cockpit owns the canonical reviewed profile. The extension exposes a one-action **Sync from EscapeHatch** path (button `Sync from EscapeHatch`, `id="syncFromCockpit"` in `browser/application-assist/popup.html`).
+EscapeHatch cockpit owns the canonical profile. The normal extension path is **automatic active-cockpit hydration**: when the extension popup is opened while the trusted local EscapeHatch cockpit is active, it reads the app-owned profile and projects it into extension-local state. The `Refresh from EscapeHatch app` control remains recovery/manual refresh, not required configuration.
 
-- The sync uses the existing `activeTab + scripting + storage` permission model to read a validated profile from the active local cockpit tab when possible — no broad host permissions, no page-runtime network requests, and no local agent in the normal startup path.
+- Automatic hydration uses the existing `activeTab + scripting + storage` permission model to read a validated profile from the active local cockpit tab — no broad host permissions, no page-runtime network requests, and no local agent in the normal startup path.
 - The active-tab bridge reads local cockpit state (keys such as `escape-hatch-profile`, `escape-hatch-assist-profile`, `escape-hatch-workspace`) via `chrome.scripting.executeScript`, validates with `acceptOnlyKnownProfileKeys` / `sanitizeProfile` (field-whitelisted, `phone_authority` whitelisted, `hasProfileValues` gated), and projects into the extension local store as `escapeHatch.applicationAssistProfile.v1` and `escapeHatch.applicationQuestionPreferences.v1` (`profile_preference` scope) via `projectProfileToPreferenceStore`.
-- A user with a reviewed cockpit profile can therefore make email (and other deterministic identity fields) available to the extension without locating secret directories or manually exporting/importing JSON — email is available without file archaeology or manual file import. Normal startup does not require a local agent; the agent remains a recovery/repair path only.
+- A user who imports a resume in the cockpit gets deterministic identity/contact profile values from the app; opening the extension popup once on that cockpit hydrates those values automatically. No name/email/address typing, JSON shuttle, or explicit sync click is part of the normal live-cert path. Normal startup does not require a local agent; the agent remains a recovery/repair path only.
 - Recovery import/export remains usable: portable profile JSON stays capped at 64 KiB (`MAX_IMPORT_BYTES = 65536`), schema-checked against `escapehatch-application-assist-profile/v2` plus legacy `v1` and `escapehatch-application-autofill-profile/v1`, field-whitelisted via `acceptOnlyKnownProfileKeys`, never executed, legacy phone defaults to `unconfirmed`, and validated through `validateImportPayloadText` / `sanitizeProfile` in `browser/application-assist/profile-sync.js`. Exports use prefix `escapehatch-application-assist-profile` and download to the browser default (usually `Downloads`) rather than a build artifact directory.
 - Generated distributable extension/package artifacts have one canonical root: `Outputs/application-assist/` (registered in `ARTIFACT_REGISTRY.md`). Source remains `browser/application-assist/`, cockpit source is `artifacts/escape-hatch/`, user state is browser-local, and recovery exports are user-visible downloads — no duplicate extension copies become alternate sources of truth. New module `browser/application-assist/profile-sync.js` (exposed as `EscapeHatchProfileSync`) owns validation/projection and the active-tab read without adding progression, password generation, or final-submission behavior.
 
@@ -164,11 +164,12 @@ Earlier global `click_next_or_continue` prohibition has been replaced by the gat
 2. Enable **Developer mode**.
 3. Choose **Load unpacked**.
 4. Select `browser/application-assist`.
-5. Open a real job application page.
-6. Open the popup, save/import a synthetic or private profile, choose **Start Assist**.
-7. Choose **Fill Allowed Fields**, then exercise Pause, Resume, Emergency Stop, and Undo Last Fill.
-8. Navigate and submit the application yourself. Safe intermediate pages may advance automatically via the Progression Plan; any REVIEW_REQUIRED or terminal gate stops for operator review.
-9. Optionally choose **Record Confirmation Evidence** after you confirm submission on-page.
+5. Launch the EscapeHatch cockpit and import the resume there. Confirm the cockpit reports the resume-derived profile as ready.
+6. While the cockpit tab is still active, open the extension popup once. Confirm it reports **App profile Ready** and a status beginning **Profile hydrated automatically from EscapeHatch app**. Do **not** type profile fields, import JSON, or press the recovery refresh control.
+7. Open the real job application page, open the popup, and choose **Start Assist**. Autofill is ON by default and the Start Assist path immediately invokes the canonical Fill Plan from the app-derived extension profile.
+8. Confirm deterministic allowed identity/contact fields populate. Use **Fill now** only as an explicit retry/control check, not as required setup.
+9. Exercise Pause, Resume, Emergency Stop, and Undo Last Fill as needed. Navigate and submit the application yourself; REVIEW_REQUIRED and terminal gates remain operator-controlled.
+10. Optionally choose **Record Confirmation Evidence** after you confirm submission on-page.
 
 ## Validation
 

@@ -392,7 +392,6 @@ test('hydrates the app-owned resume profile and keeps a multi-page application r
       await expect(popup.locator('#status')).toContainText('Filled 1 ', { timeout: 20_000 });
       await expect(application.locator('#page-two-first-name')).toHaveValue('Ada', { timeout: 20_000 });
       await expect(application.locator('#work-authorization')).toHaveValue('manual answer');
-      mark('STOP_PROVEN');
       mark('SECOND_FILL_DONE');
 
       await popup.bringToFront();
@@ -416,6 +415,7 @@ test('hydrates the app-owned resume profile and keeps a multi-page application r
       await popup.locator('#fillAllowed').click();
       await expect(popup.locator('#status')).toContainText(/Emergency Stop(?: is)? latched/, { timeout: 20_000 });
       await expect(application.locator('#work-authorization')).toHaveValue('manual answer');
+      mark('STOP_PROVEN');
       expect(
         await application.evaluate(
           () => (window as Window & { __controlClicks?: string[] }).__controlClicks,

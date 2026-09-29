@@ -40,6 +40,13 @@ const popupSource = fs.readFileSync(new URL("../browser/application-assist/popup
 assert.ok(popupSource.includes("isTrustedCockpitUrl"), "popup must restrict sync to trusted loopback cockpit URL");
 assert.ok(popupSource.includes("__escapehatch_cockpit__"), "popup must verify cockpit document identity before importing localStorage");
 assert.ok(popupSource.includes("values: out"), "cockpit injection must return the nested values shape consumed by syncFromCockpit");
+assert.ok(popupSource.includes("tryAutoHydrateFromActiveCockpit"), "popup must auto-hydrate app-owned profile on the trusted cockpit");
+assert.ok(popupSource.includes("syncFromCockpit({ automatic: true })"), "automatic hydration must reuse the validated cockpit sync seam");
+assert.ok(popupSource.includes("await tryAutoHydrateFromActiveCockpit()"), "popup startup must attempt app-owned profile hydration");
+assert.ok(popupSource.includes("return profile;"), "stored-profile load must return the profile used by readiness projection");
+const popupHtml = readText("browser/application-assist/popup.html");
+assert.ok(popupHtml.includes("Recovery profile"), "manual profile controls must be labeled recovery-only");
+assert.ok(popupHtml.includes("hydrates automatically"), "popup must explain app-owned automatic hydration");
 
 assert.equal(typeof sync.sanitizeProfile, "function", "sanitizeProfile must exist");
 assert.equal(typeof sync.acceptOnlyKnownProfileKeys, "function");

@@ -401,19 +401,32 @@ test('hydrates the app-owned resume profile and keeps a multi-page application r
       await expect(application.locator('#page-two-first-name')).toHaveValue('');
       mark('UNDO_DONE');
 
+      mark('PAUSE_BEGIN');
       await popup.locator('#pause').click();
       await expect(popup.locator('#sessionState')).toContainText('Session: paused');
       await expect(popup.locator('#status')).toContainText('Assist paused');
+      mark('PAUSE_DONE');
+
+      mark('PAUSED_FILL_BEGIN');
       await popup.locator('#fillAllowed').click();
       await expect(popup.locator('#status')).toContainText('Fill blocked', { timeout: 20_000 });
+      mark('PAUSED_FILL_DONE');
+
+      mark('RESUME_BEGIN');
       await popup.locator('#resume').click();
       await expect(popup.locator('#sessionState')).toContainText('Session: active');
+      mark('RESUME_DONE');
 
+      mark('STOP_BEGIN');
       await popup.locator('#emergencyStop').click();
       await expect(popup.locator('#sessionState')).toContainText('Session: stopped');
       await expect(popup.locator('#status')).toContainText('Emergency Stop latched');
+      mark('STOP_DONE');
+
+      mark('STOPPED_FILL_BEGIN');
       await popup.locator('#fillAllowed').click();
       await expect(popup.locator('#status')).toContainText(/Emergency Stop(?: is)? latched/, { timeout: 20_000 });
+      mark('STOPPED_FILL_DONE');
       await expect(application.locator('#work-authorization')).toHaveValue('manual answer');
       mark('STOP_PROVEN');
       expect(

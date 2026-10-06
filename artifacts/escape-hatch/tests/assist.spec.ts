@@ -209,12 +209,21 @@ test('keeps a multi-page application review-only through popup reopen', async ({
     const manifestPath = resolve(extensionDirectory, 'manifest.json');
     const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as {
       host_permissions?: string[];
+      background?: { service_worker?: string };
     };
+    // Production assist is popup-only (no background SW). Inject a test-harness SW so
+    // Playwright can resolve the unpacked extension id via serviceWorkers().
+    const harnessWorker = 'test-harness-service-worker.js';
+    await writeFile(
+      resolve(extensionDirectory, harnessWorker),
+      '// EscapeHatch browser-test harness only — not shipped in production extension.\n',
+    );
+    manifest.background = { service_worker: harnessWorker };
     manifest.host_permissions = [`${baseURL}/*`];
     await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
 
     const chromiumPath = process.env.PLAYWRIGHT_CHROMIUM_PATH;
-    // Chromium extensions require a headed (or new-headless-disabled) context; GHA uses xvfb-run.
+    // Chromium extensions require a headed context; GHA wraps the suite with xvfb-run.
     const context = await browserType.launchPersistentContext(userDataDirectory, {
       baseURL,
       headless: false,
@@ -233,7 +242,11 @@ test('keeps a multi-page application review-only through popup reopen', async ({
       await application.setContent(fixturePage);
 
       const serviceWorker =
-        context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
+        context.serviceWorkers()[0] ??
+        (await context.waitForEvent('serviceworker', { timeout: 15_000 }));
+      if (!serviceWorker) {
+        throw new Error('Assist extension service worker did not register in the test harness.');
+      }
       const extensionId = new URL(serviceWorker.url()).hostname;
       const openPopup = async () => {
         await application.bringToFront();

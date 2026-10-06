@@ -1,7 +1,7 @@
 # Visual resume dual-track — reference architecture + spike plan
 
-Status: TRACKED (execution in progress)  
-Authority: Escape Hatch resume presentation owners  
+Status: TRACKED (execution in progress)
+Authority: Escape Hatch resume presentation owners
 Related Cursor plan: `visual_resume_precedence_f0e262a7.plan.md`
 
 ## Capability

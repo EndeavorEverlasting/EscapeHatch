@@ -1,0 +1,79 @@
+{
+  "schema": "escapehatch-resume-presentation-visual/v1",
+  "version": 1,
+  "purpose": "Optional human-facing visual resume projection that deliberately diverges from ATS-conservative rules. Never the default for employer Application Assist submissions.",
+  "authority": {
+    "canonical_contract": true,
+    "projection": "visual",
+    "not_for_ats_submission": true,
+    "does_not_weaken_ats_contract": true,
+    "ats_contract": "contracts/resume-presentation.v1.json",
+    "private_content_in_repository": false,
+    "universal_ats_compatibility_claim": false,
+    "recruiter_preference_claim": false
+  },
+  "reference_artifact": {
+    "role": "read_only_visual_target",
+    "operator_folder": "Source Resumes Not to Mutate but to Generate",
+    "example_filename": "Fall 2024 - Dynamic Resume.pdf",
+    "must_not_mutate_source": true,
+    "tracked_template": "templates/resume-visual-dynamic/v1/synthetic-dynamic.tex"
+  },
+  "page": {
+    "size": "US Letter",
+    "orientation": "portrait",
+    "layout": "main_plus_right_sidebar",
+    "target_pages": 1,
+    "background": {
+      "mode": "dark_schematic",
+      "allows_watermark_or_network_motif": true,
+      "solid_white_required": false
+    }
+  },
+  "structure": {
+    "single_column": false,
+    "sidebars_allowed": true,
+    "sidebar_style": "door_hanger_or_rounded_tag",
+    "graphical_skill_bars_allowed": true,
+    "skill_bar_scale_example": "0_to_500_or_0_to_100",
+    "semantic_icons_allowed": true,
+    "layout_tables_allowed": false,
+    "image_based_text_allowed": false,
+    "selectable_text_preferred": true,
+    "text_boxes_allowed": false
+  },
+  "palette": {
+    "background_dark_allowed": true,
+    "sidebar_light_panel_allowed": true,
+    "example_dark_background": "#2B2B2B",
+    "example_sidebar_panel": "#F2F2F2",
+    "example_accent_text": "#FFFFFF",
+    "color_may_be_structural_for_visual_projection": true
+  },
+  "content": {
+    "tracked_fixtures_must_be_synthetic": true,
+    "real_pii_forbidden_in_git": true
+  },
+  "outputs": {
+    "required_formats": ["pdf"],
+    "docx_not_required": true,
+    "pdf_must_preserve_extractable_text": true
+  },
+  "quality_gate": {
+    "structural_checklist_against_reference_pdf": true,
+    "compile_when_latex_available": true,
+    "inspect_rendered_page_when_pdf_produced": true,
+    "never_mutate_source_reference_folder": true
+  },
+  "proof_ceiling": {
+    "contract_validation_proves": "Visual projection rules are registered and fail-closed without weakening the ATS contract.",
+    "spike_source_validation_proves": "The synthetic LaTeX template encodes the reverse-engineered structural markers.",
+    "does_not_prove": [
+      "universal ATS vendor compatibility",
+      "pixel-perfect match to a private reference PDF",
+      "recruiter preference",
+      "application success",
+      "live PDF compile when no TeX toolchain is installed"
+    ]
+  }
+}

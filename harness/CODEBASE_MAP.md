@@ -145,13 +145,17 @@ Promotion is provider-agnostic at the contract and bound to one concrete host ad
 
 ## Resume presentation entry points
 
-- Presentation contract: `contracts/resume-presentation.v1.json`
-- Validator: `scripts/validate_resume_presentation.py`
+- Presentation contract (ATS default): `contracts/resume-presentation.v1.json`
+- Validator (ATS): `scripts/validate_resume_presentation.py`
+- Visual projection contract (optional, non-ATS): `contracts/resume-presentation-visual.v1.json`
+- Visual validators: `scripts/validate_resume_presentation_visual.py`, `scripts/validate_resume_visual_spike.py`
+- Synthetic visual template: `templates/resume-visual-dynamic/v1/synthetic-dynamic.tex`
+- Dual-track plan: `docs/plans/visual-resume-dual-track-reference.v1.md`
 - Governance owner: **Resume presentation quality is contractual** in `AGENTS.md`
 - Operating workflow: **Resume Presentation** in `harness/WORKFLOWS.md`
 - Artifact ownership: `ARTIFACT_REGISTRY.md`
 
-The repository stores presentation rules, not the user's real resume. The registered floor preserves a single-column ATS-conservative structure, Trebuchet MS + Arial hierarchy, restrained navy/slate palette, minimum body-text size, DOCX + text-preserving PDF outputs, and rendered-page QA. Master and tailored content remain private/user-owned. A style-changing request may override the presentation contract only when the user explicitly approves the change; a generic agent default must not silently flatten the resume back to plain formatting.
+The repository stores presentation rules, not the user's real resume. The registered ATS floor preserves a single-column ATS-conservative structure, Trebuchet MS + Arial hierarchy, restrained navy/slate palette, minimum body-text size, DOCX + text-preserving PDF outputs, and rendered-page QA. An optional visual projection may use sidebars/skill bars/dark backgrounds under the visual contract and must never become the Application Assist default. Master and tailored content remain private/user-owned. A style-changing request may override the presentation contract only when the user explicitly approves the change; a generic agent default must not silently flatten the resume back to plain formatting.
 
 The contract does not prove universal ATS compatibility. A specific resume is visually proven only after the actual DOCX is rendered and every page inspected, the PDF is checked for extractable text, and current projections are checked for contact/content consistency.
 

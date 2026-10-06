@@ -43,6 +43,12 @@ This file is the canonical registry for durable EscapeHatch artifacts. A plausib
 | Application assist CI | `.github/workflows/application-assist.yml` | tracked validation workflow | product assist-session changes | GitHub Actions |
 | Resume presentation contract | `contracts/resume-presentation.v1.json` | tracked versioned quality contract | update ATS-conservative typography/layout/output/QA invariants without real resume data | `python scripts/validate_resume_presentation.py` |
 | Resume presentation validator | `scripts/validate_resume_presentation.py` | tracked quality-contract validator | update fail-closed presentation regression checks | `python scripts/validate_resume_presentation.py` |
+| Resume visual projection contract | `contracts/resume-presentation-visual.v1.json` | tracked optional non-ATS projection contract | update visual-only structure rules; never weaken ATS contract; never add real PII | `python scripts/validate_resume_presentation_visual.py` |
+| Resume visual projection validator | `scripts/validate_resume_presentation_visual.py` | tracked visual-projection validator | fail closed on ATS submission allowance or source-mutation permission | `python scripts/validate_resume_presentation_visual.py` |
+| Resume visual dynamic template (synthetic) | `templates/resume-visual-dynamic/v1/synthetic-dynamic.tex` | tracked synthetic reverse-engineer spike | edit structural markers only with synthetic content | `python scripts/validate_resume_visual_spike.py` |
+| Resume visual spike validator | `scripts/validate_resume_visual_spike.py` | tracked validator | R5 marker proof; regenerates spike receipt; optional live PDF when TeX present | `python scripts/validate_resume_visual_spike.py` |
+| Resume visual spike receipt | `harness/reports/resume-visual-spike-receipt.v1.json` | tracked regenerated receipt | produced by spike validator; source markers VALIDATED; live PDF may be BLOCKED | `python scripts/validate_resume_visual_spike.py` |
+| Visual resume dual-track plan | `docs/plans/visual-resume-dual-track-reference.v1.md` | tracked execution plan | update when dual-track phases/proof ceiling change | `python scripts/validate_resume_presentation_visual.py` |
 | Product release version authority | `VERSION` | tracked canonical SemVer product release identity | bump only through `python scripts/product_version.py bump` | `python scripts/validate_product_version.py` |
 | Product release policy contract | `contracts/product-release.v1.json` | tracked versioning policy / surface classification | update scheme, bump matrix, mirrors, cutover, compatibility rules | `python scripts/validate_product_version.py` |
 | Product version CLI | `scripts/product_version.py` | tracked release mechanic | show/check/next/bump/tag-plan against VERSION authority | `python tests/test_product_version.py` |
@@ -85,6 +91,8 @@ The following are intentionally **not** tracked repository artifacts:
 | Companion sync receipt | user | metadata only; no profile values, application answers, resume content, provider tokens, or credentials |
 | Real career-state export | user | portable contract, outside Git by default |
 | Current rendered resume DOCX/PDF | user | derive from the canonical private resume, validate against `contracts/resume-presentation.v1.json`, inspect rendered pages, and preserve existing Drive IDs when replacing current projections |
+| Source resume references (do not mutate) | user | operator folder `Source Resumes Not to Mutate but to Generate/` is gitignored; visual reverse-engineering reads only; generator writes elsewhere |
+| Visual resume PDF (optional projection) | user | may follow `contracts/resume-presentation-visual.v1.json`; marked not-for-ATS-submission; keep under `private/` or `Outputs/resume-visual/` |
 | Live ATS/application evidence | user/operator | keep local unless sanitized into an approved fixture/report |
 
 ## Validation output

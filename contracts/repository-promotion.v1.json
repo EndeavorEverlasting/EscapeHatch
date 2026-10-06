@@ -134,7 +134,7 @@
         "id": "compile-static",
         "category": "lint/type/static",
         "owner": "python -m py_compile",
-        "command": "python -m py_compile scripts/validate_governance.py scripts/validate_product_version.py scripts/product_version.py scripts/validate_application_harness.py scripts/validate_application_companion.py scripts/validate_resume_presentation.py scripts/validate_harness.py scripts/validate_career_state.py scripts/validate_repository_promotion.py scripts/promotion_guard.py scripts/export_study_guidance.py tests/test_product_version.py tests/test_repository_promotion.py tests/test_study_guidance_export.py",
+        "command": "python -m py_compile scripts/validate_governance.py scripts/validate_product_version.py scripts/product_version.py scripts/validate_application_harness.py scripts/validate_application_companion.py scripts/validate_resume_presentation.py scripts/validate_resume_presentation_visual.py scripts/validate_resume_visual_spike.py scripts/validate_harness.py scripts/validate_career_state.py scripts/validate_repository_promotion.py scripts/promotion_guard.py scripts/export_study_guidance.py tests/test_product_version.py tests/test_repository_promotion.py tests/test_study_guidance_export.py",
         "inputs": ["scripts/**/*.py", "tests/**/*.py"],
         "outputs": ["compile PASS/FAIL"],
         "blocking": "REQUIRED"
@@ -200,6 +200,24 @@
         "command": "python scripts/validate_resume_presentation.py",
         "inputs": ["contracts/resume-presentation.v1.json"],
         "outputs": ["RESUME_PRESENTATION PASS/FAIL"],
+        "blocking": "REQUIRED"
+      },
+      {
+        "id": "integration-resume-presentation-visual",
+        "category": "integration",
+        "owner": "scripts/validate_resume_presentation_visual.py",
+        "command": "python scripts/validate_resume_presentation_visual.py",
+        "inputs": ["contracts/resume-presentation-visual.v1.json", "templates/resume-visual-dynamic/v1/synthetic-dynamic.tex"],
+        "outputs": ["RESUME_PRESENTATION_VISUAL PASS/FAIL"],
+        "blocking": "REQUIRED"
+      },
+      {
+        "id": "integration-resume-visual-spike",
+        "category": "integration",
+        "owner": "scripts/validate_resume_visual_spike.py",
+        "command": "python scripts/validate_resume_visual_spike.py",
+        "inputs": ["templates/resume-visual-dynamic/v1/synthetic-dynamic.tex"],
+        "outputs": ["RESUME_VISUAL_SPIKE PASS/FAIL", "harness/reports/resume-visual-spike-receipt.v1.json"],
         "blocking": "REQUIRED"
       },
       {

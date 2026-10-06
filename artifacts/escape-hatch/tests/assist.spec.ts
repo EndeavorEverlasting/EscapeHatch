@@ -213,10 +213,11 @@ test('keeps a multi-page application review-only through popup reopen', async ({
     manifest.host_permissions = [`${baseURL}/*`];
     await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
 
+    const chromiumPath = process.env.PLAYWRIGHT_CHROMIUM_PATH;
     const context = await browserType.launchPersistentContext(userDataDirectory, {
       baseURL,
       headless: true,
-      executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH ?? '/repl/tools/bin/chromium',
+      ...(chromiumPath ? { executablePath: chromiumPath } : {}),
       args: [
         '--no-sandbox',
         '--disable-dev-shm-usage',

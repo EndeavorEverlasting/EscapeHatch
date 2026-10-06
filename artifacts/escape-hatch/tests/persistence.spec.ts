@@ -470,10 +470,11 @@ test('keeps a restored workspace after reopening a persistent browser context', 
   if (!baseURL) throw new Error('The browser test base URL is not configured.');
   const browserType = browser.browserType();
 
+  const chromiumPath = process.env.PLAYWRIGHT_CHROMIUM_PATH;
   const launchOptions = {
     baseURL,
     headless: true,
-    executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH ?? '/repl/tools/bin/chromium',
+    ...(chromiumPath ? { executablePath: chromiumPath } : {}),
     args: ['--no-sandbox', '--disable-dev-shm-usage'],
   };
 

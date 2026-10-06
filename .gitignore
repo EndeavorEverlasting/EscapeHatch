@@ -9,6 +9,8 @@ node_modules/
 **/node_modules/
 **/dist/
 *.tsbuildinfo
+**/__pycache__/
+*.py[cod]
 
 # Editor / OS
 .DS_Store

@@ -1,0 +1,132 @@
+% EscapeHatch visual resume spike (synthetic content only).
+% Reverse-engineered structural target: Fall 2024 Dynamic Resume.pdf
+% Markers used by scripts/validate_resume_visual_spike.py — do not remove.
+% ESCAPEHATCH_R5:dark_schematic_bg
+% ESCAPEHATCH_R5:main_left_column
+% ESCAPEHATCH_R5:door_hanger_sidebar
+% ESCAPEHATCH_R5:horizontal_skill_bars
+% ESCAPEHATCH_R5:contact_icon_cluster
+% ESCAPEHATCH_R5:single_page_target
+% NOT_FOR_ATS_SUBMISSION
+\documentclass[10pt,letterpaper]{article}
+\usepackage[margin=0.45in]{geometry}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{graphicx}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage[T1]{fontenc}
+\usepackage{microtype}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+
+\definecolor{PageDark}{HTML}{2B2B2B}
+\definecolor{PanelLight}{HTML}{F0F0F0}
+\definecolor{Muted}{HTML}{B8B8B8}
+\definecolor{AccentBar}{HTML}{5A5A5A}
+\definecolor{Ink}{HTML}{222222}
+
+% Full-bleed dark background + schematic network motif
+\AddToHook{shipout/background}{%
+  \put(0,-\paperheight){%
+    \begin{tikzpicture}[remember picture,overlay]
+      \fill[PageDark] (0,0) rectangle (\paperwidth,\paperheight);
+      \foreach \x in {0.5,1.5,...,8.0} {
+        \foreach \y in {0.5,1.5,...,10.5} {
+          \fill[white,opacity=0.04] (\x in,\y in) circle (0.6pt);
+        }
+      }
+      \draw[white,opacity=0.07,thin]
+        (0.8in,9.8in) -- (2.2in,8.6in) -- (3.4in,9.2in) -- (5.1in,7.8in)
+        -- (6.4in,8.9in) -- (7.6in,7.2in);
+      \draw[white,opacity=0.05,thin]
+        (1.2in,6.5in) -- (2.8in,5.4in) -- (4.0in,6.1in) -- (5.6in,4.8in);
+    \end{tikzpicture}%
+  }%
+}
+
+\newcommand{\SkillBar}[2]{%
+  \parbox{2.05in}{%
+    {\footnotesize\bfseries\color{Ink}#1}\\[-1pt]
+    \begin{tikzpicture}
+      \fill[black!12] (0,0) rectangle (2.0,0.14);
+      \fill[AccentBar] (0,0) rectangle ({0.004*#2},0.14);
+      \node[anchor=east,font=\tiny,text=Ink] at (2.0,0.28) {#2};
+    \end{tikzpicture}\\[3pt]
+  }%
+}
+
+\begin{document}
+\begin{tikzpicture}[remember picture,overlay]
+  % Main left column (experience / education)
+  \node[anchor=north west,text width=5.05in,inner sep=0] (main)
+    at ([xshift=0.35in,yshift=-0.35in]current page.north west) {%
+      {\fontsize{26}{30}\selectfont\bfseries\color{white}ALEX RIVERA}\\[2pt]
+      {\large\color{Muted}IT Technologist with Software Development Experience}\\[8pt]
+      % Contact icon cluster (text stand-ins; no FontAwesome dependency)
+      {\small\color{white}%
+        {\tikz\node[circle,fill=white,minimum size=0.22cm,inner sep=0]{};} Suffolk County, NY
+        \quad
+        {\tikz\node[circle,fill=white,minimum size=0.22cm,inner sep=0]{};} alex.rivera.example@example.com
+        \quad
+        {\tikz\node[circle,fill=white,minimum size=0.22cm,inner sep=0]{};} +1 555 0100
+        \quad
+        {\tikz\node[circle,fill=white,minimum size=0.22cm,inner sep=0]{};} github.com/example-rivera
+      }\\[12pt]
+      {\color{white}\textbf{\large Professional Experience}}\\[4pt]
+      {\color{white}\textbf{Northbridge Field Systems}} \hfill {\color{Muted}04/2023 -- Present}\\
+      {\color{Muted}\textit{Lead Field Technician}}\\
+      {\color{white}\small
+        Coordinated field technicians and quality analysis for a regional asset database.\\
+        Built Python data-cleaning tools for ticket and inventory exports.\\[6pt]
+      }
+      {\color{white}\textbf{Harbor Tutoring Collective}} \hfill {\color{Muted}06/2017 -- Present}\\
+      {\color{Muted}\textit{Educator}}\\
+      {\color{white}\small
+        Designed AP Calculus and AP Chemistry prep plans for secondary students.\\[6pt]
+      }
+      {\color{white}\textbf{Coastal Logistics Desk}} \hfill {\color{Muted}09/2018 -- 12/2021}\\
+      {\color{Muted}\textit{Data Entry / Tech Support}}\\
+      {\color{white}\small
+        Maintained dispatch records and performed workstation repair triage.\\[10pt]
+      }
+      {\color{white}\textbf{\large Education}}\\[4pt]
+      {\color{white}\textbf{State College at Example Bay}} \hfill {\color{Muted}08/2011 -- 12/2016}\\
+      {\color{Muted}B.S. Mathematics; Minor in Computer \& Information Science}\\
+      {\color{white}\small Relevant projects: RAG Prototype, Python Data Processor, Task Database, Parallax Site.}
+    };
+
+  % Door-hanger / rounded-tag sidebar on the right
+  \begin{scope}
+    \fill[PanelLight, rounded corners=18pt]
+      ([xshift=-2.55in,yshift=-0.55in]current page.north east)
+      rectangle
+      ([xshift=-0.35in,yshift=-9.7in]current page.north east);
+    % Circular cutout suggestion at top of tag
+    \fill[PageDark]
+      ([xshift=-1.45in,yshift=-0.95in]current page.north east) circle (0.28in);
+    \node[anchor=north,text width=1.95in,inner sep=0] at
+      ([xshift=-1.45in,yshift=-1.45in]current page.north east) {%
+        {\bfseries\color{Ink}About Me}\\[2pt]
+        {\footnotesize\color{Ink}Educator, computer nerd, technical enthusiast, and autodidact.}\\[8pt]
+        {\bfseries\color{Ink}Technical Skills}\\[3pt]
+        \SkillBar{MATLAB Scripts}{450}%
+        \SkillBar{Front-End React Development}{400}%
+        \SkillBar{Data Analysis in Python}{450}%
+        \SkillBar{DBMS with SQL}{420}%
+        \SkillBar{OOP (Java Python C++ VB)}{480}%
+        {\bfseries\color{Ink}Languages}\\[2pt]
+        {\footnotesize\color{Ink}English (Mother Tongue)\\Spanish (Fluent)\\Arabic (Intermediate)}\\[6pt]
+        {\bfseries\color{Ink}Hobbies}\\[2pt]
+        {\footnotesize\color{Ink}Photography, Gaming, Software Development, Gardening}\\[6pt]
+        {\bfseries\color{Ink}Volunteering}\\[2pt]
+        {\footnotesize\color{Ink}PC Hardware Mods, Study Groups, Special Needs Aid}
+      };
+  \end{scope}
+
+  % Footer strip
+  \node[anchor=south west,text=Muted,font=\tiny] at
+    ([xshift=0.4in,yshift=0.28in]current page.south west)
+    {2024/10/26 \quad SYNTHETIC RIVERA -- CV SPIKE \quad 01/01};
+\end{tikzpicture}
+\end{document}

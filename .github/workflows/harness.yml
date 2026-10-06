@@ -44,6 +44,10 @@ jobs:
 
       - name: Validate resume presentation
         run: python scripts/validate_resume_presentation.py
+      - name: Validate resume visual projection
+        run: python scripts/validate_resume_presentation_visual.py
+      - name: Validate resume visual spike
+        run: python scripts/validate_resume_visual_spike.py
 
       - name: Validate harness
         run: python scripts/validate_harness.py
@@ -51,11 +55,14 @@ jobs:
       - name: Validate career-state contract
         run: python scripts/validate_career_state.py
 
+      - name: Validate local runtime lifecycle
+        run: python scripts/validate_local_runtime_lifecycle.py
+
       - name: Test Study Syndicate export
         run: python tests/test_study_guidance_export.py
 
       - name: Compile harness validators
-        run: python -m py_compile scripts/validate_governance.py scripts/validate_product_version.py scripts/product_version.py scripts/validate_application_harness.py scripts/validate_application_companion.py scripts/validate_resume_presentation.py scripts/validate_harness.py scripts/validate_career_state.py scripts/validate_repository_promotion.py scripts/promotion_guard.py scripts/export_study_guidance.py tests/test_product_version.py tests/test_repository_promotion.py tests/test_study_guidance_export.py
+        run: python -m py_compile scripts/validate_governance.py scripts/validate_product_version.py scripts/product_version.py scripts/validate_application_harness.py scripts/validate_application_companion.py scripts/validate_resume_presentation.py scripts/validate_resume_presentation_visual.py scripts/validate_resume_visual_spike.py scripts/validate_harness.py scripts/validate_career_state.py scripts/validate_local_runtime_lifecycle.py scripts/validate_repository_promotion.py scripts/promotion_guard.py scripts/export_study_guidance.py tests/test_product_version.py tests/test_repository_promotion.py tests/test_study_guidance_export.py
 
       - name: Check whitespace
         shell: bash
@@ -92,3 +99,42 @@ jobs:
           }
           Write-Host "WINDOWS_REPO_ROOT=PASS"
           Write-Host "DEV_ROOT=$actual"
+
+  windows-lifecycle:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.16.0"
+
+      - name: Set up pnpm
+        shell: pwsh
+        run: |
+          corepack enable
+          corepack prepare pnpm@10 --activate
+          pnpm --version
+
+      - name: Install EscapeHatch artifact dependencies
+        shell: pwsh
+        run: pnpm --dir artifacts/escape-hatch install
+
+      - name: Test runtime control plane
+        shell: pwsh
+        run: pnpm --dir artifacts/escape-hatch run test:runtime-control
+
+      - name: Typecheck EscapeHatch artifact
+        shell: pwsh
+        run: pnpm --dir artifacts/escape-hatch run typecheck
+
+      - name: Build Vite artifact
+        shell: pwsh
+        run: pnpm --dir artifacts/escape-hatch run build
+
+      - name: Test Windows runtime lifecycle
+        shell: pwsh
+        run: ./tests/windows/Test-EscapeHatch-Runtime.ps1

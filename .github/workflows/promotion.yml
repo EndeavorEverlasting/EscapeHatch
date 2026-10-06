@@ -84,13 +84,17 @@ jobs:
       - name: Test promotion guard (unit)
         run: python tests/test_repository_promotion.py
       - name: Compile harness validators (lint/type/static)
-        run: python -m py_compile scripts/validate_governance.py scripts/validate_product_version.py scripts/product_version.py scripts/validate_application_harness.py scripts/validate_application_companion.py scripts/validate_resume_presentation.py scripts/validate_harness.py scripts/validate_career_state.py scripts/validate_repository_promotion.py scripts/promotion_guard.py scripts/export_study_guidance.py tests/test_product_version.py tests/test_repository_promotion.py tests/test_study_guidance_export.py
+        run: python -m py_compile scripts/validate_governance.py scripts/validate_product_version.py scripts/product_version.py scripts/validate_application_harness.py scripts/validate_application_companion.py scripts/validate_resume_presentation.py scripts/validate_resume_presentation_visual.py scripts/validate_resume_visual_spike.py scripts/validate_harness.py scripts/validate_career_state.py scripts/validate_repository_promotion.py scripts/promotion_guard.py scripts/export_study_guidance.py tests/test_product_version.py tests/test_repository_promotion.py tests/test_study_guidance_export.py
       - name: Validate application harness (integration)
         run: python scripts/validate_application_harness.py
       - name: Validate application companion (integration)
         run: python scripts/validate_application_companion.py
       - name: Validate resume presentation (integration)
         run: python scripts/validate_resume_presentation.py
+      - name: Validate resume visual projection
+        run: python scripts/validate_resume_presentation_visual.py
+      - name: Validate resume visual spike
+        run: python scripts/validate_resume_visual_spike.py
       - name: Validate harness (build + harness-e2e)
         run: python scripts/validate_harness.py
       - name: Validate career-state (integration)

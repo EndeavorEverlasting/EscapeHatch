@@ -11,7 +11,10 @@
       "pdf_projection"
     ],
     "private_content_in_repository": false,
-    "universal_ats_compatibility_claim": false
+    "universal_ats_compatibility_claim": false,
+    "default_projection": "ats",
+    "optional_visual_projection": "contracts/resume-presentation-visual.v1.json",
+    "visual_projection_not_for_ats_submission": true
   },
   "page": {
     "size": "US Letter",

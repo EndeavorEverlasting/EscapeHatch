@@ -1,0 +1,31 @@
+# Private resume sources and rendered outputs (never commit real content)
+Source Resumes Not to Mutate but to Generate/
+private/
+private/resume-visual/
+Outputs/resume-visual/
+
+# Dependencies and local build noise
+node_modules/
+**/node_modules/
+**/dist/
+*.tsbuildinfo
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Local session scratch (not registry-owned)
+session-ses_*.md
+session-ses_*.mdxyz
+OC-EscapeHatch-RunTime-Glitch.md
+
+# LaTeX aux from local compiles
+*.aux
+*.log
+*.out
+*.synctex.gz
+*.fls
+*.fdb_latexmk

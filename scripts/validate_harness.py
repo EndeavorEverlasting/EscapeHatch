@@ -15,6 +15,9 @@ COMPONENTS = {
     "governance_validator": "scripts/validate_governance.py",
     "application_harness_validator": "scripts/validate_application_harness.py",
     "resume_presentation_validator": "scripts/validate_resume_presentation.py",
+    "resume_presentation_visual_contract": "contracts/resume-presentation-visual.v1.json",
+    "resume_presentation_visual_validator": "scripts/validate_resume_presentation_visual.py",
+    "resume_visual_spike_validator": "scripts/validate_resume_visual_spike.py",
     "product_version_validator": "scripts/validate_product_version.py",
     "product_version_authority": "VERSION",
     "product_release_contract": "contracts/product-release.v1.json",
@@ -27,6 +30,9 @@ COMPONENTS = {
     "application_preference_cache": "harness/contracts/application-preference-cache.v1.json",
     "application_form_workflow": "harness/workflows/APPLICATION_FORM_INTAKE.md",
     "resume_presentation_contract": "contracts/resume-presentation.v1.json",
+    "local_runtime_lifecycle_contract": "contracts/local-runtime-lifecycle.v1.json",
+    "local_runtime_lifecycle_fixture": "fixtures/local-runtime-lifecycle.v1.example.json",
+    "local_runtime_lifecycle_validator": "scripts/validate_local_runtime_lifecycle.py",
     "pre_commit_hook": ".githooks/pre-commit",
     "pre_push_hook": ".githooks/pre-push",
     "scoped_skill": "skills/harness-operations/SKILL.md",
@@ -43,8 +49,11 @@ VALIDATION_ORDER = [
     "python scripts/validate_application_harness.py",
     "python scripts/validate_application_companion.py",
     "python scripts/validate_resume_presentation.py",
+    "python scripts/validate_resume_presentation_visual.py",
+    "python scripts/validate_resume_visual_spike.py",
     "python scripts/validate_harness.py",
     "python scripts/validate_career_state.py",
+    "python scripts/validate_local_runtime_lifecycle.py",
     "git diff --check",
 ]
 MARKERS = {
@@ -75,6 +84,15 @@ REQUIRED_REGISTRY = {
     "Application companion validator": "scripts/validate_application_companion.py",
     "Resume presentation contract": "contracts/resume-presentation.v1.json",
     "Resume presentation validator": "scripts/validate_resume_presentation.py",
+    "Resume visual projection contract": "contracts/resume-presentation-visual.v1.json",
+    "Resume visual projection validator": "scripts/validate_resume_presentation_visual.py",
+    "Resume visual dynamic template (synthetic)": "templates/resume-visual-dynamic/v1/synthetic-dynamic.tex",
+    "Resume visual spike validator": "scripts/validate_resume_visual_spike.py",
+    "Resume visual spike receipt": "harness/reports/resume-visual-spike-receipt.v1.json",
+    "Visual resume dual-track plan": "docs/plans/visual-resume-dual-track-reference.v1.md",
+    "Local runtime lifecycle contract": "contracts/local-runtime-lifecycle.v1.json",
+    "Local runtime lifecycle example fixture": "fixtures/local-runtime-lifecycle.v1.example.json",
+    "Local runtime lifecycle validator": "scripts/validate_local_runtime_lifecycle.py",
     "Product release version authority": "VERSION",
     "Product release policy contract": "contracts/product-release.v1.json",
     "Product version CLI": "scripts/product_version.py",
@@ -183,7 +201,7 @@ def validate_resolver() -> None:
 
 def validate_ci() -> None:
     text = read(".github/workflows/harness.yml")
-    for marker in ("name: Harness Validation","push:","pull_request:","name: Validate governance","run: python scripts/validate_governance.py","name: Validate product version","run: python scripts/validate_product_version.py","name: Test product version","run: python tests/test_product_version.py","name: Validate repository promotion","run: python scripts/validate_repository_promotion.py","name: Test promotion guard","run: python tests/test_repository_promotion.py","name: Validate application harness","run: python scripts/validate_application_harness.py","name: Validate application companion","run: python scripts/validate_application_companion.py","name: Validate resume presentation","run: python scripts/validate_resume_presentation.py","name: Validate harness","run: python scripts/validate_harness.py","name: Validate career-state contract","run: python scripts/validate_career_state.py","git diff --check","windows-location:","scripts/resolve_repo.ps1 -ResolveOnly","WINDOWS_REPO_ROOT=PASS"):
+    for marker in ("name: Harness Validation","push:","pull_request:","name: Validate governance","run: python scripts/validate_governance.py","name: Validate product version","run: python scripts/validate_product_version.py","name: Test product version","run: python tests/test_product_version.py","name: Validate repository promotion","run: python scripts/validate_repository_promotion.py","name: Test promotion guard","run: python tests/test_repository_promotion.py","name: Validate application harness","run: python scripts/validate_application_harness.py","name: Validate application companion","run: python scripts/validate_application_companion.py","name: Validate resume presentation","run: python scripts/validate_resume_presentation.py","name: Validate harness","run: python scripts/validate_harness.py","name: Validate career-state contract","run: python scripts/validate_career_state.py","name: Validate local runtime lifecycle","run: python scripts/validate_local_runtime_lifecycle.py","git diff --check","windows-location:","scripts/resolve_repo.ps1 -ResolveOnly","WINDOWS_REPO_ROOT=PASS"):
         if marker not in text:
             raise HarnessError(f"CI missing active marker: {marker}")
     # Promotion workflow must exist and have correct triggers
@@ -220,7 +238,7 @@ def self_tests(manifest: dict) -> int:
 def main() -> int:
     try:
         manifest = load_manifest(); validate_markers(); rows = parse_registry(); validate_hooks(); validate_resolver(); validate_ci()
-        run_validator("scripts/validate_governance.py"); run_validator("scripts/validate_product_version.py"); run_validator("scripts/validate_repository_promotion.py"); run_validator("scripts/validate_application_harness.py"); run_validator("scripts/validate_application_companion.py"); run_validator("scripts/validate_resume_presentation.py")
+        run_validator("scripts/validate_governance.py"); run_validator("scripts/validate_product_version.py"); run_validator("scripts/validate_repository_promotion.py"); run_validator("scripts/validate_application_harness.py"); run_validator("scripts/validate_application_companion.py"); run_validator("scripts/validate_resume_presentation.py"); run_validator("scripts/validate_local_runtime_lifecycle.py")
         negatives = self_tests(manifest)
     except HarnessError as exc:
         print(f"HARNESS_VALIDATION: FAIL: {exc}", file=sys.stderr); return 1
@@ -235,6 +253,7 @@ def main() -> int:
     print("application_harness_validator=PASS")
     print("application_companion_validator=PASS")
     print("resume_presentation_validator=PASS")
+    print("local_runtime_lifecycle_validator=PASS")
     return 0
 
 if __name__ == "__main__":

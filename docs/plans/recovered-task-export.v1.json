@@ -1,0 +1,1677 @@
+{
+  "schema": "escapehatch/recovered-task-export/v1",
+  "provenance": {
+    "donor_commit": "b01f62860a27081418877069f599dbc6aa510b8e",
+    "recovered_from": "generated docs/plans mirror",
+    "recovered_at": "2026-09-20",
+    "limitations": "Replit board items newer than #120 were not present in the donor export; this snapshot does not invent them."
+  },
+  "tasks": [
+    {
+      "taskRef": "#1",
+      "title": "Complete browser application assist",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T17:05:01.573Z",
+      "description": "# Complete browser application assist\n\n## What & Why\nThe current EscapeHatch artifact is a local-first preparation cockpit, not yet the page-level assistant described in the product vision. It stores a small contact profile, manually maintained answer snippets, and application notes in `localStorage`, but it has no browser extension in this workspace, no resume-to-profile ingestion, no real-form field detection/fill loop, and no reviewed path for turning newly answered application questions into reusable profile knowledge.\n\nComplete the bridge from the cockpit to a browser application-assist surface using the attached two-page resume as the first real intake case. The resume has an extractable text layer and contains the kinds of source material the product needs to handle: contact links, a professional summary, strengths/skills, software/project highlights, multiple roles with dates and bullet points, and education. Import those facts into a reviewable structured profile without placing the user's personal values in source code, test fixtures, logs, or task descriptions.\n\nThe assist session must work both as a one-shot page scan and as a controlled multi-page loop. On a page containing all supported fields, it should scan and fill in one explicit action, then clearly tell the user that known fields are populated and that they should review the page and use the site's own Next/Continue control. When the user advances manually, the session should recognize the same-application next page, preserve its state, show that a new page is ready to scan, and wait for the user's explicit fill action. EscapeHatch may report observed page progress, but it must not claim that an application is complete or submitted unless the user explicitly records that outcome.\n\n## Done looks like\n- A loadable MV3 browser-assist package exists in the workspace and can be opened while a real or synthetic job application is active.\n- The attached resume can be imported locally, parsed, and mapped into an expanded structured profile containing reviewed contact, links, summary, skills, projects, experience, and education data. The user sees the extracted value and source context, can accept/edit/reject each proposal, and invalid or unsupported imports leave the current profile unchanged.\n- The user can explicitly start an assist session, inspect the recognized fields and proposed values, fill only approved empty fields, undo the last fill, pause/resume, and latch an emergency stop. Existing values, unknown controls, passwords, uploads, attestations, legal/compliance, demographic, and other policy-sensitive fields remain untouched.\n- After a one-shot fill, the extension reports page-level progress such as filled, already populated, manual-review, blocked, and unknown controls, and clearly instructs the user to review the page and advance using the job site's own control. It never clicks Next, Continue, Apply, Submit, or certification controls.\n- After manual navigation to another page in the same application origin, the extension preserves the session, detects the new document or SPA form state, shows a ready-to-scan/ready-to-fill status, and waits for explicit user confirmation before writing. It handles repeated pages without losing the fill undo history or confusing one page's results with another's.\n- The extension and cockpit can exchange the user's profile and reusable answers through an explicit, validated, user-visible sync flow, with JSON import/export as a recovery path and conflict handling that never silently overwrites newer work.\n- After a user manually answers a detected application question, the assist surface can show the question's canonical match and let the user save a reviewed reusable answer or an opportunity-specific override. Unknown or ambiguous questions stay blank and are surfaced for manual mapping; answers are never silently inferred or committed.\n- Repeated questions can be suggested from the approved profile/answer library on later application pages, while the user remains responsible for accepting, editing, and submitting the application.\n- The cockpit can show an assist session's observed progress and lets the user explicitly record an application milestone. It does not infer “complete” or “applied” merely because all currently visible fields are filled or a page changed.\n- The cockpit continues to work without the extension, the current local backup/restore behavior remains compatible, and the extension never requires broad host access or page-runtime network requests.\n- Automated coverage exercises the shared mapping/policy logic, resume import validation, sync/conflict behavior, one-shot filling, same-origin multi-page continuation, progress messaging, and a synthetic application flow proving that no submit/continue action is triggered and user-edited values are not overwritten.\n\n## Out of scope\n- Automatic clicking of Apply, Next, Continue, Submit, certification, or any other navigation/action control.\n- Filling file-upload controls with a resume; browsers require the user to choose files manually. Resume ingestion only extracts reusable facts and suggestions for review.\n- Automatic answers for EEO/demographic, work authorization, sponsorship, legal/compliance, compensation, accommodation, truth/accuracy, or other high-stakes questions without the explicit confirmation policy for that question type.\n- Treating a route change, a full page, or an empty set of known fields as proof that an application is complete or submitted.\n- Accounts, cloud sync, server-side storage, telemetry, or sending profile/resume/application content to the existing API server. The API remains health-only unless a later product decision changes the privacy model.\n- Universal compatibility with every ATS framework or custom widget. Unsupported, ambiguous, or inaccessible controls must fail closed and be reported to the user.\n- Job-board search, application submission tracking beyond the existing cockpit queue, or redesigning unrelated cockpit persistence features.\n\n## Steps\n1. **Define the shared local data contract** — Reconcile the cockpit profile and answer schemas with the browser-assist profile, structured resume sections, canonical question IDs, preference precedence, provenance, freshness, per-application overrides, and page/session progress. Add versioned serialization, migration, validation, and an explicit bridge protocol so sync is user initiated, conflict-aware, and safe to retry.\n2. **Build resume-to-profile intake from the attached PDF** — Add a local import flow for the supported document formats, beginning with the attached text-based PDF. Extract only representable facts and answer suggestions, preserve source snippets or page references for review, and present field-by-field confidence/ambiguity states. Persist only approved structured profile/answer data, retain no hidden upload side effects, and preserve the existing workspace when parsing or validation fails. Do not commit the uploaded resume's personal values into source, fixtures, logs, or generated artifacts.\n3. **Implement the MV3 assist package** — Port or reimplement the upstream Fill Plan → policy gate → DOM writer pipeline in a workspace-owned browser package. Add active-tab session binding, semantic field classification, live re-gating before every write, exact select matching, existing-value preservation, origin-change pause behavior, page-scoped write batches, and visible Start Assist / Fill This Page / Undo / Pause / Resume / Emergency Stop controls.\n4. **Add one-shot and multi-page session state** — Scan all supported controls on the current page in one explicit action, produce a page progress summary, and instruct the user to review and use the site's own Next/Continue action. Observe same-origin full navigations and SPA/DOM changes, preserve the session and per-page history, announce when the next page is ready, and require explicit fill confirmation on each page. Keep application status honest by separating observed page progress from user-recorded completion/submission milestones.\n5. **Add reviewed question learning** — Detect visible question prompts and controls beyond the identity/contact lane without guessing their meaning. Match only unambiguous canonical questions, show reusable-answer suggestions with scope and freshness, and provide explicit save/update actions after the user has answered; keep sensitive or unknown questions manual and preserve per-opportunity answers separately from reusable profile knowledge.\n6. **Integrate cockpit and extension workflows** — Add the cockpit-side connection/sync entry point, extension-side import/export and status feedback, and a recovery path when the other surface is unavailable. Make profile, resume-derived facts, answer, and session-progress updates visible in both surfaces after a confirmed sync, retain local backups, and surface conflicts with choices rather than silently choosing a side.\n7. **Verify the complete user journey** — Add unit/contract coverage for schemas, migrations, resume extraction/review, classification, policy gates, page transitions, fill undo, sensitive-question fail-closed behavior, progress semantics, and conflict resolution. Add browser tests against a synthetic multi-page application fixture for review-before-fill, one-shot fill, explicit next-page guidance, re-scan after manual navigation, no-submit guarantees, manual answer capture, reload/reconnect recovery, and user-edited-field protection; document the load-unpacked setup, supported boundaries, and known ATS compatibility ceiling.\n\n## Relevant files\n- `[private donor asset path omitted]/[private resume asset omitted]`\n- `artifacts/escape-hatch/src/App.tsx`\n- `artifacts/escape-hatch/src/lib/storage.ts`\n- `artifacts/escape-hatch/src/lib/storage.test.ts`\n- `artifacts/escape-hatch/tests/persistence.spec.ts`\n- `artifacts/escape-hatch/package.json`\n- `artifacts/escape-hatch/playwright.config.ts`\n- `artifacts/escape-hatch/vite.config.ts`\n- `replit.md`\n- `artifacts/api-server/src/app.ts`\n- `artifacts/api-server/src/routes/index.ts`\n- `lib/api-spec/openapi.yaml`\n- `lib/db/src/schema/index.ts`",
+      "dependsOn": [],
+      "artifactKinds": [],
+      "followUpCategory": "incomplete_scope",
+      "createdAt": "2026-09-19T21:12:29.055Z"
+    },
+    {
+      "taskRef": "#2",
+      "title": "Make profile changes safe to recover from",
+      "state": "MERGED",
+      "updatedAt": "2026-09-19T21:16:06.764Z",
+      "description": "# Make profile changes safe to recover from\n\n## What & Why\nThe first build depends on browser-local storage, so profile and queue data should be protected against malformed imports and accidental edits before the app becomes a daily tool.\n\n## Done looks like\n- JSON import rejects unsupported schemas and malformed values with clear feedback.\n- Exported data can round-trip back into the app without losing fields.\n- CRUD actions for answers and applications persist after reload.\n- The most important local-storage flows have direct regression coverage.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/src/index.css",
+      "dependsOn": [],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-19T21:12:29.055Z"
+    },
+    {
+      "taskRef": "#3",
+      "title": "Let users back up and restore their whole workspace",
+      "state": "MERGED",
+      "updatedAt": "2026-09-19T21:54:00.616Z",
+      "description": "# Let users back up and restore their whole workspace\n\n## What & Why\nThe current export safely backs up the reusable profile, while answers and application queue entries remain browser-local only. A single workspace backup would make the daily tool easier to recover or move to another browser.\n\n## Done looks like\n- A versioned JSON backup includes the profile, answer library, and application queue without dropping fields.\n- Import validates every collection before changing any saved data.\n- Invalid backups show clear feedback and leave the existing workspace untouched.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/src/lib/storage.ts\n- artifacts/escape-hatch/src/lib/storage.test.ts",
+      "dependsOn": [
+        "#2"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-19T21:15:45.190Z",
+      "proposedFromRef": "#2"
+    },
+    {
+      "taskRef": "#4",
+      "title": "Catch UI persistence regressions before release",
+      "state": "MERGED",
+      "updatedAt": "2026-09-19T21:33:47.809Z",
+      "description": "# Catch UI persistence regressions before release\n\n## What & Why\nThe current regression suite directly covers storage validation and round trips, but not the rendered import feedback or the actual add/edit/delete interactions after a browser reload. Browser-level coverage would protect the user-visible recovery flows.\n\n## Done looks like\n- A browser test imports malformed JSON and confirms the error is visible without changing the draft.\n- A browser test confirms a valid export/import retains every profile field.\n- Answer and application add/edit/delete flows are reloaded and verified through the UI.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/src/lib/storage.test.ts\n- artifacts/escape-hatch/package.json",
+      "dependsOn": [
+        "#2"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-19T21:15:45.190Z",
+      "proposedFromRef": "#2"
+    },
+    {
+      "taskRef": "#5",
+      "title": "Confirm the home quick action stays applied after refresh",
+      "state": "MERGED",
+      "updatedAt": "2026-09-19T22:01:53.906Z",
+      "description": "# Confirm the home quick action stays applied after refresh\n\n## What & Why\nThe dashboard can mark an application as applied without opening the application editor. A browser regression test should ensure that user-visible shortcut remains persisted after a reload.\n\n## Done looks like\n- A browser test creates an application, uses the home page's Mark applied action, and verifies the Applied status after reload.\n- The test covers the application count/status shown on the dashboard and the application queue.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#4"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-19T21:22:54.988Z",
+      "proposedFromRef": "#4"
+    },
+    {
+      "taskRef": "#6",
+      "title": "Make sure empty answer and application forms cannot create broken entries",
+      "state": "MERGED",
+      "updatedAt": "2026-09-19T21:40:45.498Z",
+      "description": "# Make sure empty answer and application forms cannot create broken entries\n\n## What & Why\nThe forms currently rely on browser required fields and submit guards. A focused browser test would protect users from accidentally creating blank answer or application cards if form markup or validation changes.\n\n## Done looks like\n- Browser coverage confirms an empty answer cannot be saved and the dialog remains open.\n- Browser coverage confirms an application without a company or role cannot be saved and the dialog remains open.\n- Valid entries can still be saved after the validation attempt.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#4"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-19T21:22:54.988Z",
+      "proposedFromRef": "#4"
+    },
+    {
+      "taskRef": "#7",
+      "title": "Prevent saved entries from losing their required details",
+      "state": "MERGED",
+      "updatedAt": "2026-09-19T21:47:43.070Z",
+      "description": "# Prevent saved entries from losing their required details\n\n## What & Why\nThe add flows now have regression coverage for incomplete submissions, but editing an existing answer or application should receive the same protection. This prevents a later form change from clearing a required title, company, or role and leaving a broken card behind.\n\n## Done looks like\n- Browser coverage confirms clearing an answer title or content cannot save and closes neither the dialog nor the existing entry\n- Browser coverage confirms clearing an application's company or role cannot save and leaves the dialog open\n- Existing valid entries remain unchanged after each rejected edit\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#6"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-19T21:36:47.692Z",
+      "proposedFromRef": "#6"
+    },
+    {
+      "taskRef": "#8",
+      "title": "Explain which required details are missing before saving",
+      "state": "MERGED",
+      "updatedAt": "2026-09-19T23:52:30.790Z",
+      "description": "# Explain which required details are missing before saving\n\n## What & Why\nIncomplete forms currently stay open through browser validation, but users do not get app-specific guidance about what needs attention. Clear inline messages would make the answer and application flows easier to recover from, especially for keyboard and assistive-technology users.\n\n## Done looks like\n- Answer forms identify the missing title or answer content when save is attempted\n- Application forms identify whether company or role is missing\n- Validation messages are associated with their fields and disappear once the form is valid\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/src/index.css",
+      "dependsOn": [
+        "#6"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-19T21:36:47.692Z",
+      "proposedFromRef": "#6"
+    },
+    {
+      "taskRef": "#9",
+      "title": "Let users undo accidental answer or application deletions",
+      "state": "MERGED",
+      "updatedAt": "2026-09-19T23:54:55.641Z",
+      "description": "# Let users undo accidental answer or application deletions\n\n## What & Why\nThe workspace now protects saved entries from invalid edits, but a confirmed deletion is still immediate and irreversible. An undo action would reduce the risk of losing a valid answer or application by mistake.\n\n## Done looks like\n- Deleting an answer or application offers a short-lived undo action\n- Undo restores the complete original entry in the same position\n- The restored entry remains present after a page reload\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#7"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-19T21:42:00.299Z",
+      "proposedFromRef": "#7"
+    },
+    {
+      "taskRef": "#10",
+      "title": "Keep saved entries in sync across open workspace tabs",
+      "state": "MERGED",
+      "updatedAt": "2026-09-19T23:58:51.063Z",
+      "description": "# Keep saved entries in sync across open workspace tabs\n\n## What & Why\nThe workspace stores answers and applications in browser storage, so changes made in one open tab can leave another tab showing stale cards. Synchronizing storage changes would prevent edits from appearing lost or being overwritten by an older view.\n\n## Done looks like\n- Opening the workspace in two tabs reflects answer and application changes in both tabs\n- A tab refreshes its local view when another tab saves or deletes an entry\n- Browser coverage verifies the synchronization behavior\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/src/lib/storage.ts\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#7"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "tech_debt",
+      "createdAt": "2026-09-19T21:42:00.299Z",
+      "proposedFromRef": "#7"
+    },
+    {
+      "taskRef": "#11",
+      "title": "Confirm restored workspaces survive a refresh",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T00:00:35.516Z",
+      "description": "Add browser coverage proving that a successfully restored profile, answer library, and application queue remain intact after navigating away and reloading the app. This closes the regression gap around persistence after the restore flow.\n\nRelevant files:\n- artifacts/escape-hatch/tests/persistence.spec.ts\n- artifacts/escape-hatch/src/lib/storage.ts",
+      "dependsOn": [
+        "#3"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-19T21:51:45.499Z",
+      "proposedFromRef": "#3"
+    },
+    {
+      "taskRef": "#12",
+      "title": "Show users what will be replaced before restoring a workspace",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T00:04:06.617Z",
+      "description": "Add a restore confirmation that summarizes the profile, answer, and application collections in the selected backup before replacing the current local workspace. Keep the existing all-or-nothing validation behavior.\n\nRelevant files:\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/src/lib/storage.ts",
+      "dependsOn": [
+        "#3"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-19T21:51:45.499Z",
+      "proposedFromRef": "#3"
+    },
+    {
+      "taskRef": "#13",
+      "title": "Tell users when a restored workspace cannot be saved",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T00:08:19.515Z",
+      "description": "Make local-storage write failures visible after a restore instead of allowing a success message when browser storage is unavailable or full. Preserve the in-memory UI state while clearly explaining that the data was not persisted.\n\nRelevant files:\n- artifacts/escape-hatch/src/lib/storage.ts\n- artifacts/escape-hatch/src/App.tsx",
+      "dependsOn": [
+        "#3"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "tech_debt",
+      "createdAt": "2026-09-19T21:51:45.499Z",
+      "proposedFromRef": "#3"
+    },
+    {
+      "taskRef": "#14",
+      "title": "Stop offering “Mark applied” after an opportunity is already applied",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T00:10:39.249Z",
+      "description": "# Stop offering “Mark applied” after an opportunity is already applied\n\n## What & Why\nThe home shortcut remains available for any non-closed opportunity, including one whose status is already Applied. Hiding or replacing that action prevents a misleading repeat action and makes the dashboard state clearer.\n\n## Done looks like\n- An Applied opportunity does not show the home page’s “Mark applied” action.\n- The dashboard still shows the opportunity in the correct application count.\n- A browser regression test covers the post-application home state after reload.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#5"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-19T21:56:03.844Z",
+      "proposedFromRef": "#5"
+    },
+    {
+      "taskRef": "#15",
+      "title": "Confirm dashboard counts stay accurate when opportunities are closed",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T00:12:31.859Z",
+      "description": "# Confirm dashboard counts stay accurate when opportunities are closed\n\n## What & Why\nThe dashboard intentionally excludes closed opportunities from its active counts, but the current browser coverage does not verify that this remains true after status changes and reloads. A regression here could make the home summary disagree with the application queue.\n\n## Done looks like\n- A browser test creates an opportunity, changes it to Closed, and verifies the dashboard counts exclude it.\n- The queue still shows the Closed status after reload.\n- The test uses the existing persistence suite and stable application selectors.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#5"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-19T21:56:03.844Z",
+      "proposedFromRef": "#5"
+    },
+    {
+      "taskRef": "#16",
+      "title": "Catch missing-detail guidance regressions before shipping",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T00:14:35.524Z",
+      "description": "# Catch missing-detail guidance regressions before shipping\n\n## What & Why\nThe answer and opportunity dialogs now provide field-specific validation, but the browser suite does not assert the visible messages or their accessibility wiring. A focused regression test will protect this recovery path.\n\n## Done looks like\n- Empty answer submission asserts both title and answer-content messages\n- Empty opportunity submission asserts company and role messages\n- Tests verify aria-invalid and aria-describedby point to the visible messages\n- Filling each missing field removes only that field's message\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts\n- artifacts/escape-hatch/src/App.tsx",
+      "dependsOn": [
+        "#8"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-19T22:07:17.165Z",
+      "proposedFromRef": "#8"
+    },
+    {
+      "taskRef": "#17",
+      "title": "Move keyboard focus to the first missing detail after save",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T00:17:22.046Z",
+      "description": "# Move keyboard focus to the first missing detail after save\n\n## What & Why\nInline messages identify missing details, but keyboard users still have to find the first invalid field manually after a failed save. Moving focus to the first missing field would make recovery faster without changing what gets saved.\n\n## Done looks like\n- Failed answer saves focus the title first, or the answer content when only content is missing\n- Failed opportunity saves focus company first, or role when only role is missing\n- Focus remains inside the open dialog and works with screen readers\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/src/index.css",
+      "dependsOn": [
+        "#8"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-19T22:07:17.165Z",
+      "proposedFromRef": "#8"
+    },
+    {
+      "taskRef": "#18",
+      "title": "Keep the undo option available when users briefly leave the list",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-19T23:54:50.359Z",
+      "description": "# Keep the undo option available when users briefly leave the list\n\n## What & Why\nThe deletion recovery notice is intentionally short-lived and currently belongs to the answer or application page. Users who navigate away before clicking Undo lose that recovery option, even though the deletion was recent.\n\n## Done looks like\n- A recent answer or application deletion can still be undone after navigating between the main workspace pages\n- The recovery entry expires after a clear short window and cannot restore stale data\n- Restoring still preserves the complete original entry and its original position\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/src/lib/storage.ts",
+      "dependsOn": [
+        "#9"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-19T23:54:50.359Z",
+      "proposedFromRef": "#9"
+    },
+    {
+      "taskRef": "#19",
+      "title": "Confirm deleted entries stop being recoverable after the undo window",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-19T23:54:50.359Z",
+      "description": "# Confirm deleted entries stop being recoverable after the undo window\n\n## What & Why\nThe current browser coverage verifies that Undo restores answers and applications, but not that the short-lived action disappears and the deletion remains after the recovery window expires.\n\n## Done looks like\n- Browser coverage verifies the answer undo notice expires\n- Browser coverage verifies the application undo notice expires\n- Reloading after expiry confirms the deleted entry is still absent\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#9"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-19T23:54:50.359Z",
+      "proposedFromRef": "#9"
+    },
+    {
+      "taskRef": "#20",
+      "title": "Confirm profile updates appear in every open tab",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-19T23:58:42.034Z",
+      "description": "# Confirm profile updates appear in every open tab\n\n## What & Why\nThe shared storage listener also covers profile data, but the cross-tab browser coverage currently exercises answers and applications only. A profile-specific check protects the personal details users rely on across the workspace.\n\n## Done looks like\n- A profile saved in one open tab appears in another tab without a reload\n- A profile edit made in either tab replaces the older rendered details in the other tab\n- Browser coverage fails if profile synchronization regresses\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#10"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-19T23:58:42.034Z",
+      "proposedFromRef": "#10"
+    },
+    {
+      "taskRef": "#21",
+      "title": "Warn before simultaneous tab edits overwrite newer work",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-19T23:58:42.034Z",
+      "description": "# Warn before simultaneous tab edits overwrite newer work\n\n## What & Why\nCross-tab updates now keep saved cards fresh, but simultaneous edits still use last-write-wins behavior. A clear conflict signal would help users avoid losing a newer change made in another tab.\n\n## Done looks like\n- An open edit form detects when its saved entry changes in another tab\n- The user can keep the newer remote version or explicitly overwrite it\n- The choice is covered for both answers and applications\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/src/lib/storage.ts",
+      "dependsOn": [
+        "#10"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-19T23:58:42.034Z",
+      "proposedFromRef": "#10"
+    },
+    {
+      "taskRef": "#22",
+      "title": "Confirm restored workspaces survive closing and reopening the browser",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T00:20:31.675Z",
+      "description": "# Confirm restored workspaces survive closing and reopening the browser\n\n## What & Why\nThe restore flow is now covered through in-app navigation and page reloads. A browser restart is a separate persistence boundary and should be covered so users do not lose a restored workspace between sessions.\n\n## Done looks like\n- Restore a workspace in a browser context with persistent storage\n- Close and reopen the page or browser context\n- Verify the restored profile, answer library, and application queue are still present\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts\n- artifacts/escape-hatch/src/lib/storage.ts",
+      "dependsOn": [
+        "#11"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T00:00:28.008Z",
+      "proposedFromRef": "#11"
+    },
+    {
+      "taskRef": "#23",
+      "title": "Confirm restoring multiple saved items keeps their full details and order",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T00:24:02.193Z",
+      "description": "# Confirm restoring multiple saved items keeps their full details and order\n\n## What & Why\nThe current restore regression covers one answer and one opportunity. Testing multiple entries would catch collection-level regressions that accidentally drop metadata or change ordering while still passing the single-item case.\n\n## Done looks like\n- Restore a workspace containing multiple answers and opportunities\n- Verify each answer's title, category, and content after reload\n- Verify each opportunity's company, role, status, priority, notes, next action, and list order after reload\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts\n- artifacts/escape-hatch/src/lib/storage.ts",
+      "dependsOn": [
+        "#11"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T00:00:28.008Z",
+      "proposedFromRef": "#11"
+    },
+    {
+      "taskRef": "#24",
+      "title": "Verify cancelling a restore leaves the workspace unchanged",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T00:27:31.651Z",
+      "description": "# Verify cancelling a restore leaves the workspace unchanged\n\n## What & Why\nThe restore preview now delays replacement until confirmation, but the cancel path should be protected by a regression test so future changes cannot accidentally apply a backup when the user dismisses it.\n\n## Done looks like\n- A browser test imports a valid backup and confirms the dialog appears\n- Cancelling the dialog leaves the current profile draft, answers, applications, and local storage unchanged\n- Confirming a later restore still applies the complete validated backup\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts\n- artifacts/escape-hatch/src/App.tsx",
+      "dependsOn": [
+        "#12"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T00:03:57.293Z",
+      "proposedFromRef": "#12"
+    },
+    {
+      "taskRef": "#25",
+      "title": "Make workspace restore confirmation keyboard accessible",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T00:31:01.857Z",
+      "description": "# Make workspace restore confirmation keyboard accessible\n\n## What & Why\nThe restore confirmation is a destructive replacement step. Keyboard users should be able to identify the dialog, move focus into it, dismiss it with Escape, and return focus to the restore control without relying on a mouse.\n\n## Done looks like\n- Opening the restore confirmation moves focus to a meaningful dialog control\n- Escape and the cancel action dismiss the dialog without changing workspace state\n- Focus does not escape the modal while it is open and returns to the restore trigger afterward\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/src/index.css",
+      "dependsOn": [
+        "#12"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T00:03:57.293Z",
+      "proposedFromRef": "#12"
+    },
+    {
+      "taskRef": "#26",
+      "title": "Stop showing success when browser storage rejects regular edits",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T00:08:08.133Z",
+      "description": "# Stop showing success when browser storage rejects regular edits\n\n## What & Why\nWorkspace restore now reports when browser storage is unavailable or full, but ordinary profile, answer, and opportunity changes can still appear successful when their local-storage write fails. Users need the same honest feedback for edits so they do not assume changes will survive a reload.\n\n## Done looks like\n- Profile, answer, and opportunity saves detect local-storage write failures.\n- Success feedback is withheld or replaced with a clear in-memory-only warning.\n- The current UI state remains usable while explaining that a reload may lose the change.\n\n## Relevant files\n- artifacts/escape-hatch/src/lib/storage.ts\n- artifacts/escape-hatch/src/App.tsx",
+      "dependsOn": [
+        "#13"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "incomplete_scope",
+      "createdAt": "2026-09-20T00:08:08.133Z",
+      "proposedFromRef": "#13"
+    },
+    {
+      "taskRef": "#27",
+      "title": "Catch restore storage warnings before they regress",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T00:08:08.133Z",
+      "description": "# Catch restore storage warnings before they regress\n\n## What & Why\nThe restore flow needs browser-level coverage for quota or unavailable-storage failures, not just unit coverage of the write helper. A regression test should protect both halves of the user promise: restored data stays visible in memory and the success message is replaced with a warning that it was not persisted.\n\n## Done looks like\n- A Playwright test makes localStorage writes throw while importing a valid workspace backup.\n- The test confirms the warning explains the persistence failure.\n- The test confirms restored profile, answer, and opportunity details remain visible before reload.\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts\n- artifacts/escape-hatch/src/App.tsx",
+      "dependsOn": [
+        "#13"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T00:08:08.133Z",
+      "proposedFromRef": "#13"
+    },
+    {
+      "taskRef": "#28",
+      "title": "Confirm the home shortcut chooses an actionable opportunity when statuses are mixed",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T00:10:31.920Z",
+      "description": "# Confirm the home shortcut chooses an actionable opportunity when statuses are mixed\n\n## What & Why\nWhen an already-applied opportunity sits alongside a saved or preparing opportunity, the home page should keep the shortcut focused on the actionable item instead of presenting the applied item as the next move.\n\n## Done looks like\n- A browser regression test creates applied and non-applied opportunities in the same queue.\n- The home page names the actionable opportunity and shows exactly one Mark applied action for it.\n- The behavior remains correct after reload.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#14"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T00:10:31.920Z",
+      "proposedFromRef": "#14"
+    },
+    {
+      "taskRef": "#29",
+      "title": "Let users undo an accidental home status change",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T16:10:21.318Z",
+      "description": "# Let users undo an accidental home status change\n\n## What & Why\nThe home page can now move an opportunity to Applied with one click, but an accidental click requires editing the opportunity from the applications page to recover. A short-lived undo action would make this shortcut safer.\n\n## Done looks like\n- After Mark applied, the home page offers an accessible undo action for the changed opportunity.\n- Undo restores the previous status and keeps the complete opportunity details intact.\n- The recovery behavior persists correctly through the existing local browser storage flow.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#14"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T00:10:31.920Z",
+      "proposedFromRef": "#14"
+    },
+    {
+      "taskRef": "#30",
+      "title": "Confirm reopening a closed opportunity restores dashboard counts",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T00:12:20.692Z",
+      "description": "# Confirm reopening a closed opportunity restores dashboard counts\n\n## What & Why\nThe dashboard now has coverage proving Closed opportunities stay out of active totals. A complementary regression should verify that changing the same opportunity back to an active status makes the correct count return after reload, so the summary cannot become permanently stale.\n\n## Done looks like\n- A browser test in artifacts/escape-hatch/tests/persistence.spec.ts creates an opportunity, closes it, reopens it as Saved or Applied, and verifies the matching dashboard count returns.\n- The reopened status and count both persist after reload.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#15"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T00:12:20.692Z",
+      "proposedFromRef": "#15"
+    },
+    {
+      "taskRef": "#31",
+      "title": "Confirm mixed opportunity statuses are split into the right dashboard totals",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T00:12:20.692Z",
+      "description": "# Confirm mixed opportunity statuses are split into the right dashboard totals\n\n## What & Why\nThe dashboard separates active opportunities into In motion and On deck. The current regression covers a single Closed opportunity, but a future change could count active statuses in the wrong bucket when several opportunities coexist.\n\n## Done looks like\n- A browser test in artifacts/escape-hatch/tests/persistence.spec.ts creates opportunities with Saved, Preparing, Applied, and Closed statuses.\n- After reload, In motion counts only non-Saved, non-Closed opportunities and On deck counts only Saved opportunities.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#15"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T00:12:20.692Z",
+      "proposedFromRef": "#15"
+    },
+    {
+      "taskRef": "#32",
+      "title": "Block whitespace-only required details before saving",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T16:12:00.083Z",
+      "description": "# Block whitespace-only required details before saving\n\n## What & Why\nThe current regression coverage checks truly empty fields, but users can also submit spaces in required answer and opportunity fields. Treating whitespace as missing must remain consistent with the visible guidance and accessibility wiring.\n\n## Done looks like\n- Whitespace-only answer title and content remain blocked with their field-specific messages\n- Whitespace-only opportunity company and role remain blocked with their field-specific messages\n- aria-invalid and aria-describedby continue to identify the visible messages\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts\n- artifacts/escape-hatch/src/App.tsx",
+      "dependsOn": [
+        "#16"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T00:14:24.277Z",
+      "proposedFromRef": "#16"
+    },
+    {
+      "taskRef": "#33",
+      "title": "Keep saved entries safe after an invalid edit attempt",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T00:14:24.277Z",
+      "description": "# Keep saved entries safe after an invalid edit attempt\n\n## What & Why\nEditing coverage confirms that blank edits do not overwrite saved data, but it does not assert the field-specific recovery guidance shown during that failed edit. A focused browser regression should protect both the user’s saved entry and the accessible correction path.\n\n## Done looks like\n- Clearing each required field on an existing answer or opportunity shows the correct visible message\n- The invalid field exposes aria-invalid and aria-describedby while the dialog stays open\n- The previously saved value remains unchanged until the edit is corrected or cancelled\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts\n- artifacts/escape-hatch/src/App.tsx",
+      "dependsOn": [
+        "#16"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T00:14:24.277Z",
+      "proposedFromRef": "#16"
+    },
+    {
+      "taskRef": "#34",
+      "title": "Return keyboard focus after closing an entry form",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T00:35:09.534Z",
+      "description": "# Return keyboard focus after closing an entry form\n\n## What & Why\nAfter saving or cancelling an answer or opportunity dialog, keyboard users should return to the control that opened it instead of losing their place in the page.\n\n## Done looks like\n- Opening an answer form from the library returns focus to the same launch control after save or cancel.\n- Opening an opportunity form from the queue returns focus to the same launch control after save or cancel.\n- The behavior works for both page-level and empty-state add buttons.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx",
+      "dependsOn": [
+        "#17"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T00:17:12.335Z",
+      "proposedFromRef": "#17"
+    },
+    {
+      "taskRef": "#35",
+      "title": "Let keyboard users close entry dialogs with Escape",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T00:37:55.760Z",
+      "description": "# Let keyboard users close entry dialogs with Escape\n\n## What & Why\nAnswer and opportunity forms currently require the close button or a save path. Supporting Escape gives keyboard users a predictable way to dismiss an open dialog.\n\n## Done looks like\n- Pressing Escape closes answer and opportunity dialogs.\n- Escape does not submit or alter the form data.\n- The existing dialog accessible name and invalid-field focus behavior remain intact.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx",
+      "dependsOn": [
+        "#17"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T00:17:12.335Z",
+      "proposedFromRef": "#17"
+    },
+    {
+      "taskRef": "#36",
+      "title": "Warn before restoring over newer workspace edits",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T16:17:50.950Z",
+      "description": "# Warn before restoring over newer workspace edits\n\n## What & Why\nRestoring a backup replaces the current profile, answer library, and application queue. Users should not lose newer local work by importing an older backup without a clear warning.\n\n## Done looks like\n- Detect when the current workspace contains changes newer than the selected backup\n- Explain which saved areas will be replaced before confirmation\n- Let the user cancel without changing any saved data\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/src/lib/storage.ts\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#22"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T00:20:19.262Z",
+      "proposedFromRef": "#22"
+    },
+    {
+      "taskRef": "#37",
+      "title": "Keep workspace data consistent if the browser closes during restore",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T00:20:19.262Z",
+      "description": "# Keep workspace data consistent if the browser closes during restore\n\n## What & Why\nThe restore flow writes several browser-storage collections. A browser close during that operation could otherwise leave profile, answers, and applications from different workspace versions.\n\n## Done looks like\n- Add coverage for an interrupted restore or equivalent storage-write failure\n- Ensure reopening the browser shows either the previous complete workspace or the restored complete workspace\n- Never expose a mixed partial restore to the user\n\n## Relevant files\n- artifacts/escape-hatch/src/lib/storage.ts\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#22"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T00:20:19.262Z",
+      "proposedFromRef": "#22"
+    },
+    {
+      "taskRef": "#38",
+      "title": "Confirm restoring an empty workspace clears saved entries",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T00:22:49.649Z",
+      "description": "# Confirm restoring an empty workspace clears saved entries\n\n## What & Why\nA restore can validly contain an empty answer and opportunity collection. Coverage should ensure stale entries already in the browser are removed rather than left visible after the restore.\n\n## Done looks like\n- Start with saved answers and opportunities in the browser\n- Restore a valid workspace whose answer and opportunity collections are empty\n- Verify both lists remain empty after reload\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts\n- artifacts/escape-hatch/src/lib/storage.ts",
+      "dependsOn": [
+        "#23"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T00:22:49.649Z",
+      "proposedFromRef": "#23"
+    },
+    {
+      "taskRef": "#39",
+      "title": "Confirm restored opportunity links remain available after reload",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T00:22:49.649Z",
+      "description": "# Confirm restored opportunity links remain available after reload\n\n## What & Why\nThe restore coverage checks core opportunity details but not the optional job URL. A regression could drop links while leaving the visible company, role, status, and notes intact.\n\n## Done looks like\n- Restore multiple opportunities with distinct URLs\n- Reload the opportunity list\n- Verify each restored card exposes the original URL in its expanded details\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts\n- artifacts/escape-hatch/src/lib/storage.ts",
+      "dependsOn": [
+        "#23"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T00:22:49.649Z",
+      "proposedFromRef": "#23"
+    },
+    {
+      "taskRef": "#40",
+      "title": "Keep large workspace restore previews easy to review",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T00:27:21.169Z",
+      "description": "# Keep large workspace restore previews easy to review\n\n## What & Why\nLarge backups should still communicate what will be restored before the user confirms replacement. The current cancellation regression covers one answer and one opportunity, but it does not protect the summary counts, truncation text, or mixed status breakdown for a larger backup.\n\n## Done looks like\n- A browser test imports a backup with more than three answers and opportunities\n- The restore dialog shows the correct counts and the expected “and N more” summary text\n- Mixed application statuses are represented accurately before confirmation\n- Confirming the preview still restores every validated item\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/src/lib/storage.ts",
+      "dependsOn": [
+        "#24"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T00:27:21.169Z",
+      "proposedFromRef": "#24"
+    },
+    {
+      "taskRef": "#41",
+      "title": "Clear an old restore preview after an invalid backup is selected",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T00:27:21.169Z",
+      "description": "# Clear an old restore preview after an invalid backup is selected\n\n## What & Why\nIf a valid backup opens a restore preview and the user then selects a malformed or invalid backup, the app must not leave the earlier valid workspace available for accidental confirmation. Protect this replacement path with a browser regression test.\n\n## Done looks like\n- A valid workspace backup opens the restore dialog\n- Selecting an invalid workspace file closes the pending preview\n- The app shows the validation error and leaves the current profile, answers, applications, and storage unchanged\n- A later valid backup can still open and confirm normally\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts\n- artifacts/escape-hatch/src/App.tsx",
+      "dependsOn": [
+        "#24"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T00:27:21.169Z",
+      "proposedFromRef": "#24"
+    },
+    {
+      "taskRef": "#42",
+      "title": "Catch restore dialog focus regressions before release",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T00:30:50.506Z",
+      "description": "# Catch restore dialog focus regressions before release\n\n## What & Why\nThe restore flow now relies on focus placement, keyboard trapping, Escape dismissal, and focus return. A committed browser regression test would protect those behaviors from being lost during future modal or import-flow changes.\n\n## Done looks like\n- Browser coverage verifies focus moves to Cancel when the restore confirmation opens\n- Tab and Shift+Tab stay within the restore dialog\n- Escape and Cancel close the dialog without changing saved workspace data\n- Focus returns to the Restore workspace trigger after either dismissal\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts\n- artifacts/escape-hatch/src/App.tsx",
+      "dependsOn": [
+        "#25"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T00:30:50.506Z",
+      "proposedFromRef": "#25"
+    },
+    {
+      "taskRef": "#43",
+      "title": "Show progress while a workspace backup is being read",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T00:30:50.506Z",
+      "description": "# Show progress while a workspace backup is being read\n\n## What & Why\nLarge workspace backups are read asynchronously, but the current import control gives no immediate indication that the file is being processed. A temporary status would reassure users and make the restore flow clearer before the confirmation appears.\n\n## Done looks like\n- Selecting a workspace backup shows a non-blocking loading status while FileReader is active\n- The status clears when the confirmation opens or an error is shown\n- Keyboard and screen-reader users receive the same progress feedback\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/src/index.css",
+      "dependsOn": [
+        "#25"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T00:30:50.506Z",
+      "proposedFromRef": "#25"
+    },
+    {
+      "taskRef": "#44",
+      "title": "Tell screen-reader users when an entry is saved or cancelled",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T00:40:29.101Z",
+      "description": "# Tell screen-reader users when an entry is saved or cancelled\n\n## What & Why\nAnswer and opportunity dialogs now return keyboard focus to their launch controls, but users who rely on assistive technology still do not receive a clear announcement that the dialog action completed. A concise live-region message would make save and cancel outcomes easier to understand.\n\n## Done looks like\n- Saving an answer or opportunity announces a clear success message.\n- Cancelling a form announces that no changes were saved.\n- The message is exposed through an accessible live region without disrupting focus restoration.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#34"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T00:35:03.419Z",
+      "proposedFromRef": "#34"
+    },
+    {
+      "taskRef": "#45",
+      "title": "Keep focus stable when an edited opportunity leaves the active filter",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T00:44:09.761Z",
+      "description": "# Keep focus stable when an edited opportunity leaves the active filter\n\n## What & Why\nIf an opportunity is edited from a filtered queue and its status changes so it no longer matches that filter, the original edit button disappears when the dialog closes. The current fallback is the page-level add button, but a nearby queue or filter control would preserve context better.\n\n## Done looks like\n- Editing an opportunity and changing its status keeps focus in the queue even when the edited card is removed from the current filter.\n- The fallback target is deterministic and has an accessible name.\n- Browser coverage verifies the filtered edit flow.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#34"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T00:35:03.419Z",
+      "proposedFromRef": "#34"
+    },
+    {
+      "taskRef": "#46",
+      "title": "Recover a partially completed entry after accidental dismissal",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T00:50:21.275Z",
+      "description": "# Recover a partially completed entry after accidental dismissal\n\n## What & Why\nEscape now dismisses answer and opportunity dialogs as expected, but any partially completed draft is discarded. Letting users recover a recently dismissed draft would reduce accidental data loss while preserving the fast keyboard dismissal flow.\n\n## Done looks like\n- A recently dismissed answer or opportunity draft can be recovered from a clear, non-blocking prompt.\n- Recovery is available after Escape and other cancellation paths without overwriting an existing saved entry.\n- Recovered values reopen in the correct form and can be edited or saved normally.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#35"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T00:37:49.687Z",
+      "proposedFromRef": "#35"
+    },
+    {
+      "taskRef": "#47",
+      "title": "Confirm Escape cancellation is announced without saving edits",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T00:40:17.709Z",
+      "description": "# Confirm Escape cancellation is announced without saving edits\n\n## What & Why\nThe form now announces that no changes were saved when it closes, including through the shared close handler. A browser regression should confirm that keyboard users receive the same announcement when they press Escape and that draft content is discarded.\n\n## Done looks like\n- Answer and opportunity forms announce \"No changes were saved.\" after Escape closes them.\n- The draft remains absent from the saved list.\n- Focus still returns to the launch control.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#44"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T00:40:17.709Z",
+      "proposedFromRef": "#44"
+    },
+    {
+      "taskRef": "#48",
+      "title": "Confirm repeated saves are announced each time",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T00:40:17.709Z",
+      "description": "# Confirm repeated saves are announced each time\n\n## What & Why\nScreen-reader users may save several entries in one session. Add regression coverage for repeated answer and opportunity saves so the polite live region continues to communicate every completed action rather than only the first one.\n\n## Done looks like\n- Saving two answers in succession announces the save outcome for each action.\n- Saving two opportunities in succession announces the save outcome for each action.\n- Existing focus restoration remains intact.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#44"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T00:40:17.709Z",
+      "proposedFromRef": "#44"
+    },
+    {
+      "taskRef": "#49",
+      "title": "Keep focus stable when an edited opportunity leaves a search result",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T00:44:02.663Z",
+      "description": "# Keep focus stable when an edited opportunity leaves a search result\n\n## What & Why\nEditing an opportunity can also remove it from a queue because its company, role, or notes no longer match the active search. The status-filter fallback now preserves queue context, but this search-specific path should be verified explicitly.\n\n## Done looks like\n- Start editing an opportunity from a search result\n- Change the searched company, role, or notes so the result disappears\n- Focus returns to a deterministic, accessible queue control\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#45"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T00:44:02.663Z",
+      "proposedFromRef": "#45"
+    },
+    {
+      "taskRef": "#50",
+      "title": "Keep keyboard focus stable after deleting an opportunity",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T00:44:02.663Z",
+      "description": "# Keep keyboard focus stable after deleting an opportunity\n\n## What & Why\nDeleting an opportunity removes its action controls from the queue. A focused delete action can leave keyboard users at an unpredictable location, especially when the undo notice appears or the queue becomes empty.\n\n## Done looks like\n- Delete an opportunity from the queue with keyboard interaction\n- Focus moves to a deterministic, accessible undo or queue control\n- Browser coverage verifies both a populated queue and an empty result\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#45"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T00:44:02.663Z",
+      "proposedFromRef": "#45"
+    },
+    {
+      "taskRef": "#51",
+      "title": "Confirm dismissed drafts expire without stale recovery prompts",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T01:03:24.475Z",
+      "description": "# Confirm dismissed drafts expire without stale recovery prompts\n\n## What & Why\nA dismissed draft is intentionally temporary, but the recovery window should not leave an old prompt visible indefinitely or recover stale values after it expires.\n\n## Done looks like\n- The answer and opportunity recovery notices disappear after the configured recovery window.\n- The expired draft cannot be recovered after the notice is gone.\n- The behavior is covered in the browser persistence suite.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#46"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T00:50:10.494Z",
+      "proposedFromRef": "#46"
+    },
+    {
+      "taskRef": "#52",
+      "title": "Keep separate answer and opportunity drafts available across view changes",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T01:08:43.827Z",
+      "description": "# Keep separate answer and opportunity drafts available across view changes\n\n## What & Why\nRecovery currently helps when a user stays on the same list, but switching between Answer library and Applications can unmount the page and discard its temporary recovery state. Preserving one draft per entry type would protect users who move between views before returning to finish their work.\n\n## Done looks like\n- Dismissing an answer draft, switching to Applications, and returning still offers the answer draft.\n- The same works independently for an opportunity draft.\n- Recovering one draft does not replace or overwrite the other.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#46"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T00:50:10.494Z",
+      "proposedFromRef": "#46"
+    },
+    {
+      "taskRef": "#53",
+      "title": "Tell users when an unsaved draft has expired",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T01:14:46.437Z",
+      "description": "# Tell users when an unsaved draft has expired\n\n## What & Why\nWhen the recovery window ends, the notice disappears but users who rely on announcements may not know that the draft is no longer recoverable. A clear, polite status message would make the expiry behavior understandable without requiring visual inspection.\n\n## Done looks like\n- Answer and opportunity expiry announce that the unsaved draft is no longer available\n- The announcement does not claim a draft was saved\n- Browser coverage verifies the expiry announcement for both draft types\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#51"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T01:03:13.809Z",
+      "proposedFromRef": "#51"
+    },
+    {
+      "taskRef": "#54",
+      "title": "Keep unfinished drafts available after a browser reload",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T01:08:30.751Z",
+      "description": "# Keep unfinished drafts available after a browser reload\n\n## What & Why\nDraft recovery now survives switching between Answer library and Applications within the open tab, but a reload still clears the route-level recovery state. Persisting drafts would protect users who refresh or reopen the page before finishing.\n\n## Done looks like\n- A dismissed answer draft can be recovered after a browser reload.\n- A dismissed opportunity draft can be recovered after a browser reload.\n- The two draft types remain independent and expired drafts are not restored.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/src/lib/storage.ts\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#52"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T01:08:30.751Z",
+      "proposedFromRef": "#52"
+    },
+    {
+      "taskRef": "#55",
+      "title": "Confirm cross-view draft recovery works from mobile navigation",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T01:08:30.751Z",
+      "description": "# Confirm cross-view draft recovery works from mobile navigation\n\n## What & Why\nThe cross-view recovery behavior is covered through the desktop sidebar, but mobile users switch views through the collapsible navigation menu. A responsive browser check would catch regressions in that path.\n\n## Done looks like\n- An answer draft remains recoverable after switching to Applications and back through the mobile menu.\n- An opportunity draft remains recoverable through the same mobile flow.\n- Recovering one draft does not hide the other.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#52"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T01:08:30.751Z",
+      "proposedFromRef": "#52"
+    },
+    {
+      "taskRef": "#56",
+      "title": "Show users how long they have to recover an unsaved draft",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T04:54:05.150Z",
+      "description": "# Show users how long they have to recover an unsaved draft\n\n## What & Why\nUsers currently learn about an unsaved draft through a notice, but they cannot tell how much recovery time remains. A visible countdown or similarly clear time cue would make the recovery window easier to act on.\n\n## Done looks like\n- Answer and opportunity draft notices show the remaining recovery time without relying on color alone\n- The time cue updates while the notice is visible and disappears when recovery expires\n- Browser coverage verifies the time cue for both draft types\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#53"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T01:14:36.276Z",
+      "proposedFromRef": "#53"
+    },
+    {
+      "taskRef": "#57",
+      "title": "Tell users when they discard an unsaved draft",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T04:49:16.709Z",
+      "description": "# Tell users when they discard an unsaved draft\n\n## What & Why\nThe draft notice can be dismissed with Discard, but that action is not announced through the existing live status regions. Users who rely on announcements should receive confirmation that the draft was intentionally discarded.\n\n## Done looks like\n- Discarding an answer draft announces that it was discarded without implying it was saved\n- Discarding an opportunity draft announces the same outcome\n- Browser coverage verifies both announcements\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#53"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T01:14:36.276Z",
+      "proposedFromRef": "#53"
+    },
+    {
+      "taskRef": "#58",
+      "title": "Confirm discarding edited drafts preserves saved entries",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T04:48:19.175Z",
+      "description": "# Confirm discarding edited drafts preserves saved entries\n\n## What & Why\nThe discard announcement is covered for new answer and opportunity drafts, but edited drafts also need to leave the previously saved entry unchanged when users discard them.\n\n## Done looks like\n- Browser coverage edits a saved answer, discards the draft, and confirms the original answer remains.\n- Browser coverage edits a saved opportunity, discards the draft, and confirms the original opportunity remains.\n- The discard announcements remain specific to the content type.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#57"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T04:48:19.175Z",
+      "proposedFromRef": "#57"
+    },
+    {
+      "taskRef": "#59",
+      "title": "Let users undo an accidental draft discard",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T04:48:19.175Z",
+      "description": "# Let users undo an accidental draft discard\n\n## What & Why\nDiscard is intentional, but users can still click it by mistake. A short-lived recovery option would prevent useful unsaved work from being lost while preserving the current discard behavior.\n\n## Done looks like\n- Discarded answer and opportunity drafts can be recovered for a clearly defined short window.\n- Recovery restores the correct form and content without saving it automatically.\n- The recovery affordance and its outcome are announced to assistive technology users.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#57"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T04:48:19.175Z",
+      "proposedFromRef": "#57"
+    },
+    {
+      "taskRef": "#60",
+      "title": "Confirm draft recovery time stays accurate after a tab is backgrounded",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T05:01:05.652Z",
+      "description": "# Confirm draft recovery time stays accurate after a tab is backgrounded\n\n## What & Why\nBrowsers can throttle timers for background tabs. Verify that the visible recovery cue and the actual expiry stay aligned when a user briefly leaves the app and returns.\n\n## Done looks like\n- Browser coverage backgrounds the page while an answer draft notice is visible, then returns to it.\n- The displayed time never increases and the notice expires at the intended deadline.\n- The same behavior is covered for opportunity drafts where practical.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#56"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T04:52:59.090Z",
+      "proposedFromRef": "#56"
+    },
+    {
+      "taskRef": "#61",
+      "title": "Let users choose how long unsaved drafts remain recoverable",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T05:08:46.420Z",
+      "description": "# Let users choose how long unsaved drafts remain recoverable\n\n## What & Why\nThe recovery window is currently fixed. Giving users a clear preference would support people who need more time to notice and recover an unsaved answer or opportunity draft.\n\n## Done looks like\n- A user-facing setting controls the recovery duration with a safe default.\n- Both draft notices use the selected duration and show the matching countdown.\n- The setting persists locally and invalid values fall back safely.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/src/lib/storage.ts\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#56"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T04:52:59.090Z",
+      "proposedFromRef": "#56"
+    },
+    {
+      "taskRef": "#62",
+      "title": "Keep draft recovery accurate when users switch windows",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T05:12:40.454Z",
+      "description": "# Keep draft recovery accurate when users switch windows\n\n## What & Why\nThe background-tab path now rechecks draft deadlines when visibility changes. Switching windows or minimizing the browser can also throttle timers, and that focus path should not let the visible recovery cue drift from the actual expiry deadline.\n\n## Done looks like\n- Browser coverage switches focus away from an answer draft notice and then returns to it.\n- The displayed recovery time never increases and the notice expires at the intended deadline.\n- Opportunity drafts receive equivalent coverage where practical.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#60"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T04:58:01.083Z",
+      "proposedFromRef": "#60"
+    },
+    {
+      "taskRef": "#63",
+      "title": "Confirm selected recovery windows expire drafts on time",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T05:16:52.786Z",
+      "description": "# Confirm selected recovery windows expire drafts on time\n\n## What & Why\nThe current regression coverage checks the selected duration shown in both notices and checks expiry at the default duration. A focused test should also prove that a non-default preference controls the actual deadline, so users do not see a longer countdown but lose the draft early.\n\n## Done looks like\n- A browser test selects a non-default recovery window.\n- Answer and opportunity drafts remain recoverable until that selected deadline.\n- Both drafts expire and announce their loss after the matching deadline.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#61"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T05:07:25.992Z",
+      "proposedFromRef": "#61"
+    },
+    {
+      "taskRef": "#64",
+      "title": "Keep an open draft notice consistent when its recovery setting changes",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T05:21:17.589Z",
+      "description": "# Keep an open draft notice consistent when its recovery setting changes\n\n## What & Why\nChanging the preference currently affects drafts dismissed afterward. Decide and implement the user-facing behavior for a notice that is already visible when the recovery setting changes, so its displayed countdown and actual deadline never surprise the user.\n\n## Done looks like\n- The behavior for already-visible answer and opportunity notices is explicit.\n- The countdown and expiration deadline stay consistent with that behavior.\n- The behavior is covered by browser tests.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/src/lib/storage.ts\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#61"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T05:07:25.992Z",
+      "proposedFromRef": "#61"
+    },
+    {
+      "taskRef": "#65",
+      "title": "Keep draft recovery notices consistent across open windows",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T05:12:31.527Z",
+      "description": "# Keep draft recovery notices consistent across open windows\n\n## What & Why\nUsers can open EscapeHatch in more than one browser window, but an unsaved draft notice currently lives in one page's in-memory state. Keeping recovery notices and deadlines consistent across open windows would prevent one window from offering recovery after another window has already discarded or expired it.\n\n## Done looks like\n- Draft recovery state is coordinated across open EscapeHatch windows without overwriting the draft contents unexpectedly.\n- A notice removed or expired in one window is not offered as recoverable in another window.\n- Answer and opportunity drafts follow the same coordination rules.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/src/lib/storage.ts\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#62"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T05:12:31.527Z",
+      "proposedFromRef": "#62"
+    },
+    {
+      "taskRef": "#66",
+      "title": "Prevent system clock changes from extending draft recovery",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T05:12:31.527Z",
+      "description": "# Prevent system clock changes from extending draft recovery\n\n## What & Why\nRecovery deadlines are based on the browser clock. If the system clock moves backward while a notice is open, the visible recovery time can increase or the draft can remain available longer than intended. Protecting this edge case keeps the recovery promise tied to elapsed time rather than a clock adjustment.\n\n## Done looks like\n- Answer and opportunity recovery time never increases when the system clock changes backward.\n- Draft notices still expire at the original recovery deadline after a clock adjustment.\n- Browser coverage exercises the countdown and expiry behavior for both draft types.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#62"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T05:12:31.527Z",
+      "proposedFromRef": "#62"
+    },
+    {
+      "taskRef": "#67",
+      "title": "Confirm edited saved entries use the selected recovery deadline",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T16:26:04.823Z",
+      "description": "# Confirm edited saved entries use the selected recovery deadline\n\n## What & Why\nThe selected recovery-window regression currently covers new answer and opportunity drafts. Editing an existing saved entry uses the same recovery notices but can regress independently, which could make a user's changes disappear earlier than the displayed deadline.\n\n## Done looks like\n- A browser test selects a non-default recovery window.\n- Edits to an existing answer and opportunity are recoverable just before that deadline.\n- Both edited drafts expire at the selected deadline and announce their loss.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#63"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T05:16:41.478Z",
+      "proposedFromRef": "#63"
+    },
+    {
+      "taskRef": "#68",
+      "title": "Keep a dismissed draft's countdown accurate after the recovery setting changes",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T16:30:55.813Z",
+      "description": "# Keep a dismissed draft's countdown accurate after the recovery setting changes\n\n## What & Why\nA user can change the recovery preference while a dismissed draft is still available. The notice should continue counting down to the draft's already-established deadline instead of silently moving the deadline or displaying a mismatched duration.\n\n## Done looks like\n- A browser test dismisses a draft, changes the recovery preference, and checks that the existing draft remains available until its original deadline.\n- The notice countdown and expiration announcement remain consistent after the setting change.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#63"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T05:16:41.478Z",
+      "proposedFromRef": "#63"
+    },
+    {
+      "taskRef": "#69",
+      "title": "Keep a draft's deadline steady through repeated recovery-setting changes",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T06:41:44.465Z",
+      "description": "# Keep a draft's deadline steady through repeated recovery-setting changes\n\n## What & Why\nA draft notice now keeps the recovery window that was selected when it was dismissed. A regression test should also cover changing the preference more than once before that notice expires, so repeated settings changes cannot move its countdown or deadline.\n\n## Done looks like\n- An answer notice and an opportunity notice remain tied to their original dismissal deadlines after multiple preference changes.\n- Their countdowns and expiration announcements remain accurate throughout the sequence.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#64"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T05:21:10.072Z",
+      "proposedFromRef": "#64"
+    },
+    {
+      "taskRef": "#70",
+      "title": "Prevent expired drafts from returning after recovery settings change",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T06:49:21.869Z",
+      "description": "# Prevent expired drafts from returning after recovery settings change\n\n## What & Why\nA recovery preference update must not make an already expired answer or opportunity draft available again. This protects users from recovering stale work after the original deadline has passed.\n\n## Done looks like\n- An expired answer draft stays unavailable after changing the recovery preference several times.\n- An expired opportunity draft stays unavailable after changing the recovery preference several times.\n- The existing expiration announcements remain accurate.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#69"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T05:44:56.621Z",
+      "proposedFromRef": "#69"
+    },
+    {
+      "taskRef": "#71",
+      "title": "Catch recovery clicks exactly at draft expiry",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T07:00:52.425Z",
+      "description": "# Catch recovery clicks exactly at draft expiry\n\n## What & Why\nA user can activate Recover draft at the same moment its deadline passes, before the scheduled cleanup callback runs. The current guard prevents stale work from reopening, but this boundary should stay covered as expiry behavior changes.\n\n## Done looks like\n- An answer draft cannot open its edit form when recovery is activated at or after its exact deadline.\n- An opportunity draft cannot open its edit form at the same boundary.\n- The existing \"no longer available\" announcements are preserved.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#70"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T06:49:09.932Z",
+      "proposedFromRef": "#70"
+    },
+    {
+      "taskRef": "#72",
+      "title": "Keep expired draft recovery closed for keyboard users",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T10:01:24.049Z",
+      "description": "# Keep expired draft recovery closed for keyboard users\n\n## What & Why\nThe exact-deadline protection is covered for pointer clicks, but keyboard activation is another way users can trigger the same recovery action. A regression could reopen an expired draft for keyboard users while pointer users remain protected.\n\n## Done looks like\n- Pressing Enter or Space on an answer draft recovery control at its exact deadline does not open the edit form.\n- The same boundary is covered for opportunity drafts.\n- The existing no-longer-available announcements remain intact.\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#71"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T07:00:33.047Z",
+      "proposedFromRef": "#71"
+    },
+    {
+      "taskRef": "#73",
+      "title": "Keep draft expiry announcements after switching views",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T09:56:45.855Z",
+      "description": "# Keep draft expiry announcements after switching views\n\n## What & Why\nDraft expiry is managed at the router level, so a user can leave the draft's view before the deadline and return after recovery has expired. Coverage should confirm that returning to either view still presents the correct no-longer-available announcement instead of silently dropping the feedback.\n\n## Done looks like\n- An expired answer draft announces that it is no longer available after navigating away and back.\n- An expired opportunity draft does the same.\n- No recovery form opens from either expired draft.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#71"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T07:00:33.047Z",
+      "proposedFromRef": "#71"
+    },
+    {
+      "taskRef": "#74",
+      "title": "Confirm keyboard recovery works before the deadline",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T10:20:46.493Z",
+      "description": "# Confirm keyboard recovery works before the deadline\n\n## What & Why\nThe exact-deadline protection now covers Enter and Space, but a keyboard regression could also break valid recovery while pointer recovery continues to work.\n\n## Done looks like\n- Enter recovers an available answer draft before its deadline.\n- Space recovers an available opportunity draft before its deadline.\n- The recovered form contains the saved draft values.\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#72"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T10:01:15.197Z",
+      "proposedFromRef": "#72"
+    },
+    {
+      "taskRef": "#75",
+      "title": "Confirm keyboard draft recovery remains safe after changing views",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T10:05:55.047Z",
+      "description": "# Confirm keyboard draft recovery remains safe after changing views\n\n## What & Why\nDraft notices survive navigation between answer and opportunity views. The keyboard boundary should remain protected when users return to a notice after moving through another view.\n\n## Done looks like\n- An answer draft activated with Enter or Space at its deadline after view navigation does not open a form.\n- An opportunity draft has the same protection.\n- The existing no-longer-available announcements remain intact.\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#72"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T10:01:15.197Z",
+      "proposedFromRef": "#72"
+    },
+    {
+      "taskRef": "#76",
+      "title": "Confirm keyboard draft recovery stays safe after repeated view changes",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T16:32:13.065Z",
+      "description": "# Confirm keyboard draft recovery stays safe after repeated view changes\n\n## What & Why\nThe current regression coverage checks one trip to the other view before an exact-deadline keyboard activation. Repeated navigation can expose state or focus regressions that a single switch misses.\n\n## Done looks like\n- Answer and opportunity recovery notices survive multiple alternating view changes.\n- Enter and Space at the exact deadline still do not open either form.\n- The existing no-longer-available announcements remain intact.\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#75"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T10:05:45.029Z",
+      "proposedFromRef": "#75"
+    },
+    {
+      "taskRef": "#77",
+      "title": "Keep keyboard focus accessible when an expired draft notice disappears",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T16:37:43.875Z",
+      "description": "# Keep keyboard focus accessible when an expired draft notice disappears\n\n## What & Why\nThe expiry announcement is covered, but the keyboard destination after a recovery control is removed at the deadline is not explicitly protected. A focus regression could leave keyboard users without a usable next target.\n\n## Done looks like\n- Answer and opportunity expiry after navigation announce that the draft is no longer available.\n- Focus moves to a visible, meaningful control instead of a detached recovery button.\n- No answer or opportunity form opens during expiry.\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts\n- artifacts/escape-hatch/src/App.tsx",
+      "dependsOn": [
+        "#75"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T10:05:45.029Z",
+      "proposedFromRef": "#75"
+    },
+    {
+      "taskRef": "#78",
+      "title": "Keep every optional field when a draft is recovered from the keyboard",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T12:23:12.170Z",
+      "description": "# Keep every optional field when a draft is recovered from the keyboard\n\n## What & Why\nKeyboard recovery now proves the core answer and opportunity values return before expiry, but the remaining selectable fields are not covered by that activation path. A regression could silently reset an answer category or an opportunity status and priority.\n\n## Done looks like\n- Recovering an answer with the keyboard preserves its selected category.\n- Recovering an opportunity with the keyboard preserves its status and priority.\n- The assertions live alongside the existing keyboard recovery coverage.\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#74"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T10:20:39.077Z",
+      "proposedFromRef": "#74"
+    },
+    {
+      "taskRef": "#79",
+      "title": "Tell users when keyboard recovery has reopened their draft",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T12:22:03.066Z",
+      "description": "# Tell users when keyboard recovery has reopened their draft\n\n## What & Why\nKeyboard users can reopen both draft types, but the flow should also provide a clear announcement that recovery succeeded so users who rely on assistive technology know the saved work is back in the form.\n\n## Done looks like\n- Answer recovery announces that the saved draft was reopened.\n- Opportunity recovery announces the same outcome.\n- The announcement is covered for Enter and Space activation without changing the existing expiry message.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#74"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T10:20:39.077Z",
+      "proposedFromRef": "#74"
+    },
+    {
+      "taskRef": "#80",
+      "title": "Confirm mouse recovery also tells users their draft reopened",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T12:21:55.428Z",
+      "description": "# Confirm mouse recovery also tells users their draft reopened\n\n## What & Why\nKeyboard recovery now announces that the saved draft was reopened, but the same user-visible outcome should stay covered when someone activates the recovery control with a pointer. This protects the shared recovery handler from future regressions.\n\n## Done looks like\n- Add browser coverage for pointer recovery of an answer draft and an opportunity draft.\n- Assert the reopened-draft announcement for both recovery paths.\n- Keep the existing expiry announcement assertions unchanged.\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#79"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T12:21:55.428Z",
+      "proposedFromRef": "#79"
+    },
+    {
+      "taskRef": "#81",
+      "title": "Confirm mouse recovery preserves every draft selection",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T12:38:31.051Z",
+      "description": "# Confirm mouse recovery preserves every draft selection\n\n## What & Why\nMouse recovery should restore the same complete draft as keyboard recovery. A regression could reset an answer category or an opportunity's status and priority while the visible text still looks correct.\n\n## Done looks like\n- Recovering an answer draft with the mouse preserves its selected category.\n- Recovering an opportunity draft with the mouse preserves its status and priority.\n- The assertions sit beside the existing mouse recovery coverage.\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#78"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T12:23:06.755Z",
+      "proposedFromRef": "#78"
+    },
+    {
+      "taskRef": "#82",
+      "title": "Confirm both keyboard keys preserve optional draft fields",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T12:37:23.732Z",
+      "description": "# Confirm both keyboard keys preserve optional draft fields\n\n## What & Why\nThe current keyboard coverage checks one activation key per draft type. Covering the opposite key prevents Enter and Space from taking different recovery paths that silently reset category, status, or priority.\n\n## Done looks like\n- Recovering an answer with Space preserves its category.\n- Recovering an opportunity with Enter preserves its status and priority.\n- The assertions remain alongside the existing keyboard recovery tests.\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#78"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T12:23:06.755Z",
+      "proposedFromRef": "#78"
+    },
+    {
+      "taskRef": "#83",
+      "title": "Keep recovered details after saving and reloading",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T16:05:50.790Z",
+      "description": "# Keep recovered details after saving and reloading\n\n## What & Why\nThe keyboard recovery tests verify that optional fields are restored into the open form. Add coverage for the next user action so category, status, and priority cannot be lost when a recovered draft is saved and the page is reloaded.\n\n## Done looks like\n- Recover an answer with its category, save it, reload, and verify the category remains.\n- Recover an opportunity with its status and priority, save it, reload, and verify both remain.\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#82"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T12:37:13.865Z",
+      "proposedFromRef": "#82"
+    },
+    {
+      "taskRef": "#84",
+      "title": "Prevent repeated keypresses from reopening a draft twice",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T17:14:00.884Z",
+      "description": "# Prevent repeated keypresses from reopening a draft twice\n\n## What & Why\nRecovery is activated from a keyboard-accessible button. Add a regression case for rapid repeated Enter or Space input to ensure one draft produces one form and one recovery result instead of duplicate or conflicting state.\n\n## Done looks like\n- Repeated keyboard activation does not create duplicate recovery notices or forms.\n- The recovered draft values and success announcement remain stable after the repeated input.\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#82"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T12:37:13.865Z",
+      "proposedFromRef": "#82"
+    },
+    {
+      "taskRef": "#85",
+      "title": "Confirm recovering both draft types keeps each selection isolated",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T12:38:20.115Z",
+      "description": "# Confirm recovering both draft types keeps each selection isolated\n\n## What & Why\nWhen an answer draft and an opportunity draft are both waiting for recovery, mouse recovery should reopen each one with its own selected values. A regression could accidentally apply one draft's category, status, or priority to the other.\n\n## Done looks like\n- Create an answer draft with a non-default category and an opportunity draft with non-default status and priority.\n- Recover each draft with the mouse while both recovery notices exist.\n- Assert each form restores its own text and selected values.\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#81"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T12:38:20.115Z",
+      "proposedFromRef": "#81"
+    },
+    {
+      "taskRef": "#86",
+      "title": "Show saved opportunity priority clearly in the queue",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T12:43:32.815Z",
+      "description": "# Show saved opportunity priority clearly in the queue\n\n## What & Why\nRecovered opportunities keep their priority after saving and reloading, but the queue currently communicates priority mainly through icon styling. A clear label would make the saved detail easier to verify and use, including for users who cannot distinguish the visual treatment.\n\n## Done looks like\n- Saved opportunity cards show High, Normal, or Low priority text.\n- The priority label remains accurate after saving, reloading, and editing an opportunity.\n- The existing persistence coverage in artifacts/escape-hatch/tests/persistence.spec.ts verifies the visible priority label.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#83"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T12:43:32.815Z",
+      "proposedFromRef": "#83"
+    },
+    {
+      "taskRef": "#87",
+      "title": "Confirm home status undo expires after its recovery window",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T16:10:14.431Z",
+      "description": "# Confirm home status undo expires after its recovery window\n\n## What & Why\nThe home page now offers a short-lived undo after marking an opportunity applied. A regression test should confirm the action disappears after the recovery window so stale status changes cannot be reversed unexpectedly.\n\n## Done looks like\n- The browser test advances time beyond the home undo window after Mark applied\n- The undo notice and action are no longer available\n- The applied status remains persisted after reload\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#29"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T16:10:14.431Z",
+      "proposedFromRef": "#29"
+    },
+    {
+      "taskRef": "#88",
+      "title": "Confirm home undo restores every starting status without losing details",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T16:10:14.431Z",
+      "description": "# Confirm home undo restores every starting status without losing details\n\n## What & Why\nThe home shortcut can act on opportunities in several actionable statuses. Coverage should verify that undo returns each supported starting status, not just Saved, while retaining the URL, priority, next action, notes, and role.\n\n## Done looks like\n- The browser test covers undo from Preparing and Follow up (or equivalent actionable statuses)\n- Each opportunity returns to its exact prior status\n- Complete opportunity details remain available after reload\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#29"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T16:10:14.431Z",
+      "proposedFromRef": "#29"
+    },
+    {
+      "taskRef": "#89",
+      "title": "Keep blank optional opportunity details from creating empty labels",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T16:11:53.493Z",
+      "description": "# Keep blank optional opportunity details from creating empty labels\n\n## What & Why\nWhitespace-only optional values such as a next action or notes can currently remain truthy and produce blank-looking content in saved opportunity cards. Normalizing these values would keep the queue readable without changing the required-field behavior delivered here.\n\n## Done looks like\n- Whitespace-only optional next actions and notes are treated as empty when an opportunity is saved.\n- Saved cards show the normal empty-state copy instead of blank labels or gaps.\n- Existing non-empty optional values remain intact.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#32"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T16:11:53.493Z",
+      "proposedFromRef": "#32"
+    },
+    {
+      "taskRef": "#90",
+      "title": "Confirm saved details trim surrounding whitespace without changing the text",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T16:11:53.493Z",
+      "description": "# Confirm saved details trim surrounding whitespace without changing the text\n\n## What & Why\nThe required fields now reject whitespace-only input and trim valid values before persistence, but the browser regression suite does not explicitly protect the normalization behavior for values with intentional surrounding spaces. A focused check would catch future changes that either store accidental padding or remove meaningful internal spaces.\n\n## Done looks like\n- Answer titles and content with surrounding whitespace persist without that padding.\n- Opportunity company and role values with surrounding whitespace persist without that padding.\n- Internal spaces remain unchanged after saving and reloading.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#32"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T16:11:53.493Z",
+      "proposedFromRef": "#32"
+    },
+    {
+      "taskRef": "#91",
+      "title": "Undo an accidental workspace restore",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T16:17:44.302Z",
+      "description": "# Undo an accidental workspace restore\n\n## What & Why\nA confirmed restore immediately replaces the profile, answer library, and application queue. Users need a short recovery path if they confirm an older backup by mistake.\n\n## Done looks like\n- The restore flow keeps the replaced workspace available for a short, clearly labeled undo window.\n- Choosing Undo restores all three replaced areas together, including unsaved profile context where applicable.\n- The undo state survives navigation within the app and expires clearly.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/src/lib/storage.ts\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#36"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T16:17:44.302Z",
+      "proposedFromRef": "#36"
+    },
+    {
+      "taskRef": "#92",
+      "title": "Let users review exactly what an older backup will overwrite",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T16:17:44.302Z",
+      "description": "# Let users review exactly what an older backup will overwrite\n\n## What & Why\nThe restore warning identifies changed areas, but users may still want to see which records or profile fields differ before making an irreversible choice.\n\n## Done looks like\n- The restore dialog offers a concise before-and-after view for each changed area.\n- Answer and opportunity additions, removals, and edits are distinguishable without opening the backup file manually.\n- The review remains usable on narrow screens and does not change saved data until confirmation.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/src/lib/storage.ts\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#36"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T16:17:44.302Z",
+      "proposedFromRef": "#36"
+    },
+    {
+      "taskRef": "#93",
+      "title": "Confirm expired edited drafts leave saved entries unchanged",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T16:25:55.780Z",
+      "description": "# Confirm expired edited drafts leave saved entries unchanged\n\n## What & Why\nThe recovery deadline test confirms that an edited draft expires and announces its loss, but it does not explicitly verify that the original saved entry remains intact after the draft is discarded by expiry.\n\n## Done looks like\n- An edited answer draft expires without replacing or deleting the saved answer.\n- An edited opportunity draft expires without replacing or deleting the saved opportunity.\n- Reloading both lists still shows the original saved values.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#67"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T16:25:55.780Z",
+      "proposedFromRef": "#67"
+    },
+    {
+      "taskRef": "#94",
+      "title": "Keep edited entries in place after draft recovery",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T16:25:55.780Z",
+      "description": "# Keep edited entries in place after draft recovery\n\n## What & Why\nRecovering an edit should update the existing saved entry rather than changing its position or creating a duplicate, especially when a list contains multiple saved entries.\n\n## Done looks like\n- Recovering an edited answer updates the original card in its existing list position.\n- Recovering an edited opportunity updates the original row in its existing list position.\n- Reloading preserves the same order with no duplicate entries.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#67"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T16:25:55.780Z",
+      "proposedFromRef": "#67"
+    },
+    {
+      "taskRef": "#95",
+      "title": "Keep multiple recoverable drafts from replacing each other",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T16:30:47.620Z",
+      "description": "# Keep multiple recoverable drafts from replacing each other\n\n## What & Why\nIf a user dismisses a second unsaved answer or opportunity before recovering the first, the current single-notice state can replace the earlier draft. Preserving each recoverable draft avoids silently losing work.\n\n## Done looks like\n- Dismissing another draft does not silently remove an earlier still-valid recovery option.\n- Users can identify and recover each available draft independently.\n- Browser coverage verifies the behavior for both answer and opportunity drafts.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#68"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T16:30:47.620Z",
+      "proposedFromRef": "#68"
+    },
+    {
+      "taskRef": "#96",
+      "title": "Make draft countdown announcements clear for screen readers",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T16:30:47.620Z",
+      "description": "# Make draft countdown announcements clear for screen readers\n\n## What & Why\nThe recovery countdown changes frequently inside a live status notice. A screen reader may repeat every update instead of announcing only useful milestones, making the notice difficult to follow.\n\n## Done looks like\n- The recovery notice communicates availability and expiration without excessive repeated announcements.\n- Countdown updates remain visible for sighted users.\n- Accessibility-focused browser coverage verifies the notice and expiration announcement.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#68"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T16:30:47.620Z",
+      "proposedFromRef": "#68"
+    },
+    {
+      "taskRef": "#97",
+      "title": "Keep draft recovery available through browser back and forward navigation",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T17:18:41.642Z",
+      "description": "# Keep draft recovery available through browser back and forward navigation\n\n## What & Why\nThe current regression coverage exercises sidebar navigation, but browser history navigation can mount the same views through a different lifecycle. Covering it will catch recovery notices being lost when users use the browser controls.\n\n## Done looks like\n- Answer and opportunity recovery notices remain available after navigating back and forward across the two views.\n- A still-valid draft can be reopened after the history navigation.\n- Expired drafts still announce that they are no longer available.\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#76"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T16:32:02.285Z",
+      "proposedFromRef": "#76"
+    },
+    {
+      "taskRef": "#98",
+      "title": "Keep keyboard focus in the form after reopening a draft",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T16:32:02.285Z",
+      "description": "# Keep keyboard focus in the form after reopening a draft\n\n## What & Why\nKeyboard recovery is now covered for timing and view changes, but the interaction is not complete unless focus lands in the reopened form. A focus regression would force keyboard users to search for where to continue editing.\n\n## Done looks like\n- Enter and Space recovery both reopen the correct answer or opportunity form.\n- Focus lands on the first meaningful field in the reopened form.\n- The existing recovery announcements remain intact.\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#76"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T16:32:02.285Z",
+      "proposedFromRef": "#76"
+    },
+    {
+      "taskRef": "#99",
+      "title": "Keep keyboard focus accessible when users discard an unsaved draft",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T16:37:32.934Z",
+      "description": "# Keep keyboard focus accessible when users discard an unsaved draft\n\n## What & Why\nThe recovery notice now returns focus to a visible page action when a draft expires. The parallel manual-discard path should provide the same keyboard-safe behavior instead of leaving focus on a removed Discard button.\n\n## Done looks like\n- Discarding an answer draft moves focus to the visible New answer control.\n- Discarding an opportunity draft moves focus to the visible Add opportunity control.\n- The discard announcement remains available and no form opens.\n\n## Relevant files\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#77"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T16:37:32.934Z",
+      "proposedFromRef": "#77"
+    },
+    {
+      "taskRef": "#100",
+      "title": "Confirm the browser assistant never submits across real application pages",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T17:27:19.971Z",
+      "description": "# Confirm the browser assistant never submits across real application pages\n\n## What & Why\nThe current shared policy and cockpit coverage prove the safety rules, but the unpacked MV3 package still needs a Chromium-level harness against a synthetic multi-page application. This protects the highest-risk promise: fill only after explicit confirmation and never trigger site navigation.\n\n## Done looks like\n- Load browser/application-assist in a controlled Chromium test context\n- Exercise one-shot fill, manual page advance, same-origin re-scan, undo, pause, and emergency stop\n- Assert user-edited fields, passwords, uploads, sensitive questions, and Next/Continue/Submit controls remain untouched\n- Assert the exported session status preserves page history after the popup is reopened\n\n## Relevant files\n- browser/application-assist/content.js\n- browser/application-assist/popup.js\n- browser/application-assist/manifest.json\n- artifacts/escape-hatch/tests/assist.spec.ts",
+      "dependsOn": [
+        "#1"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T17:02:10.863Z",
+      "proposedFromRef": "#1"
+    },
+    {
+      "taskRef": "#101",
+      "title": "Support more resume PDF layouts without freezing local intake",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T17:36:21.499Z",
+      "description": "# Support more resume PDF layouts without freezing local intake\n\n## What & Why\nResume intake currently handles the attached text-layer Flate PDF shape and fails closed for scanned or unsupported documents. A bounded parser expansion would improve compatibility without weakening the local-only privacy boundary.\n\n## Done looks like\n- Keep decompression time-bounded and skip font streams\n- Add support for additional text operators and common uncompressed text layers\n- Surface a clear unsupported-document explanation when extraction is incomplete\n- Add representative local-only tests without committing personal resume values\n\n## Relevant files\n- artifacts/escape-hatch/src/lib/resume-import.ts\n- artifacts/escape-hatch/tests/assist.spec.ts\n- artifacts/escape-hatch/src/lib/assist.test.ts",
+      "dependsOn": [
+        "#1"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "tech_debt",
+      "createdAt": "2026-09-20T17:02:10.863Z",
+      "proposedFromRef": "#1"
+    },
+    {
+      "taskRef": "#102",
+      "title": "Keep an assist session visible after the extension popup is reopened",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T17:50:57.637Z",
+      "description": "# Keep an assist session visible after the extension popup is reopened\n\n## What & Why\nThe extension persists its state and offers JSON recovery, while the cockpit can import an observed session. A follow-up should make the reconnect path easier to verify and use when a popup closes during a multi-page application.\n\n## Done looks like\n- Reopening the popup restores the active tab's session summary and page history\n- A user can export/import session status without changing profile or application milestones\n- Origin changes and emergency-stop state remain visible after reconnect\n\n## Relevant files\n- browser/application-assist/content.js\n- browser/application-assist/popup.js\n- browser/application-assist/popup.html\n- artifacts/escape-hatch/src/App.tsx",
+      "dependsOn": [
+        "#1"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T17:02:10.863Z",
+      "proposedFromRef": "#1"
+    },
+    {
+      "taskRef": "#103",
+      "title": "Confirm opportunity drafts reopen only once after repeated keyboard activation",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T17:13:48.537Z",
+      "description": "# Confirm opportunity drafts reopen only once after repeated keyboard activation\n\n## What & Why\nAnswer draft recovery now guards against rapid repeated Enter and Space activation. The opportunity recovery flow has a separate form and state path, so it should have the same regression protection against duplicate forms, notices, or unstable recovered values.\n\n## Done looks like\n- Rapid repeated Enter and Space activation leaves exactly one opportunity form open.\n- The recovered company, role, and other draft values remain unchanged.\n- The recovery notice clears and the single success announcement remains stable.\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#84"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T17:13:48.537Z",
+      "proposedFromRef": "#84"
+    },
+    {
+      "taskRef": "#104",
+      "title": "Keep draft notices available when browser history passes through the profile",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T17:56:38.737Z",
+      "description": "# Keep draft notices available when browser history passes through the profile\n\n## What & Why\nThe current regression coverage verifies browser back and forward between the answer library and opportunity queue. A history sequence that passes through Profile should also preserve each unsaved draft notice so users do not lose recovery options when checking settings.\n\n## Done looks like\n- An answer draft notice remains available after navigating answers → profile → applications → back and forward through browser history.\n- An opportunity draft notice remains available through the same history sequence.\n- An expired draft still announces that it is unavailable after returning through history.\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#97"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T17:18:28.782Z",
+      "proposedFromRef": "#97"
+    },
+    {
+      "taskRef": "#105",
+      "title": "Prevent recovered drafts from returning during repeated browser history traversal",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T18:05:11.190Z",
+      "description": "# Prevent recovered drafts from returning during repeated browser history traversal\n\n## What & Why\nA draft that has been reopened should be cleared from recovery state. Repeated browser back and forward navigation should not make the old recovery notice reappear or allow the same draft to be reopened twice.\n\n## Done looks like\n- Recovering a draft after browser history navigation removes its notice.\n- Repeated back and forward navigation does not restore the old notice.\n- The reopened form retains its values until the user saves or explicitly cancels it.\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#97"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T17:18:28.782Z",
+      "proposedFromRef": "#97"
+    },
+    {
+      "taskRef": "#106",
+      "title": "Confirm cross-origin navigation pauses the assistant safely",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T17:27:04.417Z",
+      "description": "# Confirm cross-origin navigation pauses the assistant safely\n\n## What & Why\nThe multi-page harness now covers same-origin page changes, but a real application can redirect to another origin. Verify the assistant pauses before scanning or filling after that boundary and never carries page controls across sites.\n\n## Done looks like\n- Extend the Chromium harness around browser/application-assist/content.js and artifacts/escape-hatch/tests/assist.spec.ts.\n- Navigate the synthetic application to a different origin after a session starts.\n- Assert the session is paused, no new-origin fields are filled, and navigation controls remain untouched.",
+      "dependsOn": [
+        "#100"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T17:27:04.417Z",
+      "proposedFromRef": "#100"
+    },
+    {
+      "taskRef": "#107",
+      "title": "Keep reviewed session history after the application tab reloads",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T17:27:04.417Z",
+      "description": "# Keep reviewed session history after the application tab reloads\n\n## What & Why\nPopup reopen now preserves page history, but a browser reload is another common interruption. Confirm the locally stored session reconnects without duplicate listeners or losing reviewed page history.\n\n## Done looks like\n- Extend artifacts/escape-hatch/tests/assist.spec.ts using the unpacked browser/application-assist package.\n- Fill and review at least two same-origin pages, reload the application tab, and reopen the popup.\n- Assert the exported session still contains both page records and does not repeat fill actions automatically.",
+      "dependsOn": [
+        "#100"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T17:27:04.417Z",
+      "proposedFromRef": "#100"
+    },
+    {
+      "taskRef": "#108",
+      "title": "Catch oversized or slow PDF decompression before it freezes resume intake",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T17:36:08.247Z",
+      "description": "# Catch oversized or slow PDF decompression before it freezes resume intake\n\n## What & Why\nThe local parser now has byte, output, and deadline limits, but the safety boundary should stay protected by regression fixtures that exercise oversized uncompressed streams and malformed Flate data.\n\n## Done looks like\n- Local-only tests cover oversized uncompressed content and malformed or expanding Flate streams.\n- Each fixture fails with the unsupported-document explanation without hanging the test process.\n- No personal resume values or uploaded network fixtures are used.\n\n## Relevant files\n- artifacts/escape-hatch/src/lib/resume-import.ts\n- artifacts/escape-hatch/src/lib/assist.test.ts",
+      "dependsOn": [
+        "#101"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T17:36:08.247Z",
+      "proposedFromRef": "#101"
+    },
+    {
+      "taskRef": "#109",
+      "title": "Keep multi-column resume text in a readable order",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T17:36:08.247Z",
+      "description": "# Keep multi-column resume text in a readable order\n\n## What & Why\nText operators from multi-column layouts can be extracted safely but may currently follow PDF stream order instead of the visual reading order, which can make review proposals confusing.\n\n## Done looks like\n- A bounded, local-only ordering strategy handles representative two-column text-layer fixtures.\n- Review proposals and provenance remain readable without auto-saving extracted values.\n- Tests use synthetic resume content only.\n\n## Relevant files\n- artifacts/escape-hatch/src/lib/resume-import.ts\n- artifacts/escape-hatch/src/lib/assist.test.ts\n- artifacts/escape-hatch/tests/assist.spec.ts",
+      "dependsOn": [
+        "#101"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T17:36:08.247Z",
+      "proposedFromRef": "#101"
+    },
+    {
+      "taskRef": "#110",
+      "title": "Confirm session recovery never changes saved milestones",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T17:50:36.902Z",
+      "description": "# Confirm session recovery never changes saved milestones\n\n## What & Why\nSession status is intentionally separate from reviewed profile sync and application milestones, but the end-to-end browser flow should lock that boundary down. A regression here could make reconnecting a session alter saved opportunity status or profile details.\n\n## Done looks like\n- Seed a profile and opportunity with a known status\n- Export/import a session status through the extension and cockpit\n- Confirm profile fields, answer library entries, opportunity details, and milestone status are unchanged\n\n## Relevant files\n- artifacts/escape-hatch/tests/assist.spec.ts\n- artifacts/escape-hatch/src/App.tsx\n- browser/application-assist/popup.js",
+      "dependsOn": [
+        "#102"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T17:50:36.902Z",
+      "proposedFromRef": "#102"
+    },
+    {
+      "taskRef": "#111",
+      "title": "Keep the cockpit current when navigation happens with the popup closed",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T17:50:36.902Z",
+      "description": "# Keep the cockpit current when navigation happens with the popup closed\n\n## What & Why\nThe extension now persists page history and reconnect state safely, but the cockpit still receives that status through a manual session export/import. A later improvement could make a closed-popup navigation easier to review without requiring a new manual handoff.\n\n## Done looks like\n- Navigation and origin changes recorded while the popup is closed remain available for cockpit review\n- The cockpit can refresh or re-import the latest session without touching profile or application data\n- Emergency-stop state remains latched during the refresh path\n\n## Relevant files\n- browser/application-assist/content.js\n- browser/application-assist/popup.js\n- artifacts/escape-hatch/src/App.tsx",
+      "dependsOn": [
+        "#102"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T17:50:36.902Z",
+      "proposedFromRef": "#102"
+    },
+    {
+      "taskRef": "#112",
+      "title": "Keep unsaved profile edits through browser history",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T17:56:25.960Z",
+      "description": "# Keep unsaved profile edits through browser history\n\n## What & Why\nThe current history regression covers answer and opportunity recovery notices, but not an in-progress profile form. Visiting another workspace view and returning should not silently discard profile edits.\n\n## Done looks like\n- Unsaved profile fields remain intact after profile → answers → profile history traversal\n- Back and forward navigation preserves the same in-progress profile values\n- The coverage uses the existing persistence browser test patterns\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#104"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T17:56:25.960Z",
+      "proposedFromRef": "#104"
+    },
+    {
+      "taskRef": "#113",
+      "title": "Confirm expired draft announcements survive a page reload",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T17:56:25.960Z",
+      "description": "# Confirm expired draft announcements survive a page reload\n\n## What & Why\nDraft recovery expiry is covered during route history traversal, but a reload boundary should also prove that expired notices cannot return and that the unavailable announcement remains clear.\n\n## Done looks like\n- Expired answer drafts stay unavailable after reload and route navigation\n- Expired opportunity drafts stay unavailable after reload and route navigation\n- The existing recovery-announcement selectors are used for accessible verification\n\n## Relevant files\n- artifacts/escape-hatch/tests/persistence.spec.ts",
+      "dependsOn": [
+        "#104"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T17:56:25.960Z",
+      "proposedFromRef": "#104"
+    },
+    {
+      "taskRef": "#114",
+      "title": "Preserve reviewed resume edits",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T18:17:32.965Z",
+      "description": "# Preserve reviewed resume edits\n\n## What & Why\nThe local resume intake correctly keeps extracted values in a review panel, but the acceptance path does not consistently use the reviewer’s edited proposal value when saving structured profile data. Contact location proposals can also be accepted without applying their city and region fields. Fix this so the review-first promise is truthful: accepted and edited values become the saved profile, while rejected proposals remain out of the profile.\n\n## Done looks like\n- Editing and accepting a contact, location, link, skill, project, experience, or education proposal saves the edited value rather than the original extraction.\n- Accepting a location proposal persists both city and region to the reviewed profile and the base profile where those fields are represented.\n- Rejecting a proposal leaves the corresponding existing profile data unchanged.\n- Resume review remains non-persistent until the user chooses Save reviewed proposals, and the saved result survives reload.\n- Synthetic regression coverage proves the mapping without storing personal resume values in source, fixtures, logs, or task descriptions.\n\n## Out of scope\n- New PDF extraction filters, decompression limits, or multi-column reading-order work.\n- Browser extension field detection, navigation handling, or session progress.\n- Automatic approval, server sync, or application submission.\n\n## Steps\n1. **Make proposal values authoritative** — Update the resume approval mapping so accepted and edited proposals drive every saved contact field and structured collection entry, including location, links, skills, projects, experience, and education, while retaining provenance and excluding rejected proposals.\n2. **Keep cockpit state aligned** — Ensure the approved assist profile and the existing base profile receive only the accepted contact changes, with no writes during preview and no accidental replacement of unrelated saved values.\n3. **Add regression coverage** — Exercise accepted, edited, rejected, and location proposals with synthetic data at the library and cockpit layers, including persistence after reload and the no-accepted-proposals case.\n\n## Relevant files\n- `artifacts/escape-hatch/src/lib/resume-import.ts:245-361`\n- `artifacts/escape-hatch/src/lib/assist-contract.ts:22-72`\n- `artifacts/escape-hatch/src/App.tsx:1069-1110`\n- `artifacts/escape-hatch/src/lib/assist.test.ts:58-89`\n- `artifacts/escape-hatch/tests/assist.spec.ts:8-19`",
+      "dependsOn": [],
+      "artifactKinds": [],
+      "createdAt": "2026-09-20T18:02:42.876Z"
+    },
+    {
+      "taskRef": "#115",
+      "title": "Keep reopened draft values after a browser refresh",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T18:04:55.528Z",
+      "description": "# Keep reopened draft values after a browser refresh\n\n## What & Why\nA recovered answer or opportunity currently stays in its form while the page is open, but a browser refresh can discard the in-progress reopened values. Preserving them would prevent users from losing work after the recovery notice has already been used.\n\n## Done looks like\n- Refreshing after recovering an answer restores the same open-form values without showing the old recovery notice again.\n- Refreshing after recovering an opportunity restores the same open-form values without showing the old recovery notice again.\n- Saving or explicitly cancelling clears the persisted reopened-form state.\n- Add focused coverage in artifacts/escape-hatch/tests/persistence.spec.ts and keep the state handling in artifacts/escape-hatch/src/App.tsx consistent for both draft types.",
+      "dependsOn": [
+        "#105"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T18:04:55.528Z",
+      "proposedFromRef": "#105"
+    },
+    {
+      "taskRef": "#116",
+      "title": "Confirm multiple reviewed resume entries keep edits paired correctly",
+      "state": "MERGED",
+      "updatedAt": "2026-09-20T18:23:53.863Z",
+      "description": "# Confirm multiple reviewed resume entries keep edits paired correctly\n\n## What & Why\nThe current review flow now uses each proposal ID to preserve the right supporting details, but coverage is limited to one synthetic project, role, and education entry. A multi-entry regression protects reviewers from one accepted edit inheriting another entry's bullets or details.\n\n## Done looks like\n- A synthetic resume with multiple projects, experience roles, and education entries can be reviewed in mixed accepted, edited, and rejected states.\n- Each accepted or edited entry keeps its own proposal value and provenance.\n- Rejected entries do not add their structured data or supporting details.\n\n## Relevant files\n- artifacts/escape-hatch/src/lib/assist.test.ts\n- artifacts/escape-hatch/src/lib/resume-import.ts",
+      "dependsOn": [
+        "#114"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T18:16:56.216Z",
+      "proposedFromRef": "#114"
+    },
+    {
+      "taskRef": "#117",
+      "title": "Prevent duplicate profile entries when the same resume is reviewed again",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T18:16:56.216Z",
+      "description": "# Prevent duplicate profile entries when the same resume is reviewed again\n\n## What & Why\nSaving the same reviewed resume more than once currently appends another copy of accepted links, skills, projects, experience, and education. Deduplication would keep the local assist profile useful when a reviewer reopens a resume to correct one proposal.\n\n## Done looks like\n- Re-reviewing the same accepted resume updates or preserves the existing structured entries instead of duplicating them.\n- New or edited proposal values remain authoritative without removing unrelated user-entered entries.\n- Repeated saves are covered by library and browser persistence tests.\n\n## Relevant files\n- artifacts/escape-hatch/src/lib/resume-import.ts\n- artifacts/escape-hatch/src/App.tsx\n- artifacts/escape-hatch/src/lib/assist.test.ts\n- artifacts/escape-hatch/tests/assist.spec.ts",
+      "dependsOn": [
+        "#114"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T18:16:56.216Z",
+      "proposedFromRef": "#114"
+    },
+    {
+      "taskRef": "#118",
+      "title": "Mirror project plans locally",
+      "state": "IN_PROGRESS",
+      "updatedAt": "2026-09-20T18:24:14.613Z",
+      "description": "# Mirror project plans locally\n\n## What & Why\nCreate a tracked `docs/plans/` mirror of the Replit project task board so the complete plan history is searchable in the repository and easy to review by status. The task board remains the source of truth; a small workspace script should regenerate the local snapshot from a task export instead of requiring hand-edits to dozens of Markdown files.\n\n## Done looks like\n- `docs/plans/` contains one Markdown file for every task in the supplied task export, including proposed, active, ready, merging, merged, and archived work.\n- Each task file has stable task metadata in frontmatter, the original task title, and its full plan description when one exists; filenames are deterministic and safe for Git and shell tooling.\n- A generated index groups tasks by human-readable status and exposes task refs, titles, follow-up categories, dependencies, and last-updated timestamps so unfinished work can be separated from completed work quickly.\n- Running the documented sync command with a newer export updates changed task files and the index, creates new tasks, and removes files for tasks no longer present without leaving stale entries.\n- Re-running the sync with identical input produces no content changes, and malformed or incomplete input fails with a useful error instead of partially rewriting the mirror.\n- The initial repository snapshot is populated from the current board, and the usage/ownership rules are documented: generated files are not hand-edited, the board is authoritative, and the export/sync step is repeatable.\n- Automated tests cover status labeling, slug and filename stability, frontmatter/Markdown escaping, deterministic ordering, add/update/remove behavior, and invalid-input handling.\n\n## Out of scope\n- Replacing or modifying the Replit task board, its states, dependencies, or descriptions.\n- A live API integration, webhook, scheduled job, or background process that automatically pulls board changes.\n- Changing the EscapeHatch product UI or any API/server behavior.\n- Rewriting task plans, deduplicating tasks, or deciding which proposed work should be accepted.\n- Copying attachments, secrets, or generated build output into `docs/plans/`.\n\n## Steps\n1. **Define the export and mirror contract** — Establish the JSON input shape for task summaries and descriptions, the supported board states and their display labels, deterministic filename rules, and the generated-directory conventions. Keep the board's task refs and dependency refs intact so local documents remain traceable to their source.\n2. **Build the deterministic sync command** — Add a workspace script that reads an export file or standard input, validates required fields, renders one Markdown document per task plus a generated status index, and reconciles additions, updates, and deletions within `docs/plans/` without touching unrelated files.\n3. **Add repository integration and documentation** — Expose the sync command through the existing pnpm workspace conventions, document how to obtain an export and regenerate the mirror, and clearly mark generated files and the task board's source-of-truth role.\n4. **Seed the initial mirror** — Use the current project task board, including the complete plan descriptions and current statuses, to generate the initial tracked `docs/plans/` snapshot. Ensure the index includes every current task and distinguishes unfinished work from merged or archived work.\n5. **Verify the generator** — Add focused automated coverage for rendering and reconciliation edge cases, then run the script and repository type checks to prove that a repeat sync is stable and that invalid exports leave the existing mirror unchanged.\n\n## Relevant files\n- `package.json`\n- `scripts/package.json`\n- `scripts/tsconfig.json`\n- `scripts/src/hello.ts`\n- `replit.md`\n- `.gitignore`\n- `.local/tasks/complete-browser-application-assist.md`\n- `.local/tasks/preserve-reviewed-resume-edits.md`",
+      "dependsOn": [],
+      "artifactKinds": [],
+      "createdAt": "2026-09-20T18:19:51.700Z"
+    },
+    {
+      "taskRef": "#119",
+      "title": "Keep supporting details separate for repeated employers or schools",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T18:23:42.876Z",
+      "description": "# Keep supporting details separate for repeated employers or schools\n\n## What & Why\nResume entries with the same employer or institution name can still be ambiguous when their supporting bullets or details are restored. A regression here protects reviewers from one repeated-name entry inheriting another entry's provenance.\n\n## Done looks like\n- A synthetic resume can contain repeated employer and institution names with different supporting details.\n- Accepting or editing either entry preserves the correct bullets, details, and provenance.\n- Rejected repeated-name entries add no structured data.\n\n## Relevant files\n- artifacts/escape-hatch/src/lib/resume-import.ts\n- artifacts/escape-hatch/src/lib/assist.test.ts",
+      "dependsOn": [
+        "#116"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "test_gaps",
+      "createdAt": "2026-09-20T18:23:42.876Z",
+      "proposedFromRef": "#116"
+    },
+    {
+      "taskRef": "#120",
+      "title": "Keep imported education dates attached to the right school",
+      "state": "PROPOSED",
+      "updatedAt": "2026-09-20T18:23:42.876Z",
+      "description": "# Keep imported education dates attached to the right school\n\n## What & Why\nReviewed education entries currently preserve credentials and supporting details, but imported dates are not carried through as structured values. Keeping dates paired with each school makes the saved resume complete and prevents dates from being lost during review.\n\n## Done looks like\n- Common education date formats are parsed into each imported education entry.\n- Accepted and edited entries retain their own dates and provenance.\n- Rejected entries do not add dates or other structured education data.\n\n## Relevant files\n- artifacts/escape-hatch/src/lib/resume-import.ts\n- artifacts/escape-hatch/src/lib/assist.test.ts",
+      "dependsOn": [
+        "#116"
+      ],
+      "artifactKinds": [],
+      "followUpCategory": "next_steps",
+      "createdAt": "2026-09-20T18:23:42.876Z",
+      "proposedFromRef": "#116"
+    }
+  ]
+}

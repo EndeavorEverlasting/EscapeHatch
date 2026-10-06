@@ -38,7 +38,7 @@
 
 ## Missing / intentionally not yet established
 
-- A repository-owned renderer that consumes private resume content and emits DOCX/PDF. Private rendering currently remains an external/user-owned artifact workflow.
+- A repository-owned renderer that consumes private resume content and emits DOCX/PDF. Private rendering currently remains an external/user-owned artifact workflow. Dual-track contracts now exist: ATS (`contracts/resume-presentation.v1.json`) and optional visual (`contracts/resume-presentation-visual.v1.json`) with synthetic template `templates/resume-visual-dynamic/v1/synthetic-dynamic.tex`. Live PDF compile for the visual spike remains blocked until a TeX engine is installed; source R5 markers are validated by `python scripts/validate_resume_visual_spike.py`.
 - Universal ATS-vendor certification or observed parsing across every employer ATS; the presentation contract deliberately does not claim this.
 - Runtime implementation of the cross-surface local logical store defined by `contracts/application-companion.v1.json`.
 - A packaged Microsoft Store application and store submission/publishing pipeline.
@@ -121,6 +121,7 @@ python scripts/validate_application_companion.py
 python scripts/validate_resume_presentation.py
 python scripts/validate_harness.py
 python scripts/validate_career_state.py
+python scripts/validate_local_runtime_lifecycle.py
 python tests/test_product_version.py
 python tests/test_repository_promotion.py
 python tests/test_study_guidance_export.py

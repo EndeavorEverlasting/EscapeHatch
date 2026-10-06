@@ -1,0 +1,41 @@
+{
+  "schema": "escapehatch-resume-visual-spike-receipt/v1",
+  "generated_at_utc": "2026-10-06T06:40:21.952520+00:00",
+  "template": "templates\\resume-visual-dynamic\\v1\\synthetic-dynamic.tex",
+  "r5": {
+    "r5_markers_present": [
+      "ESCAPEHATCH_R5:dark_schematic_bg",
+      "ESCAPEHATCH_R5:main_left_column",
+      "ESCAPEHATCH_R5:door_hanger_sidebar",
+      "ESCAPEHATCH_R5:horizontal_skill_bars",
+      "ESCAPEHATCH_R5:contact_icon_cluster",
+      "ESCAPEHATCH_R5:single_page_target"
+    ],
+    "structural_tokens_present": [
+      "PageDark",
+      "SkillBar",
+      "rounded corners",
+      "Professional Experience",
+      "Technical Skills",
+      "NOT_FOR_ATS_SUBMISSION"
+    ],
+    "score": "6/6",
+    "decision": "KEEP"
+  },
+  "source_reference": {
+    "path": "Source Resumes Not to Mutate but to Generate",
+    "exists": true,
+    "doctrine": "read_only_reference_never_mutate",
+    "mutated_by_this_script": false
+  },
+  "compile": {
+    "attempted": false,
+    "engine": null,
+    "live_pdf_proof": "BLOCKED",
+    "blocker": "no pdflatex/xelatex/lualatex/tectonic on PATH"
+  },
+  "proof_levels": {
+    "source_structural_markers": "VALIDATED",
+    "live_pdf_compile": "BLOCKED"
+  }
+}

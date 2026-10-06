@@ -1,0 +1,48 @@
+name: Web Cockpit Validation
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'artifacts/escape-hatch/**'
+      - 'docs/plans/**'
+      - 'scripts/replit-plan-sync/**'
+      - 'scripts/validate_replit_transfer.py'
+      - 'docs/migrations/REPLIT_TRANSFER_2026-09-20.md'
+      - '.github/workflows/web-cockpit.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'artifacts/escape-hatch/**'
+      - 'docs/plans/**'
+      - 'scripts/replit-plan-sync/**'
+      - 'scripts/validate_replit_transfer.py'
+      - 'docs/migrations/REPLIT_TRANSFER_2026-09-20.md'
+      - '.github/workflows/web-cockpit.yml'
+permissions:
+  contents: read
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.13' }
+      - run: python scripts/validate_replit_transfer.py
+      - run: npm install --prefix artifacts/escape-hatch --ignore-scripts
+      - run: npm --prefix artifacts/escape-hatch run typecheck
+      - run: npm --prefix artifacts/escape-hatch run test:unit
+      - run: npm --prefix artifacts/escape-hatch run build
+      - run: npx --prefix artifacts/escape-hatch tsx scripts/replit-plan-sync/task-plan-sync.test.ts
+      - run: npx --prefix artifacts/escape-hatch tsx scripts/replit-plan-sync/task-plan-sync.ts --input docs/plans/recovered-task-export.v1.json --output docs/plans --preview
+      - run: git diff --check
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - run: npm install --prefix artifacts/escape-hatch --ignore-scripts
+      - run: npx --prefix artifacts/escape-hatch playwright install --with-deps chromium
+      - run: npm --prefix artifacts/escape-hatch run test:browser

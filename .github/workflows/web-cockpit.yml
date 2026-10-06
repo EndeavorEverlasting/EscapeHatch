@@ -45,4 +45,4 @@ jobs:
         with: { node-version: '22' }
       - run: npm install --prefix artifacts/escape-hatch --ignore-scripts
       - run: npx --prefix artifacts/escape-hatch playwright install --with-deps chromium
-      - run: npm --prefix artifacts/escape-hatch run test:browser
+      - run: xvfb-run --auto-servernum --server-args='-screen 0 1280x720x24' npm --prefix artifacts/escape-hatch run test:browser

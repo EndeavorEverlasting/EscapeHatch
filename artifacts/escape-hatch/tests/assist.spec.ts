@@ -214,9 +214,10 @@ test('keeps a multi-page application review-only through popup reopen', async ({
     await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
 
     const chromiumPath = process.env.PLAYWRIGHT_CHROMIUM_PATH;
+    // Chromium extensions require a headed (or new-headless-disabled) context; GHA uses xvfb-run.
     const context = await browserType.launchPersistentContext(userDataDirectory, {
       baseURL,
-      headless: true,
+      headless: false,
       ...(chromiumPath ? { executablePath: chromiumPath } : {}),
       args: [
         '--no-sandbox',

@@ -1,0 +1,14 @@
+{
+  "hypothesis_id": "NEG-INFLATE-1",
+  "hypothesis": "notification works while Chrome is foregrounded",
+  "evidence_class": "HOST_SIMULATION",
+  "minimum_evidence_class": "PHYSICAL_DEVICE_OBSERVED",
+  "build_artifact": "fixtures/p82-proof-inflation.negative.json",
+  "measurement_source": "assigned_browser_foreground_true",
+  "observation": "browser_foreground=True assigned in host runner",
+  "decision": "PROMOTE",
+  "decision_reason": "illegally treating host assignment as device proof",
+  "promotion_allowed": true,
+  "proof_ceiling": "HOST_SIMULATION",
+  "prototype_level": "P0"
+}

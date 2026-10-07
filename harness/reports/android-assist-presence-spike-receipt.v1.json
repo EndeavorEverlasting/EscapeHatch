@@ -1,31 +1,51 @@
 {
   "schema": "escapehatch/android-assist-presence-spike-receipt/v1",
-  "version": 1,
+  "version": 2,
   "lane": "EH-M1",
-  "generated_at": "2026-10-07T20:02:49.529836+00:00",
+  "generated_at": "2026-10-07T20:52:58.176190+00:00",
   "contract_schema": "escapehatch/application-assist-presence-surface/v1",
-  "floor_commit_note": "host-side spike; no Android SDK device execution",
+  "evidence_contract": "contracts/p82-evidence-class.v1.json",
+  "floor_commit_note": "host-side spike with corrected evidence classes; no Android SDK device execution",
   "prototype_ladder": [
-    "spike"
+    "P0"
   ],
   "iterations": [
     {
       "hypothesis_id": "H1",
       "hypothesis": "Quiet notification/companion affordance can remain available while browser is foregrounded without SYSTEM_ALERT_WINDOW.",
-      "observation": "affordance=surfaced; browser_foreground=True; overlay_required=False",
+      "evidence_class": "HOST_SIMULATION",
+      "minimum_evidence_class": "PHYSICAL_DEVICE_OBSERVED",
+      "build_artifact": "scripts/run_android_assist_presence_spike.py",
+      "measurement_source": "assigned_browser_foreground_and_host_affordance_machine",
+      "observation": "affordance=surfaced; browser_foreground=True (assigned); overlay_required=False (assigned). Model can represent the condition.",
       "decision": "KEEP",
+      "decision_reason": "Host model retains candidate; Android notification-over-browser remains UNOBSERVED_ANDROID.",
+      "promotion_allowed": false,
+      "proof_ceiling": "HOST_SIMULATION",
+      "prototype_level": "P0",
       "keep": true,
+      "historical_decision_label": "KEEP",
       "metrics": {
         "overlay_required": false,
-        "affordance": "surfaced"
+        "affordance": "surfaced",
+        "assigned_inputs": true
       }
     },
     {
       "hypothesis_id": "H2",
       "hypothesis": "Reopening EscapeHatch restores the identical assist session identity and origin binding.",
+      "evidence_class": "HOST_SIMULATION",
+      "minimum_evidence_class": "EMULATOR_OBSERVED",
+      "build_artifact": "scripts/run_android_assist_presence_spike.py#SessionStore",
+      "measurement_source": "in_memory_python_session_store",
       "observation": "resumed_session_id=sess-spike-001; status=active",
       "decision": "KEEP",
+      "decision_reason": "In-memory host store preserves identity; process-death Android restoration UNOBSERVED_ANDROID.",
+      "promotion_allowed": false,
+      "proof_ceiling": "HOST_SIMULATION",
+      "prototype_level": "P0",
       "keep": true,
+      "historical_decision_label": "KEEP",
       "metrics": {
         "session_key": "escapeHatch.applicationAssistSession.v1",
         "match": true
@@ -34,20 +54,38 @@
     {
       "hypothesis_id": "H3",
       "hypothesis": "At least one supported Android handoff (deep link and Sharesheet text) can carry application context into EscapeHatch.",
+      "evidence_class": "HOST_SIMULATION",
+      "minimum_evidence_class": "EMULATOR_OBSERVED",
+      "build_artifact": "scripts/run_android_assist_presence_spike.py#parse_*",
+      "measurement_source": "python_uri_and_share_text_parsers",
       "observation": "deep={'session_id': 'sess-spike-001', 'url': 'https://jobs.example.com/apply', 'company': 'Example Co', 'role': 'Automation Engineer', 'question_text': None, 'source': 'deep_link'}; share_url=https://jobs.example.com/apply",
       "decision": "KEEP",
+      "decision_reason": "Parser semantics HOST_SIMULATION_PROVEN; Android Activity/Sharesheet reception UNOBSERVED_ANDROID.",
+      "promotion_allowed": false,
+      "proof_ceiling": "HOST_SIMULATION",
+      "prototype_level": "P0",
       "keep": true,
+      "historical_decision_label": "KEEP",
       "metrics": {
         "deep_link": true,
-        "sharesheet": true
+        "sharesheet_parser": true
       }
     },
     {
       "hypothesis_id": "H4",
       "hypothesis": "Dismiss preserves session and ordinary browser navigation does not spawn repeated prompts.",
+      "evidence_class": "HOST_SIMULATION",
+      "minimum_evidence_class": "BROWSER_OBSERVED",
+      "build_artifact": "scripts/run_android_assist_presence_spike.py#AffordanceMachine",
+      "measurement_source": "host_affordance_machine_plus_in_memory_store",
       "observation": "state=temporarily_dismissed; prompts=0; session_preserved=True",
       "decision": "KEEP",
+      "decision_reason": "Dismiss/session retention model HOST_SIMULATION_PROVEN; Android notification lifecycle UNOBSERVED_ANDROID.",
+      "promotion_allowed": false,
+      "proof_ceiling": "HOST_SIMULATION",
+      "prototype_level": "P0",
       "keep": true,
+      "historical_decision_label": "KEEP",
       "metrics": {
         "prompts": 0
       }
@@ -55,136 +93,82 @@
     {
       "hypothesis_id": "H5",
       "hypothesis": "SYSTEM_ALERT_WINDOW is unnecessary for V1 because a lower-authority mechanism scores higher on quiet presence + policy + onboarding.",
-      "observation": "primary=notification_foreground_service score=19; overlay_score=8",
+      "evidence_class": "STATIC_REASONING",
+      "minimum_evidence_class": "EMULATOR_OBSERVED",
+      "build_artifact": "docs/APPLICATION_ASSIST_ANDROID_CAPABILITY_MATRIX.md",
+      "measurement_source": "authored_numeric_weights_plus_play_policy_docs",
+      "observation": "primary=notification_foreground_service score=19; overlay_score=8; provenance=authored_weights",
       "decision": "KEEP",
+      "decision_reason": "ACCEPTED DESIGN aid only \u2014 authored scores are not Android observation. Overlay necessity remains empirically open until H2\u2013H6 Android evidence.",
+      "promotion_allowed": false,
+      "proof_ceiling": "STATIC_REASONING",
+      "prototype_level": "P0",
       "keep": true,
+      "historical_decision_label": "KEEP",
       "metrics": {
         "primary_score": 19,
-        "overlay_score": 8
+        "overlay_score": 8,
+        "authored": true
       }
     },
     {
       "hypothesis_id": "H6",
       "hypothesis": "Android Bubbles are unsuitable as V1 primary because API 30+ conversation requirements fight presence-not-nag doctrine for job assist.",
-      "observation": "recommendation=optional_enhancement_after_v1; doctrine_fit=medium \u2014 floating affordance ok only if quiet and user-opted",
+      "evidence_class": "STATIC_REASONING",
+      "minimum_evidence_class": "PHYSICAL_DEVICE_OBSERVED",
+      "build_artifact": "android/application-assist-spike/.../BubblePresenceCandidate.kt",
+      "measurement_source": "authored_recommendation_metadata_and_android_docs",
+      "observation": "recommendation=optional_enhancement_after_v1; doctrine_fit=medium. Success condition previously depended on pre-authored recommendation label \u2014 not independent measurement.",
       "decision": "KEEP",
+      "decision_reason": "Retain as optional later candidate; Bubble behavior UNOBSERVED_DEVICE. Do not promote from metadata.",
+      "promotion_allowed": false,
+      "proof_ceiling": "STATIC_REASONING",
+      "prototype_level": "P0",
       "keep": true,
+      "historical_decision_label": "KEEP",
       "metrics": {
-        "bubbles_primary": false
+        "bubbles_primary": false,
+        "metadata_dependent_historical_pass": true
       }
     }
   ],
   "mechanism_matrix_embedded": [
     {
       "id": "notification_foreground_service",
-      "android_versions": "API 26+ FGS patterns; POST_NOTIFICATIONS API 33+",
-      "permissions": [
-        "POST_NOTIFICATIONS",
-        "optional FOREGROUND_SERVICE*"
-      ],
-      "play_policy": "standard notification; no special SYSTEM_ALERT_WINDOW",
-      "browser_compat": "independent of Chrome/Firefox/Samsung; reopen via PendingIntent",
-      "persistence": "ongoing notification + local session store",
-      "ux_cost": "low if channel importance LOW and non-noisy",
-      "complexity": "medium",
-      "security": "no overlay spoofing; user can dismiss notification channel",
-      "doctrine_fit": "high \u2014 quiet by default",
-      "requires_overlay": false,
-      "requires_accessibility": false,
       "recommendation": "primary_v1",
+      "requires_overlay": false,
       "score_quiet_presence": 5,
       "score_session_resume": 5,
       "score_policy": 5,
-      "score_onboarding": 4
+      "score_onboarding": 4,
+      "score_provenance": "STATIC_REASONING_authored_weights"
     },
     {
       "id": "android_bubbles",
-      "android_versions": "API 29+; conversation rules API 30+",
-      "permissions": [
-        "POST_NOTIFICATIONS",
-        "BubbleMetadata on notification"
-      ],
-      "play_policy": "allowed via notification API; conversation semantics required for reliable bubbling on API 30+",
-      "browser_compat": "floats over other apps when system allows bubble",
-      "persistence": "bubble tied to notification lifecycle",
-      "ux_cost": "medium \u2014 conversation framing mismatches job assist; risk of nag if misused",
-      "complexity": "high",
-      "security": "system-managed bubble; lower spoof risk than TYPE_APPLICATION_OVERLAY",
-      "doctrine_fit": "medium \u2014 floating affordance ok only if quiet and user-opted",
-      "requires_overlay": false,
-      "requires_accessibility": false,
       "recommendation": "optional_enhancement_after_v1",
+      "requires_overlay": false,
       "score_quiet_presence": 3,
       "score_session_resume": 4,
       "score_policy": 4,
-      "score_onboarding": 3
+      "score_onboarding": 3,
+      "score_provenance": "STATIC_REASONING_authored_weights",
+      "doctrine_fit": "medium"
     },
     {
       "id": "system_alert_window_overlay",
-      "android_versions": "special access; Settings.canDrawOverlays",
-      "permissions": [
-        "SYSTEM_ALERT_WINDOW"
-      ],
-      "play_policy": "sensitive special access; must send user to system settings; core-function justification required",
-      "browser_compat": "true draw-over browser",
-      "persistence": "service-managed overlay view",
-      "ux_cost": "high onboarding friction; spoofing/attention risk",
-      "complexity": "high",
-      "security": "overlay spoofing risk elevated",
-      "doctrine_fit": "low for default \u2014 attention competition",
-      "requires_overlay": true,
-      "requires_accessibility": false,
       "recommendation": "rejected_v1_primary",
+      "requires_overlay": true,
       "score_quiet_presence": 2,
       "score_session_resume": 4,
       "score_policy": 1,
-      "score_onboarding": 1
-    },
-    {
-      "id": "companion_activity",
-      "android_versions": "all supported",
-      "permissions": [
-        "none beyond app install"
-      ],
-      "play_policy": "standard activity",
-      "browser_compat": "user switches apps; no in-browser injection",
-      "persistence": "local session store",
-      "ux_cost": "medium \u2014 leaves browser unless paired with notification/bubble",
-      "complexity": "low",
-      "security": "standard app sandbox",
-      "doctrine_fit": "high as expansion target",
-      "requires_overlay": false,
-      "requires_accessibility": false,
-      "recommendation": "required_expansion_surface",
-      "score_quiet_presence": 2,
-      "score_session_resume": 5,
-      "score_policy": 5,
-      "score_onboarding": 5
-    },
-    {
-      "id": "sharesheet_intent_applink",
-      "android_versions": "all supported; App Links optional verification",
-      "permissions": [
-        "none for custom scheme; https App Links need verification"
-      ],
-      "play_policy": "standard intents / share targets",
-      "browser_compat": "Chrome/Firefox/Samsung Share; no desktop extension APIs",
-      "persistence": "handoff payload seeds session context",
-      "ux_cost": "one explicit share gesture",
-      "complexity": "low-medium",
-      "security": "user-mediated content; validate/sanitize",
-      "doctrine_fit": "high for context capture",
-      "requires_overlay": false,
-      "requires_accessibility": false,
-      "recommendation": "required_handoff_path",
-      "score_quiet_presence": 1,
-      "score_session_resume": 4,
-      "score_policy": 5,
-      "score_onboarding": 5
+      "score_onboarding": 1,
+      "score_provenance": "STATIC_REASONING_authored_weights"
     }
   ],
   "architecture_decision": {
-    "status": "DECIDED",
+    "status": "ACCEPTED_DESIGN",
+    "evidence_class": "STATIC_REASONING",
+    "empirical_android_proof": false,
     "preferred_v1": "notification_foreground_service + companion_activity",
     "fallback": "sharesheet_intent_applink deep link without ongoing notification",
     "optional_later": "android_bubbles after quiet baseline and honest non-conversation UX research",
@@ -199,21 +183,39 @@
       "BIND_ACCESSIBILITY_SERVICE"
     ],
     "browser_handoff_path": "escapehatch://assist deep link + ACTION_SEND Sharesheet text/url",
-    "session_persistence_boundary": "escapeHatch.applicationAssistSession.v1"
+    "session_persistence_boundary": "escapeHatch.applicationAssistSession.v1",
+    "note": "Architecture retained as last-known-good design. Not promoted to Android-observed proof.",
+    "candidates_retained": [
+      "H1",
+      "H2",
+      "H3",
+      "H4",
+      "H5",
+      "H6"
+    ]
   },
   "acceptance": {
     "eh_u1_separated": true,
     "one_session_model": true,
     "no_second_state_machine": true,
-    "handoff_proven_host_side": true,
-    "session_resume_proven_host_side": true,
-    "primary_mechanism_decided": true,
-    "device_apk_proof": "BLOCKED_no_android_sdk"
+    "handoff_parser_host_simulation": true,
+    "session_resume_host_simulation": true,
+    "architecture_accepted_design": true,
+    "any_promotion_allowed": false,
+    "device_apk_proof": "UNOBSERVED_ANDROID",
+    "notification_over_browser": "UNOBSERVED_ANDROID",
+    "android_activity_deeplink": "UNOBSERVED_ANDROID",
+    "sharesheet_reception": "UNOBSERVED_ANDROID",
+    "process_death_restore": "UNOBSERVED_ANDROID",
+    "bubble_behavior": "UNOBSERVED_DEVICE",
+    "play_store_acceptance": "UNOBSERVED_EXTERNAL"
   },
   "proof_ceiling": [
-    "repository_contract_and_spike_simulation",
-    "no_play_store_packaging_claim",
-    "no_physical_android_device_claim_without_sdk_device_receipt",
-    "no_live_browser_extension_on_android_chrome_claim"
-  ]
+    "HOST_SIMULATION for parsers/state machine",
+    "STATIC_REASONING / ACCEPTED_DESIGN for architecture selection",
+    "no_compiled_android_claim",
+    "no_emulator_or_device_claim",
+    "no_play_release_claim"
+  ],
+  "correction_note": "Historical KEEP labels preserved under historical_decision_label. KEEP means candidate retained, not empirical Android proof."
 }

@@ -1,10 +1,10 @@
 # EH-M2 P82 experiment ladder — Android Application Assist
 
-**Lane:** EH-M2  
-**Canonical plan:** `docs/APPLICATION_ASSIST_MOBILE_M2_P82_PLAN.md`  
-**Depends on:** EH-M1 presence-surface contract + corrected proof ledger  
-**Evidence contract:** `contracts/p82-evidence-class.v1.json`  
-**LKG architecture:** quiet notification + companion activity + Sharesheet/deep-link; no overlay; no Accessibility; Bubbles optional later  
+**Lane:** EH-M2
+**Canonical plan:** `docs/APPLICATION_ASSIST_MOBILE_M2_P82_PLAN.md`
+**Depends on:** EH-M1 presence-surface contract + corrected proof ledger
+**Evidence contract:** `contracts/p82-evidence-class.v1.json`
+**LKG architecture:** quiet notification + companion activity + Sharesheet/deep-link; no overlay; no Accessibility; Bubbles optional later
 
 ## Sprint declaration
 

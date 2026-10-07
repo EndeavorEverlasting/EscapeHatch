@@ -1,7 +1,7 @@
 # EH-M2 validation report
 
-**Lane:** EH-M2 P82 evidence ladder  
-**Branch:** `feat/eh-m2-p82-evidence-ladder-20261007`  
+**Lane:** EH-M2 P82 evidence ladder
+**Branch:** `feat/eh-m2-p82-evidence-ladder-20261007`
 **Floor:** `upstream/main` @ `5a4e6de`
 
 ## Validation executed
@@ -20,5 +20,5 @@
 
 ## Proof ceiling
 
-Highest achieved: **HOST_SIMULATION** (sources + typed receipts).  
+Highest achieved: **HOST_SIMULATION** (sources + typed receipts).
 **COMPILED_ANDROID** and above: BLOCKED in this environment.

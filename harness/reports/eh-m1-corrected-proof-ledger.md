@@ -1,8 +1,8 @@
 # EH-M1 corrected proof ledger
 
-**Correction lane:** EH-M2 P82 evidence hardening  
-**EH-M1 merge:** `5a4e6de` (PR #56) / head `ce9cf0e`  
-**Architecture:** retained (not challenged)  
+**Correction lane:** EH-M2 P82 evidence hardening
+**EH-M1 merge:** `5a4e6de` (PR #56) / head `ce9cf0e`
+**Architecture:** retained (not challenged)
 **Rule:** KEEP is not PROVEN.
 
 ## Capability proof states

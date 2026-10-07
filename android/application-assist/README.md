@@ -4,7 +4,7 @@ Real Gradle application promoting the EH-M1 spike into a compilable Android adap
 
 ## LKG architecture (unchanged)
 
-quiet notification + companion activity + Sharesheet/deep-link  
+quiet notification + companion activity + Sharesheet/deep-link
 no `SYSTEM_ALERT_WINDOW` · no Accessibility · Bubbles optional later · no FGS until H6 evidence
 
 ## Build

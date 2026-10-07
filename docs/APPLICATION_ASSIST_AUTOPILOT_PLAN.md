@@ -206,8 +206,9 @@ Graph:
 `EH-A0 -> { EH-A1 || EH-A2 || EH-A3 || EH-A4 || EH-U1 } -> EH-A5`
 `EH-Q0 -> EH-Q1`
 `{ EH-A5 + EH-Q1 } -> EH-Q2 -> EH-A6`
+`EH-M1 -> EH-M2 -> EH-M3` (Android presence surface; parallel to EH-U1; does not replace EH-U1)
 
-Immediately after explicit implementation authorization, graph width is **2**: EH-A0 and EH-Q0 own independent contract floors. Maximum meaningful width later is **6** (EH-A1/A2/A3/A4/U1 plus EH-Q1), subject to refreshed file-collision inspection.
+Immediately after explicit implementation authorization, graph width is **2**: EH-A0 and EH-Q0 own independent contract floors. Maximum meaningful width later is **6** (EH-A1/A2/A3/A4/U1 plus EH-Q1), subject to refreshed file-collision inspection. Mobile Android presence (EH-M1+) is an additional parallel adapter lane over the same Application Assist session contract.
 
 ### EH-A0 — Progression & account-flow contract floor
 
@@ -420,6 +421,37 @@ Immediately after explicit implementation authorization, graph width is **2**: E
 - `git diff --check`
 
 **Proof ceiling:** repository + synthetic adapter proof. Live Google Drive/mail/provider proof requires separately authorized connected-provider execution.
+
+### EH-M1 — Mobile Application Assist presence surface (Android-first)
+
+**Type:** platform-neutral presence-surface contract + Android adapter spike
+**Dependencies:** Application Assist session contract (`escapehatch/application-assist-session/v1`); companion `android_store_app` surface id
+**Canonical detailed plan:** `docs/APPLICATION_ASSIST_MOBILE_PRESENCE_PLAN.md`
+**Contract:** `contracts/application-assist-presence-surface.v1.json`
+**ADR:** `docs/adr/ADR-20261007-android-assist-presence-v1.md`
+**Goal:** keep EscapeHatch quietly available beside Android job applications via a presentation adapter that reuses the same session model — **not** EH-U1 on mobile.
+
+**Owned scope**
+- presence-surface affordance contract (unavailable…session_ended)
+- Android capability matrix + host-side spike + ADR
+- Kotlin spike stubs under `android/application-assist-spike/`
+- iOS constraints documentation only
+
+**Forbidden scope**
+- EH-U1 in-page beacon rewrite
+- iOS implementation
+- Accessibility Service as V1 dependency
+- `SYSTEM_ALERT_WINDOW` as V1 primary without proof
+- second application/session store
+- autonomous form submission
+
+**Required behavior**
+- quiet notification + companion activity preferred V1
+- Sharesheet/deep-link handoff proven
+- session resume across browser↔companion switches
+- presence-not-nag doctrine
+
+**Proof ceiling:** repository + host-side spike. Device APK / Play packaging = EH-M2+.
 
 ### EH-U1 — Ambient Companion Presence
 

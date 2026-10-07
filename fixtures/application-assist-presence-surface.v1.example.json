@@ -1,0 +1,25 @@
+{
+  "schema": "escapehatch/application-assist-presence-surface-fixture/v1",
+  "version": 1,
+  "note": "Synthetic fixture only — no real PII",
+  "session": {
+    "storage_key": "escapeHatch.applicationAssistSession.v1",
+    "session_id": "sess-fixture-001",
+    "origin": "https://jobs.example.com",
+    "status": "active",
+    "company": "Example Co",
+    "role": "Automation Engineer"
+  },
+  "operational_presence_state": "waiting_user",
+  "presentation_affordance_state": "surfaced",
+  "handoff": {
+    "deep_link": "escapehatch://assist?session=sess-fixture-001&url=https%3A%2F%2Fjobs.example.com%2Fapply&company=Example%20Co&role=Automation%20Engineer",
+    "share_text": "Example Co Automation Engineer https://jobs.example.com/apply"
+  },
+  "android_v1": {
+    "preferred_mechanism": "notification_foreground_service",
+    "fallback": "sharesheet_intent_applink",
+    "requires_system_alert_window": false,
+    "requires_accessibility": false
+  }
+}

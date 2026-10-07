@@ -42,7 +42,7 @@
 - Universal ATS-vendor certification or observed parsing across every employer ATS; the presentation contract deliberately does not claim this.
 - Runtime implementation of the cross-surface local logical store defined by `contracts/application-companion.v1.json`.
 - A packaged Microsoft Store application and store submission/publishing pipeline.
-- A packaged Android/Play Store application and store submission/publishing pipeline.
+- A packaged Android/Play Store application and store submission/publishing pipeline. EH-M1 established the platform-neutral presence-surface contract, Android capability matrix, host-side spike receipt, and ADR selecting quiet notification + companion activity + Sharesheet/deep-link handoff (not overlay-first). Device APK / Play packaging remain EH-M2+.
 - A live local-web companion runtime with stable loopback/origin behavior.
 - A live Google Drive OAuth/sync adapter, sync receipt producer, and observed conflict-resolution flow.
 - Runtime event capture that writes application progress back into career-state after the registered evidence gates.

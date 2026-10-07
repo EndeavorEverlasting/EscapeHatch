@@ -1,0 +1,219 @@
+{
+  "schema": "escapehatch/android-assist-presence-spike-receipt/v1",
+  "version": 1,
+  "lane": "EH-M1",
+  "generated_at": "2026-10-07T20:02:49.529836+00:00",
+  "contract_schema": "escapehatch/application-assist-presence-surface/v1",
+  "floor_commit_note": "host-side spike; no Android SDK device execution",
+  "prototype_ladder": [
+    "spike"
+  ],
+  "iterations": [
+    {
+      "hypothesis_id": "H1",
+      "hypothesis": "Quiet notification/companion affordance can remain available while browser is foregrounded without SYSTEM_ALERT_WINDOW.",
+      "observation": "affordance=surfaced; browser_foreground=True; overlay_required=False",
+      "decision": "KEEP",
+      "keep": true,
+      "metrics": {
+        "overlay_required": false,
+        "affordance": "surfaced"
+      }
+    },
+    {
+      "hypothesis_id": "H2",
+      "hypothesis": "Reopening EscapeHatch restores the identical assist session identity and origin binding.",
+      "observation": "resumed_session_id=sess-spike-001; status=active",
+      "decision": "KEEP",
+      "keep": true,
+      "metrics": {
+        "session_key": "escapeHatch.applicationAssistSession.v1",
+        "match": true
+      }
+    },
+    {
+      "hypothesis_id": "H3",
+      "hypothesis": "At least one supported Android handoff (deep link and Sharesheet text) can carry application context into EscapeHatch.",
+      "observation": "deep={'session_id': 'sess-spike-001', 'url': 'https://jobs.example.com/apply', 'company': 'Example Co', 'role': 'Automation Engineer', 'question_text': None, 'source': 'deep_link'}; share_url=https://jobs.example.com/apply",
+      "decision": "KEEP",
+      "keep": true,
+      "metrics": {
+        "deep_link": true,
+        "sharesheet": true
+      }
+    },
+    {
+      "hypothesis_id": "H4",
+      "hypothesis": "Dismiss preserves session and ordinary browser navigation does not spawn repeated prompts.",
+      "observation": "state=temporarily_dismissed; prompts=0; session_preserved=True",
+      "decision": "KEEP",
+      "keep": true,
+      "metrics": {
+        "prompts": 0
+      }
+    },
+    {
+      "hypothesis_id": "H5",
+      "hypothesis": "SYSTEM_ALERT_WINDOW is unnecessary for V1 because a lower-authority mechanism scores higher on quiet presence + policy + onboarding.",
+      "observation": "primary=notification_foreground_service score=19; overlay_score=8",
+      "decision": "KEEP",
+      "keep": true,
+      "metrics": {
+        "primary_score": 19,
+        "overlay_score": 8
+      }
+    },
+    {
+      "hypothesis_id": "H6",
+      "hypothesis": "Android Bubbles are unsuitable as V1 primary because API 30+ conversation requirements fight presence-not-nag doctrine for job assist.",
+      "observation": "recommendation=optional_enhancement_after_v1; doctrine_fit=medium \u2014 floating affordance ok only if quiet and user-opted",
+      "decision": "KEEP",
+      "keep": true,
+      "metrics": {
+        "bubbles_primary": false
+      }
+    }
+  ],
+  "mechanism_matrix_embedded": [
+    {
+      "id": "notification_foreground_service",
+      "android_versions": "API 26+ FGS patterns; POST_NOTIFICATIONS API 33+",
+      "permissions": [
+        "POST_NOTIFICATIONS",
+        "optional FOREGROUND_SERVICE*"
+      ],
+      "play_policy": "standard notification; no special SYSTEM_ALERT_WINDOW",
+      "browser_compat": "independent of Chrome/Firefox/Samsung; reopen via PendingIntent",
+      "persistence": "ongoing notification + local session store",
+      "ux_cost": "low if channel importance LOW and non-noisy",
+      "complexity": "medium",
+      "security": "no overlay spoofing; user can dismiss notification channel",
+      "doctrine_fit": "high \u2014 quiet by default",
+      "requires_overlay": false,
+      "requires_accessibility": false,
+      "recommendation": "primary_v1",
+      "score_quiet_presence": 5,
+      "score_session_resume": 5,
+      "score_policy": 5,
+      "score_onboarding": 4
+    },
+    {
+      "id": "android_bubbles",
+      "android_versions": "API 29+; conversation rules API 30+",
+      "permissions": [
+        "POST_NOTIFICATIONS",
+        "BubbleMetadata on notification"
+      ],
+      "play_policy": "allowed via notification API; conversation semantics required for reliable bubbling on API 30+",
+      "browser_compat": "floats over other apps when system allows bubble",
+      "persistence": "bubble tied to notification lifecycle",
+      "ux_cost": "medium \u2014 conversation framing mismatches job assist; risk of nag if misused",
+      "complexity": "high",
+      "security": "system-managed bubble; lower spoof risk than TYPE_APPLICATION_OVERLAY",
+      "doctrine_fit": "medium \u2014 floating affordance ok only if quiet and user-opted",
+      "requires_overlay": false,
+      "requires_accessibility": false,
+      "recommendation": "optional_enhancement_after_v1",
+      "score_quiet_presence": 3,
+      "score_session_resume": 4,
+      "score_policy": 4,
+      "score_onboarding": 3
+    },
+    {
+      "id": "system_alert_window_overlay",
+      "android_versions": "special access; Settings.canDrawOverlays",
+      "permissions": [
+        "SYSTEM_ALERT_WINDOW"
+      ],
+      "play_policy": "sensitive special access; must send user to system settings; core-function justification required",
+      "browser_compat": "true draw-over browser",
+      "persistence": "service-managed overlay view",
+      "ux_cost": "high onboarding friction; spoofing/attention risk",
+      "complexity": "high",
+      "security": "overlay spoofing risk elevated",
+      "doctrine_fit": "low for default \u2014 attention competition",
+      "requires_overlay": true,
+      "requires_accessibility": false,
+      "recommendation": "rejected_v1_primary",
+      "score_quiet_presence": 2,
+      "score_session_resume": 4,
+      "score_policy": 1,
+      "score_onboarding": 1
+    },
+    {
+      "id": "companion_activity",
+      "android_versions": "all supported",
+      "permissions": [
+        "none beyond app install"
+      ],
+      "play_policy": "standard activity",
+      "browser_compat": "user switches apps; no in-browser injection",
+      "persistence": "local session store",
+      "ux_cost": "medium \u2014 leaves browser unless paired with notification/bubble",
+      "complexity": "low",
+      "security": "standard app sandbox",
+      "doctrine_fit": "high as expansion target",
+      "requires_overlay": false,
+      "requires_accessibility": false,
+      "recommendation": "required_expansion_surface",
+      "score_quiet_presence": 2,
+      "score_session_resume": 5,
+      "score_policy": 5,
+      "score_onboarding": 5
+    },
+    {
+      "id": "sharesheet_intent_applink",
+      "android_versions": "all supported; App Links optional verification",
+      "permissions": [
+        "none for custom scheme; https App Links need verification"
+      ],
+      "play_policy": "standard intents / share targets",
+      "browser_compat": "Chrome/Firefox/Samsung Share; no desktop extension APIs",
+      "persistence": "handoff payload seeds session context",
+      "ux_cost": "one explicit share gesture",
+      "complexity": "low-medium",
+      "security": "user-mediated content; validate/sanitize",
+      "doctrine_fit": "high for context capture",
+      "requires_overlay": false,
+      "requires_accessibility": false,
+      "recommendation": "required_handoff_path",
+      "score_quiet_presence": 1,
+      "score_session_resume": 4,
+      "score_policy": 5,
+      "score_onboarding": 5
+    }
+  ],
+  "architecture_decision": {
+    "status": "DECIDED",
+    "preferred_v1": "notification_foreground_service + companion_activity",
+    "fallback": "sharesheet_intent_applink deep link without ongoing notification",
+    "optional_later": "android_bubbles after quiet baseline and honest non-conversation UX research",
+    "rejected_v1_primary": "system_alert_window_overlay",
+    "forbidden_v1_dependency": "accessibility_service",
+    "permissions_required": [
+      "POST_NOTIFICATIONS (API 33+)",
+      "optional FOREGROUND_SERVICE / FOREGROUND_SERVICE_SPECIAL_USE for durable quiet assist"
+    ],
+    "permissions_not_required_for_v1": [
+      "SYSTEM_ALERT_WINDOW",
+      "BIND_ACCESSIBILITY_SERVICE"
+    ],
+    "browser_handoff_path": "escapehatch://assist deep link + ACTION_SEND Sharesheet text/url",
+    "session_persistence_boundary": "escapeHatch.applicationAssistSession.v1"
+  },
+  "acceptance": {
+    "eh_u1_separated": true,
+    "one_session_model": true,
+    "no_second_state_machine": true,
+    "handoff_proven_host_side": true,
+    "session_resume_proven_host_side": true,
+    "primary_mechanism_decided": true,
+    "device_apk_proof": "BLOCKED_no_android_sdk"
+  },
+  "proof_ceiling": [
+    "repository_contract_and_spike_simulation",
+    "no_play_store_packaging_claim",
+    "no_physical_android_device_claim_without_sdk_device_receipt",
+    "no_live_browser_extension_on_android_chrome_claim"
+  ]
+}

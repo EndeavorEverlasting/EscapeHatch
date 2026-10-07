@@ -1,0 +1,305 @@
+{
+  "schema": "escapehatch/application-assist-presence-surface/v1",
+  "version": 1,
+  "mission": "Platform-neutral presentation affordance for Application Assist so EscapeHatch can stay quietly available beside an active job-application workflow across desktop and mobile adapters without inventing a second session state machine.",
+  "product_intent": "EscapeHatch stays quietly present while I apply, remembers what I am doing, and is one gesture away whenever I need help.",
+  "lane": "EH-M1",
+  "not_eh_u1": true,
+  "dependencies": {
+    "session_contract": "contracts/application-assist-session.v1.json",
+    "session_schema": "escapehatch/application-assist-session/v1",
+    "companion_contract": "contracts/application-companion.v1.json",
+    "modality_contract": "contracts/application-assist-modality.v1.json",
+    "operational_presence_owner": "EH-U1",
+    "operational_presence_schema": "escapehatch/application-assist-presence/v1",
+    "operational_presence_contract_planned_path": "contracts/application-assist-presence.v1.json",
+    "operational_presence_status_on_main": "not_merged_at_EH_M1_floor; surface contract must not fork operational states"
+  },
+  "architecture": {
+    "layers": [
+      "canonical_application_assist_session",
+      "optional_operational_presence_projection",
+      "presence_surface_affordance",
+      "platform_adapter"
+    ],
+    "invariant": "presentation_adapters_project_session_state_they_do_not_own_workflow",
+    "diagram": "Application Assist Session -> Desktop browser adapter (EH-U1 in-page beacon) | Mobile adapters (Android presence surface; future iOS constrained surface)"
+  },
+  "session_identity": {
+    "binding": "one_active_job_application_workflow",
+    "survives_presentation_surface_changes": true,
+    "storage_key": "escapeHatch.applicationAssistSession.v1",
+    "android_storage_adapter": "platform_app_data_or_user_selected_store",
+    "must_not_create_parallel_session_key": true
+  },
+  "application_context": {
+    "reuse_existing_owners": true,
+    "fields": [
+      {
+        "id": "target_company",
+        "owner": "career-state opportunity / session metadata",
+        "required_for_surface": false
+      },
+      {
+        "id": "role",
+        "owner": "career-state opportunity / session metadata",
+        "required_for_surface": false
+      },
+      {
+        "id": "application_url_or_domain",
+        "owner": "application-assist-session origin binding",
+        "required_for_surface": true
+      },
+      {
+        "id": "current_step",
+        "owner": "session status + future progression contract",
+        "required_for_surface": false
+      },
+      {
+        "id": "question_or_draft",
+        "owner": "application preference / answer draft stores",
+        "required_for_surface": false
+      },
+      {
+        "id": "resume_or_profile_source",
+        "owner": "application-assist profile + career-state",
+        "required_for_surface": false
+      },
+      {
+        "id": "unresolved_fields",
+        "owner": "Fill Plan residual / taxonomy mapping",
+        "required_for_surface": false
+      },
+      {
+        "id": "proof_or_evidence_state",
+        "owner": "companion progress evidence",
+        "required_for_surface": false
+      },
+      {
+        "id": "automation_state",
+        "owner": "application-assist-session statuses",
+        "required_for_surface": true
+      }
+    ],
+    "forbidden": [
+      "duplicate_application_state_store_for_android",
+      "password_or_protected_credential_capture",
+      "url_only_status_inference"
+    ]
+  },
+  "operational_presence_states_dependency": [
+    "dormant",
+    "ready",
+    "observing",
+    "working_fill",
+    "working_account",
+    "working_advance",
+    "waiting_user",
+    "blocked",
+    "paused",
+    "step_complete",
+    "error",
+    "stopped"
+  ],
+  "presentation_affordance_states": [
+    {
+      "id": "unavailable",
+      "meaning": "no installable or runnable presence adapter on this platform/runtime",
+      "default_visual": "none"
+    },
+    {
+      "id": "dormant",
+      "meaning": "adapter installed but no assist session owns a workflow",
+      "default_visual": "hidden"
+    },
+    {
+      "id": "available",
+      "meaning": "session exists and may be resumed; affordance may be quiet or absent until user/context invites it",
+      "default_visual": "quiet_indicator_or_notification_slot"
+    },
+    {
+      "id": "surfaced",
+      "meaning": "affordance is visible beside the work without expanded controls",
+      "default_visual": "collapsed_presence"
+    },
+    {
+      "id": "expanded",
+      "meaning": "operator intentionally opened command/context surface",
+      "default_visual": "sheet_or_activity"
+    },
+    {
+      "id": "temporarily_dismissed",
+      "meaning": "operator hid affordance for this session/window; session preserved",
+      "default_visual": "hidden_until_restore_or_new_material_invite"
+    },
+    {
+      "id": "session_ended",
+      "meaning": "assist session stopped or ended; surface must not keep pretending work continues",
+      "default_visual": "cleared"
+    }
+  ],
+  "affordance_transitions": {
+    "allowed": [
+      ["unavailable", "dormant"],
+      ["dormant", "available"],
+      ["available", "surfaced"],
+      ["available", "expanded"],
+      ["surfaced", "expanded"],
+      ["expanded", "surfaced"],
+      ["surfaced", "temporarily_dismissed"],
+      ["expanded", "temporarily_dismissed"],
+      ["temporarily_dismissed", "available"],
+      ["temporarily_dismissed", "surfaced"],
+      ["available", "session_ended"],
+      ["surfaced", "session_ended"],
+      ["expanded", "session_ended"],
+      ["temporarily_dismissed", "session_ended"],
+      ["session_ended", "dormant"]
+    ],
+    "forbidden": [
+      "auto_expand_on_ordinary_navigation",
+      "auto_resurface_after_dismiss_without_material_invite",
+      "repeated_prompt_storm_on_url_change",
+      "ui_timer_promotes_session_workflow_state"
+    ]
+  },
+  "doctrine": {
+    "presence_not_nagging": true,
+    "quiet_by_default": true,
+    "user_invoked_or_contextual": true,
+    "dismissible": true,
+    "resumable": true,
+    "non_blocking": true,
+    "visually_subordinate": true,
+    "state_preserving": true,
+    "forbidden_behaviors": [
+      "flashing",
+      "bouncing",
+      "repeated_notifications_for_ordinary_navigation",
+      "unsolicited_modal_interruption",
+      "gamified_urgency",
+      "attention_grabbing_assistant_bubble_as_default"
+    ]
+  },
+  "logical_actions": [
+    {
+      "id": "resume_assist_session",
+      "semantic_action": "resume_session",
+      "state_owner": "escapeHatch.applicationAssistSession.v1"
+    },
+    {
+      "id": "inspect_application_context",
+      "semantic_action": "inspect_application_context",
+      "state_owner": "presence_surface_ui_only"
+    },
+    {
+      "id": "answer_or_copy_field_response",
+      "semantic_action": "provide_field_response",
+      "state_owner": "profile_preference_or_draft_store",
+      "notes": "copy/paste assist only; no password fields"
+    },
+    {
+      "id": "open_command_sheet",
+      "semantic_action": "open_command_palette",
+      "state_owner": "ui.overlay only"
+    },
+    {
+      "id": "capture_or_paste_question",
+      "semantic_action": "capture_question_text",
+      "state_owner": "draft_store",
+      "notes": "operator-supplied or share-sheet text; never scrape passwords"
+    },
+    {
+      "id": "mark_field_or_application_progress",
+      "semantic_action": "record_confirmation",
+      "state_owner": "companion progress evidence"
+    },
+    {
+      "id": "handoff_to_full_experience",
+      "semantic_action": "open_full_companion",
+      "state_owner": "ui.destination"
+    },
+    {
+      "id": "dismiss_or_minimize",
+      "semantic_action": "dismiss_overlay",
+      "state_owner": "presentation_affordance only"
+    },
+    {
+      "id": "end_session",
+      "semantic_action": "emergency_stop_or_stop_session",
+      "state_owner": "escapeHatch.applicationAssistSession.v1"
+    }
+  ],
+  "adapters": [
+    {
+      "id": "desktop_in_page_beacon",
+      "lane": "EH-U1",
+      "status": "planned_or_branched_not_owned_by_EH_M1",
+      "mechanism": "shadow_dom_in_page_beacon",
+      "owns": "operational_presence_projection_on_employer_page"
+    },
+    {
+      "id": "android_presence_surface",
+      "lane": "EH-M1",
+      "status": "spike_and_contract",
+      "mechanism_candidates": [
+        "notification_foreground_service",
+        "android_bubbles",
+        "system_alert_window_overlay",
+        "companion_activity",
+        "sharesheet_intent_applink"
+      ],
+      "owns": "android_lifecycle_permissions_handoff_affordance"
+    },
+    {
+      "id": "ios_constrained_surface",
+      "lane": "future",
+      "status": "documented_constraints_only",
+      "mechanism_candidates": [
+        "share_extension",
+        "safari_web_extension",
+        "companion_app",
+        "app_group_shared_state",
+        "notification_or_live_activity",
+        "in_app_browser_workflow"
+      ],
+      "forbidden_assumption": "android_style_arbitrary_overlay"
+    }
+  ],
+  "android_v1_policy": {
+    "prefer_lowest_authority": true,
+    "accessibility_service": "forbidden_as_v1_requirement",
+    "system_alert_window": "requires_proof_lower_authority_insufficient",
+    "password_capture": "forbidden",
+    "telemetry_default": "off",
+    "proof_ceiling_no_live_play_claim": true
+  },
+  "safety_privacy": {
+    "sensitive_application_fields": "local_user_owned_only",
+    "clipboard": "explicit_user_action_only; never background scrape",
+    "browser_page_capture": "forbidden_without_user_confirm_and_never_passwords",
+    "pii_persistence": "platform_app_data_or_user_selected_store; repository_tracking_forbidden",
+    "overlay_spoofing_risk": "avoid_system_alert_window_unless_justified",
+    "accessibility_temptation": "reject_as_v1_dependency",
+    "screenshots": "no_automatic_capture",
+    "credential_fields": "never_capture",
+    "session_expiration": "cross_origin_pause_and_stop_semantics_from_session_contract",
+    "telemetry": "off_by_default; profile_or_application_content_forbidden"
+  },
+  "invariants": [
+    "one_canonical_application_assist_session_model",
+    "no_second_application_state_machine",
+    "eh_u1_and_mobile_are_presentation_adapters_only",
+    "presence_surface_does_not_own_fill_plan_or_submission",
+    "quiet_by_default_presence_not_nagging",
+    "dismiss_preserves_session",
+    "no_password_or_protected_credential_capture",
+    "ios_constraints_must_not_android_shape_the_shared_contract"
+  ],
+  "proof_ceiling": [
+    "repository_contract_and_spike_simulation",
+    "no_play_store_packaging_claim",
+    "no_physical_android_device_claim_without_sdk_device_receipt",
+    "no_live_browser_extension_on_android_chrome_claim"
+  ]
+}

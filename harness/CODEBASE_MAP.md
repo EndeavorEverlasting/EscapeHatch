@@ -13,6 +13,11 @@ EscapeHatch has canonical governance, an operational harness, a portable career-
 | `contracts/career-state.v1.schema.json` | Versioned product persistence contract for career state, study guidance, and artifact ownership. |
 | `contracts/application-companion.v1.json` | Local-first product contract for private installable/local companion surfaces, progress recording, portability, and optional sync. |
 | `contracts/application-assist-session.v1.json` | Browser Application Assist Session contract: Fill Plan, policy gate, DOM writer, pause/stop/undo, confirmation evidence metadata. |
+| `contracts/application-assist-presence-surface.v1.json` | Platform-neutral presentation affordance contract for desktop/mobile adapters (EH-M1); not the EH-U1 operational beacon contract. |
+| `docs/APPLICATION_ASSIST_MOBILE_PRESENCE_PLAN.md` | EH-M1 Android-first mobile assist presence plan, sequencing, and successor lanes. |
+| `docs/APPLICATION_ASSIST_ANDROID_CAPABILITY_MATRIX.md` | Bubble vs overlay vs notification vs handoff comparison with Play/permission notes. |
+| `docs/adr/ADR-20261007-android-assist-presence-v1.md` | Accepted Android V1 presence mechanism decision. |
+| `android/application-assist-spike/README.md` | Host-proven Kotlin/Python spike for quiet notification + session handoff (no Play packaging claim). |
 | `browser/application-assist/` | Manifest V3 unpacked extension implementing the assist-session control loop without auto-submit. |
 | `VERSION` | Canonical human-facing EscapeHatch product release SemVer. Exact freshness remains the Git commit. |
 | `contracts/product-release.v1.json` | Product-release scheme, bump matrix, mirror list, cutover, compatibility, and tag policy. |

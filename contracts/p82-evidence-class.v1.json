@@ -1,0 +1,98 @@
+{
+  "schema": "escapehatch/p82-evidence-class/v1",
+  "version": 1,
+  "mission": "Declare typed evidence provenance for Prototype-Measure-Refine experiments so host simulation cannot masquerade as Android runtime or device proof.",
+  "lane_scope": ["EH-M1", "EH-M2", "EH-M3", "EH-M4"],
+  "evidence_classes": [
+    {
+      "id": "STATIC_REASONING",
+      "rank": 10,
+      "meaning": "Architecture/policy reasoning, authored scores, or documentation synthesis without executable observation of the claimed runtime."
+    },
+    {
+      "id": "PLAY_POLICY_DOCUMENTED",
+      "rank": 15,
+      "meaning": "Public Play/Android policy documentation cited; not a runtime observation and not a Play release."
+    },
+    {
+      "id": "HOST_SIMULATION",
+      "rank": 20,
+      "meaning": "Executable host-side model/parser/state-machine proof that does not run on Android OS."
+    },
+    {
+      "id": "COMPILED_ANDROID",
+      "rank": 30,
+      "meaning": "Real Android toolchain compiled an APK/AAB (or equivalent) from repository sources."
+    },
+    {
+      "id": "EMULATOR_OBSERVED",
+      "rank": 40,
+      "meaning": "Behavior observed on an Android emulator/runtime under instrumentation or adb."
+    },
+    {
+      "id": "BROWSER_OBSERVED",
+      "rank": 50,
+      "meaning": "Behavior observed with a real mobile browser participating (emulator or device)."
+    },
+    {
+      "id": "PHYSICAL_DEVICE_OBSERVED",
+      "rank": 60,
+      "meaning": "Behavior observed on a physical Android device."
+    },
+    {
+      "id": "PLAY_RELEASE_OBSERVED",
+      "rank": 70,
+      "meaning": "Behavior observed through a Play-distributed or Play-review release path."
+    }
+  ],
+  "prototype_levels": [
+    {"id": "P0", "label": "host model", "typical_evidence": "HOST_SIMULATION"},
+    {"id": "P1", "label": "compiling Android app", "typical_evidence": "COMPILED_ANDROID"},
+    {"id": "P2", "label": "emulator lifecycle", "typical_evidence": "EMULATOR_OBSERVED"},
+    {"id": "P3", "label": "browser-integrated emulator", "typical_evidence": "BROWSER_OBSERVED"},
+    {"id": "P4", "label": "physical Android device", "typical_evidence": "PHYSICAL_DEVICE_OBSERVED"},
+    {"id": "P5", "label": "multi-browser / OEM validation", "typical_evidence": "PHYSICAL_DEVICE_OBSERVED"},
+    {"id": "P6", "label": "distributable build", "typical_evidence": "COMPILED_ANDROID"},
+    {"id": "P7", "label": "Play/release observation", "typical_evidence": "PLAY_RELEASE_OBSERVED"}
+  ],
+  "decisions": ["KEEP", "REFINE", "REJECT", "PROMOTE", "BLOCKED", "INCONCLUSIVE"],
+  "decision_semantics": {
+    "KEEP": "candidate remains worth testing; not equivalent to empirical proof",
+    "REFINE": "hypothesis remains viable but implementation/test needs correction",
+    "REJECT": "evidence contradicts the candidate",
+    "PROMOTE": "evidence satisfies the declared promotion gate for this hypothesis",
+    "BLOCKED": "required external/tooling condition unavailable",
+    "INCONCLUSIVE": "measurement occurred but does not distinguish alternatives"
+  },
+  "experiment_record_required_fields": [
+    "hypothesis_id",
+    "hypothesis",
+    "evidence_class",
+    "minimum_evidence_class",
+    "build_artifact",
+    "measurement_source",
+    "observation",
+    "decision",
+    "decision_reason",
+    "promotion_allowed",
+    "proof_ceiling",
+    "prototype_level"
+  ],
+  "promotion_rules": {
+    "higher_evidence_may_satisfy_lower_minimum": true,
+    "promote_requires_evidence_rank_gte_minimum": true,
+    "keep_with_insufficient_evidence_is_valid": true,
+    "keep_is_not_proven": true,
+    "forbidden": [
+      "promote_when_evidence_class_below_minimum",
+      "treat_host_simulation_as_android_runtime_proof",
+      "treat_authored_recommendation_metadata_as_independent_measurement"
+    ]
+  },
+  "invariants": [
+    "no_boolean_proven_collapse",
+    "receipt_must_declare_evidence_class_per_experiment",
+    "validator_fails_closed_on_proof_inflation",
+    "historical_keep_receipts_may_be_preserved_with_corrected_evidence_class"
+  ]
+}

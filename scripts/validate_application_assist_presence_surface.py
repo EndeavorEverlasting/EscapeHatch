@@ -7,11 +7,16 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+from p82_evidence import validate_experiment  # noqa: E402
+
 CONTRACT = ROOT / "contracts" / "application-assist-presence-surface.v1.json"
 SESSION = ROOT / "contracts" / "application-assist-session.v1.json"
+EVIDENCE = ROOT / "contracts" / "p82-evidence-class.v1.json"
 PLAN = ROOT / "docs" / "APPLICATION_ASSIST_MOBILE_PRESENCE_PLAN.md"
 MATRIX = ROOT / "docs" / "APPLICATION_ASSIST_ANDROID_CAPABILITY_MATRIX.md"
 ADR = ROOT / "docs" / "adr" / "ADR-20261007-android-assist-presence-v1.md"
+LEDGER = ROOT / "harness" / "reports" / "eh-m1-corrected-proof-ledger.md"
 SPIKE_README = ROOT / "android" / "application-assist-spike" / "README.md"
 RECEIPT = ROOT / "harness" / "reports" / "android-assist-presence-spike-receipt.v1.json"
 REGISTRY = ROOT / "ARTIFACT_REGISTRY.md"
@@ -55,7 +60,7 @@ def main() -> int:
         if not cond:
             errors.append(msg)
 
-    for path in (CONTRACT, SESSION, PLAN, MATRIX, ADR, SPIKE_README, REGISTRY, AUTOPILOT):
+    for path in (CONTRACT, SESSION, EVIDENCE, PLAN, MATRIX, ADR, LEDGER, SPIKE_README, REGISTRY, AUTOPILOT):
         check(path.is_file(), f"missing required artifact: {path.relative_to(ROOT)}")
 
     contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
@@ -118,13 +123,30 @@ def main() -> int:
         errors.append("missing spike receipt; run scripts/run_android_assist_presence_spike.py")
     else:
         receipt = json.loads(RECEIPT.read_text(encoding="utf-8"))
-        check(receipt.get("architecture_decision", {}).get("status") == "DECIDED", "spike not decided")
-        check(receipt.get("acceptance", {}).get("primary_mechanism_decided") is True, "primary not decided")
-        check(all(i.get("keep") for i in receipt.get("iterations", [])), "spike iteration failed")
+        arch = receipt.get("architecture_decision", {})
+        check(arch.get("status") == "ACCEPTED_DESIGN", "architecture must be ACCEPTED_DESIGN not empirical DECIDED")
+        check(arch.get("empirical_android_proof") is False, "architecture must declare empirical_android_proof=false")
+        check(receipt.get("acceptance", {}).get("architecture_accepted_design") is True, "acceptance missing design flag")
+        check(receipt.get("acceptance", {}).get("any_promotion_allowed") is False, "spike must not claim promotion")
         check(
-            "SYSTEM_ALERT_WINDOW" in receipt.get("architecture_decision", {}).get("permissions_not_required_for_v1", []),
+            "SYSTEM_ALERT_WINDOW" in arch.get("permissions_not_required_for_v1", []),
             "overlay must remain not required",
         )
+        for item in receipt.get("iterations", []):
+            for err in validate_experiment(item):
+                errors.append(err)
+            if item.get("decision") == "PROMOTE":
+                errors.append(f"{item.get('hypothesis_id')}: EH-M1 spike must not PROMOTE Android claims")
+            if item.get("promotion_allowed") is True:
+                errors.append(f"{item.get('hypothesis_id')}: promotion_allowed must be false on EH-M1 host spike")
+        ledger = LEDGER.read_text(encoding="utf-8")
+        for marker in (
+            "UNOBSERVED_ANDROID",
+            "HOST_SIMULATION_PROVEN",
+            "ACCEPTED DESIGN",
+            "KEEP is not PROVEN",
+        ):
+            check(marker in ledger, f"corrected ledger missing marker: {marker}")
 
     registry = REGISTRY.read_text(encoding="utf-8")
     check("application-assist-presence-surface.v1.json" in registry, "registry missing surface contract")

@@ -453,6 +453,28 @@ Immediately after explicit implementation authorization, graph width is **2**: E
 
 **Proof ceiling:** repository + host-side spike. Device APK / Play packaging = EH-M2+.
 
+### EH-M2 — P82 Android experiment ladder + evidence hardening
+
+**Type:** proof-class correction + Gradle Android adapter experiments
+**Dependencies:** EH-M1 presence-surface contract (merged)
+**Canonical plan:** `docs/APPLICATION_ASSIST_MOBILE_M2_P82_PLAN.md`
+**Evidence contract:** `contracts/p82-evidence-class.v1.json`
+**Goal:** stop host simulation from masquerading as Android proof; advance quiet-notification companion through measured P1–P4 gates without reopening EH-M1 architecture unless stronger evidence contradicts LKG.
+
+**Owned scope**
+- P82 evidence classes + inflation fixtures/validators
+- EH-M1 corrected proof ledger
+- `android/application-assist` Gradle application
+- EH-M2 experiment runner/receipts
+
+**Forbidden scope**
+- silent promotion of HOST_SIMULATION to device/Play proof
+- Accessibility / overlay-first without empirical impossibility proof
+- second session store
+- Bubble promotion before H5 quiet baseline
+
+**Proof ceiling:** whatever evidence class the environment actually produces (often BLOCKED at COMPILED_ANDROID without JDK/SDK).
+
 ### EH-U1 — Ambient Companion Presence
 
 **Type:** UX polish + integration adapter

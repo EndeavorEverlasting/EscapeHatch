@@ -1,11 +1,12 @@
 # ADR-20261007 — Android Application Assist presence V1 mechanism
 
 - **Status:** Accepted
+- **Evidence class:** STATIC_REASONING / PLAY_POLICY_DOCUMENTED (ACCEPTED DESIGN — not Android-observed)
 - **Date:** 2026-10-07
-- **Lane:** EH-M1
-- **Deciders:** EscapeHatch EH-M1 sprint evidence (spike receipt + capability matrix)
+- **Lane:** EH-M1 (architecture); evidence reclassification EH-M2
+- **Deciders:** EscapeHatch EH-M1 design + matrix; empirical Android gates deferred to EH-M2+
 - **Contract:** `contracts/application-assist-presence-surface.v1.json`
-- **Evidence:** `harness/reports/android-assist-presence-spike-receipt.v1.json`, `docs/APPLICATION_ASSIST_ANDROID_CAPABILITY_MATRIX.md`
+- **Evidence:** `harness/reports/android-assist-presence-spike-receipt.v1.json` (v2 typed classes), `harness/reports/eh-m1-corrected-proof-ledger.md`, `docs/APPLICATION_ASSIST_ANDROID_CAPABILITY_MATRIX.md`
 
 ## Context
 

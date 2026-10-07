@@ -1,38 +1,34 @@
-# EH-M1 validation report
+# EH-M1 validation report (corrected)
 
 **Lane:** EH-M1 — Mobile Application Assist presence surface
-**Branch:** `feat/eh-m1-android-assist-presence-20261007`
-**Floor:** `main` @ `e54e77dbfbe1ff3f4dbf4ce87dd1c00f3c969f9f` (pre-sprint)
+**Merged:** PR #56 → `5a4e6de` (head `ce9cf0e`)
+**Correction:** EH-M2 P82 evidence hardening
 
-## Designed
+## Designed / ACCEPTED DESIGN
 
-- Platform-neutral presence-surface contract
-- Android capability matrix
-- ADR (quiet notification primary; overlay rejected)
-- Successor lanes EH-M2/M3/M4
-- iOS constraints (non-implementation)
+- Platform-neutral presence-surface contract — PROVEN
+- Android capability matrix + ADR — ACCEPTED DESIGN
+- Quiet notification + companion + Sharesheet/deep-link LKG — ACCEPTED DESIGN
 
 ## Implemented
 
-- Contract, docs, ADR, fixture
-- Host-side spike runner + Kotlin stubs + AndroidManifest sketch
-- Validator + unit tests + registry/roadmap cross-links
+- Host-side spike runner + Kotlin stubs
+- Validators/tests/registry cross-links
 
-## Locally validated
+## Locally validated (evidence classes)
 
-| Command | Outcome |
-| --- | --- |
-| `python scripts/run_android_assist_presence_spike.py` | PASS — DECIDED preferred=`notification_foreground_service + companion_activity`; H1–H6 KEEP |
-| `python scripts/validate_application_assist_presence_surface.py` | PASS |
-| `python tests/test_application_assist_presence_surface.py` | PASS — 7 tests |
-| `python scripts/validate_harness.py` | PASS |
-| `git diff --check` | PASS |
+| Command | Outcome | Evidence class |
+| --- | --- | --- |
+| spike runner | PASS with typed records | HOST_SIMULATION / STATIC_REASONING |
+| presence-surface validator | PASS | contract proof |
+| unit tests | PASS | HOST_SIMULATION |
 
 ## Integration validated
 
-- Not claimed until merged to default branch with owning checks green.
+- Contained in `main` via PR #56 merge `5a4e6de`
 
 ## Proof ceiling
 
-- Host-side simulation: in scope
-- Physical Android device / Play Store: BLOCKED (no JDK/Android SDK in EH-M1 environment)
+- Highest empirical class from EH-M1: **HOST_SIMULATION**
+- Architecture: **ACCEPTED DESIGN** (not Android-observed)
+- KEEP is not PROVEN — see `eh-m1-corrected-proof-ledger.md`

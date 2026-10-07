@@ -1,0 +1,14 @@
+{
+  "hypothesis_id": "POS-KEEP-1",
+  "hypothesis": "notification works while Chrome is foregrounded",
+  "evidence_class": "HOST_SIMULATION",
+  "minimum_evidence_class": "PHYSICAL_DEVICE_OBSERVED",
+  "build_artifact": "fixtures/p82-proof-inflation.positive-keep.json",
+  "measurement_source": "assigned_browser_foreground_true",
+  "observation": "browser_foreground=True assigned in host runner",
+  "decision": "KEEP",
+  "decision_reason": "candidate retained; empirical gate remains open",
+  "promotion_allowed": false,
+  "proof_ceiling": "HOST_SIMULATION",
+  "prototype_level": "P0"
+}

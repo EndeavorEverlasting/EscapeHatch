@@ -1,0 +1,28 @@
+{
+  "hypothesis_id": "POS-2",
+  "hypothesis": "combined physical-device and browser evidence satisfies composed requirements",
+  "evidence": [
+    {
+      "evidence_class": "PHYSICAL_DEVICE_OBSERVED",
+      "capabilities": ["android_runtime", "physical_device"]
+    },
+    {
+      "evidence_class": "BROWSER_OBSERVED",
+      "capabilities": ["android_runtime", "browser_integration"]
+    }
+  ],
+  "required_capabilities": [
+    "android_runtime",
+    "physical_device",
+    "browser_integration"
+  ],
+  "build_artifact": "fixtures/p82-pos-combined-evidence.json",
+  "measurement_source": "capability_regression",
+  "observation": "device + browser evidence composed",
+  "decision": "PROMOTE",
+  "decision_reason": "union of capabilities contains all required capabilities",
+  "promotion_allowed": true,
+  "proof_ceiling": "PHYSICAL_DEVICE_OBSERVED+BROWSER_OBSERVED",
+  "achieved_prototype_level": "P4",
+  "target_prototype_level": "P4"
+}

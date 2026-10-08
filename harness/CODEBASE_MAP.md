@@ -18,7 +18,7 @@ EscapeHatch has canonical governance, an operational harness, a portable career-
 | `docs/APPLICATION_ASSIST_ANDROID_CAPABILITY_MATRIX.md` | Bubble vs overlay vs notification vs handoff comparison with Play/permission notes. |
 | `docs/adr/ADR-20261007-android-assist-presence-v1.md` | Accepted Android V1 presence mechanism decision. |
 | `android/application-assist-spike/README.md` | Host-proven Kotlin/Python spike for quiet notification + session handoff (no Play packaging claim). |
-| `contracts/p82-evidence-class.v1.json` | Typed P82 evidence provenance ranks and promotion rules. |
+| `contracts/p82-evidence-class.v1.json` | Typed P82 evidence capabilities; promotion by capability containment (rank display-only). |
 | `android/application-assist/README.md` | EH-M2 Gradle Android Application Assist adapter. |
 | `docs/APPLICATION_ASSIST_MOBILE_M2_P82_PLAN.md` | EH-M2 experiment ladder and acceptance gates. |
 | `harness/reports/eh-m1-corrected-proof-ledger.md` | Corrected EH-M1 proof classifications (KEEP ≠ PROVEN). |

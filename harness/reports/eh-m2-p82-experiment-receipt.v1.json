@@ -1,9 +1,10 @@
 {
   "schema": "escapehatch/eh-m2-p82-experiment-receipt/v1",
-  "version": 1,
+  "version": 2,
   "lane": "EH-M2",
-  "generated_at": "2026-10-07T20:53:58.319509+00:00",
+  "generated_at": "2026-10-07T23:58:44.174662+00:00",
   "evidence_contract": "contracts/p82-evidence-class.v1.json",
+  "promotion_authority": "capability_containment",
   "lkg_architecture": {
     "session": "escapeHatch.applicationAssistSession.v1",
     "presence_surface": "contracts/application-assist-presence-surface.v1.json",
@@ -31,6 +32,18 @@
       "hypothesis": "The EH-M1 Android scaffold can be promoted into a valid installable Android application without changing the canonical Application Assist contract.",
       "evidence_class": "HOST_SIMULATION",
       "minimum_evidence_class": "COMPILED_ANDROID",
+      "required_capabilities": [
+        "android_compilation"
+      ],
+      "evidence": [
+        {
+          "evidence_class": "HOST_SIMULATION",
+          "capabilities": [
+            "host_execution",
+            "simulated_state"
+          ]
+        }
+      ],
       "build_artifact": "android/application-assist",
       "measurement_source": "toolchain_probe",
       "observation": "sources_present=true; java=None; ANDROID_HOME=None; sdk.dir=None; gradlew=False",
@@ -38,7 +51,8 @@
       "decision_reason": "JDK 17+ and/or Android SDK unavailable in this environment; cannot claim COMPILED_ANDROID.",
       "promotion_allowed": false,
       "proof_ceiling": "HOST_SIMULATION",
-      "prototype_level": "P1",
+      "achieved_prototype_level": "P0",
+      "target_prototype_level": "P1",
       "metrics": {
         "java": null,
         "javac": null,
@@ -53,6 +67,19 @@
       "hypothesis": "`escapehatch://assist` can invoke the companion Activity and deliver sanitized assist context.",
       "evidence_class": "HOST_SIMULATION",
       "minimum_evidence_class": "EMULATOR_OBSERVED",
+      "required_capabilities": [
+        "android_runtime",
+        "emulator_runtime"
+      ],
+      "evidence": [
+        {
+          "evidence_class": "HOST_SIMULATION",
+          "capabilities": [
+            "host_execution",
+            "simulated_state"
+          ]
+        }
+      ],
       "build_artifact": "android/application-assist/app/src/main/java/com/escapehatch/assist",
       "measurement_source": "environment_capability_probe",
       "observation": "No adb/emulator available; Activity deep-link reception UNOBSERVED_ANDROID. Sources implement intent filters.",
@@ -60,14 +87,28 @@
       "decision_reason": "No adb/emulator available; Activity deep-link reception UNOBSERVED_ANDROID. Sources implement intent filters.",
       "promotion_allowed": false,
       "proof_ceiling": "HOST_SIMULATION",
-      "prototype_level": "P2",
+      "achieved_prototype_level": "P0",
+      "target_prototype_level": "P2",
       "metrics": {}
     },
     {
       "hypothesis_id": "H3",
       "hypothesis": "A browser can share job/application context into EscapeHatch through ACTION_SEND.",
       "evidence_class": "HOST_SIMULATION",
-      "minimum_evidence_class": "EMULATOR_OBSERVED",
+      "minimum_evidence_class": "BROWSER_OBSERVED",
+      "required_capabilities": [
+        "android_runtime",
+        "browser_integration"
+      ],
+      "evidence": [
+        {
+          "evidence_class": "HOST_SIMULATION",
+          "capabilities": [
+            "host_execution",
+            "simulated_state"
+          ]
+        }
+      ],
       "build_artifact": "android/application-assist/app/src/main/java/com/escapehatch/assist",
       "measurement_source": "environment_capability_probe",
       "observation": "No browser/emulator share path available. Manifest declares SEND text/plain target; reception UNOBSERVED_ANDROID.",
@@ -75,7 +116,8 @@
       "decision_reason": "No browser/emulator share path available. Manifest declares SEND text/plain target; reception UNOBSERVED_ANDROID.",
       "promotion_allowed": false,
       "proof_ceiling": "HOST_SIMULATION",
-      "prototype_level": "P3",
+      "achieved_prototype_level": "P0",
+      "target_prototype_level": "P3",
       "metrics": {}
     },
     {
@@ -83,6 +125,19 @@
       "hypothesis": "Application Assist survives Activity destruction/process restart with same workflow identity.",
       "evidence_class": "HOST_SIMULATION",
       "minimum_evidence_class": "EMULATOR_OBSERVED",
+      "required_capabilities": [
+        "android_runtime",
+        "emulator_runtime"
+      ],
+      "evidence": [
+        {
+          "evidence_class": "HOST_SIMULATION",
+          "capabilities": [
+            "host_execution",
+            "simulated_state"
+          ]
+        }
+      ],
       "build_artifact": "android/application-assist/app/src/main/java/com/escapehatch/assist",
       "measurement_source": "environment_capability_probe",
       "observation": "SharedPreferences store implemented replacing in-memory spike; lifecycle recreation not instrumented (no emulator).",
@@ -90,7 +145,8 @@
       "decision_reason": "SharedPreferences store implemented replacing in-memory spike; lifecycle recreation not instrumented (no emulator).",
       "promotion_allowed": false,
       "proof_ceiling": "HOST_SIMULATION",
-      "prototype_level": "P2",
+      "achieved_prototype_level": "P0",
+      "target_prototype_level": "P2",
       "metrics": {}
     },
     {
@@ -98,6 +154,19 @@
       "hypothesis": "A low-attention Android notification provides persistent contextual availability while the browser remains the main work surface.",
       "evidence_class": "HOST_SIMULATION",
       "minimum_evidence_class": "BROWSER_OBSERVED",
+      "required_capabilities": [
+        "android_runtime",
+        "browser_integration"
+      ],
+      "evidence": [
+        {
+          "evidence_class": "HOST_SIMULATION",
+          "capabilities": [
+            "host_execution",
+            "simulated_state"
+          ]
+        }
+      ],
       "build_artifact": "android/application-assist/app/src/main/java/com/escapehatch/assist",
       "measurement_source": "environment_capability_probe",
       "observation": "QuietAssistNotification implemented (IMPORTANCE_LOW, silent, onlyAlertOnce). Notification-over-browser UNOBSERVED_ANDROID.",
@@ -105,7 +174,8 @@
       "decision_reason": "QuietAssistNotification implemented (IMPORTANCE_LOW, silent, onlyAlertOnce). Notification-over-browser UNOBSERVED_ANDROID.",
       "promotion_allowed": false,
       "proof_ceiling": "HOST_SIMULATION",
-      "prototype_level": "P3",
+      "achieved_prototype_level": "P0",
+      "target_prototype_level": "P3",
       "metrics": {}
     },
     {
@@ -113,6 +183,18 @@
       "hypothesis": "A foreground service is either necessary or unnecessary for the actual V1 lifecycle.",
       "evidence_class": "STATIC_REASONING",
       "minimum_evidence_class": "EMULATOR_OBSERVED",
+      "required_capabilities": [
+        "android_runtime",
+        "emulator_runtime"
+      ],
+      "evidence": [
+        {
+          "evidence_class": "STATIC_REASONING",
+          "capabilities": [
+            "static_reasoning"
+          ]
+        }
+      ],
       "build_artifact": "android/application-assist/.../QuietAssistNotification.kt",
       "measurement_source": "code_inspection_no_fgs_path",
       "observation": "V1 path implements notification/activity without FGS. Necessity undecided until H5 lifecycle evidence.",
@@ -120,7 +202,8 @@
       "decision_reason": "No FGS added yet (correct sequencing). Decision among NO_FGS_NEEDED_V1 / FGS_REQUIRED_V1 / FGS_CONDITIONAL requires emulator/device measurement.",
       "promotion_allowed": false,
       "proof_ceiling": "STATIC_REASONING",
-      "prototype_level": "P1",
+      "achieved_prototype_level": "P0",
+      "target_prototype_level": "P2",
       "metrics": {
         "fgs_enabled": false,
         "p82_decision": "INCONCLUSIVE"
@@ -131,6 +214,18 @@
       "hypothesis": "SYSTEM_ALERT_WINDOW remains unnecessary for V1.",
       "evidence_class": "STATIC_REASONING",
       "minimum_evidence_class": "EMULATOR_OBSERVED",
+      "required_capabilities": [
+        "android_runtime",
+        "emulator_runtime"
+      ],
+      "evidence": [
+        {
+          "evidence_class": "STATIC_REASONING",
+          "capabilities": [
+            "static_reasoning"
+          ]
+        }
+      ],
       "build_artifact": "android/application-assist/app/src/main/AndroidManifest.xml",
       "measurement_source": "manifest_inspection_plus_prior_lkg",
       "observation": "Manifest omits SYSTEM_ALERT_WINDOW. H2\u2013H6 Android observations unavailable; no unmet V1 requirement empirically demonstrated that requires overlay.",
@@ -138,7 +233,8 @@
       "decision_reason": "Retain LKG (overlay not required). Do not reopen overlay without H2\u2013H6 evidence of impossibility.",
       "promotion_allowed": false,
       "proof_ceiling": "STATIC_REASONING",
-      "prototype_level": "P1",
+      "achieved_prototype_level": "P0",
+      "target_prototype_level": "P2",
       "metrics": {
         "overlay_permission_declared": false
       }
@@ -148,6 +244,18 @@
       "hypothesis": "Android Bubbles may or may not improve the post-V1 experience.",
       "evidence_class": "STATIC_REASONING",
       "minimum_evidence_class": "PHYSICAL_DEVICE_OBSERVED",
+      "required_capabilities": [
+        "android_runtime",
+        "physical_device"
+      ],
+      "evidence": [
+        {
+          "evidence_class": "STATIC_REASONING",
+          "capabilities": [
+            "static_reasoning"
+          ]
+        }
+      ],
       "build_artifact": "none \u2014 deferred until H5 quiet baseline OBSERVED",
       "measurement_source": "sequencing_gate",
       "observation": "H5 not BROWSER_OBSERVED/PHYSICAL_DEVICE_OBSERVED; Bubble experiment not admitted.",
@@ -155,14 +263,22 @@
       "decision_reason": "Requires known-good quiet notification baseline (H5) before Bubble comparison.",
       "promotion_allowed": false,
       "proof_ceiling": "STATIC_REASONING",
-      "prototype_level": "P0",
+      "achieved_prototype_level": "P0",
+      "target_prototype_level": "P4",
       "metrics": {
         "admitted": false
       }
     }
   ],
+  "achieved_evidence_capabilities": [
+    "host_execution",
+    "simulated_state",
+    "static_reasoning"
+  ],
   "highest_evidence_class": "HOST_SIMULATION",
+  "highest_evidence_class_role": "display_only_non_authoritative",
   "proof_ceiling": [
+    "capability-based evidence framework",
     "Gradle sources implemented",
     "COMPILED_ANDROID only if assembleDebug succeeds",
     "emulator/device/browser observations BLOCKED without SDK/adb"

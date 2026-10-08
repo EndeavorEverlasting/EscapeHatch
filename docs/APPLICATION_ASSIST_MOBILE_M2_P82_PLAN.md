@@ -10,25 +10,28 @@
 
 | Field | Value |
 | --- | --- |
-| Repo / branch | EscapeHatch / `feat/eh-m2-p82-evidence-ladder-20261007` |
-| Mission | Correct EH-M1 evidence semantics; promote Android scaffold through measurable P82 ladder |
-| Owned | evidence contract; validators/fixtures; corrected ledger; Gradle app under `android/application-assist/`; EH-M2 experiment runner/receipts |
-| Forbidden | reopen EH-M1 architecture without stronger evidence; Accessibility; overlay-first; second session store; iOS impl; claiming unobserved proof |
+| Repo / branch | EscapeHatch / `fix/eh-m2-p82-evidence-capabilities-20261007` |
+| Mission | Capability-based P82 evidence admissibility; honest achieved vs target prototype levels |
+| Owned | evidence contract; validators/fixtures; corrected ledger; EH-M2 experiment runner/receipts (evidence-framework only) |
+| Forbidden | reopen EH-M1 architecture without stronger evidence; Accessibility; overlay-first; second session store; iOS impl; claiming unobserved proof; rank-based promotion |
 | Validation | `python scripts/run_android_assist_presence_spike.py`; `python scripts/validate_p82_evidence.py`; `python scripts/validate_application_assist_presence_surface.py`; `python tests/test_p82_evidence.py`; `python scripts/run_eh_m2_experiments.py`; Android build when SDK present; harness; `git diff --check` |
 
 ## Ladder
 
-| ID | Prototype | Required evidence | Notes |
-| --- | --- | --- | --- |
-| H1 | P1 compile | COMPILED_ANDROID | Gradle app builds |
-| H2 | P2 emulator | EMULATOR_OBSERVED | deep link Activity |
-| H3 | P2/P3 | EMULATOR_OBSERVED / BROWSER_OBSERVED | Sharesheet |
-| H4 | P2 | EMULATOR_OBSERVED | durable session |
-| H5 | P3/P4 | BROWSER_OBSERVED / PHYSICAL_DEVICE_OBSERVED | quiet notification |
-| H6 | P2+ | EMULATOR_OBSERVED+ | FGS necessity |
-| H7 | from H2–H6 | Android observations | overlay still unnecessary? |
-| H8 | P4 | PHYSICAL_DEVICE_OBSERVED | Bubbles after H5 baseline |
+Promotion authority is **capability containment**, not scalar evidence rank.
+Ask: does the evidence establish every required capability? Never: is this evidence type “higher”?
+
+| ID | Achieved | Target | Required capabilities | Notes |
+| --- | --- | --- | --- | --- |
+| H1 | P0 (until compile) | P1 | `android_compilation` | Gradle app builds |
+| H2 | P0 | P2 | `android_runtime`, `emulator_runtime` | deep link Activity |
+| H3 | P0 | P3 | `android_runtime`, `browser_integration` | Sharesheet |
+| H4 | P0 | P2 | `android_runtime`, `emulator_runtime` | durable session |
+| H5 | P0 | P3 | `android_runtime`, `browser_integration` | quiet notification |
+| H6 | P0 | P2 | `android_runtime`, `emulator_runtime` | FGS necessity |
+| H7 | P0 / static | P2 | Android observations | overlay still unnecessary? KEEP ≠ PROVEN |
+| H8 | P0 | P4+ | `android_runtime`, `physical_device` | Bubbles after H5 baseline |
 
 ## Acceptance
 
-EH-M2 complete only when H1–H7 have evidence classes meeting their gates (or honest BLOCKED with tooling named). Physical-device may remain successor if unavailable — must stay UNPROVEN, never silently promoted.
+EH-M2 complete only when H1–H7 have capability evidence meeting their gates (or honest BLOCKED with tooling named). Physical-device may remain successor if unavailable — must stay UNPROVEN, never silently promoted. `achieved_prototype_level` must never copy `target_prototype_level` without supporting capabilities.

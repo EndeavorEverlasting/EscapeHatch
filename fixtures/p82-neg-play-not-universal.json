@@ -1,0 +1,21 @@
+{
+  "hypothesis_id": "NEG-3",
+  "hypothesis": "Play release incorrectly treated as universal runtime proof",
+  "evidence_class": "PLAY_RELEASE_OBSERVED",
+  "evidence": [
+    {
+      "evidence_class": "PLAY_RELEASE_OBSERVED",
+      "capabilities": ["play_distribution"]
+    }
+  ],
+  "required_capabilities": ["physical_device", "browser_integration"],
+  "build_artifact": "fixtures/p82-neg-play-not-universal.json",
+  "measurement_source": "capability_regression",
+  "observation": "PLAY_RELEASE_OBSERVED only",
+  "decision": "PROMOTE",
+  "decision_reason": "illegal highest-rank universal proof",
+  "promotion_allowed": true,
+  "proof_ceiling": "PLAY_RELEASE_OBSERVED",
+  "achieved_prototype_level": "P7",
+  "target_prototype_level": "P7"
+}

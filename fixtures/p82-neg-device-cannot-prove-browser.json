@@ -1,0 +1,21 @@
+{
+  "hypothesis_id": "NEG-2",
+  "hypothesis": "physical device alone incorrectly satisfies browser integration",
+  "evidence_class": "PHYSICAL_DEVICE_OBSERVED",
+  "evidence": [
+    {
+      "evidence_class": "PHYSICAL_DEVICE_OBSERVED",
+      "capabilities": ["android_runtime", "physical_device"]
+    }
+  ],
+  "required_capabilities": ["android_runtime", "browser_integration"],
+  "build_artifact": "fixtures/p82-neg-device-cannot-prove-browser.json",
+  "measurement_source": "capability_regression",
+  "observation": "PHYSICAL_DEVICE_OBSERVED only; no browser participated",
+  "decision": "PROMOTE",
+  "decision_reason": "illegal orthogonal promotion",
+  "promotion_allowed": true,
+  "proof_ceiling": "PHYSICAL_DEVICE_OBSERVED",
+  "achieved_prototype_level": "P4",
+  "target_prototype_level": "P3"
+}

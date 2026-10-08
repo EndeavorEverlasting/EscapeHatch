@@ -17,7 +17,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-from p82_evidence import validate_experiment  # noqa: E402
+from p82_evidence import capabilities_for, validate_experiment  # noqa: E402
 
 CONTRACT = ROOT / "contracts" / "application-assist-presence-surface.v1.json"
 RECEIPT = ROOT / "harness" / "reports" / "android-assist-presence-spike-receipt.v1.json"
@@ -68,6 +68,8 @@ class ExperimentRecord:
     hypothesis: str
     evidence_class: str
     minimum_evidence_class: str
+    required_capabilities: list[str]
+    evidence: list[dict[str, Any]]
     build_artifact: str
     measurement_source: str
     observation: str
@@ -75,11 +77,16 @@ class ExperimentRecord:
     decision_reason: str
     promotion_allowed: bool
     proof_ceiling: str
-    prototype_level: str
+    achieved_prototype_level: str
+    target_prototype_level: str
     # Historical compatibility: KEEP-as-candidate retained, not empirical proof.
     keep: bool = False
     historical_decision_label: str | None = None
     metrics: dict[str, Any] = field(default_factory=dict)
+
+
+def evidence_for(cls: str) -> list[dict[str, Any]]:
+    return [{"evidence_class": cls, "capabilities": capabilities_for(cls)}]
 
 
 class AffordanceMachine:
@@ -203,6 +210,8 @@ def run_iterations() -> list[ExperimentRecord]:
             hypothesis="Quiet notification/companion affordance can remain available while browser is foregrounded without SYSTEM_ALERT_WINDOW.",
             evidence_class="HOST_SIMULATION",
             minimum_evidence_class="PHYSICAL_DEVICE_OBSERVED",
+            required_capabilities=capabilities_for("PHYSICAL_DEVICE_OBSERVED"),
+            evidence=evidence_for("HOST_SIMULATION"),
             build_artifact="scripts/run_android_assist_presence_spike.py",
             measurement_source="assigned_browser_foreground_and_host_affordance_machine",
             observation=(
@@ -213,7 +222,8 @@ def run_iterations() -> list[ExperimentRecord]:
             decision_reason="Host model retains candidate; Android notification-over-browser remains UNOBSERVED_ANDROID.",
             promotion_allowed=False,
             proof_ceiling="HOST_SIMULATION",
-            prototype_level="P0",
+            achieved_prototype_level="P0",
+            target_prototype_level="P4",
             keep=True,
             historical_decision_label="KEEP",
             metrics={"overlay_required": False, "affordance": machine.state, "assigned_inputs": True},
@@ -235,6 +245,8 @@ def run_iterations() -> list[ExperimentRecord]:
             hypothesis="Reopening EscapeHatch restores the identical assist session identity and origin binding.",
             evidence_class="HOST_SIMULATION",
             minimum_evidence_class="EMULATOR_OBSERVED",
+            required_capabilities=capabilities_for("EMULATOR_OBSERVED"),
+            evidence=evidence_for("HOST_SIMULATION"),
             build_artifact="scripts/run_android_assist_presence_spike.py#SessionStore",
             measurement_source="in_memory_python_session_store",
             observation=f"resumed_session_id={getattr(resumed, 'session_id', None)}; status={getattr(resumed, 'status', None)}",
@@ -246,7 +258,8 @@ def run_iterations() -> list[ExperimentRecord]:
             ),
             promotion_allowed=False,
             proof_ceiling="HOST_SIMULATION",
-            prototype_level="P0",
+            achieved_prototype_level="P0",
+            target_prototype_level="P2",
             keep=host_resume_ok,
             historical_decision_label="KEEP" if host_resume_ok else "REJECT",
             metrics={"session_key": SESSION_KEY, "match": host_resume_ok},
@@ -270,6 +283,8 @@ def run_iterations() -> list[ExperimentRecord]:
             hypothesis="At least one supported Android handoff (deep link and Sharesheet text) can carry application context into EscapeHatch.",
             evidence_class="HOST_SIMULATION",
             minimum_evidence_class="EMULATOR_OBSERVED",
+            required_capabilities=capabilities_for("EMULATOR_OBSERVED"),
+            evidence=evidence_for("HOST_SIMULATION"),
             build_artifact="scripts/run_android_assist_presence_spike.py#parse_*",
             measurement_source="python_uri_and_share_text_parsers",
             observation=f"deep={deep}; share_url={share.get('url')}",
@@ -281,7 +296,8 @@ def run_iterations() -> list[ExperimentRecord]:
             ),
             promotion_allowed=False,
             proof_ceiling="HOST_SIMULATION",
-            prototype_level="P0",
+            achieved_prototype_level="P0",
+            target_prototype_level="P2",
             keep=parse_ok,
             historical_decision_label="KEEP" if parse_ok else "REJECT",
             metrics={"deep_link": bool(deep), "sharesheet_parser": True},
@@ -302,6 +318,8 @@ def run_iterations() -> list[ExperimentRecord]:
             hypothesis="Dismiss preserves session and ordinary browser navigation does not spawn repeated prompts.",
             evidence_class="HOST_SIMULATION",
             minimum_evidence_class="BROWSER_OBSERVED",
+            required_capabilities=capabilities_for("BROWSER_OBSERVED"),
+            evidence=evidence_for("HOST_SIMULATION"),
             build_artifact="scripts/run_android_assist_presence_spike.py#AffordanceMachine",
             measurement_source="host_affordance_machine_plus_in_memory_store",
             observation=f"state={machine.state}; prompts={prompts}; session_preserved={after_dismiss is not None}",
@@ -313,7 +331,8 @@ def run_iterations() -> list[ExperimentRecord]:
             ),
             promotion_allowed=False,
             proof_ceiling="HOST_SIMULATION",
-            prototype_level="P0",
+            achieved_prototype_level="P0",
+            target_prototype_level="P3",
             keep=dismiss_ok,
             historical_decision_label="KEEP" if dismiss_ok else "REJECT",
             metrics={"prompts": prompts},
@@ -341,6 +360,8 @@ def run_iterations() -> list[ExperimentRecord]:
             hypothesis="SYSTEM_ALERT_WINDOW is unnecessary for V1 because a lower-authority mechanism scores higher on quiet presence + policy + onboarding.",
             evidence_class="STATIC_REASONING",
             minimum_evidence_class="EMULATOR_OBSERVED",
+            required_capabilities=capabilities_for("EMULATOR_OBSERVED"),
+            evidence=evidence_for("STATIC_REASONING"),
             build_artifact="docs/APPLICATION_ASSIST_ANDROID_CAPABILITY_MATRIX.md",
             measurement_source="authored_numeric_weights_plus_play_policy_docs",
             observation=f"primary={primary['id']} score={primary_score}; overlay_score={overlay_score}; provenance=authored_weights",
@@ -350,7 +371,8 @@ def run_iterations() -> list[ExperimentRecord]:
             ),
             promotion_allowed=False,
             proof_ceiling="STATIC_REASONING",
-            prototype_level="P0",
+            achieved_prototype_level="P0",
+            target_prototype_level="P2",
             keep=score_prefers_primary,
             historical_decision_label="KEEP" if score_prefers_primary else "COMPARE",
             metrics={"primary_score": primary_score, "overlay_score": overlay_score, "authored": True},
@@ -364,6 +386,8 @@ def run_iterations() -> list[ExperimentRecord]:
             hypothesis="Android Bubbles are unsuitable as V1 primary because API 30+ conversation requirements fight presence-not-nag doctrine for job assist.",
             evidence_class="STATIC_REASONING",
             minimum_evidence_class="PHYSICAL_DEVICE_OBSERVED",
+            required_capabilities=capabilities_for("PHYSICAL_DEVICE_OBSERVED"),
+            evidence=evidence_for("STATIC_REASONING"),
             build_artifact="android/application-assist-spike/.../BubblePresenceCandidate.kt",
             measurement_source="authored_recommendation_metadata_and_android_docs",
             observation=(
@@ -374,7 +398,8 @@ def run_iterations() -> list[ExperimentRecord]:
             decision_reason="Retain as optional later candidate; Bubble behavior UNOBSERVED_DEVICE. Do not promote from metadata.",
             promotion_allowed=False,
             proof_ceiling="STATIC_REASONING",
-            prototype_level="P0",
+            achieved_prototype_level="P0",
+            target_prototype_level="P4",
             keep=True,
             historical_decision_label="KEEP",
             metrics={"bubbles_primary": False, "metadata_dependent_historical_pass": True},
@@ -477,7 +502,8 @@ def main() -> int:
     for r in results:
         print(
             f"  {r.hypothesis_id} {r.decision} evidence={r.evidence_class} "
-            f"min={r.minimum_evidence_class} promote={r.promotion_allowed}"
+            f"achieved={r.achieved_prototype_level} target={r.target_prototype_level} "
+            f"promote={r.promotion_allowed}"
         )
     for err in inflation:
         print(f"  ! {err}")

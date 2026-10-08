@@ -1,0 +1,21 @@
+{
+  "hypothesis_id": "NEG-4",
+  "hypothesis": "target prototype masquerades as achieved without emulator evidence",
+  "evidence_class": "HOST_SIMULATION",
+  "evidence": [
+    {
+      "evidence_class": "HOST_SIMULATION",
+      "capabilities": ["host_execution", "simulated_state"]
+    }
+  ],
+  "required_capabilities": ["android_runtime", "emulator_runtime"],
+  "build_artifact": "fixtures/p82-neg-target-as-achieved.json",
+  "measurement_source": "capability_regression",
+  "observation": "no emulator receipt exists",
+  "decision": "BLOCKED",
+  "decision_reason": "blocked but falsely claims achieved P2",
+  "promotion_allowed": false,
+  "proof_ceiling": "HOST_SIMULATION",
+  "achieved_prototype_level": "P2",
+  "target_prototype_level": "P2"
+}

@@ -1,74 +1,157 @@
 {
   "schema": "escapehatch/p82-evidence-class/v1",
-  "version": 1,
-  "mission": "Declare typed evidence provenance for Prototype-Measure-Refine experiments so host simulation cannot masquerade as Android runtime or device proof.",
+  "version": 2,
+  "mission": "Declare typed evidence provenance as orthogonal capabilities so host simulation, policy docs, browser observation, device observation, and Play release cannot silently satisfy unrelated proof requirements.",
   "lane_scope": ["EH-M1", "EH-M2", "EH-M3", "EH-M4"],
+  "promotion_authority": "capability_containment",
+  "promotion_authority_note": "Promotion is allowed only when union(actual evidence capabilities) contains all(required capabilities). Scalar rank MUST NOT participate in proof admissibility.",
+  "capabilities": [
+    "static_reasoning",
+    "host_execution",
+    "simulated_state",
+    "android_compilation",
+    "android_runtime",
+    "emulator_runtime",
+    "browser_integration",
+    "physical_device",
+    "multi_browser_oem_coverage",
+    "distributable_build",
+    "play_policy_documentation",
+    "play_distribution"
+  ],
   "evidence_classes": [
     {
       "id": "STATIC_REASONING",
+      "display_order": 10,
       "rank": 10,
+      "rank_role": "display_only_non_authoritative",
+      "capabilities": ["static_reasoning"],
       "meaning": "Architecture/policy reasoning, authored scores, or documentation synthesis without executable observation of the claimed runtime."
     },
     {
       "id": "PLAY_POLICY_DOCUMENTED",
+      "display_order": 15,
       "rank": 15,
+      "rank_role": "display_only_non_authoritative",
+      "capabilities": ["play_policy_documentation"],
       "meaning": "Public Play/Android policy documentation cited; not a runtime observation and not a Play release."
     },
     {
       "id": "HOST_SIMULATION",
+      "display_order": 20,
       "rank": 20,
+      "rank_role": "display_only_non_authoritative",
+      "capabilities": ["host_execution", "simulated_state"],
       "meaning": "Executable host-side model/parser/state-machine proof that does not run on Android OS."
     },
     {
       "id": "COMPILED_ANDROID",
+      "display_order": 30,
       "rank": 30,
+      "rank_role": "display_only_non_authoritative",
+      "capabilities": ["android_compilation"],
       "meaning": "Real Android toolchain compiled an APK/AAB (or equivalent) from repository sources."
     },
     {
       "id": "EMULATOR_OBSERVED",
+      "display_order": 40,
       "rank": 40,
+      "rank_role": "display_only_non_authoritative",
+      "capabilities": ["android_runtime", "emulator_runtime"],
       "meaning": "Behavior observed on an Android emulator/runtime under instrumentation or adb."
     },
     {
       "id": "BROWSER_OBSERVED",
+      "display_order": 50,
       "rank": 50,
+      "rank_role": "display_only_non_authoritative",
+      "capabilities": ["android_runtime", "browser_integration"],
       "meaning": "Behavior observed with a real mobile browser participating (emulator or device)."
     },
     {
       "id": "PHYSICAL_DEVICE_OBSERVED",
+      "display_order": 60,
       "rank": 60,
-      "meaning": "Behavior observed on a physical Android device."
+      "rank_role": "display_only_non_authoritative",
+      "capabilities": ["android_runtime", "physical_device"],
+      "meaning": "Behavior observed on a physical Android device. Does not imply browser integration or multi-OEM coverage."
     },
     {
       "id": "PLAY_RELEASE_OBSERVED",
+      "display_order": 70,
       "rank": 70,
-      "meaning": "Behavior observed through a Play-distributed or Play-review release path."
+      "rank_role": "display_only_non_authoritative",
+      "capabilities": ["play_distribution"],
+      "meaning": "Behavior observed through a Play-distributed or Play-review release path. Does not automatically prove device/browser/runtime claims."
     }
   ],
   "prototype_levels": [
-    {"id": "P0", "label": "host model", "typical_evidence": "HOST_SIMULATION"},
-    {"id": "P1", "label": "compiling Android app", "typical_evidence": "COMPILED_ANDROID"},
-    {"id": "P2", "label": "emulator lifecycle", "typical_evidence": "EMULATOR_OBSERVED"},
-    {"id": "P3", "label": "browser-integrated emulator", "typical_evidence": "BROWSER_OBSERVED"},
-    {"id": "P4", "label": "physical Android device", "typical_evidence": "PHYSICAL_DEVICE_OBSERVED"},
-    {"id": "P5", "label": "multi-browser / OEM validation", "typical_evidence": "PHYSICAL_DEVICE_OBSERVED"},
-    {"id": "P6", "label": "distributable build", "typical_evidence": "COMPILED_ANDROID"},
-    {"id": "P7", "label": "Play/release observation", "typical_evidence": "PLAY_RELEASE_OBSERVED"}
+    {
+      "id": "P0",
+      "label": "host model / static",
+      "required_capabilities_any_of": [
+        ["static_reasoning"],
+        ["host_execution", "simulated_state"]
+      ],
+      "typical_evidence": ["STATIC_REASONING", "HOST_SIMULATION", "PLAY_POLICY_DOCUMENTED"]
+    },
+    {
+      "id": "P1",
+      "label": "compiling Android app",
+      "required_capabilities": ["android_compilation"],
+      "typical_evidence": ["COMPILED_ANDROID"]
+    },
+    {
+      "id": "P2",
+      "label": "emulator lifecycle",
+      "required_capabilities": ["android_runtime", "emulator_runtime"],
+      "typical_evidence": ["EMULATOR_OBSERVED"]
+    },
+    {
+      "id": "P3",
+      "label": "browser-integrated observation",
+      "required_capabilities": ["android_runtime", "browser_integration"],
+      "typical_evidence": ["BROWSER_OBSERVED"]
+    },
+    {
+      "id": "P4",
+      "label": "physical Android device",
+      "required_capabilities": ["android_runtime", "physical_device"],
+      "typical_evidence": ["PHYSICAL_DEVICE_OBSERVED"]
+    },
+    {
+      "id": "P5",
+      "label": "multi-browser / OEM validation",
+      "required_capabilities": ["android_runtime", "physical_device", "multi_browser_oem_coverage"],
+      "typical_evidence": ["PHYSICAL_DEVICE_OBSERVED"],
+      "note": "Do not infer P5 from a single physical-device observation."
+    },
+    {
+      "id": "P6",
+      "label": "distributable build",
+      "required_capabilities": ["distributable_build"],
+      "typical_evidence": [],
+      "note": "Requires explicit distributable_build capability; COMPILED_ANDROID alone is insufficient."
+    },
+    {
+      "id": "P7",
+      "label": "Play/release observation",
+      "required_capabilities": ["play_distribution"],
+      "typical_evidence": ["PLAY_RELEASE_OBSERVED"]
+    }
   ],
   "decisions": ["KEEP", "REFINE", "REJECT", "PROMOTE", "BLOCKED", "INCONCLUSIVE"],
   "decision_semantics": {
     "KEEP": "candidate remains worth testing; not equivalent to empirical proof",
     "REFINE": "hypothesis remains viable but implementation/test needs correction",
     "REJECT": "evidence contradicts the candidate",
-    "PROMOTE": "evidence satisfies the declared promotion gate for this hypothesis",
+    "PROMOTE": "union of evidence capabilities contains every required capability",
     "BLOCKED": "required external/tooling condition unavailable",
     "INCONCLUSIVE": "measurement occurred but does not distinguish alternatives"
   },
   "experiment_record_required_fields": [
     "hypothesis_id",
     "hypothesis",
-    "evidence_class",
-    "minimum_evidence_class",
     "build_artifact",
     "measurement_source",
     "observation",
@@ -76,23 +159,40 @@
     "decision_reason",
     "promotion_allowed",
     "proof_ceiling",
-    "prototype_level"
+    "achieved_prototype_level",
+    "target_prototype_level"
   ],
+  "legacy_compatibility_fields": {
+    "evidence_class": "single-class compatibility metadata; capabilities are derived from the class",
+    "minimum_evidence_class": "compatibility metadata; required capabilities are derived from the class",
+    "prototype_level": "deprecated ambiguous field; must not be treated as achieved evidence",
+    "rank": "display/sorting only; never promotion authority",
+    "highest_evidence_class": "display_only_non_authoritative receipt summary"
+  },
   "promotion_rules": {
-    "higher_evidence_may_satisfy_lower_minimum": true,
-    "promote_requires_evidence_rank_gte_minimum": true,
+    "authority": "capability_containment",
+    "rank_participates_in_admissibility": false,
+    "higher_rank_does_not_imply_capability_superset": true,
+    "promote_requires_all_required_capabilities": true,
+    "multiple_evidence_records_may_compose": true,
     "keep_with_insufficient_evidence_is_valid": true,
     "keep_is_not_proven": true,
+    "target_prototype_is_never_achievement": true,
     "forbidden": [
-      "promote_when_evidence_class_below_minimum",
-      "treat_host_simulation_as_android_runtime_proof",
+      "use_scalar_rank_for_promotion",
+      "host_simulation_satisfies_play_policy_documentation",
+      "physical_device_satisfies_browser_integration_alone",
+      "play_release_satisfies_unrelated_runtime_requirements",
+      "claim_achieved_prototype_without_supporting_capabilities",
       "treat_authored_recommendation_metadata_as_independent_measurement"
     ]
   },
   "invariants": [
     "no_boolean_proven_collapse",
-    "receipt_must_declare_evidence_class_per_experiment",
+    "receipt_must_declare_evidence_capabilities_per_experiment",
+    "validator_fails_closed_on_missing_required_capabilities",
     "validator_fails_closed_on_proof_inflation",
+    "achieved_and_target_prototype_levels_are_distinct",
     "historical_keep_receipts_may_be_preserved_with_corrected_evidence_class"
   ]
 }

@@ -1,0 +1,21 @@
+{
+  "hypothesis_id": "NEG-1",
+  "hypothesis": "host simulation incorrectly satisfies Play policy documentation",
+  "evidence_class": "HOST_SIMULATION",
+  "evidence": [
+    {
+      "evidence_class": "HOST_SIMULATION",
+      "capabilities": ["host_execution", "simulated_state"]
+    }
+  ],
+  "required_capabilities": ["play_policy_documentation"],
+  "build_artifact": "fixtures/p82-neg-host-cannot-prove-policy.json",
+  "measurement_source": "capability_regression",
+  "observation": "HOST_SIMULATION only",
+  "decision": "PROMOTE",
+  "decision_reason": "illegal scalar-rank-style promotion across orthogonal capabilities",
+  "promotion_allowed": true,
+  "proof_ceiling": "HOST_SIMULATION",
+  "achieved_prototype_level": "P0",
+  "target_prototype_level": "P0"
+}

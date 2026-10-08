@@ -1,0 +1,21 @@
+{
+  "hypothesis_id": "POS-1",
+  "hypothesis": "honest blocked experiment waiting on Android compilation",
+  "evidence_class": "HOST_SIMULATION",
+  "evidence": [
+    {
+      "evidence_class": "HOST_SIMULATION",
+      "capabilities": ["host_execution", "simulated_state"]
+    }
+  ],
+  "required_capabilities": ["android_compilation"],
+  "build_artifact": "fixtures/p82-pos-honest-blocked.json",
+  "measurement_source": "capability_regression",
+  "observation": "sources present; no compile",
+  "decision": "BLOCKED",
+  "decision_reason": "Android SDK/JDK unavailable",
+  "promotion_allowed": false,
+  "proof_ceiling": "HOST_SIMULATION",
+  "achieved_prototype_level": "P0",
+  "target_prototype_level": "P1"
+}

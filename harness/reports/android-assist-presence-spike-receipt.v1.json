@@ -2,7 +2,7 @@
   "schema": "escapehatch/android-assist-presence-spike-receipt/v1",
   "version": 2,
   "lane": "EH-M1",
-  "generated_at": "2026-10-07T20:52:58.176190+00:00",
+  "generated_at": "2026-10-07T23:58:44.941374+00:00",
   "contract_schema": "escapehatch/application-assist-presence-surface/v1",
   "evidence_contract": "contracts/p82-evidence-class.v1.json",
   "floor_commit_note": "host-side spike with corrected evidence classes; no Android SDK device execution",
@@ -15,6 +15,19 @@
       "hypothesis": "Quiet notification/companion affordance can remain available while browser is foregrounded without SYSTEM_ALERT_WINDOW.",
       "evidence_class": "HOST_SIMULATION",
       "minimum_evidence_class": "PHYSICAL_DEVICE_OBSERVED",
+      "required_capabilities": [
+        "android_runtime",
+        "physical_device"
+      ],
+      "evidence": [
+        {
+          "evidence_class": "HOST_SIMULATION",
+          "capabilities": [
+            "host_execution",
+            "simulated_state"
+          ]
+        }
+      ],
       "build_artifact": "scripts/run_android_assist_presence_spike.py",
       "measurement_source": "assigned_browser_foreground_and_host_affordance_machine",
       "observation": "affordance=surfaced; browser_foreground=True (assigned); overlay_required=False (assigned). Model can represent the condition.",
@@ -22,7 +35,8 @@
       "decision_reason": "Host model retains candidate; Android notification-over-browser remains UNOBSERVED_ANDROID.",
       "promotion_allowed": false,
       "proof_ceiling": "HOST_SIMULATION",
-      "prototype_level": "P0",
+      "achieved_prototype_level": "P0",
+      "target_prototype_level": "P4",
       "keep": true,
       "historical_decision_label": "KEEP",
       "metrics": {
@@ -36,6 +50,19 @@
       "hypothesis": "Reopening EscapeHatch restores the identical assist session identity and origin binding.",
       "evidence_class": "HOST_SIMULATION",
       "minimum_evidence_class": "EMULATOR_OBSERVED",
+      "required_capabilities": [
+        "android_runtime",
+        "emulator_runtime"
+      ],
+      "evidence": [
+        {
+          "evidence_class": "HOST_SIMULATION",
+          "capabilities": [
+            "host_execution",
+            "simulated_state"
+          ]
+        }
+      ],
       "build_artifact": "scripts/run_android_assist_presence_spike.py#SessionStore",
       "measurement_source": "in_memory_python_session_store",
       "observation": "resumed_session_id=sess-spike-001; status=active",
@@ -43,7 +70,8 @@
       "decision_reason": "In-memory host store preserves identity; process-death Android restoration UNOBSERVED_ANDROID.",
       "promotion_allowed": false,
       "proof_ceiling": "HOST_SIMULATION",
-      "prototype_level": "P0",
+      "achieved_prototype_level": "P0",
+      "target_prototype_level": "P2",
       "keep": true,
       "historical_decision_label": "KEEP",
       "metrics": {
@@ -56,6 +84,19 @@
       "hypothesis": "At least one supported Android handoff (deep link and Sharesheet text) can carry application context into EscapeHatch.",
       "evidence_class": "HOST_SIMULATION",
       "minimum_evidence_class": "EMULATOR_OBSERVED",
+      "required_capabilities": [
+        "android_runtime",
+        "emulator_runtime"
+      ],
+      "evidence": [
+        {
+          "evidence_class": "HOST_SIMULATION",
+          "capabilities": [
+            "host_execution",
+            "simulated_state"
+          ]
+        }
+      ],
       "build_artifact": "scripts/run_android_assist_presence_spike.py#parse_*",
       "measurement_source": "python_uri_and_share_text_parsers",
       "observation": "deep={'session_id': 'sess-spike-001', 'url': 'https://jobs.example.com/apply', 'company': 'Example Co', 'role': 'Automation Engineer', 'question_text': None, 'source': 'deep_link'}; share_url=https://jobs.example.com/apply",
@@ -63,7 +104,8 @@
       "decision_reason": "Parser semantics HOST_SIMULATION_PROVEN; Android Activity/Sharesheet reception UNOBSERVED_ANDROID.",
       "promotion_allowed": false,
       "proof_ceiling": "HOST_SIMULATION",
-      "prototype_level": "P0",
+      "achieved_prototype_level": "P0",
+      "target_prototype_level": "P2",
       "keep": true,
       "historical_decision_label": "KEEP",
       "metrics": {
@@ -76,6 +118,19 @@
       "hypothesis": "Dismiss preserves session and ordinary browser navigation does not spawn repeated prompts.",
       "evidence_class": "HOST_SIMULATION",
       "minimum_evidence_class": "BROWSER_OBSERVED",
+      "required_capabilities": [
+        "android_runtime",
+        "browser_integration"
+      ],
+      "evidence": [
+        {
+          "evidence_class": "HOST_SIMULATION",
+          "capabilities": [
+            "host_execution",
+            "simulated_state"
+          ]
+        }
+      ],
       "build_artifact": "scripts/run_android_assist_presence_spike.py#AffordanceMachine",
       "measurement_source": "host_affordance_machine_plus_in_memory_store",
       "observation": "state=temporarily_dismissed; prompts=0; session_preserved=True",
@@ -83,7 +138,8 @@
       "decision_reason": "Dismiss/session retention model HOST_SIMULATION_PROVEN; Android notification lifecycle UNOBSERVED_ANDROID.",
       "promotion_allowed": false,
       "proof_ceiling": "HOST_SIMULATION",
-      "prototype_level": "P0",
+      "achieved_prototype_level": "P0",
+      "target_prototype_level": "P3",
       "keep": true,
       "historical_decision_label": "KEEP",
       "metrics": {
@@ -95,6 +151,18 @@
       "hypothesis": "SYSTEM_ALERT_WINDOW is unnecessary for V1 because a lower-authority mechanism scores higher on quiet presence + policy + onboarding.",
       "evidence_class": "STATIC_REASONING",
       "minimum_evidence_class": "EMULATOR_OBSERVED",
+      "required_capabilities": [
+        "android_runtime",
+        "emulator_runtime"
+      ],
+      "evidence": [
+        {
+          "evidence_class": "STATIC_REASONING",
+          "capabilities": [
+            "static_reasoning"
+          ]
+        }
+      ],
       "build_artifact": "docs/APPLICATION_ASSIST_ANDROID_CAPABILITY_MATRIX.md",
       "measurement_source": "authored_numeric_weights_plus_play_policy_docs",
       "observation": "primary=notification_foreground_service score=19; overlay_score=8; provenance=authored_weights",
@@ -102,7 +170,8 @@
       "decision_reason": "ACCEPTED DESIGN aid only \u2014 authored scores are not Android observation. Overlay necessity remains empirically open until H2\u2013H6 Android evidence.",
       "promotion_allowed": false,
       "proof_ceiling": "STATIC_REASONING",
-      "prototype_level": "P0",
+      "achieved_prototype_level": "P0",
+      "target_prototype_level": "P2",
       "keep": true,
       "historical_decision_label": "KEEP",
       "metrics": {
@@ -116,6 +185,18 @@
       "hypothesis": "Android Bubbles are unsuitable as V1 primary because API 30+ conversation requirements fight presence-not-nag doctrine for job assist.",
       "evidence_class": "STATIC_REASONING",
       "minimum_evidence_class": "PHYSICAL_DEVICE_OBSERVED",
+      "required_capabilities": [
+        "android_runtime",
+        "physical_device"
+      ],
+      "evidence": [
+        {
+          "evidence_class": "STATIC_REASONING",
+          "capabilities": [
+            "static_reasoning"
+          ]
+        }
+      ],
       "build_artifact": "android/application-assist-spike/.../BubblePresenceCandidate.kt",
       "measurement_source": "authored_recommendation_metadata_and_android_docs",
       "observation": "recommendation=optional_enhancement_after_v1; doctrine_fit=medium. Success condition previously depended on pre-authored recommendation label \u2014 not independent measurement.",
@@ -123,7 +204,8 @@
       "decision_reason": "Retain as optional later candidate; Bubble behavior UNOBSERVED_DEVICE. Do not promote from metadata.",
       "promotion_allowed": false,
       "proof_ceiling": "STATIC_REASONING",
-      "prototype_level": "P0",
+      "achieved_prototype_level": "P0",
+      "target_prototype_level": "P4",
       "keep": true,
       "historical_decision_label": "KEEP",
       "metrics": {

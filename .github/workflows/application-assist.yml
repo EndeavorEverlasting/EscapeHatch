@@ -6,11 +6,14 @@ on:
       - "browser/application-assist/**"
       - "contracts/application-assist-session.v1.json"
       - "contracts/application-assist-modality.v1.json"
+      - "contracts/application-event-journal.v1.json"
       - "docs/APPLICATION_ASSIST_SESSION.md"
       - "tests/test_application_assist_session_contract.py"
       - "tests/test_application_assist_session.mjs"
       - "tests/test_application_assist_modality_contract.py"
       - "tests/test_application_assist_modality.mjs"
+      - "tests/test_application_event_journal.mjs"
+      - "tests/test_application_event_journal_contract.py"
       - ".github/workflows/application-assist.yml"
   pull_request:
     paths:
@@ -48,13 +51,20 @@ jobs:
         run: node tests/test_application_assist_session.mjs
       - name: Test three-mode modality harness
         run: node tests/test_application_assist_modality.mjs
+      - name: Validate private event journal contract and reducer
+        run: |
+          python tests/test_application_event_journal_contract.py
+          node tests/test_application_event_journal.mjs
       - name: Parse popup and modality runtime
         run: |
           node --check browser/application-assist/modality.js
           node --check browser/application-assist/popup.js
+          node --check browser/application-assist/event-journal.js
+          node --check browser/application-assist/event-observer.js
       - name: Validate JSON syntax
         run: |
           python -m json.tool contracts/application-assist-session.v1.json > /dev/null
+          python -m json.tool contracts/application-event-journal.v1.json > /dev/null
           python -m json.tool contracts/application-assist-modality.v1.json > /dev/null
           python -m json.tool browser/application-assist/manifest.json > /dev/null
       - name: Check whitespace

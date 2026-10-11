@@ -193,6 +193,9 @@
     <div class="actions">
       <button id="startAssist" type="button" title="Shortcut: S" data-action="start_assist">Start Assist</button>
       <button id="fillAllowed" type="button" title="Shortcut: F" data-action="fill_allowed">Fill Allowed Fields</button>
+      <button id="listenCurrentPage" type="button" data-action="listen_current_page">Listen on This Page</button>
+      <button id="exportEventJournal" type="button" data-action="export_event_journal">Export Event JSONL</button>
+      <button id="clearEventJournal" type="button" data-action="clear_event_journal">Clear Event Journal</button>
       <button id="pause" type="button" title="Shortcut: P" data-action="pause_session">Pause</button>
       <button id="resume" type="button" title="Shortcut: R" data-action="resume_session">Resume</button>
       <button id="undoLast" type="button" title="Shortcut: U" data-action="undo_last_fill">Undo Last Fill</button>
@@ -235,8 +238,9 @@
 
   <input id="importFile" type="file" accept="application/json,.json">
   <div id="status" role="status" aria-live="polite"></div>
-  <p class="privacy">User-owned browser-local state. Writes go through a canonical Fill Plan and policy gate. Phone is withheld unless explicitly marked as the primary career number you control. Never auto-submits, never clicks Next/Continue, never attests.</p>
+  <p class="privacy">User-owned browser-local state. Writes go through a canonical Fill Plan and policy gate. Phone is withheld unless explicitly marked as the primary career number you control. Event listening is opt-in, metadata-only, local, and limited to the current document; navigation requires re-enabling. Never auto-submits, never clicks Next/Continue, never attests.</p>
   <script src="assist-core.js"></script>
+  <script src="event-journal.js"></script>
   <script src="modality.js"></script>
   <script src="popup.js"></script>
 </body>

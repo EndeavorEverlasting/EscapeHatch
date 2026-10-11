@@ -1,0 +1,80 @@
+{
+  "schema": "escapehatch/application-event-journal/v1",
+  "version": 1,
+  "owner": "contracts/application-event-journal.v1.json",
+  "mission": "Opt-in, local-first, append-only JSON event evidence for a user-authorized application page, never a background surveillance stream.",
+  "capture": {
+    "start": "explicit_operator_action",
+    "session": "application-assist-session/v1",
+    "scope": "current_document_only",
+    "cross_origin": "stop_and_require_operator_reauthorization",
+    "navigation": "page_unload_stops_listener; operator must re-enable at next page",
+    "manifest_permission_change": "none",
+    "collection": "nonblocking_dom_events_only",
+    "initial_status": "off",
+    "authorization_does_not_imply_auto_fill": true
+  },
+  "storage": {
+    "location": "chrome.storage.local",
+    "key": "escapeHatch.applicationEventJournal.v1",
+    "max_events": 1000,
+    "on_full": "fail_closed_preserve_existing",
+    "retention": "until_explicit_clear",
+    "export": "JSONL, user-initiated",
+    "sync": "disabled; optional Drive integration requires separate explicit authorization",
+    "public_repo_private_data": "forbidden"
+  },
+  "envelope": {
+    "required": [
+      "schema",
+      "event_id",
+      "session_id",
+      "sequence",
+      "caused_by",
+      "type",
+      "observed_at",
+      "evidence_class",
+      "payload"
+    ],
+    "evidence_class": "observed_metadata_only"
+  },
+  "event_types": [
+    "observation_started",
+    "page_snapshot",
+    "field_completed",
+    "field_cleared",
+    "upload_presence_changed",
+    "submit_attempt_observed"
+  ],
+  "privacy": {
+    "stored_page_url": false,
+    "stored_url_query": false,
+    "stored_input_names": false,
+    "stored_labels": false,
+    "stored_text_values": false,
+    "stored_answer_content": false,
+    "stored_filename": false,
+    "stored_passwords": false,
+    "stored_checkbox_selection": false,
+    "stored_document_contents": false,
+    "stored_form_error_messages": false,
+    "storage_policy": "allowlisted_metadata_only"
+  },
+  "projection": {
+    "never_infer_submitted": true,
+    "submit_attempt_is_not_success": true,
+    "confirmation_requires": "existing explicit operator confirmation/evidence flow",
+    "no_employer_site_network_requests": true
+  },
+  "existing_owners": [
+    "contracts/application-assist-session.v1.json",
+    "contracts/application-companion.v1.json",
+    "browser/application-assist/assist-core.js"
+  ],
+  "next_gates": [
+    "runtime_browser_observation",
+    "cross_page_origin_scoped_permission_consent",
+    "durable career_state reducer",
+    "optional authorized Drive tracker projection"
+  ]
+}

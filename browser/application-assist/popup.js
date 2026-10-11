@@ -370,6 +370,7 @@ async function undoLastFill() {
 }
 
 async function recordConfirmationEvidence() {
+  if (!window.confirm("I personally verified that the employer accepted the final application submission. This is not merely a form submit attempt. Record confirmation evidence?")) return;
   let session = await loadStoredSession();
   if (!session) {
     setStatus("Start Assist before recording confirmation evidence.");

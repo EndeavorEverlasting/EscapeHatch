@@ -278,8 +278,10 @@ async function exportEventJournal() {
 
 async function clearEventJournal() {
   if (!window.confirm("Clear saved application event journal on this device? Export first if needed.")) return;
+  const session = await loadStoredSession();
+  if (session && session.status === "active") await saveSession(api.pauseSession(session, "journal_cleared"));
   await chrome.storage.local.remove(journalApi.STORAGE_KEY);
-  setStatus("Local event journal cleared. Existing application session is unchanged.");
+  setStatus("Local event journal cleared and active observation paused. Resume explicitly if needed.");
 }
 
 async function startAssist() {

@@ -1,8 +1,8 @@
 # Application Event Journal — EH-EVT0 (current-document MVP)
 
-**Owner:** `contracts/application-event-journal.v1.json`  
-**Repo:** `EndeavorEverlasting/EscapeHatch`  
-**Scope:** browser/application-assist, explicit opt-in for the active application tab.  
+**Owner:** `contracts/application-event-journal.v1.json`
+**Repo:** `EndeavorEverlasting/EscapeHatch`
+**Scope:** browser/application-assist, explicit opt-in for the active application tab.
 **Status:** repository implementation pending CI + real Chrome/Edge acceptance.
 
 ## Why this exists

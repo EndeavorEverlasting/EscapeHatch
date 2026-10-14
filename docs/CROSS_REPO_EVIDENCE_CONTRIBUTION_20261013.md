@@ -87,3 +87,50 @@ do not fork prompt text. Run
 Application Assist CI. Then perform the existing EH-EVT0 headed synthetic
 browser acceptance and EVT1 replay gates. Do not merge PR #59 or its
 dependent work based on these pure Node tests alone.
+
+## Wider P04 cross-pollination inventory
+
+This is a contribution registry **for decisions and source ownership**, not a
+shared package. Only rows marked IMPLEMENTED have current candidate code.
+Neither repository should autonomously consume the other's private state.
+
+| Donor (canonical source) | Transferable mechanism | Consumer, target seam | Disposition / P82 next proof |
+| --- | --- | --- | --- |
+| EscapeHatch `browser/application-assist/event-journal.js` (PR #59) | Opt-in append-only metadata events, bounded retention, JSONL export, causal ordering | FileSteward `src/filesteward/deletion/receipt.py` and review UI audit history | **INVESTIGATE.** Compare current action receipts vs synthetic event replay; no rename/file contents or PII in a shared journal. FileSteward remains audit owner. |
+| FileSteward `src/filesteward/models.py`, `src/filesteward/ownership/actions.py` | Evidence and authorization are different types; stale dependency evidence fails closed | EscapeHatch `event-evidence-review.js` | **IMPLEMENTED CANDIDATE** this PR. Strict, pure journal review; never grants submitted state. CI and browser integration separate. |
+| FileSteward `harness/contracts/storage-ownership-evidence-graph.v1.json` | Multi-source attribution, most-protective-edge-wins, no absence→proof | EscapeHatch application source/session/opportunity attribution at EH-EVT1 | **INVESTIGATE.** Test fake ATS same-origin different opportunities and cross-origin handoffs before defining binding; do not reuse filesystem graph node types. |
+| EscapeHatch `contracts/application-assist-modality.v1.json` | One semantic action registry across pointer, keyboard, phone | FileSteward `src/filesteward/visualization/` and mobile reviews | **INVESTIGATE/P129.** Compare equivalent inspect, review, revoke, export flows on desktop/touch. Do not duplicate FileSteward action/review state. |
+| FileSteward `src/filesteward/deletion/{preflight,receipt}.py` | Re-check current evidence immediately before consequence; bind receipts to exact revision | EscapeHatch browser assist Fill Plan / later CareerState transitions | **INVESTIGATE.** Test paused/stale session, operator-edited field, unknown receipt and tab drift; never copy a destructive deletion executor. |
+| EscapeHatch `contracts/application-companion.v1.json` | Local user-owned state, optional explicit provider sync, conflict preservation | FileSteward private mobile inventory/review state | **INVESTIGATE.** Synthetic provider conflicts and revocation; no Drive write without separate operator selection. |
+| FileSteward `src/filesteward/profiles/` | Host-bound observation and privacy-separated performance receipts | EscapeHatch mobile/browser capability and diagnostic evidence | **REFERENCE ONLY.** Prove useful browser/device adaptation before transferring; no hardware profiling or workstation IDs in public applicant journal. |
+
+### A single prioritized hypothesis per P82 lane
+
+- **EH-EVT:** imported consequence/authority type separation makes it
+  impossible for a valid or hostile observation to promote `submitted`.
+  Observable assertion: 0 transitions from every synthetic journal fixture;
+  preserve prior valid event counts and rejected corrupt payloads.
+- **FS-MOBILE:** a platform-aware protected-scope reducer can present honest
+  next actions without claiming access to restricted Android/iOS storage.
+  Assertion: no authority/no estimated reclaim over 160 platform×surface×
+  permission×residency combinations; exact-heading CI receipts required.
+- **FS-JOURNAL (successor only):** current FileSteward action receipts might
+  already be sufficient. Measure event reconstruction/retention/replay on the
+  same synthetic workload first; **reject** a second event store if it adds
+  duplication without improving recovery or explainability.
+- **EH-ATTRIBUTION (successor only):** current session source binding may be
+  enough for a single page but not different applications at the same origin.
+  Falsify with ATS cases before promoting an event stream to one opportunity.
+
+**Parallel dispatch:** EH-EVT and FS-MOBILE are independent repositories and
+owners (width 2). They were executed as distinct GitHub-provider mutation
+lanes within CURRENT_CHAT_RUNTIME, not fictional delegated workers. Each has
+separate PR + CI; actual local browser/device proof cannot be transferred
+through the provider. Remaining lanes have dependency edges and are not
+treated as independently completed.
+
+**Why we reject blind copying:** a browser `change` event is not a
+filesystem mutation; an app file is not an employment application; local
+bytes are not a submission receipt. Transfer consent, provenance, replay,
+idempotence, verification and UX semantics through adapters and tests; keep
+the owning domain models independent.

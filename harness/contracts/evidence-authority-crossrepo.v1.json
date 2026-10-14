@@ -1,0 +1,46 @@
+{
+  "schema_version": "escapehatch.evidence-authority-boundary/v1",
+  "owner": "EndeavorEverlasting/EscapeHatch",
+  "runtime_owner": "browser/application-assist/event-evidence-review.js",
+  "donor": {
+    "repository": "EndeavorEverlasting/FileSteward",
+    "base_sha": "09597b68d260cf8a8e0163bf25333722d03c7357",
+    "source_files": [
+      "src/filesteward/models.py",
+      "src/filesteward/ownership/actions.py",
+      "harness/contracts/storage-dependency-judgment.v1.json"
+    ],
+    "donated_pattern": "disposition is evidence, authorization is separate, execution and verification are separate"
+  },
+  "consumer_owner": {
+    "repository": "EndeavorEverlasting/EscapeHatch",
+    "depends_on": "feat/application-event-journal-local-optin-20261011",
+    "source_files": [
+      "contracts/application-event-journal.v1.json",
+      "contracts/career-state.v1.schema.json",
+      "browser/application-assist/event-journal.js"
+    ]
+  },
+  "guard": {
+    "inputs": "private local application-event-journal/v1",
+    "admitted_event_class": "observed_metadata_only",
+    "expected_result": "OBSERVED_METADATA_ONLY | NO_OBSERVATION | REJECTED_INVALID_EVIDENCE",
+    "output_has_career_state_transition": false,
+    "output_has_submission_authority": false,
+    "requires_explicit_confirmation_for_future_projection": true,
+    "unknown_or_corrupt_journal": "REJECTED_INVALID_EVIDENCE",
+    "public_repo_no_real_application_data": true,
+    "no_submission_or_form_control": true,
+    "no_automatic_drive_sync": true
+  },
+  "proof": {
+    "command": "node tests/test_application_event_evidence_review.mjs",
+    "target": "synthetic Node 22 + GitHub CI",
+    "ceiling": "pure policy evidence review; not a running browser observer or a persisted CareerState reducer"
+  },
+  "successor": {
+    "issue": "https://github.com/EndeavorEverlasting/EscapeHatch/issues/60",
+    "gate": "EVT0 synthetic headed browser then EVT1 opportunity identity; integrate review guard at EVT4 canonical reducer",
+    "do_not_duplicate_state_machine": true
+  }
+}

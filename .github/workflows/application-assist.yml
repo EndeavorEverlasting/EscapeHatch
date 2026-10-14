@@ -13,6 +13,7 @@ on:
       - "tests/test_application_assist_modality_contract.py"
       - "tests/test_application_assist_modality.mjs"
       - "tests/test_application_event_journal.mjs"
+      - "tests/test_application_event_evidence_review.mjs"
       - "tests/test_application_event_journal_contract.py"
       - ".github/workflows/application-assist.yml"
   pull_request:
@@ -55,11 +56,13 @@ jobs:
         run: |
           python tests/test_application_event_journal_contract.py
           node tests/test_application_event_journal.mjs
+          node tests/test_application_event_evidence_review.mjs
       - name: Parse popup and modality runtime
         run: |
           node --check browser/application-assist/modality.js
           node --check browser/application-assist/popup.js
           node --check browser/application-assist/event-journal.js
+          node --check browser/application-assist/event-evidence-review.js
           node --check browser/application-assist/event-observer.js
       - name: Validate JSON syntax
         run: |

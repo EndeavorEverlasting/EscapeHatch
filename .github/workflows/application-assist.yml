@@ -7,6 +7,8 @@ on:
       - "contracts/application-assist-session.v1.json"
       - "contracts/application-assist-modality.v1.json"
       - "contracts/application-event-journal.v1.json"
+      - "harness/contracts/evidence-authority-crossrepo.v1.json"
+      - "docs/CROSS_REPO_EVIDENCE_CONTRIBUTION_20261013.md"
       - "docs/APPLICATION_ASSIST_SESSION.md"
       - "tests/test_application_assist_session_contract.py"
       - "tests/test_application_assist_session.mjs"
@@ -68,6 +70,7 @@ jobs:
         run: |
           python -m json.tool contracts/application-assist-session.v1.json > /dev/null
           python -m json.tool contracts/application-event-journal.v1.json > /dev/null
+          python -m json.tool harness/contracts/evidence-authority-crossrepo.v1.json > /dev/null
           python -m json.tool contracts/application-assist-modality.v1.json > /dev/null
           python -m json.tool browser/application-assist/manifest.json > /dev/null
       - name: Check whitespace

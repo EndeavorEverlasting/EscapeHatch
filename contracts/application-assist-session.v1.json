@@ -51,7 +51,15 @@
     ]
   },
   "session": {
-    "binding": "same_application_origin",
+    "binding": "explicit_application_identity_with_same_origin_guard",
+    "identity": {
+      "opportunity_id": "explicit_opaque_id_or_independent_local_uuid",
+      "application_id": "individual_application_id_never_origin",
+      "session_id": "independent_active_assist_uuid",
+      "observation_document_event": "contracts/application-event-journal.v1.json",
+      "multiple_applications_same_origin": "start_a_new_explicit_application_session",
+      "durable_replay_reducer": "not_implemented_no_automatic_career_state_transition"
+    },
     "statuses": [
       "idle",
       "active",

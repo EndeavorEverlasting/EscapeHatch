@@ -64,6 +64,21 @@ class JournalContractTests(unittest.TestCase):
         self.assertIn('window.confirm(', self.popup)
         self.assertIn("node tests/test_application_event_journal.mjs", self.workflow)
 
+    def test_receipt_health_and_separate_authorities(self):
+        self.assertEqual(self.contract["authority"]["listener"], "read_only_observation")
+        self.assertFalse(self.contract["authority"]["observed_values_are_answer_authority"])
+        self.assertEqual(set(self.contract["runtime_health"]["states"]), {
+            "Listening", "Paused", "Disconnected", "User Action Required", "Review Required", "Stopped"
+        })
+        self.assertIn("persisted_browser_local_receipt", self.contract["runtime_health"]["listening_requires"])
+        self.assertIn("persisted_receipt_required", self.popup)
+        self.assertIn("page_changed_reactivate_listener", self.popup)
+        self.assertIn("await drainObservation(session)", self.popup)
+        self.assertIn("min-width: 320px", self.html)
+        self.assertIn("event-evidence-review.js", self.html)
+        self.assertIn("node tests/test_application_event_observer.mjs", self.workflow)
+        self.assertNotIn("application_id: origin", self.popup)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

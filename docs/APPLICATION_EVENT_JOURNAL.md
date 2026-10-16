@@ -3,7 +3,7 @@
 **Owner:** `contracts/application-event-journal.v1.json`
 **Repo:** `EndeavorEverlasting/EscapeHatch`
 **Scope:** browser/application-assist, explicit opt-in for the active application tab.
-**Status:** repository implementation pending CI + real Chrome/Edge acceptance.
+**Status:** Windows headed synthetic acceptance passed on 2026-10-16; live activation observed on a posting document only. Application-form coverage, final-head CI and submission remain separate gates. See `harness/reports/APPLICATION_FORM_AUTOMATION_STATE.md` for the sanitized evidence and owned dependencies.
 
 ## Why this exists
 
@@ -15,12 +15,21 @@ The journal schema is **not** the existing `application-companion-session/v1` su
 
 ## What V1 actually implements
 
-- An explicit **Listen on This Page** command in the existing shared mouse/keyboard/phone modality registry; it creates or uses the active same-origin Assist session. It does not autofill.
+- An explicit **Listen on This Page** command in the existing shared mouse/keyboard/phone modality registry; it creates or uses an active Assist session with separate opaque opportunity/application/session IDs and a same-origin guard. Origin is not application identity. It does not autofill.
 - A programmatically injected observer in Chrome/Edge using existing `activeTab` + `scripting` + `storage` permissions; no new host permissions, resident service worker, page content-script registration, or automatic activation.
 - Document-level `change` and `submit` event listeners, and a coalesced MutationObserver for dynamic fields.
 - A sequential browser-local event journal at `escapeHatch.applicationEventJournal.v1` (max 1000 events). Full journal stops capturing rather than silently evicting events.
 - Explicit **Export Event JSONL** and confirmed **Clear Event Journal** controls. No provider sync.
 - The journal contains synthetic IDs, monotonically increasing per-session sequence numbers, causal links to the prior event in the session, event type, timestamp, fixed evidence class, and only allowlisted metadata.
+- The existing evidence-review owner validates append/export and storage changes. Corruption, missing runtime, failed storage and full capacity fail closed; existing data is preserved for explicit recovery, not silently replaced.
+- Popup health probes the consented document while open. **LISTENING** requires a successful live observer response backed by a persisted browser-local event receipt, not just an installed extension or saved session. Document and observation IDs are independent random UUIDs, never URLs.
+- Pause/Stop/Clear invalidate queued reads and drain dispatched writes before acknowledgment. Full navigation disconnects; a durable receipt does not prove observation survived unload/restart.
+
+### Separate authorities
+
+- **Behavior Listener:** read-only metadata observation; observations are not approved answers.
+- **Application Assist:** explicit, validated Fill Plan → policy gate → DOM writer; preserve operator edits.
+- **Progression Controller:** no implementation or navigation authority in this MVP. Next/Continue remain operator actions. Final review, submission and attestation are always operator-owned.
 
 Event classes:
 
@@ -38,7 +47,7 @@ Event classes:
 
 1. Update your checked-out EscapeHatch repository to a reviewed/merged build; do **not** assume this branch has been deployed to your Chrome/Edge extension.
 2. Open Chrome/Edge `chrome://extensions` / `edge://extensions`, enable Developer mode, Load unpacked `browser/application-assist`, or reload the already-installed development extension after updating.
-3. Navigate to an application form. Click EscapeHatch **Listen on This Page**; the extension records metadata while you edit this page.
+3. Navigate to an application form. Optionally enter existing opaque opportunity/application IDs before starting a session; otherwise independent local IDs are generated. Use a new explicit session for another application, even on the same ATS origin. Click **Listen on This Page** and check **LISTENING** with origin, session, document, observation and last persisted receipt before editing.
 4. Use **Fill Allowed Fields** only if desired; listening does not trigger fills.
 5. After a full-page navigation, click **Listen on This Page** again. A same-document SPA update can be observed without reinjection.
 6. At any point choose **Export Event JSONL**. Preserve the file privately. Use **Record Confirmation Evidence** only when you have actually verified submission.
@@ -46,15 +55,20 @@ Event classes:
 
 ## Proof / limitations
 
-**CI checks:** `python tests/test_application_event_journal_contract.py`, `node tests/test_application_event_journal.mjs`, `node --check browser/application-assist/event-observer.js`, existing Application Assist suite.
+**Executable checks:** `python tests/test_application_event_journal_contract.py`, `node tests/test_application_event_journal.mjs`, `node tests/test_application_event_observer.mjs`, `node tests/test_application_event_evidence_review.mjs`, existing Application Assist suite, and `npm --prefix artifacts/escape-hatch run test:browser -- event-journal.spec.ts` (headed Chromium; Linux uses Xvfb).
 
-**Not proven from provider/CI alone:** Chrome/Edge extension injection on real ATS pages; permission effects, React page controls, data persistence across page unload, real employer submission, Windows install, cross-origin transitions, live browser UI and network traffic. A submit event may be raised before server acceptance; it does not imply success. No automatic tracker/Drive update is implemented here.
+**Local browser proof:** two reordered synthetic layouts, Chromium `156.0.8078.4`, 11 events each, zero private test markers in stored/exported metadata, ordered causal links, duplicate activation, SPA mutation, Pause/Resume/Stop/Clear, full reload requiring consent, and denied corrupt/null export. The temporary harness adds loopback-only host permission and a discovery worker to a copied manifest; it does **not** prove production `activeTab` permission UX. A separate actual Chrome activation proved only the then-current posting document, not a real application form or submission. Do not publish live journal contents or private binding IDs.
+
+**Still unproven:** multi-vendor real forms/custom controls, continuous cross-page observation, crash/restart/replay recovery, live submission, Edge runtime, traffic-level audit and provider read-back. A submit event may precede server rejection; it never implies success. No automatic career-state/tracker/Drive update is implemented here.
 
 ## Successor gates
 
-1. Headed Chrome/Edge synthetic application fixture exercising observation, normal changes, unknown/sensitive fields, SPA transition, Pause/Stop, export/clear and duplicate injection.
-2. Add a session health indicator, transport errors, and an explicit observer-disconnect/stop control. Verify bounded storage pressure and no loss of previously committed events.
-3. Evolve origin-scoped optional permission **only with explicit user authorization** if continuous cross-navigation observation is required. Never add `<all_urls>` as a shortcut; exclude login, IdP, payments, medical and unrelated sites.
-4. Add a validated, idempotent reducer from events into private `escapehatch-career-state/v1` with evidence provenance and no automatic `submitted` status. Provider Drive/Sheets sync is separately authorized and read-back verified.
+Issue #60 remains the execution ladder; the automation state report names each existing owner and executable proof gate. Synthetic acceptance and popup receipt health are implemented, not universal product certification.
 
-**Next live gate:** merge after CI; reload the unpacked extension on a controlled synthetic employer page, then verify JSONL export and redaction before a real application.
+1. Operator navigates to the real application form and explicitly enables **Listen on This Page** there. Verify a fresh current-document persisted receipt before claiming coverage. Do not advance the form for the operator.
+2. EVT1: durable session/opportunity/application recovery, replay/deduplication and corruption handling. Independent IDs alone do not prove this gate.
+3. EVT2: origin-scoped optional permission **only with explicit user authorization** if continuous cross-navigation observation is required. Never add `<all_urls>`; exclude login, IdP, payments, medical and unrelated sites.
+4. EVT3: approved private semantic answer candidates and review UI; never promote observed values into reusable authority automatically.
+5. EVT4/EVT5: validated idempotent private career-state reducer, then separately authorized conflict-preserving Drive/Sheets sync with provider read-back. Neither may infer `submitted` from observation.
+
+**Next live gate:** on the application-form document, the operator clicks **Listen on This Page** and verifies its fresh receipt. Until then, application-form listening is not established.

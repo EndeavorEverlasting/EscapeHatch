@@ -1,8 +1,8 @@
 (function (root, factory) {
-  const api = factory();
+  const api = factory(root);
   if (typeof module === "object" && module.exports) module.exports = api;
   root.EscapeHatchEventJournal = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (root) {
   "use strict";
 
   const SCHEMA = "escapehatch/application-event-journal/v1";
@@ -51,6 +51,23 @@
     return { schema: SCHEMA, version: 1, events: [] };
   }
 
+  function keysMatch(value, keys) {
+    return value && typeof value === "object" && !Array.isArray(value) &&
+      Object.keys(value).length === keys.length &&
+      keys.every((key) => Object.prototype.hasOwnProperty.call(value, key));
+  }
+
+  // Resolve lazily: the existing evidence owner depends on the journal API.
+  // Do not create a second evidence validator for append/export.
+  function assertJournal(journal) {
+    const review = root.EscapeHatchEventEvidenceReview ||
+      (typeof require === "function" ? require("./event-evidence-review.js") : null);
+    if (!keysMatch(journal, ["schema", "version", "events"]) ||
+        !review || review.review(journal).state === "REJECTED_INVALID_EVIDENCE") {
+      throw new Error("Unsupported or corrupted event journal");
+    }
+  }
+
   function append(journal, input) {
     if (!journal || journal.schema !== SCHEMA || !Array.isArray(journal.events)) {
       throw new Error("Unsupported or corrupted event journal");
@@ -63,6 +80,7 @@
     if (journal.events.length >= MAX_EVENTS) {
       throw new Error("Event journal full: export and clear explicitly, no silent loss");
     }
+    assertJournal(journal);
     const previous = [...journal.events].reverse().find((event) => event.session_id === sessionId);
     const seq = previous ? previous.sequence + 1 : 1;
     const event = {
@@ -80,9 +98,7 @@
   }
 
   function exportJsonl(journal) {
-    if (!journal || journal.schema !== SCHEMA || !Array.isArray(journal.events)) {
-      throw new Error("Invalid event journal");
-    }
+    assertJournal(journal);
     return journal.events.map((e) => JSON.stringify(e)).join("\n") +
       (journal.events.length ? "\n" : "");
   }

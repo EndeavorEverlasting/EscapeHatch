@@ -25,6 +25,7 @@ const PROFILE_KEYS = [
 
 const statusNode = document.getElementById("status");
 const sessionNode = document.getElementById("sessionState");
+const observerNode = document.getElementById("observerState");
 const importFile = document.getElementById("importFile");
 const api = globalThis.EscapeHatchAssist;
 
@@ -239,37 +240,129 @@ async function runPageCommand(command, profile, session, preferenceStore) {
 
 const journalApi = globalThis.EscapeHatchEventJournal;
 
+function renderObservation(health, origin) {
+  const labels = { listening: "LISTENING", paused: "Paused", stopped: "Stopped",
+    disconnected: "Disconnected", review_required: "Review Required", user_action_required: "User Action Required" };
+  const parts = ["Listener: " + (labels[health.state] || "Disconnected")];
+  if (origin) parts.push("origin=" + origin);
+  if (health.session_id) parts.push("session=" + health.session_id);
+  if (health.document_id) parts.push("document=" + health.document_id);
+  if (health.observation_id) parts.push("observation=" + health.observation_id);
+  if (health.last_persisted_event_id) parts.push("receipt=" + health.last_persisted_event_id);
+  if (health.last_persisted_observed_at) parts.push("at=" + health.last_persisted_observed_at);
+  if (health.reason) parts.push("reason=" + health.reason);
+  observerNode.textContent = parts.join(" · ");
+}
+
+async function refreshObservationHealth() {
+  const stored = await chrome.storage.local.get(SESSION_KEY);
+  const session = stored[SESSION_KEY];
+  renderSession(session);
+  if (!session) return renderObservation({ state: "user_action_required" });
+  if (["paused", "stopped"].includes(session.status)) {
+    return renderObservation({ state: session.status, session_id: session.session_id }, session.origin);
+  }
+  const binding = session.observation;
+  if (!binding || !Number.isInteger(binding.tab_id)) {
+    return renderObservation({ state: "user_action_required", reason: "listen_on_this_page_required" }, session.origin);
+  }
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: binding.tab_id },
+      func: () => globalThis.__EscapeHatchApplicationObserver?.status?.() || null
+    });
+    const health = results?.[0]?.result;
+    if (!health || health.session_id !== session.session_id || health.document_id !== binding.document_id) {
+      return renderObservation({ state: "disconnected", reason: "page_changed_reactivate_listener" }, session.origin);
+    }
+    renderObservation(health, session.origin);
+  } catch (_error) {
+    renderObservation({ state: "disconnected", reason: "page_unavailable_reactivate_listener" }, session.origin);
+  }
+}
+
+function newApplicationSession(origin) {
+  const bindingId = (elementId, prefix) => {
+    const value = document.getElementById(elementId).value.trim();
+    if (value && !/^[A-Za-z0-9_-]{1,128}$/.test(value)) throw new Error("Application binding IDs must be opaque identifiers, not URLs or personal information.");
+    return value || prefix + crypto.randomUUID();
+  };
+  return api.createSession({ origin,
+    opportunity_id: bindingId("opportunityId", "opportunity-"),
+    application_id: bindingId("applicationId", "application-") });
+}
+
+function assertObservationPage(tab) {
+  const url = new URL(tab.url || "");
+  if (!["http:", "https:"].includes(url.protocol) ||
+      /(^|[/.\-_])(login|signin|sign-in|oauth|authorize|sso|password|register)([/.\-_]|$)/i.test(url.pathname) ||
+      /(^|\.)(accounts\.google\.com|login\.microsoftonline\.com|mail\.google\.com|outlook\.live\.com)$/i.test(url.hostname)) {
+    throw new Error("Observation is not authorized on login, identity-provider, mail, or browser pages. Open the application form.");
+  }
+}
+
+async function drainObservation(session) {
+  if (!Number.isInteger(session?.observation?.tab_id)) return;
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId: session.observation.tab_id },
+      func: async () => { await globalThis.__EscapeHatchApplicationObserver?.drain?.(); }
+    });
+  } catch (_error) { /* An unavailable document cannot continue capturing. */ }
+}
+
 async function listenCurrentPage() {
   const tab = await activeTab();
+  assertObservationPage(tab);
   const origin = tabOrigin(tab);
   if (!origin.startsWith("https://") && !origin.startsWith("http://")) {
     throw new Error("Open a regular application page before enabling observation.");
   }
   let session = await loadStoredSession();
   if (!session) {
-    session = api.createSession({ origin, application_id: origin });
+    session = newApplicationSession(origin);
     await saveSession(session);
   }
   if (session.status !== "active" || session.origin !== origin) {
     throw new Error("Start or resume an active session on this origin before listening.");
   }
+  if (session.observation && session.observation.tab_id !== tab.id) {
+    throw new Error("This session is bound to another tab. Start a separate application session before listening here.");
+  }
   await chrome.scripting.executeScript({
     target: { tabId: tab.id },
-    files: ["assist-core.js", "event-journal.js"]
+    files: ["assist-core.js", "event-journal.js", "event-evidence-review.js"]
   });
   const result = await chrome.scripting.executeScript({
     target: { tabId: tab.id }, files: ["event-observer.js"]
   });
   const state = result && result[0] && result[0].result;
   if (!state || state.ok !== true) {
+    if (state?.document_id && state?.observation_id) {
+      await saveSession({ ...session, observation: { tab_id: tab.id,
+        document_id: state.document_id, observation_id: state.observation_id } });
+    }
+    renderObservation(state || { state: "disconnected" }, origin);
     throw new Error("Observation unavailable: " + ((state && state.reason) || "unknown"));
   }
+  const persisted = await chrome.storage.local.get(journalApi.STORAGE_KEY);
+  const receipt = persisted[journalApi.STORAGE_KEY]?.events?.find(event => event.event_id === state.last_persisted_event_id);
+  if (!receipt || receipt.session_id !== session.session_id || receipt.observed_at !== state.last_persisted_observed_at) {
+    renderObservation({ state: "review_required", reason: "persisted_receipt_required" }, origin);
+    throw new Error("Listener activation has no validated browser-local receipt.");
+  }
+  session = await saveSession({ ...session, observation: {
+    tab_id: tab.id, document_id: state.document_id, observation_id: state.observation_id,
+    receipt_event_id: receipt.event_id, receipt_observed_at: receipt.observed_at
+  } });
+  renderObservation(state, origin);
   setStatus("Listening on this page only. Only field-presence and progress metadata is saved locally; re-enable after navigation.");
 }
 
 async function exportEventJournal() {
   const stored = await chrome.storage.local.get(journalApi.STORAGE_KEY);
-  const data = stored[journalApi.STORAGE_KEY] || journalApi.emptyJournal();
+  const data = stored[journalApi.STORAGE_KEY] === undefined ?
+    journalApi.emptyJournal() : stored[journalApi.STORAGE_KEY];
   const text = journalApi.exportJsonl(data);
   if (!text) { setStatus("No captured events yet."); return; }
   downloadJsonText(text, "escapehatch-application-events.jsonl");
@@ -280,7 +373,9 @@ async function clearEventJournal() {
   if (!window.confirm("Clear saved application event journal on this device? Export first if needed.")) return;
   const session = await loadStoredSession();
   if (session && session.status === "active") await saveSession(api.pauseSession(session, "journal_cleared"));
+  await drainObservation(session);
   await chrome.storage.local.remove(journalApi.STORAGE_KEY);
+  await refreshObservationHealth();
   setStatus("Local event journal cleared and active observation paused. Resume explicitly if needed.");
 }
 
@@ -290,13 +385,10 @@ async function startAssist() {
   if (origin === "null" || origin.startsWith("chrome:") || origin.startsWith("edge:") || origin.startsWith("about:")) {
     throw new Error("Open a real application page before starting assist.");
   }
-  const session = api.createSession({
-    origin,
-    application_id: origin,
-    started_at: new Date().toISOString()
-  });
+  const session = newApplicationSession(origin);
   await saveSession(session);
-  setStatus("Assist session started for this application origin. Navigate pages manually.");
+  await refreshObservationHealth();
+  setStatus("Private application session started. Listening and filling are separate explicit actions. Navigate pages manually.");
 }
 
 async function fillAllowedFields() {
@@ -334,7 +426,9 @@ async function pauseAssist() {
     return;
   }
   await saveSession(api.pauseSession(session, "user_pause"));
-  setStatus("Assist paused. No DOM writes will run until Resume.");
+  await drainObservation(session);
+  await refreshObservationHealth();
+  setStatus("Paused. No observations or DOM writes will run until Resume.");
 }
 
 async function resumeAssist() {
@@ -346,7 +440,8 @@ async function resumeAssist() {
   }
   const next = api.resumeSession(session, tabOrigin(tab));
   await saveSession(next);
-  setStatus("Assist resumed on the same application origin.");
+  await refreshObservationHealth();
+  setStatus("Assist resumed. If the page changed, Listen on This Page is required again.");
 }
 
 async function emergencyStop() {
@@ -356,6 +451,8 @@ async function emergencyStop() {
     return;
   }
   await saveSession(api.stopSession(session));
+  await drainObservation(session);
+  await refreshObservationHealth();
   setStatus("Emergency Stop latched. Future fills are cancelled until you Start Assist again.");
 }
 
@@ -625,10 +722,16 @@ bindSemanticHandlers();
 bindDirectControls();
 applyMode();
 
-Promise.all([loadStoredProfile(), loadStoredSession()])
+Promise.all([loadStoredProfile(), loadStoredSession(), refreshObservationHealth()])
   .then(() => {
     if (activeMode === "phone" && document.activeElement && modality.isEditableTarget(document.activeElement)) {
       document.activeElement.blur();
     }
   })
   .catch((error) => setStatus(error.message));
+
+// Only probes a previously consented document while this popup is open. It
+// never injects a listener, grants permission, fills, or follows navigation.
+setInterval(() => refreshObservationHealth().catch(() => {
+  renderObservation({ state: "disconnected", reason: "health_probe_failed" });
+}), 1500);

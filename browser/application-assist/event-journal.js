@@ -51,6 +51,41 @@
     return { schema: SCHEMA, version: 1, events: [] };
   }
 
+  function keysMatch(value, keys) {
+    return value && typeof value === "object" && !Array.isArray(value) &&
+      Object.keys(value).length === keys.length &&
+      keys.every((key) => Object.prototype.hasOwnProperty.call(value, key));
+  }
+
+  // Storage/export integrity only. Semantic evidence review remains owned by
+  // event-evidence-review.js, which depends on this module (never the reverse).
+  function assertJournal(journal) {
+    const invalid = () => { throw new Error("Unsupported or corrupted event journal"); };
+    if (!keysMatch(journal, ["schema", "version", "events"]) ||
+        journal.schema !== SCHEMA || journal.version !== 1 ||
+        !Array.isArray(journal.events) || journal.events.length > MAX_EVENTS) invalid();
+    const sessions = new Map();
+    for (const event of journal.events) {
+      if (!keysMatch(event, ["schema", "event_id", "session_id", "sequence", "caused_by",
+        "type", "observed_at", "evidence_class", "payload"]) ||
+          event.schema !== SCHEMA || !EVENTS.includes(event.type) ||
+          event.evidence_class !== "observed_metadata_only" ||
+          typeof event.session_id !== "string" || !/^assist-[A-Za-z0-9_-]{1,80}$/.test(event.session_id) ||
+          !Number.isSafeInteger(event.sequence) || event.sequence < 1 ||
+          event.event_id !== event.session_id + ":" + event.sequence ||
+          typeof event.observed_at !== "string" || !Number.isFinite(Date.parse(event.observed_at)) ||
+          new Date(event.observed_at).toISOString() !== event.observed_at) invalid();
+      const previous = sessions.get(event.session_id);
+      if (event.sequence !== (previous ? previous.sequence + 1 : 1) ||
+          event.caused_by !== (previous ? previous.event_id : null)) invalid();
+      let sanitized;
+      try { sanitized = sanitizePayload(event.type, event.payload); } catch (_error) { invalid(); }
+      if (!keysMatch(event.payload, Object.keys(sanitized)) ||
+          Object.keys(sanitized).some((key) => sanitized[key] !== event.payload[key])) invalid();
+      sessions.set(event.session_id, event);
+    }
+  }
+
   function append(journal, input) {
     if (!journal || journal.schema !== SCHEMA || !Array.isArray(journal.events)) {
       throw new Error("Unsupported or corrupted event journal");
@@ -63,6 +98,7 @@
     if (journal.events.length >= MAX_EVENTS) {
       throw new Error("Event journal full: export and clear explicitly, no silent loss");
     }
+    assertJournal(journal);
     const previous = [...journal.events].reverse().find((event) => event.session_id === sessionId);
     const seq = previous ? previous.sequence + 1 : 1;
     const event = {
@@ -80,9 +116,7 @@
   }
 
   function exportJsonl(journal) {
-    if (!journal || journal.schema !== SCHEMA || !Array.isArray(journal.events)) {
-      throw new Error("Invalid event journal");
-    }
+    assertJournal(journal);
     return journal.events.map((e) => JSON.stringify(e)).join("\n") +
       (journal.events.length ? "\n" : "");
   }

@@ -39,4 +39,38 @@ assert.throws(() => journal.append(state, { session_id: "raw.email@example.com",
 assert.throws(() => journal.append({ schema: "unknown", events: [] }, { session_id: "assist-synthetic_1", type: "page_snapshot" }), /Unsupported or corrupted/);
 const full = { schema: journal.SCHEMA, version: 1, events: Array(journal.MAX_EVENTS).fill(first) };
 assert.throws(() => journal.append(full, { session_id: "assist-synthetic_1", type: "page_snapshot" }), /full/);
+
+// Negative baseline: stored evidence must be rejected, never sanitized on export
+// or carried forward by append. All sentinels here are synthetic.
+const corruptions = [
+  (j) => { j.version = 2; },
+  (j) => { j.private_note = "synthetic-private-sentinel"; },
+  (j) => { j.events[0].payload.answer = "synthetic-private-sentinel"; },
+  (j) => { j.events[0].raw_label = "synthetic-private-sentinel"; },
+  (j) => { j.events[0].observed_at += " synthetic-private-sentinel"; },
+  (j) => { j.events[0].event_id = "synthetic-private-sentinel"; },
+  (j) => { j.events[0].caused_by = "synthetic-private-sentinel"; },
+  (j) => { j.events[1].sequence = 99; },
+  (j) => { j.events[1].payload.form_count = "synthetic-private-sentinel"; },
+  (j) => { j.events[2].payload.present = false; },
+  (j) => { j.events[2].payload.question_id = "private.answer"; },
+  (j) => { j.events[4].payload.submission_verified = true; }
+];
+for (const corrupt of corruptions) {
+  const damaged = structuredClone(state);
+  corrupt(damaged);
+  const before = JSON.stringify(damaged);
+  assert.throws(() => journal.append(damaged, {
+    session_id: "assist-synthetic_1", type: "observation_started"
+  }), /corrupted/, "append must reject stored corruption");
+  assert.throws(() => journal.exportJsonl(damaged), /corrupted/,
+    "export must reject stored corruption");
+  assert.equal(JSON.stringify(damaged), before, "rejection must preserve stored evidence");
+}
+const interleaved = journal.append(state, {
+  session_id: "assist-synthetic_2", type: "observation_started"
+}).journal;
+assert.equal(journal.append(interleaved, {
+  session_id: "assist-synthetic_1", type: "observation_started"
+}).event.sequence, 6);
 console.log("event journal metadata safety/ordering fixtures passed");

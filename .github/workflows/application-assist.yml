@@ -10,13 +10,17 @@ on:
       - "harness/contracts/evidence-authority-crossrepo.v1.json"
       - "docs/CROSS_REPO_EVIDENCE_CONTRIBUTION_20261013.md"
       - "docs/APPLICATION_ASSIST_SESSION.md"
+      - "docs/APPLICATION_EVENT_JOURNAL.md"
       - "tests/test_application_assist_session_contract.py"
       - "tests/test_application_assist_session.mjs"
       - "tests/test_application_assist_modality_contract.py"
       - "tests/test_application_assist_modality.mjs"
       - "tests/test_application_event_journal.mjs"
+      - "tests/test_application_event_observer.mjs"
       - "tests/test_application_event_evidence_review.mjs"
       - "tests/test_application_event_journal_contract.py"
+      - "artifacts/escape-hatch/tests/event-journal.spec.ts"
+      - "artifacts/escape-hatch/tests/assist.spec.ts"
       - ".github/workflows/application-assist.yml"
   pull_request:
     paths:
@@ -24,10 +28,18 @@ on:
       - "contracts/application-assist-session.v1.json"
       - "contracts/application-assist-modality.v1.json"
       - "docs/APPLICATION_ASSIST_SESSION.md"
+      - "docs/APPLICATION_EVENT_JOURNAL.md"
       - "tests/test_application_assist_session_contract.py"
       - "tests/test_application_assist_session.mjs"
       - "tests/test_application_assist_modality_contract.py"
       - "tests/test_application_assist_modality.mjs"
+      - "contracts/application-event-journal.v1.json"
+      - "tests/test_application_event_journal_contract.py"
+      - "tests/test_application_event_journal.mjs"
+      - "tests/test_application_event_observer.mjs"
+      - "tests/test_application_event_evidence_review.mjs"
+      - "artifacts/escape-hatch/tests/event-journal.spec.ts"
+      - "artifacts/escape-hatch/tests/assist.spec.ts"
       - ".github/workflows/application-assist.yml"
 
 permissions:
@@ -58,6 +70,7 @@ jobs:
         run: |
           python tests/test_application_event_journal_contract.py
           node tests/test_application_event_journal.mjs
+          node tests/test_application_event_observer.mjs
           node tests/test_application_event_evidence_review.mjs
       - name: Parse popup and modality runtime
         run: |
@@ -89,3 +102,15 @@ jobs:
           else
             git diff --check
           fi
+
+  synthetic-browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install --prefix artifacts/escape-hatch --ignore-scripts --package-lock=false
+      - run: npx --prefix artifacts/escape-hatch playwright install --with-deps chromium
+      - name: Headed synthetic listener acceptance (not live ATS proof)
+        run: xvfb-run --auto-servernum npm --prefix artifacts/escape-hatch run test:browser -- event-journal.spec.ts

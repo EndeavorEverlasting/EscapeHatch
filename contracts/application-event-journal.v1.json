@@ -14,11 +14,32 @@
     "initial_status": "off",
     "authorization_does_not_imply_auto_fill": true
   },
+  "authority": {
+    "listener": "read_only_observation",
+    "assist": "validated_fill_plan_only_preserve_user_edits",
+    "progression_controller": "not_implemented_separate_explicit_authority_required",
+    "next_continue": "operator_only_in_current_mvp",
+    "final_review_submit_attestation": "operator_only",
+    "observed_values_are_answer_authority": false
+  },
+  "runtime_health": {
+    "states": ["Listening", "Paused", "Disconnected", "User Action Required", "Review Required", "Stopped"],
+    "listening_requires": "current_document_probe_and_persisted_browser_local_receipt",
+    "receipt_fields": ["session_id", "document_id", "observation_id", "last_persisted_event_id", "last_persisted_sequence", "last_persisted_observed_at"],
+    "document_and_observation_ids": "independent_random_uuids_not_urls",
+    "session_binding_owner": "contracts/application-assist-session.v1.json",
+    "health_probe": "only_while_popup_open_no_listener_reinjection",
+    "storage_error": "terminal_review_required_no_automatic_revival",
+    "pause_stop_clear": "invalidate_queued_reads_and_drain_dispatched_writes_before_acknowledgment",
+    "unload": "disconnect_no_automatic_reauthorization",
+    "restart": "receipt_survives_but_does_not_prove_a_live_observer"
+  },
   "storage": {
     "location": "chrome.storage.local",
     "key": "escapeHatch.applicationEventJournal.v1",
     "max_events": 1000,
     "on_full": "fail_closed_preserve_existing",
+    "on_corruption": "reject_append_and_export_preserve_existing_for_explicit_recovery",
     "retention": "until_explicit_clear",
     "export": "JSONL, user-initiated",
     "sync": "disabled; optional Drive integration requires separate explicit authorization",

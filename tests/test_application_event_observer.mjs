@@ -95,6 +95,11 @@ function harness(options = {}) {
       delete data[journal.STORAGE_KEY];
       notify({ [journal.STORAGE_KEY]: { oldValue } });
     },
+    replaceJournal(value) {
+      const oldValue = data[journal.STORAGE_KEY];
+      data[journal.STORAGE_KEY] = clone(value);
+      notify({ [journal.STORAGE_KEY]: { oldValue, newValue: value } });
+    },
     holdRead() { holdNext = true; },
     releaseRead() { assert.ok(heldRead, "queued storage read reached"); heldRead(); heldRead = null; },
     holdWrite() { holdWrite = true; },
@@ -187,6 +192,23 @@ test("pause resumes only fresh events", async () => {
   assert.equal(h.writes.length, 3);
   assert.equal(h.data[journal.STORAGE_KEY].events.at(-1).type, "submit_attempt_observed");
 });
+
+for (const malformed of [null, { schema: "broken", events: [] },
+  { ...journal.emptyJournal(), private_answer: "synthetic-private-sentinel" }]) {
+  test(`stored corruption immediately disconnects capture: ${malformed === null ? "null" : malformed.schema}`, async () => {
+    const h = harness();
+    await h.inject();
+    const count = h.writes.length;
+    h.replaceJournal(malformed);
+    assert.equal(h.observer().status().state, "review_required");
+    assert.equal(h.observer().status().reason, "corrupt_journal");
+    h.session("active");
+    h.submit();
+    await tick();
+    assert.equal(h.writes.length, count);
+    assert.deepEqual(h.data[journal.STORAGE_KEY], malformed);
+  });
+}
 
 for (const failure of ["write", "read", "capacity", "corrupt", "null"]) {
   test(`${failure} failure is truthful and cannot be revived by storage changes`, async () => {
@@ -317,4 +339,25 @@ test("pause/resume during initialization cannot report success without a persist
   assert.equal(result.reason, "initial_observation_interrupted");
   assert.equal(result.last_persisted_event_id, null);
   assert.equal(h.writes.length, 0);
+});
+
+test("drain waits for an already dispatched write before control acknowledgment", async () => {
+  const h = harness();
+  await h.inject();
+  h.holdWrite();
+  h.submit();
+  await tick();
+  h.session("paused");
+  let acknowledged = false;
+  const drained = h.observer().drain().then(() => { acknowledged = true; });
+  await tick();
+  assert.equal(acknowledged, false, "Pause/Clear acknowledgment must wait for in-flight storage");
+  h.releaseWrite();
+  await drained;
+  const count = h.writes.length;
+  h.clear();
+  h.submit();
+  await tick();
+  assert.equal(h.writes.length, count);
+  assert.equal(h.data[journal.STORAGE_KEY], undefined);
 });

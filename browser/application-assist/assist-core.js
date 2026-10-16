@@ -323,8 +323,9 @@
     if (!origin) throw new Error("Assist session requires an application origin.");
     return {
       schema_version: "escapehatch-application-assist-session/v1",
-      session_id: String((input && input.session_id) || `assist-${Date.now()}`),
-      application_id: String((input && input.application_id) || ""),
+      session_id: String((input && input.session_id) || `assist-${globalThis.crypto.randomUUID()}`),
+      opportunity_id: String((input && input.opportunity_id) || `opportunity-${globalThis.crypto.randomUUID()}`),
+      application_id: String((input && input.application_id) || `application-${globalThis.crypto.randomUUID()}`),
       origin,
       status: "active",
       started_at: String((input && input.started_at) || new Date().toISOString()),

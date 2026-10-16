@@ -20,6 +20,9 @@
       --safe-left: env(safe-area-inset-left, 0px);
     }
     * { box-sizing: border-box; }
+    /* Chrome action popups size to content before modality detection. Keep
+       phone command mode from collapsing the desktop popup to ~140px. */
+    html { min-width: 320px; }
     body {
       font: 14px/1.4 "Segoe UI", system-ui, sans-serif;
       margin: 0;
@@ -45,14 +48,16 @@
       font-size: 11px;
       color: var(--muted);
     }
-    #sessionState, #status {
+    #sessionState, #observerState, #status {
       min-height: 1.3em;
       margin: 0 0 10px;
       padding: 8px 10px;
       border: 1px solid var(--line);
       border-radius: 10px;
       background: var(--panel);
+      overflow-wrap: anywhere;
     }
+    #observerState { max-height: 100px; overflow-y: auto; }
     .actions, .sheet {
       display: grid;
       gap: 8px;
@@ -172,6 +177,13 @@
   <p class="lede">Same semantic session controls for mouse, keyboard, and phone. Phone lands on commands first — not a shrunken desktop form.</p>
   <div class="mode-chip" id="modeChip" aria-live="polite">Mode: detecting</div>
   <div id="sessionState" role="status" aria-live="polite">Session: idle</div>
+  <div id="observerState" role="status" aria-live="polite">Listener: User Action Required</div>
+  <details>
+    <summary>Private application binding (optional)</summary>
+    <label>Opportunity ID <input id="opportunityId" autocomplete="off" maxlength="128"></label>
+    <label>Application ID <input id="applicationId" autocomplete="off" maxlength="128"></label>
+    <p>Set before Start Assist. Blank IDs receive independent local identifiers. The origin is never the application identity.</p>
+  </details>
 
   <div id="commandPalette" role="dialog" aria-label="Command palette" aria-modal="true">
     <p class="kbd-hint">Type to filter. Enter runs the action. Esc closes without changing session state.</p>
@@ -241,6 +253,7 @@
   <p class="privacy">User-owned browser-local state. Writes go through a canonical Fill Plan and policy gate. Phone is withheld unless explicitly marked as the primary career number you control. Event listening is opt-in, metadata-only, local, and limited to the current document; navigation requires re-enabling. Never auto-submits, never clicks Next/Continue, never attests.</p>
   <script src="assist-core.js"></script>
   <script src="event-journal.js"></script>
+  <script src="event-evidence-review.js"></script>
   <script src="modality.js"></script>
   <script src="popup.js"></script>
 </body>

@@ -60,6 +60,12 @@ assert.equal(core.phoneAuthority({ phone: "+1 555 010 0999" }), "unconfirmed");
 
 const session = core.createSession({ origin: "https://jobs.example.invalid" });
 assert.equal(session.status, "active");
+const anotherApplication = core.createSession({ origin: session.origin });
+for (const id of ["session_id", "application_id", "opportunity_id"]) {
+  assert.notEqual(session[id], anotherApplication[id], "same origin is not application identity");
+  assert.notEqual(session[id], session.origin);
+}
+assert.notEqual(session.application_id, session.opportunity_id);
 
 const fields = [
   { label: "Title", tag: "select", value: "", options: [{ value: "", text: "Select a title" }, { value: "Mr.", text: "Mr." }] },

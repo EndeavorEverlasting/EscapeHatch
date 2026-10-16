@@ -241,6 +241,11 @@
     if (changes[journalApi.SESSION_KEY]) applySession(changes[journalApi.SESSION_KEY].newValue);
     if (disposed) return;
     const change = changes[journalApi.STORAGE_KEY];
+    if (change && change.newValue !== undefined &&
+        evidenceReview.review(change.newValue).state === "REJECTED_INVALID_EVIDENCE") {
+      terminate("review_required", "corrupt_journal");
+      return;
+    }
     if (change && (change.newValue === undefined ||
         (Array.isArray(change.newValue?.events) && Array.isArray(change.oldValue?.events) &&
         change.newValue.events.length < change.oldValue.events.length))) {
@@ -262,6 +267,7 @@
   globalThis.__EscapeHatchApplicationObserver = {
     session_id: sessionId,
     status,
+    async drain() { await queue; return status(); },
     dispose() { terminate("stopped", "observer_disposed"); }
   };
   emit("observation_started", {});

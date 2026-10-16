@@ -45,7 +45,7 @@
   }
 
   function review(journal) {
-    if (!journalApi || !journal || journal.schema !== journalApi.SCHEMA ||
+    if (!journalApi || !keysMatch(journal, ["schema", "version", "events"]) || journal.schema !== journalApi.SCHEMA ||
         journal.version !== 1 || !Array.isArray(journal.events) ||
         journal.events.length > journalApi.MAX_EVENTS) {
       return invalid("INVALID_JOURNAL");
@@ -58,12 +58,14 @@
           e.schema !== journalApi.SCHEMA ||
           !journalApi.EVENTS.includes(e.type) ||
           e.evidence_class !== "observed_metadata_only" ||
+          typeof e.session_id !== "string" ||
           !/^assist-[A-Za-z0-9_-]{1,80}$/.test(e.session_id) ||
           !Number.isSafeInteger(e.sequence) || e.sequence < 1 ||
           e.event_id !== e.session_id + ":" + e.sequence ||
           seenIds.has(e.event_id) ||
           typeof e.observed_at !== "string" ||
-          !/^\d{4}-\d{2}-\d{2}T/.test(e.observed_at)) {
+          !Number.isFinite(Date.parse(e.observed_at)) ||
+          new Date(e.observed_at).toISOString() !== e.observed_at) {
         return invalid("INVALID_EVENT_ENVELOPE");
       }
       const previous = sessions.get(e.session_id);
@@ -79,7 +81,9 @@
       } catch (_error) {
         return invalid("UNAPPROVED_PAYLOAD");
       }
-      if (JSON.stringify(sanitized) !== JSON.stringify(e.payload)) {
+      // Browser storage may reorder object keys. Compare the allowlisted
+      // scalar values, not JSON serialization order.
+      if (requiredKeys.some((key) => sanitized[key] !== e.payload[key])) {
         return invalid("UNAPPROVED_PAYLOAD");
       }
       seenIds.add(e.event_id);

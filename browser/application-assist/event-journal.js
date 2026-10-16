@@ -1,8 +1,8 @@
 (function (root, factory) {
-  const api = factory();
+  const api = factory(root);
   if (typeof module === "object" && module.exports) module.exports = api;
   root.EscapeHatchEventJournal = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (root) {
   "use strict";
 
   const SCHEMA = "escapehatch/application-event-journal/v1";
@@ -57,32 +57,14 @@
       keys.every((key) => Object.prototype.hasOwnProperty.call(value, key));
   }
 
-  // Storage/export integrity only. Semantic evidence review remains owned by
-  // event-evidence-review.js, which depends on this module (never the reverse).
+  // Resolve lazily: the existing evidence owner depends on the journal API.
+  // Do not create a second evidence validator for append/export.
   function assertJournal(journal) {
-    const invalid = () => { throw new Error("Unsupported or corrupted event journal"); };
+    const review = root.EscapeHatchEventEvidenceReview ||
+      (typeof require === "function" ? require("./event-evidence-review.js") : null);
     if (!keysMatch(journal, ["schema", "version", "events"]) ||
-        journal.schema !== SCHEMA || journal.version !== 1 ||
-        !Array.isArray(journal.events) || journal.events.length > MAX_EVENTS) invalid();
-    const sessions = new Map();
-    for (const event of journal.events) {
-      if (!keysMatch(event, ["schema", "event_id", "session_id", "sequence", "caused_by",
-        "type", "observed_at", "evidence_class", "payload"]) ||
-          event.schema !== SCHEMA || !EVENTS.includes(event.type) ||
-          event.evidence_class !== "observed_metadata_only" ||
-          typeof event.session_id !== "string" || !/^assist-[A-Za-z0-9_-]{1,80}$/.test(event.session_id) ||
-          !Number.isSafeInteger(event.sequence) || event.sequence < 1 ||
-          event.event_id !== event.session_id + ":" + event.sequence ||
-          typeof event.observed_at !== "string" || !Number.isFinite(Date.parse(event.observed_at)) ||
-          new Date(event.observed_at).toISOString() !== event.observed_at) invalid();
-      const previous = sessions.get(event.session_id);
-      if (event.sequence !== (previous ? previous.sequence + 1 : 1) ||
-          event.caused_by !== (previous ? previous.event_id : null)) invalid();
-      let sanitized;
-      try { sanitized = sanitizePayload(event.type, event.payload); } catch (_error) { invalid(); }
-      if (!keysMatch(event.payload, Object.keys(sanitized)) ||
-          Object.keys(sanitized).some((key) => sanitized[key] !== event.payload[key])) invalid();
-      sessions.set(event.session_id, event);
+        !review || review.review(journal).state === "REJECTED_INVALID_EVIDENCE") {
+      throw new Error("Unsupported or corrupted event journal");
     }
   }
 

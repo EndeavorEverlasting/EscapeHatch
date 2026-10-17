@@ -20,6 +20,12 @@ test('cockpit owns Launch, Fill and Attach without a Chrome extension', async ({
   await expect(page.getByText('Application opened — sign in if requested')).toBeVisible();
   await page.getByTestId('button-managed-fill').click();
   await expect(page.getByTestId('managed-browser-feedback')).toContainText('No fields filled');
+  await page.getByTestId('managed-browser-assist').locator('input[type="file"]').first().setInputFiles({
+    name: 'synthetic-resume.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\\nfixture'),
+  });
+  await page.getByTestId('button-managed-attach').click();
+  await expect(page.getByTestId('managed-browser-feedback')).toContainText('resume: attached to input review required');
+  expect(seen).toContain('attach');
   assertNeverSubmitted(seen);
 });
 

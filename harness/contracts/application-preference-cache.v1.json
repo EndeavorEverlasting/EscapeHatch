@@ -13,7 +13,8 @@
       "Export Preferences",
       "Import Preferences",
       "Clear Preferences"
-    ]
+    ],
+    "local_file_adapter": "private/application-question-preferences.json; optional ESCAPEHATCH_PREFERENCES_FILE override; same schema, explicit Save/Clear, no remote sync"
   },
   "portability": {
     "export_schema": "escapehatch-application-question-preferences/v1",

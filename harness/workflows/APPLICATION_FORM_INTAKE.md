@@ -11,7 +11,7 @@ Use this workflow when an application page contains reusable identity, demograph
 - Harness artifact registry: `ARTIFACT_REGISTRY.md`
 - Product career state: `contracts/career-state.v1.schema.json`
 
-The taxonomy owns semantic question IDs. It does not own real user answers. Real preferences remain user-owned browser-local state.
+The taxonomy owns semantic question IDs. It does not own real user answers. Real preferences remain user-owned local state. The managed app may use the registered private local-file adapter; browser storage remains the extension adapter.
 
 ## Order-independent intake
 

@@ -68,3 +68,13 @@ and never reset, clean or switch the dirty feature branch. If the existing manag
 is already occupying port 21031 with FOREIGN_CONFLICT due CIM commandline access, do not
 kill that unproven PID. Test new branch on another managed port, e.g. PORT=21032 (configured
 in the launch terminal) with its own worktree and installed dependencies.
+
+## Reusable answers and local persistence
+
+The managed assist page includes Save/Export/Import/Clear Preferences. Explicit choices use the existing `escapehatch-application-question-preferences/v1` schema and canonical question taxonomy. The local file adapter defaults to `private/application-question-preferences.json`; `ESCAPEHATCH_PREFERENCES_FILE` selects a shared private file across worktrees/ports. Never commit that file, exported answers, or raw employer forms. Invalid imports preserve saved data. Clearing removes the saved file; imported data is staged for review until Save.
+
+Fill approved profile and answers reads the saved file on each action. Recognized text/native-select/radio fields use exact normalized question aliases and explicit option equivalents. Unknown/ambiguous fields, missing answers, unsupported controls, existing values, and changed origins are skipped. No agreement checkbox, signature, Submit, or Next is activated. Citizenship, current clearance and conditional clearance-detail prompts are registered in the taxonomy. No-clearance detail becomes N/A only from an explicit saved No. Sponsorship is an explicit reusable preference until changed; other per-application legal/current facts retain their confirmation gates. Race/ethnicity is never inferred from a name; an absent matching option remains unresolved.
+
+The browser profile and this local-file adapter are separate from the legacy optional extension adapter. Saving on this page does not silently rewrite an independently owned extension installation. The managed fill reads disk preferences first and falls back to approved cockpit contact fields when missing.
+
+Validation: `npm --prefix artifacts/escape-hatch run test:managed-assist` exercises atomic persistence, invalid-import preservation, Clear, actual Chrome DOM fill, repeated-fill preservation, reordered radio/select fields, missing options, and agreement/submission guards using synthetic data. It does not prove live employer acceptance of attachments or submission readiness.

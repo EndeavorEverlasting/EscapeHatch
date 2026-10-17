@@ -78,3 +78,7 @@ pwsh -NoProfile -File scripts/resolve_repo.ps1 -ResolveOnly
 ## Proof ceiling
 
 Repository contracts, validators, CI, and sanitized semantic coverage can prove harness readiness. They cannot prove third-party ATS behavior or the correctness/currentness of a user's private answers without observed browser runtime evidence.
+
+### Managed saved-answer implementation (2026-10-17)
+
+The managed cockpit now consumes canonical question IDs from the taxonomy and stores explicit choices through the preference-cache contract's private local-file adapter. The user can Save, Export, Import for review, or Clear. Current implemented fill supports exact prompt/option mapping for text, native selects and radios; unknown/custom widgets remain unresolved. Added canonical citizenship and clearance questions; sponsorship is reusable until changed. Synthetic actual-Chrome tests cover reordered controls, existing-value preservation, missing-option refusal and no attestation/submission. This statement does not claim all ATS controls, live employer PDF acceptance, or completed applications.

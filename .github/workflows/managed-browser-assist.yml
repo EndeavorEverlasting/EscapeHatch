@@ -1,0 +1,42 @@
+name: Managed Browser Assist Validation
+on:
+  pull_request:
+    paths:
+      - "artifacts/escape-hatch/browser-assist-control.ts"
+      - "artifacts/escape-hatch/browser-assist-control.test.ts"
+      - "artifacts/escape-hatch/src/components/managed-browser-assist.tsx"
+      - "artifacts/escape-hatch/src/App.tsx"
+      - "artifacts/escape-hatch/vite.config.ts"
+      - "artifacts/escape-hatch/package.json"
+      - "artifacts/escape-hatch/tests/managed-browser-assist.spec.ts"
+      - ".github/workflows/managed-browser-assist.yml"
+  push:
+    paths:
+      - "artifacts/escape-hatch/browser-assist-control.ts"
+      - "artifacts/escape-hatch/browser-assist-control.test.ts"
+      - "artifacts/escape-hatch/src/components/managed-browser-assist.tsx"
+      - "artifacts/escape-hatch/src/App.tsx"
+      - "artifacts/escape-hatch/vite.config.ts"
+      - "artifacts/escape-hatch/package.json"
+      - "artifacts/escape-hatch/tests/managed-browser-assist.spec.ts"
+      - ".github/workflows/managed-browser-assist.yml"
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: artifacts/escape-hatch
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install --no-audit --no-fund
+      - run: npm run test:managed-assist
+      - run: npm run typecheck
+      - run: npm run build
+      - name: Patch hygiene
+        working-directory: .
+        run: git diff --check HEAD^ HEAD

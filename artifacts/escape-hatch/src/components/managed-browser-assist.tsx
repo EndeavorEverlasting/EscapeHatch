@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent } from 'react';
+import { useEffect, useState, type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
 import { ArrowUpRight, CheckCircle2, FileUp, LoaderCircle, ShieldCheck } from 'lucide-react';
 import type { Application, Profile } from '@/lib/storage';
 
@@ -52,7 +52,7 @@ const titles: Record<string, string> = {
   browser_closed: 'Managed browser closed',
 };
 
-export function ManagedBrowserAssist({ profile, applications }: { profile: Profile; applications: Application[] }) {
+export function ManagedBrowserAssist({ profile, applications, setApplications }: { profile: Profile; applications: Application[]; setApplications: Dispatch<SetStateAction<Application[]>> }) {
   const [url, setUrl] = useState(MANDIANT);
   const [resume, setResume] = useState<File | null>(null);
   const [cover, setCover] = useState<File | null>(null);
@@ -79,7 +79,27 @@ export function ManagedBrowserAssist({ profile, applications }: { profile: Profi
       else body = { resume: await privatePdf(resume), cover: await privatePdf(cover) };
       const result = await request('/' + action, body);
       setStatus(result.state || 'idle');
-      if (action === 'launch') setBrowserOpen(true);
+      if (action === 'launch') {
+        setBrowserOpen(true);
+        setApplications((items) => {
+          const existing = items.find((item) => item.url === url);
+          if (existing) return items.map((item) => item.id === existing.id && item.status === 'saved'
+            ? { ...item, status: 'preparing', updatedAt: new Date().toISOString() }
+            : item);
+          if (url !== MANDIANT) return items; // Unknown employer is not silently invented.
+          return [{
+            id: 'mandiant-americas-pmo-20261017',
+            company: 'Mandiant Consulting (Google Cloud)',
+            role: 'Project Manager, Americas PMO',
+            url: MANDIANT,
+            status: 'preparing',
+            priority: 'high',
+            notes: 'Opened from the managed browser assistant; submission not confirmed.',
+            nextAction: 'Review employer application; final Submit is operator-only.',
+            updatedAt: new Date().toISOString(),
+          }, ...items];
+        });
+      }
       if (action === 'fill') setMessage(
         (result.filled?.length ? 'Filled: ' + result.filled.join(', ') + '. ' : 'No fields filled. ') +
         (result.skipped?.length ? 'Skipped: ' + result.skipped.join(', ') + '. ' : '') +

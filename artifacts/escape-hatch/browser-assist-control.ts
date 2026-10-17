@@ -4,7 +4,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { chromium, type BrowserContext, type Page } from '@playwright/test';
 import type { Plugin } from 'vite';
-import { isLoopbackAddress, readManagedRuntime } from './runtime-control';
+import { isLoopbackAddress, readManagedRuntime } from './runtime-control.ts';
 
 const PREFIX = '/__escapehatch/managed-assist';
 const MAX_BODY = 15 * 1024 * 1024;

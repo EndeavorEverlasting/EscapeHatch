@@ -47,6 +47,7 @@ const titles: Record<string, string> = {
   idle: 'Ready to launch',
   browser_open: 'Chrome opened — verify the application',
   application_open_review_required: 'Application opened — sign in if requested',
+  application_form_open_review_required: 'Application form opened — ready to fill',
   browser_open_navigation_unverified: 'Chrome opened — verify the URL manually',
   fields_filled_review_required: 'Known fields filled — review the page',
   attachments_staged_review_required: 'File controls populated — verify attachments',

@@ -6,7 +6,7 @@ import { chromium, type BrowserContext, type Page } from '@playwright/test';
 import type { Plugin } from 'vite';
 import { isLoopbackAddress, readManagedRuntime } from './runtime-control.ts';
 import { readPreferences, savePreferences, clearPreferences } from './preference-file.ts';
-import { fillSavedPreferences } from './managed-form.ts';
+import { fillSavedPreferences, openApplicationForm } from './managed-form.ts';
 import { emptyPreferences } from './src/lib/application-preferences.ts';
 
 const PREFIX = '/__escapehatch/managed-assist';
@@ -90,7 +90,7 @@ async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> 
   return parsed as Record<string, unknown>;
 }
 
-async function attachPdfs(page: Page, resume: ReturnType<typeof parsePrivatePdf>, cover: ReturnType<typeof parsePrivatePdf>) {
+export async function attachPdfs(page: Page, resume: ReturnType<typeof parsePrivatePdf>, cover: ReturnType<typeof parsePrivatePdf>) {
   const inputs = await page.locator('input[type="file"]').all();
   const outcome: Record<string, string> = {};
   for (const [kind, file] of [['resume', resume], ['cover', cover]] as const) {
@@ -105,6 +105,25 @@ async function attachPdfs(page: Page, resume: ReturnType<typeof parsePrivatePdf>
         });
         if ((kind === 'resume' ? /\b(resume|r[ée]sum[ée]|cv)\b/i : /\b(cover[\s_-]*letter)\b/i).test(attrs)) matches.push(input);
       } catch { /* page changed; leave control unmodified */ }
+    }
+    if (matches.length === 0) {
+      // Portal-based uploaders leave their anonymous file inputs under body. Bind the chooser
+      // to the uniquely labelled upload widget instead of guessing an input by DOM order.
+      const labels = page.locator('label[id$="_label"]').filter({ hasText: kind === 'resume' ? /^Resume:\s*\(Word\/PDF\)/i : /^Cover Letter:\s*\(Word\/PDF\)/i });
+      if (await labels.count() !== 1) { outcome[kind] = 'manual_required'; continue; }
+      const labelId = await labels.getAttribute('id');
+      const widgetId = labelId?.replace(/(?:\.file)?_label$/, '') || '';
+      if (!/^[A-Za-z0-9_.-]{1,100}$/.test(widgetId)) { outcome[kind] = 'manual_required'; continue; }
+      const trigger = page.locator('[id="' + widgetId + '"] .filepicker');
+      if (await trigger.count() !== 1 || !await trigger.isVisible()) { outcome[kind] = 'manual_required'; continue; }
+      try {
+        const chooserPromise = page.waitForEvent('filechooser', { timeout: 5000 });
+        await trigger.click({ timeout: 2500 });
+        const chooser = await chooserPromise;
+        await chooser.setFiles(file, { timeout: 5000 });
+        outcome[kind] = 'attached_to_input_review_required';
+      } catch { outcome[kind] = 'manual_required'; }
+      continue;
     }
     if (matches.length !== 1) { outcome[kind] = 'manual_required'; continue; }
     try {
@@ -173,6 +192,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             try {
               await page.goto(jobUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
               state = 'application_open_review_required';
+              if (await openApplicationForm(page)) state = 'application_form_open_review_required';
             } catch {
               state = 'browser_open_navigation_unverified';
             }

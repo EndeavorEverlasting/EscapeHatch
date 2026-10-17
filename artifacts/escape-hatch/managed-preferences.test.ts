@@ -6,11 +6,12 @@ import path from 'node:path';
 import { chromium } from '@playwright/test';
 import { emptyPreferences, parsePreferences, optionMatches } from './src/lib/application-preferences.ts';
 import { savePreferences, readPreferences, clearPreferences } from './preference-file.ts';
-import { fillSavedPreferences } from './managed-form.ts';
+import { fillSavedPreferences, openApplicationForm, internationalPhone } from './managed-form.ts';
+import { attachPdfs, parsePrivatePdf } from './browser-assist-control.ts';
 
 function syntheticPreferences() {
   const data = emptyPreferences();
-  for (const [id, value] of Object.entries({ 'identity.first_name': 'Synthetic', 'identity.last_name': 'Candidate', 'identity.phone': '+15550123456', 'employment.us_citizenship': 'Yes', 'employment.current_clearance': 'No', 'eeo.gender': 'Male', 'eeo.race_ethnicity': 'Hispanic or Latino', 'legal.non_compete_blocking': 'No', 'attestation.truth_accuracy': 'Yes' })) {
+  for (const [id, value] of Object.entries({ 'identity.first_name': 'Synthetic', 'identity.last_name': 'Candidate', 'identity.phone': '+15550123456', 'identity.region': 'New York', 'identity.country': 'United States', 'employment.us_citizenship': 'Yes', 'employment.current_clearance': 'No', 'eeo.gender': 'Male', 'eeo.race_ethnicity': 'Hispanic or Latino', 'legal.non_compete_blocking': 'No', 'attestation.truth_accuracy': 'Yes' })) {
     data.preferences[id] = { scope: 'profile_preference', value, source: 'user', updated_at: data.exported_at };
   }
   return data;
@@ -28,6 +29,9 @@ test('explicit preferences survive process-independent disk reads; invalid impor
     assert.deepEqual(await readPreferences(file), data);
     assert.equal(parsePreferences({ ...data, schema_version: 'wrong' }), null);
     assert.equal(optionMatches('Male', 'Female'), false);
+    assert.equal(internationalPhone('(555) 012-3456', 'United States'), '+15550123456');
+    assert.equal(internationalPhone('(555) 012-3456', ''), null);
+    assert.equal(internationalPhone('+44 7700 900123', ''), '+447700900123');
     await clearPreferences(file);
     assert.deepEqual((await readPreferences(file)).preferences, {});
   } finally { await fs.rm(directory, { recursive: true, force: true }); }
@@ -37,6 +41,11 @@ test('real browser fills reordered saved answers, preserves existing values, and
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
   try {
     const page = await browser.newPage();
+    await page.setContent('<button type="button" aria-label="Apply for this position button" onclick="this.outerHTML=\'<h2>Contact Details</h2><label>First Name<input></label>\'">Apply for this position</button>');
+    assert.equal(await openApplicationForm(page), true);
+    await page.setContent('<form onsubmit="window.submitted=true;return false"><button type="submit">Apply for this position</button></form>');
+    assert.equal(await openApplicationForm(page), false);
+    assert.equal(await page.evaluate(() => (window as unknown as { submitted?: boolean }).submitted), undefined);
     await page.setContent(`<form onsubmit="window.submitted=true;return false">
       <label>Last Name (required)<input name="user.last_name" value="Keep existing"></label>
       <fieldset><legend>Do you currently hold a clearance?</legend><label><input type="radio" name="clearance" value="yes">Yes</label><label><input type="radio" name="clearance" value="no">No</label></fieldset>
@@ -68,5 +77,20 @@ test('real browser fills reordered saved answers, preserves existing values, and
     await page.locator('[name="user.first_name"]').fill('Edited locally');
     await fillSavedPreferences(page, syntheticPreferences());
     assert.equal(await page.locator('[name="user.first_name"]').inputValue(), 'Edited locally');
+    await page.setContent('<label>Phone<input type="tel" value="+1" oninput="if(this.value.length>3)this.value=\'rejected\'"></label>');
+    const rejected = await fillSavedPreferences(page, syntheticPreferences());
+    assert.equal(await page.locator('input').inputValue(), '+1');
+    assert.ok(rejected.skipped.includes('identity.phone:not_verified'));
+    assert.equal(rejected.filled.includes('identity.phone'), false);
+    await page.setContent(`<label>State<div class="Select"><span id="selection"></span><input id="state" role="combobox" oninput="document.querySelector('#choice').hidden=false"></div></label><div role="option" id="choice" hidden onclick="document.querySelector('#selection').innerHTML='<input type=hidden><span role=option aria-selected=true>New York</span>';this.remove()">New York</div><label>First Name<input name="first_name"></label>`);
+    const selected = await fillSavedPreferences(page, syntheticPreferences());
+    assert.ok(selected.filled.includes('identity.region'));
+    assert.equal(await page.locator('[aria-selected="true"]').textContent(), 'New York');
+    assert.equal(await page.locator('[name="first_name"]').inputValue(), 'Synthetic');
+    await page.setContent(`<div><label id="files.Resume.file_label">Resume: (Word/PDF)</label><div id="files.Resume"><button type="button" class="filepicker" onclick="document.querySelector('input[type=file]').click()">Choose</button></div></div><input type="file" style="display:none" onchange="document.querySelector('output').textContent=this.files[0].name"><output></output>`);
+    const pdf = parsePrivatePdf({ name: 'synthetic.pdf', base64: Buffer.from('%PDF-1.4\n').toString('base64') });
+    const attached = await attachPdfs(page, pdf, null);
+    assert.equal(attached.resume, 'attached_to_input_review_required');
+    assert.equal(await page.locator('output').textContent(), 'synthetic.pdf');
   } finally { await browser.close(); }
 });

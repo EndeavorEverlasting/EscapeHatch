@@ -82,3 +82,17 @@ Repository contracts, validators, CI, and sanitized semantic coverage can prove 
 ### Managed saved-answer implementation (2026-10-17)
 
 The managed cockpit now consumes canonical question IDs from the taxonomy and stores explicit choices through the preference-cache contract's private local-file adapter. The user can Save, Export, Import for review, or Clear. Current implemented fill supports exact prompt/option mapping for text, native selects and radios; unknown/custom widgets remain unresolved. Added canonical citizenship and clearance questions; sponsorship is reusable until changed. Synthetic actual-Chrome tests cover reordered controls, existing-value preservation, missing-option refusal and no attestation/submission. This statement does not claim all ATS controls, live employer PDF acceptance, or completed applications.
+
+### Local Windows proof: reusable managed application preparation
+
+- Base: PR #63 head `e5c051863d2211637b09cc7e1e5b74fdc71af5f2`; isolated branch `codex/reusable-application-preferences`.
+- Canonical Windows launcher returned OWNED_HEALTHY on an alternate managed port; original dirty checkout and original browser tabs preserved.
+- Private preferences saved in ignored local storage using the existing preference export schema; values and document bytes excluded from this report and Git.
+- App-driven live test on `savantage-solutions.hiringthing.com`: application entry opened and Contact Details observed; eleven recognized identity/eligibility fields filled and verified, existing country retained, conditional clearance detail handled, optional unmatched fields skipped.
+- Both selected PDF filenames appeared in the employer form after the app's labelled filechooser path. This proves employer UI receipt, not final submission or backend processing.
+- International telephone input and state option were observed correctly. Agreement and subscription boxes stayed unchecked; Submit Application was not activated.
+- Focused validation: six managed-assist tests (including actual Chrome), 25 existing unit tests, typecheck, production build, application-harness validator, harness validator and diff hygiene passed. The default full browser suite was not run because its fixed port and known prior selector failure are outside this isolated lane; no full-suite-green claim.
+- First remaining application gate: operator review of the populated form and original documents, then operator-only agreement/submission. No application was marked applied.
+- Integration gate: PR #63 is OPEN/DRAFT/UNSTABLE at the audited base SHA; this dependent change does not merge or alter that separately owned branch.
+
+Changed files in this sprint: `ARTIFACT_REGISTRY.md`; `artifacts/escape-hatch/browser-assist-control.ts`; `artifacts/escape-hatch/managed-form.ts`; `artifacts/escape-hatch/managed-preferences.test.ts`; `artifacts/escape-hatch/package.json`; `artifacts/escape-hatch/preference-file.ts`; `artifacts/escape-hatch/src/App.tsx`; `artifacts/escape-hatch/src/components/application-preferences.tsx`; `artifacts/escape-hatch/src/components/managed-browser-assist.tsx`; `artifacts/escape-hatch/src/lib/application-preferences.ts`; `docs/MANAGED_BROWSER_ASSIST.md`; `harness/contracts/application-form-taxonomy.v1.json`; `harness/contracts/application-preference-cache.v1.json`; `harness/reports/APPLICATION_FORM_AUTOMATION_STATE.md`; `harness/workflows/APPLICATION_FORM_INTAKE.md`.

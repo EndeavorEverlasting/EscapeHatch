@@ -1,6 +1,7 @@
 import { useEffect, useState, type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
 import { ArrowUpRight, CheckCircle2, FileUp, LoaderCircle, ShieldCheck } from 'lucide-react';
 import type { Application, Profile } from '@/lib/storage';
+import { ApplicationPreferences } from './application-preferences';
 
 const MANDIANT = 'https://www.google.com/about/careers/applications/jobs/results/132629079244317382-project-manager-americas-pmo-mandiant-consulting';
 const API = '/__escapehatch/managed-assist';
@@ -46,13 +47,14 @@ const titles: Record<string, string> = {
   idle: 'Ready to launch',
   browser_open: 'Chrome opened — verify the application',
   application_open_review_required: 'Application opened — sign in if requested',
+  application_form_open_review_required: 'Application form opened — ready to fill',
   browser_open_navigation_unverified: 'Chrome opened — verify the URL manually',
   fields_filled_review_required: 'Known fields filled — review the page',
   attachments_staged_review_required: 'File controls populated — verify attachments',
   browser_closed: 'Managed browser closed',
 };
 
-export function ManagedBrowserAssist({ profile, applications, setApplications }: { profile: Profile; applications: Application[]; setApplications: Dispatch<SetStateAction<Application[]>> }) {
+export function ManagedBrowserAssist({ profile, setProfile, applications, setApplications }: { profile: Profile; setProfile: Dispatch<SetStateAction<Profile>>; applications: Application[]; setApplications: Dispatch<SetStateAction<Application[]>> }) {
   const [url, setUrl] = useState(MANDIANT);
   const [resume, setResume] = useState<File | null>(null);
   const [cover, setCover] = useState<File | null>(null);
@@ -122,7 +124,15 @@ export function ManagedBrowserAssist({ profile, applications, setApplications }:
   const secondary = 'inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-bold hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50';
 
   return (
-    <section className="mb-6 rounded-2xl border border-primary/25 bg-card p-5 shadow-sm sm:p-7" data-testid="managed-browser-assist">
+    <><ApplicationPreferences onLoad={data => setProfile(current => {
+      const next = { ...current };
+      for (const key of Object.keys(current) as (keyof Profile)[]) {
+        const id = 'identity.' + (key === 'linkedin_url' ? 'linkedin' : key === 'name_prefix' ? 'title' : key);
+        const value = data.preferences[id]?.value;
+        if (!next[key] && value) next[key] = value;
+      }
+      return next;
+    })} /><section className="mb-6 rounded-2xl border border-primary/25 bg-card p-5 shadow-sm sm:p-7" data-testid="managed-browser-assist">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div>
           <p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-primary">Native application launch</p>
@@ -177,7 +187,7 @@ export function ManagedBrowserAssist({ profile, applications, setApplications }:
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <button type="button" className={secondary} disabled={busy || !browserOpen} onClick={() => void run('fill')} data-testid="button-managed-fill">
-            Fill approved contact
+            Fill approved profile and answers
           </button>
           <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5 text-sm font-bold">
             <FileUp size={15} /> {resume ? 'Resume selected' : 'Choose résumé PDF'}
@@ -199,6 +209,6 @@ export function ManagedBrowserAssist({ profile, applications, setApplications }:
         Files are transferred only to your loopback runtime on your explicit click, held in memory, and never committed.
         A file input being populated does not prove the employer accepted an upload.
       </p>
-    </section>
+    </section></>
   );
 }

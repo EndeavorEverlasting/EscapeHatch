@@ -120,7 +120,7 @@ async function attachPdfs(page: Page, resume: ReturnType<typeof parsePrivatePdf>
         const attrs = await input.evaluate((element) => {
           const field = element as HTMLInputElement;
           const label = field.labels ? Array.from(field.labels).map((x) => x.textContent || '').join(' ') : '';
-          return [field.name, field.id, field.getAttribute('aria-label') || '', label].join(' ').toLowerCase();
+          return [field.name, field.id, field.getAttribute('aria-label') || '', label].join(' ').toLowerCase().replace(/[_-]/g, ' ');
         });
         if ((kind === 'resume' ? /\b(resume|r[ée]sum[ée]|cv)\b/i : /\b(cover[\s_-]*letter)\b/i).test(attrs)) matches.push(input);
       } catch { /* page changed; leave control unmodified */ }

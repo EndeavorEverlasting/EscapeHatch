@@ -78,6 +78,7 @@ import {
 } from '@/lib/assist-contract';
 import { applyAcceptedResumeImport, extractResumeText, getAcceptedResumeContactPatch, parseResumeText, type ResumeImport } from '@/lib/resume-import';
 import { initialSession, parseAssistSessionStatus, type AssistSession } from '@/lib/assist-session';
+import { ManagedBrowserAssist } from '@/components/managed-browser-assist';
 
 const queryClient = new QueryClient();
 
@@ -1181,6 +1182,7 @@ function AssistPage({
   };
 
   return <div>
+    <ManagedBrowserAssist profile={profile} applications={applications} />
      <PageIntro eyebrow="Browser assist" title="Fill the repeatable parts." description="Review local profile knowledge here, then use the MV3 assistant to scan and fill one page at a time. It never advances or submits an application." action={<div className="flex flex-wrap justify-end gap-2"><Button variant="outline" type="button" onClick={() => fileRef.current?.click()} data-testid="button-import-resume"><FileUp size={16} /> Import resume</Button><Button variant="outline" type="button" onClick={exportSync} data-testid="button-export-assist-sync"><FileDown size={16} /> Export assist sync</Button><Button variant="outline" type="button" onClick={exportSession} data-testid="button-export-assist-session"><FileDown size={16} /> Export session status</Button><label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm font-bold hover:bg-secondary"><FileUp size={16} /> Import session<input ref={sessionFileRef} type="file" accept="application/json,.json" onChange={importSession} className="hidden" data-testid="input-import-assist-session" /></label><input ref={fileRef} type="file" accept=".pdf,.txt,text/plain,application/pdf" onChange={importResume} className="hidden" data-testid="input-import-resume" /></div>} />
     {feedback && <p role="status" aria-live="polite" data-testid="assist-feedback" className="mb-5 rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 text-sm font-bold text-primary">{feedback}</p>}
     <div className="grid gap-5 lg:grid-cols-[1.25fr_.75fr]">

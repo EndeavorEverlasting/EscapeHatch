@@ -15,7 +15,7 @@ const FIELDS = [
   ['last_name', ['family-name'], ['lastName', 'last_name', 'lastname']],
   ['email', ['email'], ['email', 'emailAddress']],
   ['phone', ['tel'], ['phone', 'phoneNumber']],
-  ['linkedin_url', ['url'], ['linkedin', 'linkedin_url']],
+  ['linkedin_url', [], ['linkedin', 'linkedin_url', 'linkedinUrl']],
   ['city', ['address-level2'], ['city']],
   ['region', ['address-level1'], ['state', 'region']],
   ['postal_code', ['postal-code'], ['postalCode', 'postal_code', 'zip']],

@@ -78,6 +78,7 @@ import {
 } from '@/lib/assist-contract';
 import { applyAcceptedResumeImport, extractResumeText, getAcceptedResumeContactPatch, parseResumeText, type ResumeImport } from '@/lib/resume-import';
 import { initialSession, parseAssistSessionStatus, type AssistSession } from '@/lib/assist-session';
+import { ManagedBrowserAssist } from '@/components/managed-browser-assist';
 
 const queryClient = new QueryClient();
 
@@ -1181,7 +1182,8 @@ function AssistPage({
   };
 
   return <div>
-     <PageIntro eyebrow="Browser assist" title="Fill the repeatable parts." description="Review local profile knowledge here, then use the MV3 assistant to scan and fill one page at a time. It never advances or submits an application." action={<div className="flex flex-wrap justify-end gap-2"><Button variant="outline" type="button" onClick={() => fileRef.current?.click()} data-testid="button-import-resume"><FileUp size={16} /> Import resume</Button><Button variant="outline" type="button" onClick={exportSync} data-testid="button-export-assist-sync"><FileDown size={16} /> Export assist sync</Button><Button variant="outline" type="button" onClick={exportSession} data-testid="button-export-assist-session"><FileDown size={16} /> Export session status</Button><label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm font-bold hover:bg-secondary"><FileUp size={16} /> Import session<input ref={sessionFileRef} type="file" accept="application/json,.json" onChange={importSession} className="hidden" data-testid="input-import-assist-session" /></label><input ref={fileRef} type="file" accept=".pdf,.txt,text/plain,application/pdf" onChange={importResume} className="hidden" data-testid="input-import-resume" /></div>} />
+    <ManagedBrowserAssist profile={profile} applications={applications} setApplications={setApplications} />
+     <PageIntro eyebrow="Browser assist" title="Fill the repeatable parts." description="Launch an application in managed Chrome above. Review your reusable knowledge here, fill known contact fields, and prepare attachments without installing an extension." action={<div className="flex flex-wrap justify-end gap-2"><Button variant="outline" type="button" onClick={() => fileRef.current?.click()} data-testid="button-import-resume"><FileUp size={16} /> Import resume</Button><Button variant="outline" type="button" onClick={exportSync} data-testid="button-export-assist-sync"><FileDown size={16} /> Export assist sync</Button><Button variant="outline" type="button" onClick={exportSession} data-testid="button-export-assist-session"><FileDown size={16} /> Export session status</Button><label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm font-bold hover:bg-secondary"><FileUp size={16} /> Import session<input ref={sessionFileRef} type="file" accept="application/json,.json" onChange={importSession} className="hidden" data-testid="input-import-assist-session" /></label><input ref={fileRef} type="file" accept=".pdf,.txt,text/plain,application/pdf" onChange={importResume} className="hidden" data-testid="input-import-resume" /></div>} />
     {feedback && <p role="status" aria-live="polite" data-testid="assist-feedback" className="mb-5 rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 text-sm font-bold text-primary">{feedback}</p>}
     <div className="grid gap-5 lg:grid-cols-[1.25fr_.75fr]">
       <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-7">
@@ -1203,10 +1205,10 @@ function AssistPage({
         </div>
       </section>
       <aside className="h-fit rounded-2xl border border-border bg-primary p-5 text-primary-foreground shadow-sm sm:p-6">
-        <p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-primary-foreground/65">Load unpacked</p>
-        <h2 className="mt-2 font-display text-2xl">Use the active tab, not automation.</h2>
-        <ol className="mt-5 space-y-3 text-sm leading-6 text-primary-foreground/80"><li><strong className="text-primary-foreground">1.</strong> Open browser extensions and enable developer mode.</li><li><strong className="text-primary-foreground">2.</strong> Choose Load unpacked and select <code className="rounded bg-primary-foreground/10 px-1">browser/application-assist</code>.</li><li><strong className="text-primary-foreground">3.</strong> Export a reviewed sync, import it in the extension, then Start Assist on the application tab.</li></ol>
-        <p className="mt-5 border-t border-primary-foreground/15 pt-4 text-xs leading-5 text-primary-foreground/65">Active-tab access only. Passwords, uploads, attestations, demographic fields, and navigation controls are blocked.</p>
+        <p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-primary-foreground/65">Your application, one place</p>
+        <h2 className="mt-2 font-display text-2xl">The cockpit starts the browser.</h2>
+        <p className="mt-5 text-sm leading-6 text-primary-foreground/80">Select the opportunity above and click <strong className="text-primary-foreground">Launch application</strong>. EscapeHatch opens a separate managed Chrome window. Return here whenever the employer moves you to a new page to fill recognized fields or attach a PDF.</p>
+        <p className="mt-5 border-t border-primary-foreground/15 pt-4 text-xs leading-5 text-primary-foreground/65">The older extension is optional, not part of the native launch path. Authentication, legal answers, Next/Continue, and Submit are yours to control.</p>
       </aside>
     </div>
     {resume && <section className="mt-5 rounded-2xl border border-accent/50 bg-accent/10 p-5 sm:p-7" data-testid="resume-review-panel">

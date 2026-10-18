@@ -112,7 +112,7 @@ test('pre-activation DOM drift cannot activate stale controls', async () => {
   const changed = snapshot('drift', 'Submit');
   const activations: string[] = [];
   const driver: PreparationDriver = {
-    async inspect() { calls++; return calls < 4 ? stable : changed; },
+    async inspect() { calls++; return calls < 3 ? stable : changed; },
     async prepareCurrentPage() { return { deterministic: true, unresolved: [] }; },
     async activateVerifiedIntermediate(control) { activations.push(control.pageFingerprint); },
   };

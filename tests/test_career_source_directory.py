@@ -28,6 +28,24 @@ class CareerSourcesTests(unittest.TestCase):
             for secret in ("CONFIDENTIAL", "Private Resume.pdf", str(root)):
                 self.assertNotIn(secret, report)
 
+    def test_nested_company_folders_and_symlink_safety(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            nested = root / "2026" / "employer" / "resume"
+            nested.mkdir(parents=True)
+            (nested / "role.pdf").write_bytes(b"SYNTHETIC CONTENT")
+            report = source.scan_local({"id": "nested", "role": "resume_directory",
+                                        "provider": "local_directory", "locator": str(root)})
+            self.assertEqual(report["status"], "LOCAL_METADATA_READ")
+            self.assertEqual(report["file_count"], 1)
+            try:
+                (root / "linked").symlink_to(nested, target_is_directory=True)
+            except (OSError, NotImplementedError):
+                return
+            second = source.scan_local({"id": "nested", "role": "resume_directory",
+                                        "provider": "local_directory", "locator": str(root)})
+            self.assertEqual(second["file_count"], 1)
+
     def test_google_directory_is_not_false_live_proof(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "sources.json"

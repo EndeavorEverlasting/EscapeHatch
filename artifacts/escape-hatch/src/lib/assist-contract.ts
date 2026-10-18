@@ -14,6 +14,8 @@ export type Provenance = {
   snippet?: string;
   page?: number;
   capturedAt: string;
+  sourceId?: string;
+  revision?: string;
 };
 
 export type ReviewState = 'proposed' | 'accepted' | 'edited' | 'rejected';

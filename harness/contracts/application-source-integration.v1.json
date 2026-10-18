@@ -1,0 +1,189 @@
+{
+  "schema": "escapehatch/integrated-career-source-ux/v1",
+  "canonical_owner": "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md",
+  "detail_owner": "docs/APPLICATION_SOURCE_INTEGRATED_UX_P04_P82_2026-10-18.md",
+  "parent_issue": "https://github.com/EndeavorEverlasting/EscapeHatch/issues/69",
+  "release_status": "DESIGN_AND_CONTRACT_ONLY",
+  "product_decision": "ONE_PRODUCT_TWO_INTEGRATED_VIEWS",
+  "shell": "artifacts/escape-hatch",
+  "views": [
+    {
+      "key": "sources",
+      "route_proposed": "/sources",
+      "function": "connect_google_or_local_select_sources_review_import",
+      "state_owner": "canonical_career_state",
+      "ui_owner": "EscapeHatch",
+      "stage": "DESIGNED"
+    },
+    {
+      "key": "applications",
+      "route_existing": "/assist",
+      "function": "select_opportunity_package_launch_prepare_to_review",
+      "state_owner": "canonical_career_state",
+      "ui_owner": "EscapeHatch",
+      "stage": "PARTIAL_IMPLEMENTATIONS_UNMERGED"
+    }
+  ],
+  "separate_website_default": false,
+  "design_options": [
+    {
+      "id": "standalone_google_portal_then_migrate",
+      "decision": "REJECT",
+      "reason": "duplicate_state_and_posthoc_migration"
+    },
+    {
+      "id": "one_cockpit_one_monolithic_branch",
+      "decision": "REJECT",
+      "reason": "overlapping_writes_to_active_browser_branches"
+    },
+    {
+      "id": "one_shell_shared_contract_parallel_nonconflicting_lanes",
+      "decision": "SELECT",
+      "reason": "integrated_domain_contract_with_isolated_lanes"
+    }
+  ],
+  "identity": {
+    "principal_key": "local_installation_user_or_verified_hosted_user",
+    "connection_key": "per_principal_google_account_sub",
+    "source_key": "per_principal_per_connection_provider_file_id",
+    "opportunity_key": "canonical_opportunity_id",
+    "document_version_key": "provider_file_id_plus_revision_or_verified_fingerprint",
+    "source_credential_boundary": "private_connector_store_only",
+    "cross_tenant_source_fallback": "FORBIDDEN",
+    "chatgpt_connector_credentials_transfer": "FORBIDDEN",
+    "shared_credential_reuse_between_users": "FORBIDDEN"
+  },
+  "canonical_authorities": {
+    "candidate": "existing_EscapeHatch_reviewed_profile",
+    "opportunities": "existing_EscapeHatch_career_state_and_application_tracker_mapping",
+    "selected_sources": "user_private_source_manifest_consumer_of_PR66_not_second_profile_store",
+    "preferences": "harness/contracts/application-preference-cache.v1.json",
+    "browser_navigation": "contracts/application-navigation-authority.v1.json",
+    "parent_gates": "harness/contracts/application-autofill-parent.v1.json",
+    "source_bytes": "user_selected_provider_or_local_content_read_only",
+    "provider_auth": "TokenCorridor_adapter_or_compatible_installed_user_provider",
+    "browser_fill": "existing_deterministic_fill_plan_and_managed_browser_executors"
+  },
+  "connection_modes": [
+    {
+      "id": "existing_local_authorization",
+      "for_user": "returning",
+      "rule": "discover_existing_authorized_provider_paths_and_prove_exact_file_content_before_prompting",
+      "no_google_cloud_setup": true
+    },
+    {
+      "id": "new_user_google_consent",
+      "for_user": "new",
+      "rule": "product_registered_oauth_client_user_selects_account_and_scoped_files_google_picker",
+      "per_user_cloud_project_required": false
+    },
+    {
+      "id": "local_synced_files",
+      "for_user": "any",
+      "rule": "user_selects_local_paths_read_only_private",
+      "new_google_authorization_required": false
+    }
+  ],
+  "oauth": {
+    "preferred_google_scope": "https://www.googleapis.com/auth/drive.file",
+    "preferred_picker": "Google_Picker",
+    "privileged_broad_drive_scope_default": "FORBIDDEN",
+    "broader_scope_exception": "separate_explicit_feature_user_consent_scope_assessment_app_verification_security_review",
+    "callback_security": [
+      "state_bound_to_session",
+      "PKCE_where_supported",
+      "exact_redirect_uri",
+      "nonce_or_oidc_account_binding",
+      "csrf_protection",
+      "encrypted_refresh_token_at_rest",
+      "no_token_in_browser_or_repo_logs",
+      "rate_limit",
+      "account_sub_verified_on_callback"
+    ],
+    "secrets_location": "private_os_store_or_secure_hosted_server_credential_vault",
+    "revoke_behavior": "provider_revoke_if_possible_then_delete_local_credential_binding_and_mark_imports_stale_without_deleting_approved_resume_data",
+    "public_hosting_gate": "registered_oauth_brand_and_redirects_plus_google_verification_as_required"
+  },
+  "source_pipeline": [
+    "CONNECTED_OR_AUTH_RECOVERABLE",
+    "SOURCES_SELECTED",
+    "FILE_METADATA_READ",
+    "EXACT_BYTES_OR_DOC_TEXT_READ",
+    "TYPE_AND_REVISION_VERIFIED",
+    "IMPORT_PREVIEW",
+    "REVIEWED_AND_APPROVED",
+    "CANONICAL_PROFILE_UPDATED_WITH_PROVENANCE",
+    "OPPORTUNITY_DOCUMENT_PACKAGE_READY",
+    "DETERMINISTIC_BROWSER_PREPARATION",
+    "REVIEW_READY_NOT_SUBMITTED"
+  ],
+  "import_policies": {
+    "minimum_real_resume_reads": 2,
+    "bound_reads_to_verified_user_connection": true,
+    "require_revision_hash_or_provider_revision": true,
+    "never_infer_current_legal_eeo_education_work_authorization": true,
+    "import_idempotent": true,
+    "conflicting_or_stale_data": "REVIEW_REQUIRED_NO_SILENT_OVERWRITE",
+    "canonical_import_helper": "artifacts/escape-hatch/src/lib/resume-import.ts",
+    "unknown_required_question": "REVIEW_REQUIRED"
+  },
+  "browser_policies": {
+    "final_submit": "OPERATOR_ONLY",
+    "attestations_and_sensitive_confirmations": "OPERATOR_ONLY",
+    "advance": "TRUSTED_CONSEQUENCE_EVIDENCE_AND_SCOPED_AUTHORIZATION_ONLY",
+    "fill": "DETERMINISTIC_CODE_ONLY_NO_AGENT_FORM_MUTATION",
+    "blocked_default": "REVIEW_REQUIRED_WITH_EXACT_REASON",
+    "user_edits": "PRESERVE_AND_DETECT_CONFLICTS"
+  },
+  "verification_gates": [
+    {
+      "id": "C1_EXISTING_AUTH_RECOVERY",
+      "receipt": "real_windows_exact_private_google_doc_read_without_new_oauth_client",
+      "status": "UNPROVEN"
+    },
+    {
+      "id": "C2_NEW_USER_ONBOARD",
+      "receipt": "distinct_test_google_account_grants_scoped_read_and_disconnects_without_cross_account_leak",
+      "status": "UNPROVEN"
+    },
+    {
+      "id": "C3_CANONICAL_IMPORT",
+      "receipt": "two_actual_resumes_read_revision_checked_imported_and_linked_to_opportunity_no_duplicate_candidate_store",
+      "status": "UNPROVEN"
+    },
+    {
+      "id": "C4_TWO_VIEW_UX",
+      "receipt": "real_sources_screen_and_existing_assist_share_one_candidate_opportunity_package_without_manual_reexport",
+      "status": "UNPROVEN"
+    },
+    {
+      "id": "C5_BROWSER_REVIEW",
+      "receipt": "application_autopilot_parent_P08_real_windows_review_state_no_terminal_post",
+      "status": "UNPROVEN"
+    },
+    {
+      "id": "C6_CROSS_TENANT_NEGATIVE",
+      "receipt": "two_test_users_no_cross_user_locator_profile_token_document_cache_or_session_access",
+      "status": "UNPROVEN"
+    },
+    {
+      "id": "C7_HOSTED_READINESS",
+      "receipt": "verified_server_auth_security_and_google_app_publishing_scope_review_before_public_users",
+      "status": "UNPROVEN"
+    }
+  ],
+  "forbidden_false_proof": [
+    "connector_listed",
+    "oauth_client_exists",
+    "token_file_exists",
+    "chatgpt_can_read_drive",
+    "file_listing_only",
+    "mocked_picker_selection",
+    "source_locator_registered",
+    "green_contract_CI",
+    "one_page_filled",
+    "submitted_without_operator"
+  ],
+  "tracked_personal_information": "FORBIDDEN",
+  "parent_completion_rule": "ALL_NINE_EXISTING_PARENT_GATES_MUST_BE_PROVEN_LIVE"
+}

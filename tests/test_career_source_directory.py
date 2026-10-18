@@ -41,6 +41,11 @@ class CareerSourcesTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             source.normalize("google_drive", "https://drive.google.com/drive/folders/1234567890abcdef", "application_tracker")
 
+    def test_existing_drive_sharing_urls_normalize_without_secrets(self):
+        url = "https://drive.google.com/drive/folders/1234567890abcdef?usp=drivesdk"
+        self.assertEqual(source.normalize("google_drive", url, "resume_directory"),
+                         "https://drive.google.com/drive/folders/1234567890abcdef")
+
     def test_local_tracker_file(self):
         with tempfile.TemporaryDirectory() as tmp:
             ledger = Path(tmp) / "tracker.csv"

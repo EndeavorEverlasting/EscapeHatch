@@ -7,6 +7,9 @@ on:
       - "fixtures/**"
       - "scripts/validate_career_state.py"
       - "scripts/validate_career_claim_fidelity.py"
+      - "scripts/validate_career_artifact_propagation.py"
+      - "harness/contracts/career-artifact-propagation.v1.json"
+      - "docs/CAREER_ARTIFACT_PROPAGATION_HARNESS.md"
       - "scripts/validate_application_companion.py"
       - "scripts/export_study_guidance.py"
       - "tests/test_study_guidance_export.py"
@@ -17,6 +20,9 @@ on:
       - "fixtures/**"
       - "scripts/validate_career_state.py"
       - "scripts/validate_career_claim_fidelity.py"
+      - "scripts/validate_career_artifact_propagation.py"
+      - "harness/contracts/career-artifact-propagation.v1.json"
+      - "docs/CAREER_ARTIFACT_PROPAGATION_HARNESS.md"
       - "scripts/validate_application_companion.py"
       - "scripts/export_study_guidance.py"
       - "tests/test_study_guidance_export.py"
@@ -39,12 +45,14 @@ jobs:
         run: python scripts/validate_career_state.py
       - name: Validate career claim fidelity
         run: python scripts/validate_career_claim_fidelity.py
+      - name: Validate career artifact propagation
+        run: python scripts/validate_career_artifact_propagation.py
       - name: Validate application companion
         run: python scripts/validate_application_companion.py
       - name: Test StudySyndicate export
         run: python tests/test_study_guidance_export.py
       - name: Compile product validators
-        run: python -m py_compile scripts/validate_career_state.py scripts/validate_career_claim_fidelity.py scripts/validate_application_companion.py scripts/export_study_guidance.py tests/test_study_guidance_export.py
+        run: python -m py_compile scripts/validate_career_state.py scripts/validate_career_claim_fidelity.py scripts/validate_career_artifact_propagation.py scripts/validate_application_companion.py scripts/export_study_guidance.py tests/test_study_guidance_export.py
       - name: Check whitespace
         shell: bash
         run: |

@@ -332,6 +332,46 @@ def emit_receipt(receipt: dict, run_id: str | None = None) -> None:
         print(f"PROMOTION_GUARD: BLOCKED — {receipt.get('reason')}")
 
 
+
+def observed_browser_check(payload: dict, candidate_sha: str, job_name: str) -> tuple[int, str]:
+    """Real provider check-run evidence, never the simulated cmd_check success list.
+
+    0=green, 2=pending/missing, 1=failed/stale/malformed. Latest attempt wins.
+    """
+    if not isinstance(payload, dict) or not isinstance(payload.get("check_runs"), list):
+        return 1, "provider check-runs response missing or malformed"
+    matching = [
+        run for run in payload["check_runs"]
+        if isinstance(run, dict) and run.get("name") == job_name
+        and run.get("head_sha") == candidate_sha
+    ]
+    if not matching:
+        if any(isinstance(run, dict) and run.get("name") == job_name for run in payload["check_runs"]):
+            return 1, "browser job belongs to another commit SHA"
+        return 2, "required browser job not yet reported for exact head"
+    latest = max(matching, key=lambda run: int(run.get("id") or 0))
+    if latest.get("status") != "completed":
+        return 2, "browser job has not completed"
+    if latest.get("conclusion") != "success":
+        return 1, "browser job concluded " + str(latest.get("conclusion") or "unknown")
+    return 0, "browser job completed successfully on exact candidate"
+
+
+def cmd_verify_browser(args: argparse.Namespace) -> int:
+    required = [item for item in load_required_checks(destination=args.target)
+                if item["workflow"] == "Web Cockpit Validation"]
+    if len(required) != 1:
+        raise GuardError("exactly one required Web Cockpit browser job must exist in promotion manifest")
+    try:
+        with open(args.checks_file, encoding="utf-8") as source:
+            payload = json.load(source)
+    except (OSError, json.JSONDecodeError) as exc:
+        raise GuardError("cannot read actual provider check-runs: " + str(exc)) from exc
+    status, reason = observed_browser_check(payload, args.candidate_sha, required[0]["job"])
+    print(f"BROWSER_PROMOTION_GATE: {'PASS' if status == 0 else 'PENDING' if status == 2 else 'BLOCKED'} — {reason}")
+    return status
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="EscapeHatch promotion guard")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -345,6 +385,12 @@ def build_parser() -> argparse.ArgumentParser:
     check_p.add_argument("--harness", default="success", help="Harness E2E conclusion")
     check_p.add_argument("--app-e2e", default="success", help="Application E2E conclusion")
     check_p.add_argument("--run-id", default="", help="Run ID for receipt")
+
+    browser_p = sub.add_parser("verify-browser", help="Enforce actual provider check-runs, never synthetic success")
+    browser_p.add_argument("--candidate-sha", required=True)
+    browser_p.add_argument("--checks-file", required=True)
+    browser_p.add_argument("--target", default="main")
+    browser_p.set_defaults(func=cmd_verify_browser)
 
     sub.add_parser("self-test", help="Run fault-injection proofs for blocking paths").set_defaults(func=cmd_self_test)
 

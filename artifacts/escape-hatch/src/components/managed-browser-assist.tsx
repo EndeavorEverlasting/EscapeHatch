@@ -23,6 +23,7 @@ type ServerResponse = {
   browserOpen?: boolean;
   error?: string;
   filled?: string[];
+  recorded?: string[];
   skipped?: string[];
   attachments?: Record<string, string>;
   requiresOperatorSubmission?: boolean;
@@ -89,6 +90,9 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const [status, setStatus] = useState('idle');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [recordMilitary, setRecordMilitary] = useState(false);
+  const [preferencesRefresh, setPreferencesRefresh] = useState(0);
+  const [recordingMessage, setRecordingMessage] = useState('');
   const [browserOpen, setBrowserOpen] = useState(false);
   const [preparation, setPreparation] = useState<PreparationResult | null>(null);
 
@@ -178,12 +182,34 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     void run('launch');
   }, [applications, explicitLaunchId, runtimeChecked, trackerChecked, selectedOpportunityId, url, verifiedNextReadyId]);
 
+  useEffect(() => {
+    if (!recordMilitary || !browserOpen) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    async function record() {
+      try {
+        const result = await request('/capture-military', {});
+        if (cancelled) return;
+        if (result.recorded?.length) {
+          setPreferencesRefresh(value => value + 1);
+          setRecordingMessage('Saved your selected veteran/service answer on this computer.');
+        } else setRecordingMessage('Listening for a recognized native veteran/service select or radio answer. Unknown or ambiguous fields remain unsaved.');
+        timer = setTimeout(record, 1500);
+      } catch {
+        if (!cancelled) { setRecordMilitary(false); setRecordingMessage('Recording paused: verify the managed application origin and restart recording.'); }
+      }
+    }
+    void record();
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [recordMilitary, browserOpen]);
+
   async function run(action: 'launch' | 'fill' | 'attach' | 'prepare') {
     setBusy(true);
     setMessage('');
     try {
       let body: object;
       if (action === 'launch') {
+        setRecordMilitary(false);
         const opportunity = applications.find((item) => item.id === selectedOpportunityId && item.url === url);
         if (applications.some((item) => item.url === url && (item.status === 'applied' || item.status === 'closed'))) {
           throw new Error('This opportunity is already applied or closed. Do not reapply.');
@@ -274,7 +300,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const secondary = 'inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-bold hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50';
 
   return (
-    <><ApplicationPreferences onLoad={data => setProfile(current => {
+    <><ApplicationPreferences currentRole={applications.find(item => item.id === selectedOpportunityId)?.role} refresh={preferencesRefresh} onEdit={() => setRecordMilitary(false)} onLoad={data => setProfile(current => {
       const next = { ...current };
       for (const key of Object.keys(current) as (keyof Profile)[]) {
         const id = 'identity.' + (key === 'linkedin_url' ? 'linkedin' : key === 'name_prefix' ? 'title' : key);
@@ -350,6 +376,12 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
             </p>
           </div>
         )}
+        <label className="mt-3 block text-sm">
+          <input type="checkbox" checked={recordMilitary} disabled={!browserOpen || busy}
+            onChange={event => setRecordMilitary(event.target.checked)} /> Record my veteran/service answers from this managed application
+        </label>
+        <p className="text-xs">While enabled and this page stays open, selected native dropdown/radio answers are saved locally for reuse. Protected-veteran status and military service are separate facts. Other fields and custom widgets are not recorded.</p>
+        <p role="status" className="text-xs">{recordingMessage}</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <button type="button" className={secondary} disabled={busy || !browserOpen} onClick={() => void run('fill')} data-testid="button-managed-fill">
             Fill approved profile and answers

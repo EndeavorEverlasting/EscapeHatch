@@ -3,7 +3,7 @@ import taxonomy from '../../../../harness/contracts/application-form-taxonomy.v1
 export const PREFERENCE_KEY = 'escapeHatch.applicationQuestionPreferences.v1';
 export const PREFERENCE_SCHEMA = 'escapehatch-application-question-preferences/v1';
 export type Preference = { scope: 'profile_preference'; value: string; source: 'user'; updated_at: string };
-export type Preferences = { schema_version: typeof PREFERENCE_SCHEMA; exported_at: string; preferences: Record<string, Preference> };
+export type Preferences = { schema_version: typeof PREFERENCE_SCHEMA; exported_at: string; preferences: Record<string, Preference>; job_titles?: string[] };
 export const questions = taxonomy.questions;
 export const emptyPreferences = (): Preferences => ({ schema_version: PREFERENCE_SCHEMA, exported_at: new Date().toISOString(), preferences: {} });
 
@@ -16,6 +16,11 @@ export function parsePreferences(input: unknown): Preferences | null {
   const known = new Set(questions.map(q => q.id));
   const clean = emptyPreferences();
   clean.exported_at = data.exported_at;
+  if (data.job_titles !== undefined) {
+    if (!Array.isArray(data.job_titles) || data.job_titles.length > 100 ||
+        data.job_titles.some(value => typeof value !== 'string' || !value.trim() || value.length > 160)) return null;
+    clean.job_titles = [...new Set(data.job_titles.map(value => value.trim()))];
+  }
   for (const [id, entry] of Object.entries(data.preferences)) {
     if (!known.has(id) || !entry || typeof entry !== 'object' || entry.scope !== 'profile_preference' || entry.source !== 'user' ||
         typeof entry.value !== 'string' || !entry.value.trim() || entry.value.length > 512 ||
@@ -26,7 +31,7 @@ export function parsePreferences(input: unknown): Preferences | null {
 }
 
 export function normalizeQuestion(text: string) {
-  return text.normalize('NFKC').toLowerCase().replace(/\(required\)|\brequired\b/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  return text.normalize('NFKC').toLowerCase().replace(/\bu\.s\.(?:a\.)?/g, 'us').replace(/\((?:required|optional|voluntary|select one|please select)\)|\[(?:required|optional)\]|\brequired\b/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
 export function matchQuestion(prompt: string): string | null {
@@ -52,3 +57,14 @@ export function optionMatches(value: string, option: string): boolean {
   ];
   return groups.some(group => group.includes(a) && group.includes(b));
 }
+
+export const preferenceChoices: Record<string, string[]> = {
+  'eeo.gender': ['Male', 'Female', 'Non-binary', 'Prefer to self-describe', 'Prefer not to answer'],
+  'eeo.race_ethnicity': ['American Indian or Alaska Native', 'Asian', 'Black or African American', 'Hispanic or Latino', 'Native Hawaiian or Other Pacific Islander', 'White', 'Two or more races', 'Prefer not to answer'],
+  'employment.us_citizenship': ['Yes', 'No'],
+  'employment.current_clearance': ['Yes', 'No'],
+  'employment.sponsorship_required': ['Yes', 'No'],
+  'military.service_history': ['Yes', 'No', 'Prefer not to answer'],
+  'eeo.disability_status': ['Yes', 'No', 'Prefer not to answer'],
+  'eeo.veteran_status': ['I am not a protected veteran', 'I identify as one or more classifications of a protected veteran', 'Prefer not to answer'],
+};

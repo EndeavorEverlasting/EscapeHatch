@@ -1,3 +1,4 @@
+import { captureMilitaryAnswers } from './managed-form.ts';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { homedir } from 'node:os';
 import path from 'node:path';
@@ -370,6 +371,19 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               requiresOperatorSubmission: true,
               finalActionActivated: false,
             });
+          }
+          if (url.pathname === PREFIX + '/capture-military') {
+            const answers = await captureMilitaryAnswers(page);
+            if (new URL(page.url()).origin !== applicationOrigin) throw new Error('application_origin_changed_review_required');
+            const preferences = await readPreferences();
+            const recorded: string[] = [];
+            for (const [id, value] of Object.entries(answers)) {
+              if (preferences.preferences[id]?.value === value) continue;
+              preferences.preferences[id] = { scope: 'profile_preference', source: 'user', value, updated_at: new Date().toISOString() };
+              recorded.push(id);
+            }
+            if (recorded.length) await savePreferences(preferences);
+            return respond(res, 200, { ok: true, recorded });
           }
           if (url.pathname === PREFIX + '/fill') {
             const preferences = await readPreferences();

@@ -30,15 +30,17 @@ export async function openApplicationForm(page: Page): Promise<boolean> {
   return true;
 }
 
-// This routine changes values only. It never clicks buttons, checks agreements, or navigates.
-export async function fillSavedPreferences(page: Page, preferences: Preferences): Promise<FillOutcome> {
-  const result: FillOutcome = { filled: [], skipped: [] };
+async function inspectPreferenceFields(page: Page) {
   // Hold observed elements, not nth-based locators: React may insert hidden controls after a selection.
   const controls = await page.locator('input,textarea,select').elementHandles();
   const descriptors = await Promise.all(controls.map(control => control.evaluate(element => {
     const field = element as HTMLInputElement;
     const type = field.tagName === 'SELECT' ? 'select' : field.type || 'text';
-    const labels = Array.from(field.labels || []).map(label => label.textContent || '');
+    const labels = Array.from(field.labels || []).map(label => {
+      const copy = label.cloneNode(true) as Element;
+      copy.querySelectorAll('input,select,textarea,button').forEach(control => control.remove());
+      return copy.textContent || '';
+    });
     const labelled = (field.getAttribute('aria-labelledby') || '').split(/\s+/).map(id => document.getElementById(id)?.textContent || '');
     const group = field.closest('fieldset');
     const named = [field.name, field.id].flatMap(id => [document.getElementById(id + '_label')?.textContent || '', id.replace(/^user\./, '').replace(/_/g, ' ')]);
@@ -58,6 +60,38 @@ export async function fillSavedPreferences(page: Page, preferences: Preferences)
     !descriptors[i].readonly && ['text', 'email', 'tel', 'url', 'textarea', 'select', 'radio'].includes(descriptors[i].type) &&
     await control.isVisible() && await control.isEnabled()));
   const ids = descriptors.map(d => [...new Set(d.prompts.map(matchQuestion).filter((id): id is string => id !== null))]);
+  return { controls, descriptors, available, ids };
+}
+
+// Explicitly enabled capture is limited to veteran/service answers. It never infers either from the other.
+export async function captureMilitaryAnswers(page: Page): Promise<Record<string, string>> {
+  const { controls, descriptors, available, ids } = await inspectPreferenceFields(page);
+  const answers: Record<string, string> = {};
+  for (const id of ['eeo.veteran_status', 'military.service_history']) {
+    const peers = ids.map((matches, i) => available[i] && matches.length === 1 && matches[0] === id ? i : -1).filter(i => i >= 0);
+    if (!peers.length) continue;
+    const radios = peers.every(i => descriptors[i].type === 'radio');
+    if (radios) {
+      if (!descriptors[peers[0]].name || !peers.every(i => descriptors[i].name === descriptors[peers[0]].name)) continue;
+      const selected = [];
+      for (const i of peers) if (await controls[i].isChecked()) selected.push(i);
+      if (selected.length === 1) answers[id] = descriptors[selected[0]].option;
+    } else if (peers.length === 1 && descriptors[peers[0]].type === 'select') {
+      const selected = await controls[peers[0]].evaluate(element => {
+        const select = element as HTMLSelectElement;
+        const option = select.selectedOptions[0];
+        return select.value && option && !option.disabled ? option.textContent?.trim() || '' : '';
+      });
+      if (selected) answers[id] = selected;
+    }
+  }
+  return Object.fromEntries(Object.entries(answers).filter(([, value]) => value.trim() && value.length <= 512 && !/^(select|choose|please select|select one)(?:\b|$)/i.test(value)));
+}
+
+// This routine changes values only. It never clicks buttons, checks agreements, or navigates.
+export async function fillSavedPreferences(page: Page, preferences: Preferences): Promise<FillOutcome> {
+  const result: FillOutcome = { filled: [], skipped: [] };
+  const { controls, descriptors, available, ids } = await inspectPreferenceFields(page);
   for (let index = 0; index < controls.length; index++) {
     const control = controls[index], descriptor = descriptors[index];
     if (['hidden', 'file', 'checkbox', 'password', 'submit', 'button', 'reset'].includes(descriptor.type)) continue;

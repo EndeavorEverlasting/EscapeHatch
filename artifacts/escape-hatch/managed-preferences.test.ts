@@ -4,9 +4,9 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { chromium } from '@playwright/test';
-import { emptyPreferences, parsePreferences, optionMatches } from './src/lib/application-preferences.ts';
+import { emptyPreferences, parsePreferences, optionMatches, matchQuestion } from './src/lib/application-preferences.ts';
 import { savePreferences, readPreferences, clearPreferences } from './preference-file.ts';
-import { fillSavedPreferences, openApplicationForm, internationalPhone } from './managed-form.ts';
+import { fillSavedPreferences, openApplicationForm, internationalPhone, captureMilitaryAnswers } from './managed-form.ts';
 import { attachPdfs, parsePrivatePdf } from './browser-assist-control.ts';
 
 function syntheticPreferences() {
@@ -92,5 +92,43 @@ test('real browser fills reordered saved answers, preserves existing values, and
     const attached = await attachPdfs(page, pdf, null);
     assert.equal(attached.resume, 'attached_to_input_review_required');
     assert.equal(await page.locator('output').textContent(), 'synthetic.pdf');
+  } finally { await browser.close(); }
+});
+
+test('job titles persist separately from salutations; decorated military prompts match without conflating protected status', async () => {
+  const preferences = syntheticPreferences();
+  preferences.job_titles = ['Synthetic Role', 'Second Role'];
+  preferences.preferences['identity.job_title'] = { scope: 'profile_preference', source: 'user', value: 'Synthetic Role', updated_at: preferences.exported_at };
+  assert.deepEqual(parsePreferences(preferences)?.job_titles, preferences.job_titles);
+  assert.equal(parsePreferences({ ...preferences, job_titles: [42] }), null);
+  assert.equal(matchQuestion('Have you ever served in the U.S. Armed Forces? (Optional) *'), 'military.service_history');
+  assert.equal(matchQuestion('Protected veteran status [Optional]'), 'eeo.veteran_status');
+  assert.equal(matchQuestion('Previous job title'), null);
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  try {
+    const page = await browser.newPage();
+    await page.setContent(`<label>Professional title<input id="role"></label><label>Salutation<input id="salutation"></label>
+      <label>Have you ever served in the U.S. Armed Forces? (Optional)<select id="service"><option value="">Choose</option><option value="n">No</option><option value="y">Yes</option></select></label>
+      <fieldset><legend>Protected veteran status [Optional]</legend><label><input type="radio" name="veteran" value="n">I am not a protected veteran</label><label><input type="radio" name="veteran" value="y">I am a protected veteran</label></fieldset>
+      <label>Race<input value="Do not capture"></label><button type="submit">Submit</button>`);
+    assert.deepEqual(await captureMilitaryAnswers(page), {});
+    await page.locator('#service').selectOption('n');
+    await page.locator('[name="veteran"][value="y"]').check();
+    assert.deepEqual(await captureMilitaryAnswers(page), { 'military.service_history': 'No', 'eeo.veteran_status': 'I am a protected veteran' });
+    for (const [id, value] of Object.entries(await captureMilitaryAnswers(page))) preferences.preferences[id] = { scope: 'profile_preference', source: 'user', value, updated_at: preferences.exported_at };
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-recorded-'));
+    try {
+      const file = path.join(directory, 'preferences.json');
+      await savePreferences(preferences, file);
+      await page.locator('#service').selectOption('');
+      const outcome = await fillSavedPreferences(page, await readPreferences(file));
+      assert.ok(outcome.filled.includes('identity.job_title'));
+      assert.ok(outcome.filled.includes('military.service_history'));
+      assert.equal(await page.locator('#role').inputValue(), 'Synthetic Role');
+      assert.equal(await page.locator('#salutation').inputValue(), '');
+      assert.equal(await page.locator('#service').inputValue(), 'n');
+    } finally { await fs.rm(directory, { recursive: true, force: true }); }
+    await page.setContent('<label>Military service<select><option value="">Choose</option><option selected>No</option></select></label><label>Military service<select><option selected>Yes</option></select></label>');
+    assert.deepEqual(await captureMilitaryAnswers(page), {});
   } finally { await browser.close(); }
 });

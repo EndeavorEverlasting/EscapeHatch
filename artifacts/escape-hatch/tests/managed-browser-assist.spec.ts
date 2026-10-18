@@ -184,3 +184,34 @@ test('one-click authorization fails closed when the employer was submitted after
   expect(actions).not.toContain('submit');
   expect(actions).not.toContain('next');
 });
+
+test('reusable role list and binary dropdowns persist through the preferences API', async ({ page }) => {
+  let saved: Record<string, unknown> = { schema_version: 'escapehatch-application-question-preferences/v1', exported_at: new Date().toISOString(), preferences: {} };
+  await page.route('**/__escapehatch/managed-assist/**', async route => {
+    const action = new URL(route.request().url()).pathname.split('/').at(-1);
+    if (action === 'preferences' && route.request().method() === 'POST') saved = route.request().postDataJSON().preferences;
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(action === 'preferences' ? { ok: true, preferences: saved } : { ok: true, state: 'idle', browserOpen: true, recorded: [] }) });
+  });
+  await page.goto('/assist');
+  await page.evaluate(() => localStorage.setItem('escape-hatch-applications', JSON.stringify([{ id: 'synthetic-title', company: 'Synthetic', role: 'Synthetic Role', url: 'https://example.com/apply', status: 'saved', priority: 'normal', notes: '', nextAction: '', updatedAt: new Date().toISOString() }])));
+  await page.reload();
+  await page.getByLabel('Saved opportunity').selectOption('synthetic-title');
+  await page.getByRole('button', { name: 'Add selected role to my job titles: Synthetic Role', exact: true }).click();
+  await expect(page.getByLabel('job title', { exact: true })).toHaveValue('Synthetic Role');
+  await expect(page.getByLabel('Salutation (Mr., Ms., Dr.)')).toHaveValue('');
+  await page.getByLabel('have you ever served in the us armed forces', { exact: true }).selectOption('No');
+  await page.getByLabel('Are you currently a US Citizen?', { exact: true }).selectOption('Yes');
+  await page.getByLabel('gender', { exact: true }).selectOption('Male');
+  await page.getByLabel('race / ethnicity', { exact: true }).selectOption('Hispanic or Latino');
+  await page.getByRole('button', { name: 'Save Preferences', exact: true }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Preferences saved on this computer' })).toBeVisible();
+  expect(saved.job_titles).toEqual(['Synthetic Role']);
+  expect((saved.preferences as Record<string, { value: string }>)['eeo.gender'].value).toBe('Male');
+  expect((saved.preferences as Record<string, { value: string }>)['eeo.race_ethnicity'].value).toBe('Hispanic or Latino');
+  await page.reload();
+  await expect(page.getByLabel('job title', { exact: true })).toHaveValue('Synthetic Role');
+  await expect(page.getByLabel('have you ever served in the us armed forces', { exact: true })).toHaveValue('No');
+  await page.getByLabel('Record my veteran/service answers from this managed application').check();
+  await expect(page.getByRole('status').filter({ hasText: 'Listening for a recognized' })).toBeVisible();
+  await page.getByLabel('Record my veteran/service answers from this managed application').uncheck();
+});

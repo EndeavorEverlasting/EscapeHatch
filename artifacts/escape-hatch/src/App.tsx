@@ -941,8 +941,8 @@ function AnswerForm({ answer, initialDraft, returnFocusRef, fallbackFocusRef, on
   });
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    // Read the actual control at commit time. A rapid Fill -> click can precede
-    // React's next render; stale state must never certify an empty required answer.
+    // Synchronously captured input events own required values at commit time.
+    // A rapid Fill -> click must never save an older rendered value.
     const submittedTitle = requiredDraft.current.title;
     const submittedContent = requiredDraft.current.content;
     const nextErrors = {
@@ -1132,8 +1132,8 @@ function ApplicationForm({ application, initialDraft, returnFocusRef, fallbackFo
   };
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    // Validate the live DOM before committing; React may not have rendered the
-    // immediately preceding edit. Never save a stale company/role after removal.
+    // Validate synchronously captured company/role edits before committing.
+    // React's pending render must not certify a stale pre-edit value.
     const submittedCompany = requiredDraft.current.company;
     const submittedRole = requiredDraft.current.role;
     const nextErrors = {

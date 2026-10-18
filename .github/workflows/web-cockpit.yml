@@ -1,14 +1,9 @@
 name: Web Cockpit Validation
 on:
+  # This workflow is mandatory for every PR to main. Do not filter away non-UI PRs:
+  # the promotion gate blocks until real browser proof is complete.
   pull_request:
     branches: [main]
-    paths:
-      - 'artifacts/escape-hatch/**'
-      - 'docs/plans/**'
-      - 'scripts/replit-plan-sync/**'
-      - 'scripts/validate_replit_transfer.py'
-      - 'docs/migrations/REPLIT_TRANSFER_2026-09-20.md'
-      - '.github/workflows/web-cockpit.yml'
   push:
     branches: [main]
     paths:
@@ -37,7 +32,7 @@ jobs:
       - run: npx --prefix artifacts/escape-hatch tsx scripts/replit-plan-sync/task-plan-sync.test.ts
       - run: npx --prefix artifacts/escape-hatch tsx scripts/replit-plan-sync/task-plan-sync.ts --input docs/plans/recovered-task-export.v1.json --output docs/plans --preview
       - run: git diff --check
-  browser:
+  web-cockpit-browser:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

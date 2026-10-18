@@ -38,12 +38,15 @@ jobs:
         with:
           python-version: '3.11'
       - name: Consequence classifier and deterministic cycle (no AI, no live ATS)
-        run: node --experimental-strip-types --test artifacts/escape-hatch/application-navigation-policy.test.ts artifacts/escape-hatch/application-autopilot-executor.test.ts artifacts/escape-hatch/managed-preparation-driver.test.ts artifacts/escape-hatch/browser-assist-control.test.ts
+        run: node --experimental-strip-types --test artifacts/escape-hatch/application-navigation-policy.test.ts artifacts/escape-hatch/application-autopilot-executor.test.ts artifacts/escape-hatch/managed-preparation-driver.test.ts
       - name: Install cockpit dependencies and Chromium for synthetic real-browser proof
         working-directory: artifacts/escape-hatch
         run: |
           npm install --no-audit --no-fund
           npx playwright install chromium
+      - name: Managed assist policy parsers after Playwright deps are available
+        working-directory: artifacts/escape-hatch
+        run: node --experimental-strip-types --test browser-assist-control.test.ts
       - name: Chromium synthetic ATS prepare-through-review; terminal effect journal must stay empty
         working-directory: artifacts/escape-hatch
         run: npx playwright test tests/application-autopilot-executor.spec.ts

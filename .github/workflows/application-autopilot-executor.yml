@@ -1,0 +1,35 @@
+name: Deterministic Application Autopilot Core
+on:
+  pull_request:
+    paths:
+      - 'artifacts/escape-hatch/application-autopilot-executor.ts'
+      - 'artifacts/escape-hatch/application-autopilot-executor.test.ts'
+      - 'artifacts/escape-hatch/application-navigation-policy.ts'
+      - '.github/workflows/application-autopilot-executor.yml'
+  push:
+    paths:
+      - 'artifacts/escape-hatch/application-autopilot-executor.ts'
+      - 'artifacts/escape-hatch/application-autopilot-executor.test.ts'
+      - 'artifacts/escape-hatch/application-navigation-policy.ts'
+      - '.github/workflows/application-autopilot-executor.yml'
+permissions:
+  contents: read
+jobs:
+  deterministic-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Consequence classifier and deterministic cycle (no AI, no live ATS)
+        run: node --experimental-strip-types --test artifacts/escape-hatch/application-navigation-policy.test.ts artifacts/escape-hatch/application-autopilot-executor.test.ts
+      - name: Parent completion floor stays fail-closed
+        run: python scripts/validate_application_autofill_parent.py
+      - name: Repository harness
+        run: python scripts/validate_harness.py
+      - name: Patch hygiene
+        run: git diff --check HEAD^ HEAD

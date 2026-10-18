@@ -3,6 +3,8 @@ import { Link } from 'wouter';
 import type { AssistProfile, ReviewedProposal } from '../lib/assist-contract';
 import type { Application, Profile } from '../lib/storage';
 import { approveSource, previewLocalSource, sourcePackageStatus, type SourceBinding, type SourcePreview } from '../lib/source-bridge';
+import { connectionFromSnapshot, isSubmittedLocked, parseTrackerSnapshot, selectNextActionableOpportunity, trackerOpportunityId } from '../lib/tracker-bridge';
+import { stageManagedLaunchIntent } from '../lib/managed-launch-intent';
 
 export type SourceStateProps = {
   profile: Profile;
@@ -40,7 +42,23 @@ export function SourcesPage(props: SourceStateProps & {
   const [opportunityId, setOpportunityId] = useState('');
   const [feedback, setFeedback] = useState('');
   const [busy, setBusy] = useState(false);
+  const [nextReady, setNextReady] = useState<{ id: string; company: string; role: string } | null>(null);
   const generation = useRef(0);
+  useEffect(() => {
+    let active = true;
+    fetch('/__escapehatch/tracker/status', { credentials: 'same-origin' })
+      .then((response) => response.ok ? response.json() as Promise<{ connection?: string; snapshot?: unknown }> : null)
+      .then((response) => {
+        if (!active || response?.connection !== 'CONNECTED') return;
+        const snapshot = parseTrackerSnapshot(response.snapshot);
+        if (!snapshot || connectionFromSnapshot(snapshot).status !== 'CONNECTED') return;
+        const next = selectNextActionableOpportunity(snapshot);
+        if (next?.applyUrl && !isSubmittedLocked(next)) {
+          setNextReady({ id: trackerOpportunityId(next), company: next.company, role: next.role });
+        }
+      }).catch(() => { /* Explicit launch shortcut unavailable; ordinary Sources remains usable. */ });
+    return () => { active = false; };
+  }, []);
   const current = useRef(props);
   current.current = props;
   useEffect(() => () => { generation.current += 1; }, []);
@@ -107,5 +125,13 @@ export function SourcesPage(props: SourceStateProps & {
     <SourcePackageSummary {...props} />
     {props.sourceBindings.length > 0 && <button className="underline" onClick={props.onForget}>Forget source bindings (keep approved profile)</button>}
     <p className="my-5"><Link href="/assist" className="underline">Continue to application assist</Link></p>
+    {nextReady && <section className="my-4 rounded-xl border border-border p-4" aria-label="Next managed application">
+      <strong>Next ready opportunity: {nextReady.company} — {nextReady.role}</strong>
+      <p className="my-2 text-sm">Launch the employer form in managed Chrome and fill only permitted, approved answers. Résumé and cover-letter files still require your review and attachment approval.</p>
+      <Link href={`/assist?opportunityId=${encodeURIComponent(nextReady.id)}`}
+        onClick={() => stageManagedLaunchIntent(nextReady.id, window.sessionStorage)}
+        className="inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
+        data-testid="sources-launch-next">Launch &amp; fill next application</Link>
+    </section>}
   </div>;
 }

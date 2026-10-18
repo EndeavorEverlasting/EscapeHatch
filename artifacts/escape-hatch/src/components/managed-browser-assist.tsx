@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type ChangeEvent, type Dispatch, type SetS
 import { ArrowUpRight, CheckCircle2, FileUp, LoaderCircle, ShieldCheck } from 'lucide-react';
 import type { Application, Profile } from '@/lib/storage';
 import { ApplicationPreferences } from './application-preferences';
-import { mergeTrackerIntoApplications, parseTrackerSnapshot } from '@/lib/tracker-bridge';
+import { connectionFromSnapshot, isSubmittedLocked, mergeTrackerIntoApplications, parseTrackerSnapshot, selectNextActionableOpportunity, trackerOpportunityId } from '@/lib/tracker-bridge';
+import { consumeManagedLaunchIntent } from '@/lib/managed-launch-intent';
 
 const API = '/__escapehatch/managed-assist';
 
@@ -78,6 +79,11 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const [url, setUrl] = useState('');
   const [selectedOpportunityId, setSelectedOpportunityId] = useState('');
   const operatorSelected = useRef(false);
+  const autoLaunchAttempted = useRef(false);
+  const [explicitLaunchId] = useState(() => consumeManagedLaunchIntent(window.sessionStorage));
+  const [verifiedNextReadyId, setVerifiedNextReadyId] = useState<string | null>(null);
+  const [trackerChecked, setTrackerChecked] = useState(false);
+  const [runtimeChecked, setRuntimeChecked] = useState(false);
   const [resume, setResume] = useState<File | null>(null);
   const [cover, setCover] = useState<File | null>(null);
   const [status, setStatus] = useState('idle');
@@ -92,10 +98,20 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     fetch('/__escapehatch/tracker/status', { credentials: 'same-origin' })
       .then((response) => response.ok ? response.json() as Promise<{ connection?: string; snapshot?: unknown }> : null)
       .then((value) => {
-        if (!active || value?.connection !== 'CONNECTED') return;
-        const snapshot = parseTrackerSnapshot(value.snapshot);
-        if (snapshot) setApplications((current) => mergeTrackerIntoApplications(current, snapshot));
-      }).catch(() => { /* Local-only application selections remain available. */ });
+        if (!active) return;
+        if (value?.connection === 'CONNECTED') {
+          const snapshot = parseTrackerSnapshot(value.snapshot);
+          if (snapshot && connectionFromSnapshot(snapshot).status === 'CONNECTED') {
+            setApplications((current) => mergeTrackerIntoApplications(current, snapshot));
+            const next = selectNextActionableOpportunity(snapshot);
+            if (next?.applyUrl && !isSubmittedLocked(next)) setVerifiedNextReadyId(trackerOpportunityId(next));
+          }
+        }
+        setTrackerChecked(true);
+      }).catch(() => {
+        if (active) setTrackerChecked(true);
+        // Local selection remains available; one-click automatic launch requires fresh source evidence.
+      });
     return () => { active = false; };
   }, [setApplications]);
 
@@ -132,9 +148,35 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           });
         }
       }
-    }).catch(() => { if (active) setMessage('Managed browser is unavailable until EscapeHatch is started with its Windows launcher.'); });
+    }).catch(() => { if (active) setMessage('Managed browser is unavailable until EscapeHatch is started with its Windows launcher.'); })
+      .finally(() => { if (active) setRuntimeChecked(true); });
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    if (!explicitLaunchId || autoLaunchAttempted.current || !trackerChecked || !runtimeChecked) return;
+    const queryId = new URLSearchParams(window.location.search).get('opportunityId');
+    if (queryId !== explicitLaunchId || verifiedNextReadyId !== explicitLaunchId) {
+      autoLaunchAttempted.current = true;
+      setMessage('Automatic launch paused: the requested opportunity is no longer the freshly verified next Ready-to-Apply job. Review the selection before launching.');
+      return;
+    }
+    const selected = applications.find((item) => item.id === explicitLaunchId);
+    if (!selected || !selected.url || selected.status === 'applied' || selected.status === 'closed') {
+      autoLaunchAttempted.current = true;
+      setMessage('Automatic launch stopped: no active matching opportunity was available.');
+      return;
+    }
+    // Selection is populated in a separate effect. Never launch a stale or other employer URL.
+    if (selectedOpportunityId !== selected.id || url !== selected.url) return;
+    if (operatorSelected.current) {
+      autoLaunchAttempted.current = true;
+      setMessage('Automatic launch cancelled because the opportunity selection was changed.');
+      return;
+    }
+    autoLaunchAttempted.current = true;
+    void run('launch');
+  }, [applications, explicitLaunchId, runtimeChecked, trackerChecked, selectedOpportunityId, url, verifiedNextReadyId]);
 
   async function run(action: 'launch' | 'fill' | 'attach' | 'prepare') {
     setBusy(true);

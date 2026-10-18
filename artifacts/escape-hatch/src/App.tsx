@@ -79,6 +79,7 @@ import {
 import { applyAcceptedResumeImport, extractResumeText, getAcceptedResumeContactPatch, parseResumeText, type ResumeImport } from '@/lib/resume-import';
 import { initialSession, parseAssistSessionStatus, type AssistSession } from '@/lib/assist-session';
 import { ManagedBrowserAssist } from '@/components/managed-browser-assist';
+import { stageManagedLaunchIntent } from '@/lib/managed-launch-intent';
 import { SourcesPage, SourcePackageSummary } from '@/components/sources-page';
 import {
   SOURCE_BINDINGS_KEY,
@@ -658,7 +659,9 @@ function HomePage({ profile, answers, applications, setApplications }: { profile
     <div className="grid gap-4 md:grid-cols-[1.35fr_.65fr]">
       <section className="animate-rise rounded-2xl bg-primary p-6 text-primary-foreground shadow-md sm:p-8" data-testid="home-next-opportunity">
         <div className="flex items-start justify-between gap-4"><div><p className="font-mono-app text-[10px] uppercase tracking-[.18em] text-primary-foreground/65">one useful thing</p><h2 className="mt-3 max-w-lg font-display text-3xl leading-tight sm:text-4xl">{next ? `Move ${next.company} one step closer.` : tracker.status === 'CONNECTED' ? 'No Ready-to-Apply opportunities in the tracker.' : 'Connect your tracker or add one opportunity.'}</h2></div><span className="rounded-full border border-primary-foreground/20 px-3 py-1 font-mono-app text-[10px] uppercase tracking-widest text-primary-foreground/70">next</span></div>
-        {next ? <div className="mt-8 flex flex-col gap-4 rounded-xl bg-primary-foreground/10 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold" data-testid="home-next-action">{next.nextAction || `Review the ${next.role} opportunity`}</p><p className="mt-1 text-xs text-primary-foreground/65" data-testid="home-next-company-role">{next.company} · {next.role}</p>{next.url ? <a href={next.url} target="_blank" rel="noreferrer" data-testid="home-next-url" className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-primary-foreground underline">Open posting <ExternalLink size={12} /></a> : null}</div>{nextLocked ? <span className="shrink-0 rounded-lg border border-primary-foreground/20 px-3.5 py-2.5 text-sm font-bold text-primary-foreground/80" data-testid="home-next-locked">Submitted — do not reapply</span> : next.status === 'applied' ? <span className="shrink-0 rounded-lg border border-primary-foreground/20 px-3.5 py-2.5 text-sm font-bold text-primary-foreground/80">Applied</span> : <div className="flex shrink-0 flex-col gap-2 sm:items-end"><Link href={`/assist?opportunityId=${encodeURIComponent(next.id)}`} data-testid="link-prepare-next" className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-3.5 py-2.5 text-sm font-bold text-foreground transition hover:brightness-95">Prepare in Browser Assist <ArrowRight size={15} /></Link><Button variant="quiet" onClick={() => markApplied(next)} data-testid={`button-progress-${next.id}`} className="shrink-0">Mark applied <ArrowRight size={15} /></Button></div>}</div> : tracker.status !== 'CONNECTED' ? <Link href="/sources" data-testid="link-connect-tracker" className="mt-8 inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-3 text-sm font-bold text-foreground transition hover:brightness-95">Review Sources <ArrowRight size={15} /></Link> : <Link href="/applications" data-testid="link-add-first-application" className="mt-8 inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-3 text-sm font-bold text-foreground transition hover:brightness-95">Review applications <ArrowRight size={15} /></Link>}
+        {next ? <div className="mt-8 flex flex-col gap-4 rounded-xl bg-primary-foreground/10 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold" data-testid="home-next-action">{next.nextAction || `Review the ${next.role} opportunity`}</p><p className="mt-1 text-xs text-primary-foreground/65" data-testid="home-next-company-role">{next.company} · {next.role}</p>{next.url ? <a href={next.url} target="_blank" rel="noreferrer" data-testid="home-next-url" className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-primary-foreground underline">Open posting <ExternalLink size={12} /></a> : null}</div>{nextLocked ? <span className="shrink-0 rounded-lg border border-primary-foreground/20 px-3.5 py-2.5 text-sm font-bold text-primary-foreground/80" data-testid="home-next-locked">Submitted — do not reapply</span> : next.status === 'applied' ? <span className="shrink-0 rounded-lg border border-primary-foreground/20 px-3.5 py-2.5 text-sm font-bold text-primary-foreground/80">Applied</span> : <div className="flex shrink-0 flex-col gap-2 sm:items-end"><Link href={`/assist?opportunityId=${encodeURIComponent(next.id)}`}
+  onClick={() => stageManagedLaunchIntent(next.id, window.sessionStorage)}
+  data-testid="link-prepare-next" className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-3.5 py-2.5 text-sm font-bold text-foreground transition hover:brightness-95">Launch & fill in managed Chrome <ArrowRight size={15} /></Link><Button variant="quiet" onClick={() => markApplied(next)} data-testid={`button-progress-${next.id}`} className="shrink-0">Mark applied <ArrowRight size={15} /></Button></div>}</div> : tracker.status !== 'CONNECTED' ? <Link href="/sources" data-testid="link-connect-tracker" className="mt-8 inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-3 text-sm font-bold text-foreground transition hover:brightness-95">Review Sources <ArrowRight size={15} /></Link> : <Link href="/applications" data-testid="link-add-first-application" className="mt-8 inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-3 text-sm font-bold text-foreground transition hover:brightness-95">Review applications <ArrowRight size={15} /></Link>}
         {appliedUndo && <div role="status" aria-live="polite" data-testid="home-applied-undo-notice" className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary-foreground/20 bg-primary-foreground/10 px-4 py-3 text-sm"><span>Marked {appliedUndo.company} applied.</span><Button type="button" variant="quiet" onClick={undoMarkApplied} data-testid="button-undo-mark-applied">Undo</Button></div>}
       </section>
       <section className="animate-rise-delay-1 rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
@@ -927,6 +930,9 @@ function AnswerForm({ answer, initialDraft, returnFocusRef, fallbackFocusRef, on
   const [errors, setErrors] = useState<{ title?: string; content?: string }>({});
   const titleRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLTextAreaElement>(null);
+  // Input handlers synchronously capture the user's last edit, independent of
+  // whether a controlled React state render has committed before the Save click.
+  const requiredDraft = useRef({ title, content });
   const clearError = (key: 'title' | 'content') => setErrors((current) => {
     if (!current[key]) return current;
     const next = { ...current };
@@ -935,22 +941,26 @@ function AnswerForm({ answer, initialDraft, returnFocusRef, fallbackFocusRef, on
   });
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    // Synchronously captured input events own required values at commit time.
+    // A rapid Fill -> click must never save an older rendered value.
+    const submittedTitle = requiredDraft.current.title;
+    const submittedContent = requiredDraft.current.content;
     const nextErrors = {
-      ...(title.trim() ? {} : { title: 'Add a short title before saving.' }),
-      ...(content.trim() ? {} : { content: 'Write an answer before saving.' }),
+      ...(submittedTitle.trim() ? {} : { title: 'Add a short title before saving.' }),
+      ...(submittedContent.trim() ? {} : { content: 'Write an answer before saving.' }),
     };
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
       window.requestAnimationFrame(() => {
-        if (!title.trim()) titleRef.current?.focus();
+        if (!submittedTitle.trim()) titleRef.current?.focus();
         else contentRef.current?.focus();
       });
       return;
     }
-    onSave({ title: title.trim(), category, content: content.trim() });
+    onSave({ title: submittedTitle.trim(), category, content: submittedContent.trim() });
   };
   const dismiss = () => onClose({ title, category, content });
-  return <Modal title={answer ? 'Edit answer' : 'New answer'} eyebrow="Answer library" onClose={dismiss} returnFocusRef={returnFocusRef} fallbackFocusRef={fallbackFocusRef}><form onSubmit={submit} className="space-y-5"><Field label="Short title" name="answer-title" value={title} onChange={(event) => { setTitle(event.target.value); if (event.target.value.trim()) clearError('title'); }} placeholder="Why I am interested in this kind of work" required inputRef={titleRef} error={errors.title} data-testid="input-answer-title" /><SelectField label="Category" value={category} onChange={(event) => setCategory(event.target.value)} options={categories.map((item) => ({ value: item, label: item }))} testId="select-answer-category" /><TextArea label="Your answer" name="answer-content" value={content} onChange={(event) => { setContent(event.target.value); if (event.target.value.trim()) clearError('content'); }} placeholder="Write it in your own voice. It does not need to be perfect." required textareaRef={contentRef} error={errors.content} data-testid="textarea-answer-content" /><div className="flex justify-end gap-2 pt-2"><Button type="button" variant="outline" onClick={dismiss} data-testid="button-cancel-answer">Cancel</Button><Button type="submit" data-testid="button-save-answer"><Check size={16} /> Save answer</Button></div></form></Modal>;
+  return <Modal title={answer ? 'Edit answer' : 'New answer'} eyebrow="Answer library" onClose={dismiss} returnFocusRef={returnFocusRef} fallbackFocusRef={fallbackFocusRef}><form onSubmit={submit} className="space-y-5"><Field label="Short title" name="answer-title" value={title} onChange={(event) => { requiredDraft.current.title = event.target.value; setTitle(event.target.value); if (event.target.value.trim()) clearError('title'); }} placeholder="Why I am interested in this kind of work" required inputRef={titleRef} error={errors.title} data-testid="input-answer-title" /><SelectField label="Category" value={category} onChange={(event) => setCategory(event.target.value)} options={categories.map((item) => ({ value: item, label: item }))} testId="select-answer-category" /><TextArea label="Your answer" name="answer-content" value={content} onChange={(event) => { requiredDraft.current.content = event.target.value; setContent(event.target.value); if (event.target.value.trim()) clearError('content'); }} placeholder="Write it in your own voice. It does not need to be perfect." required textareaRef={contentRef} error={errors.content} data-testid="textarea-answer-content" /><div className="flex justify-end gap-2 pt-2"><Button type="button" variant="outline" onClick={dismiss} data-testid="button-cancel-answer">Cancel</Button><Button type="submit" data-testid="button-save-answer"><Check size={16} /> Save answer</Button></div></form></Modal>;
 }
 
 function statusTone(status: ApplicationStatus) {
@@ -1107,6 +1117,7 @@ function ApplicationForm({ application, initialDraft, returnFocusRef, fallbackFo
   const [errors, setErrors] = useState<{ company?: string; role?: string }>({});
   const companyRef = useRef<HTMLInputElement>(null);
   const roleRef = useRef<HTMLInputElement>(null);
+  const requiredDraft = useRef({ company: form.company, role: form.role });
   const clearError = (key: 'company' | 'role') => setErrors((current) => {
     if (!current[key]) return current;
     const next = { ...current };
@@ -1115,24 +1126,29 @@ function ApplicationForm({ application, initialDraft, returnFocusRef, fallbackFo
   });
   const update = (key: keyof typeof form) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const value = event.target.value;
+    if (key === 'company' || key === 'role') requiredDraft.current[key] = value;
     setForm((current) => ({ ...current, [key]: value }));
     if ((key === 'company' || key === 'role') && value.trim()) clearError(key);
   };
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    // Validate synchronously captured company/role edits before committing.
+    // React's pending render must not certify a stale pre-edit value.
+    const submittedCompany = requiredDraft.current.company;
+    const submittedRole = requiredDraft.current.role;
     const nextErrors = {
-      ...(form.company.trim() ? {} : { company: 'Add a company before saving.' }),
-      ...(form.role.trim() ? {} : { role: 'Add a role before saving.' }),
+      ...(submittedCompany.trim() ? {} : { company: 'Add a company before saving.' }),
+      ...(submittedRole.trim() ? {} : { role: 'Add a role before saving.' }),
     };
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
       window.requestAnimationFrame(() => {
-        if (!form.company.trim()) companyRef.current?.focus();
+        if (!submittedCompany.trim()) companyRef.current?.focus();
         else roleRef.current?.focus();
       });
       return;
     }
-    onSave({ ...form, company: form.company.trim(), role: form.role.trim() });
+    onSave({ ...form, company: submittedCompany.trim(), role: submittedRole.trim() });
   };
   const dismiss = () => onClose(form);
   return <Modal title={application ? 'Edit opportunity' : 'Add opportunity'} eyebrow="Application queue" onClose={dismiss} returnFocusRef={returnFocusRef} fallbackFocusRef={fallbackFocusRef}><form onSubmit={submit} className="space-y-5"><div className="grid gap-4 sm:grid-cols-2"><Field label="Company" name="company" value={form.company} onChange={update('company')} placeholder="Company name" required inputRef={companyRef} error={errors.company} data-testid="input-application-company" /><Field label="Role" name="role" value={form.role} onChange={update('role')} placeholder="Role or title" required inputRef={roleRef} error={errors.role} data-testid="input-application-role" /></div><Field label="Job link" name="url" type="url" value={form.url} onChange={update('url')} placeholder="https://..." data-testid="input-application-url" /><div className="grid gap-4 sm:grid-cols-2"><SelectField label="Status" value={form.status} onChange={update('status')} options={(Object.keys(statusLabels) as ApplicationStatus[]).map((key) => ({ value: key, label: statusLabels[key] }))} testId="select-application-status" /><SelectField label="Priority" value={form.priority} onChange={update('priority')} options={[{ value: 'high', label: 'High' }, { value: 'normal', label: 'Normal' }, { value: 'low', label: 'Low' }]} testId="select-application-priority" /></div><Field label="Next action" name="nextAction" value={form.nextAction} onChange={update('nextAction')} placeholder="Read the role brief, ask for a referral..." data-testid="input-application-next-action" /><TextArea label="Notes" name="notes" value={form.notes} onChange={update('notes')} placeholder="What stood out? What do you want to remember?" data-testid="textarea-application-notes" /><div className="flex justify-end gap-2 pt-2"><Button type="button" variant="outline" onClick={dismiss} data-testid="button-cancel-application">Cancel</Button><Button type="submit" data-testid="button-save-application"><Check size={16} /> Save opportunity</Button></div></form></Modal>;

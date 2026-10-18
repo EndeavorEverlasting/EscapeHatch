@@ -39,3 +39,39 @@ test('empty read cannot approve a source or alter candidate state', async ({ pag
   await expect(page.getByRole('button', { name: 'Approve selected claims' })).toHaveCount(0);
   expect(await page.evaluate(() => localStorage.getItem('escape-hatch-profile'))).toBe(before);
 });
+
+test('Sources can directly launch the next fresh verified application through EscapeHatch, without attaching unapproved PDFs', async ({ page }) => {
+  const nextUrl = 'https://jobs.ashbyhq.com/thyme-care/synthetic-source';
+  const snapshot = {
+    schema: 'escapehatch/tracker-snapshot/v1', provider: 'synthetic',
+    spreadsheetId: 'sheet', sheetName: 'Applications', contentDigest: 'synthetic',
+    capturedAtUtc: new Date().toISOString(), authPath: 'fixture',
+    localGoogleAuthPresent: false, metrics: {},
+    applications: [{
+      sheetRow: 32, company: 'Thyme Care', role: 'Product Operations Lead',
+      status: 'Ready to Apply', appliedCheckbox: false, priority: 'High', applyUrl: nextUrl,
+    }],
+  };
+  const actions: string[] = [];
+  await page.route('**/__escapehatch/tracker/status', (route) => route.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ connection: 'CONNECTED', snapshot }),
+  }));
+  await page.route('**/__escapehatch/managed-assist/**', (route) => {
+    const action = route.request().url().split('/').at(-1) || '';
+    actions.push(action);
+    const state = action === 'launch' ? 'application_form_open_review_required' :
+      action === 'fill' ? 'fields_filled_review_required' : 'idle';
+    return route.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify({ ok: true, state, browserOpen: false,
+        filled: action === 'fill' ? ['email'] : [], skipped: [] }) });
+  });
+  await page.goto('/sources');
+  await expect(page.getByTestId('sources-launch-next')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Next managed application' })).toContainText('Thyme Care');
+  await expect(page.getByRole('region', { name: 'Next managed application' })).toContainText('files still require your review');
+  await page.getByTestId('sources-launch-next').click();
+  await expect(page.getByTestId('managed-browser-feedback')).toContainText('Filled: email');
+  expect(actions.filter(action => ['launch', 'fill', 'attach', 'prepare'].includes(action))).toEqual(['launch', 'fill']);
+  expect(actions).not.toContain('submit');
+});

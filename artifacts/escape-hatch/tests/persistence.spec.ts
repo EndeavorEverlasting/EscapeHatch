@@ -53,7 +53,9 @@ async function pressRecoveryAtExactDeadline(
   key: 'Enter' | 'Space',
   deadline: number,
 ) {
-  await page.clock.setSystemTime(new Date(deadline - 100));
+  // Position well before the edge; exact timing is asserted by the temporary
+  // Date.now override during activation, not by real CI scheduling speed.
+  await page.clock.setSystemTime(new Date(deadline - 1_000));
   await recoveryButton.focus();
   await page.evaluate((exactDeadline) => {
     const pageWindow = window as Window & { __escapeHatchOriginalDateNow?: typeof Date.now };
@@ -88,7 +90,9 @@ async function pressRecoveryRepeatedlyBeforeDeadline(
   key: 'Enter' | 'Space',
   deadline: number,
 ) {
-  await page.clock.setSystemTime(new Date(deadline - 100));
+  // Position well before the edge; exact timing is asserted by the temporary
+  // Date.now override during activation, not by real CI scheduling speed.
+  await page.clock.setSystemTime(new Date(deadline - 1_000));
   await recoveryButton.focus();
   await page.evaluate((beforeDeadline) => {
     const pageWindow = window as Window & { __escapeHatchOriginalDateNow?: typeof Date.now };
@@ -2060,6 +2064,8 @@ test('does not recover an answer draft with Enter or Space at its exact deadline
     await page.getByTestId('input-answer-title').fill(`Cross-view keyboard answer ${index}`);
     await page.getByTestId('textarea-answer-content').fill('This answer expires after changing views.');
     await page.getByTestId('button-cancel-answer').click();
+    // Deadline belongs to the original draft; route traversal must not reset it.
+    const exactDeadline = await page.evaluate(() => Date.now() + 8_000);
 
     for (let viewChange = 0; viewChange < 3; viewChange += 1) {
       await page.getByTestId('link-sidebar-applications').click();
@@ -2068,7 +2074,6 @@ test('does not recover an answer draft with Enter or Space at its exact deadline
       await expect(page.getByTestId('answer-draft-notice')).toBeVisible();
     }
 
-    const exactDeadline = await page.evaluate(() => Date.now() + 8_000);
     const recoveryButton = page.getByTestId('button-recover-answer-draft');
     await expect(page.getByTestId('answer-draft-notice')).toBeVisible();
     await expect(recoveryButton).toBeVisible();
@@ -2094,6 +2099,8 @@ test('does not recover an opportunity draft with Enter or Space at its exact dea
     await page.getByTestId('input-company').fill(`Cross-view keyboard Labs ${index}`);
     await page.getByTestId('input-role').fill('Deadline researcher');
     await page.getByTestId('button-cancel-application').click();
+    // Deadline belongs to the original draft; route traversal must not reset it.
+    const exactDeadline = await page.evaluate(() => Date.now() + 8_000);
 
     for (let viewChange = 0; viewChange < 3; viewChange += 1) {
       await page.getByTestId('link-sidebar-answer-library').click();
@@ -2102,7 +2109,6 @@ test('does not recover an opportunity draft with Enter or Space at its exact dea
       await expect(page.getByTestId('application-draft-notice')).toBeVisible();
     }
 
-    const exactDeadline = await page.evaluate(() => Date.now() + 8_000);
     const recoveryButton = page.getByTestId('button-recover-application-draft');
     await expect(page.getByTestId('application-draft-notice')).toBeVisible();
     await expect(recoveryButton).toBeVisible();

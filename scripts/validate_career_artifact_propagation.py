@@ -152,9 +152,41 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, default=FIXTURE,
                         help="synthetic cases or untracked local/private receipt JSON")
+    parser.add_argument("--scaffold", help="emit a fully blocked receipt template for this changed node")
+    parser.add_argument("--source-revision", help="provider-reviewed source revision for --scaffold")
     args = parser.parse_args()
     try:
         nodes, policy = load_contract()
+        if args.scaffold is not None:
+            if args.scaffold not in nodes:
+                raise PropagationError("unknown changed node")
+            need(args.source_revision, "source revision for scaffold")
+            affected = sorted(reachable(args.scaffold, nodes))
+            if not affected:
+                raise PropagationError("changed node has no descendants to reconcile")
+            case = {
+                "name": "unverified-reconciliation",
+                "changed_node": args.scaffold,
+                "source_revision": args.source_revision,
+                "receipts": {
+                    node: {
+                        "status": "BLOCKED",
+                        "source_revision": args.source_revision,
+                        "reason": "dependent not yet verified",
+                        "next_action": "read current provider source and dependent; reconcile, export and read back",
+                    }
+                    for node in affected
+                },
+                "expected": "OPEN",
+            }
+            if check_case(case, nodes, policy) != "OPEN":
+                raise PropagationError("scaffold is not safely blocked")
+            print(json.dumps({
+                "schema": "escapehatch/career-artifact-propagation-cases/v1",
+                "synthetic_only": False,
+                "cases": [case],
+            }, indent=2))
+            return 0
         payload = json.loads(args.input.read_text(encoding="utf-8"))
         if payload.get("schema") != "escapehatch/career-artifact-propagation-cases/v1":
             raise PropagationError("receipt case schema drift")

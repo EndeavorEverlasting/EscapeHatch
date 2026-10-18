@@ -46,6 +46,7 @@ class RepositoryPromotionTests(unittest.TestCase):
         self.assertNotIn("paths:", pr_part)
         workflow = (ROOT / ".github/workflows/promotion.yml").read_text(encoding="utf-8")
         self.assertIn("verify-browser --candidate-sha", workflow)
+        self.assertIn("ready_for_review", workflow)
         self.assertIn("BROWSER_GATE_FAILED: no promotion", workflow)
         self.assertIn("BROWSER_GATE_TIMEOUT: no promotion", workflow)
 

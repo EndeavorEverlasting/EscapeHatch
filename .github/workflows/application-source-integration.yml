@@ -1,0 +1,41 @@
+name: P04 P82 Integrated Sources and Application UX
+on:
+  pull_request:
+    paths:
+      - 'docs/APPLICATION_SOURCE_INTEGRATED_UX_P04_P82_2026-10-18.md'
+      - 'docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md'
+      - 'harness/contracts/application-source-integration.v1.json'
+      - 'harness/reports/application-source-ux-p04-dispatch.v1.json'
+      - 'scripts/validate_application_source_integration.py'
+      - 'tests/test_application_source_integration.py'
+      - '.github/workflows/application-source-integration.yml'
+  push:
+    paths:
+      - 'docs/APPLICATION_SOURCE_INTEGRATED_UX_P04_P82_2026-10-18.md'
+      - 'harness/contracts/application-source-integration.v1.json'
+      - 'harness/reports/application-source-ux-p04-dispatch.v1.json'
+      - 'scripts/validate_application_source_integration.py'
+      - 'tests/test_application_source_integration.py'
+      - '.github/workflows/application-source-integration.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: P04 source and two-interface invariants
+        run: python scripts/validate_application_source_integration.py
+      - name: P82 adversarial design hypotheses
+        run: python -m unittest discover -s tests -p 'test_application_source_integration.py' -v
+      - name: Preserve the full browser-application parent
+        run: python scripts/validate_application_autofill_parent.py
+      - name: Existing EscapeHatch harness
+        run: python scripts/validate_harness.py
+      - name: Patch whitespace
+        run: git diff --check HEAD^ HEAD

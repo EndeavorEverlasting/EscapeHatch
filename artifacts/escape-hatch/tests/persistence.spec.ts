@@ -53,8 +53,9 @@ async function pressRecoveryAtExactDeadline(
   key: 'Enter' | 'Space',
   deadline: number,
 ) {
-  // Freeze near the target, preventing a CI focus delay from expiring the control.
-  await page.clock.pauseAt(new Date(deadline - 100));
+  // Position well before the edge; exact timing is asserted by the temporary
+  // Date.now override during activation, not by real CI scheduling speed.
+  await page.clock.setSystemTime(new Date(deadline - 1_000));
   await recoveryButton.focus();
   await page.evaluate((exactDeadline) => {
     const pageWindow = window as Window & { __escapeHatchOriginalDateNow?: typeof Date.now };
@@ -89,8 +90,9 @@ async function pressRecoveryRepeatedlyBeforeDeadline(
   key: 'Enter' | 'Space',
   deadline: number,
 ) {
-  // Freeze near the target, preventing a CI focus delay from expiring the control.
-  await page.clock.pauseAt(new Date(deadline - 100));
+  // Position well before the edge; exact timing is asserted by the temporary
+  // Date.now override during activation, not by real CI scheduling speed.
+  await page.clock.setSystemTime(new Date(deadline - 1_000));
   await recoveryButton.focus();
   await page.evaluate((beforeDeadline) => {
     const pageWindow = window as Window & { __escapeHatchOriginalDateNow?: typeof Date.now };

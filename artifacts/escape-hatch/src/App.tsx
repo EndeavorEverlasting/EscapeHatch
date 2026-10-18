@@ -624,17 +624,12 @@ function HomePage({ profile, answers, applications, setApplications }: { profile
         { label: 'Submitted', value: String(metrics.submittedStatus), caption: 'status text Submitted (not checkbox alone)', href: '/applications', testId: 'stat-submitted' },
         { label: 'Ready to apply', value: String(metrics.readyToApply), caption: `${metrics.inProcess} in process · ${metrics.highPriority} high priority`, href: '/applications', testId: 'stat-ready' },
       ]
-    : tracker.status === 'NOT_CONNECTED' || tracker.status === 'STALE'
-      ? [
-          { label: 'Tracker', value: '—', caption: tracker.status === 'STALE' ? 'Stale — refresh before trusting counts' : 'Not connected — counts withheld', href: '/sources', testId: 'stat-tracker-offline' },
-          { label: 'Local queue', value: String(active.length), caption: 'workspace-only rows (not career source of truth)', href: '/applications', testId: 'stat-local-queue' },
-          { label: 'Reusable answers', value: String(answers.length), caption: 'answers ready to borrow', href: '/answers', testId: 'stat-answers' },
-        ]
-      : [
-          { label: 'In motion', value: String(active.filter((item) => item.status !== 'saved').length), caption: 'applications beyond saved', href: '/applications', testId: 'stat-in-motion' },
-          { label: 'On deck', value: String(active.filter((item) => item.status === 'saved').length), caption: 'opportunities to explore', href: '/applications', testId: 'stat-on-deck' },
-          { label: 'Reusable answers', value: String(answers.length), caption: 'answers ready to borrow', href: '/answers', testId: 'stat-answers' },
-        ];
+    : [
+        // Offline/stale: local workspace counts only — tracker panel above owns provenance; never label these as verified career totals.
+        { label: 'In motion', value: String(active.filter((item) => item.status !== 'saved').length), caption: tracker.status === 'STALE' ? 'local only · tracker stale' : 'local workspace only · tracker not connected', href: '/applications', testId: 'link-stat-0' },
+        { label: 'On deck', value: String(active.filter((item) => item.status === 'saved').length), caption: 'local opportunities to explore', href: '/applications', testId: 'link-stat-1' },
+        { label: 'Reusable answers', value: String(answers.length), caption: 'answers ready to borrow', href: '/answers', testId: 'link-stat-2' },
+      ];
   return <div>
     <PageIntro eyebrow="Wednesday · your cockpit" title={profile.first_name ? `Keep going, ${displayName(profile)}.` : 'Make room for momentum.'} description="A small, private place to move one good opportunity forward at a time." />
     <section className="mb-6 rounded-2xl border border-border bg-card p-5 shadow-sm" data-testid="tracker-connection-panel" data-tracker-status={tracker.status}>

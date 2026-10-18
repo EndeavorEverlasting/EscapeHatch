@@ -36,6 +36,13 @@ All resume, cover-letter, career-profile, export, and browser-application text m
 
 Before releasing generated text, load `contracts/career-claim-fidelity.v1.json` and run `python scripts/validate_career_claim_fidelity.py`; apply its local `--input` mode to untracked, source-grounded claim paragraphs when available. A passing synthetic check is **not** a proof of arbitrary text semantics, real source ingestion, PDF regeneration, or complete browser application readiness. Private claim records, resumes, contact data, and documents must remain outside this public repository.
 
+
+### Career artifact propagation must be reconciled
+
+A user correction, approved new achievement, or approved career-story edit is a **source event**, not permission to silently rewrite every document. Before closing the work, identify the affected master and role-specific resumes, approved cover letters, derived PDFs, pre-submission bundles, and browser-application fields. Use the canonical dependency and receipt contract at `harness/contracts/career-artifact-propagation.v1.json` and its validator once installed. For every reachable dependent, record `UPDATED_VERIFIED`, `VERIFIED_UNCHANGED`, `PROTECTED_NO_EDIT`, `BLOCKED`, or genuinely `NOT_APPLICABLE` with source revision and destination readback evidence. Never treat a plan, an export request, or a GitHub merge as verified downstream propagation. A missing or stale dependent must not be reported current.
+
+**Respect author approval and live work:** leave user-approved documents unchanged unless the operator expressly requests editing them; do not overwrite an active application session, submit an application, or replace private career assets without authorized provider writes. A protected artifact may be checked for impact and marked `PROTECTED_NO_EDIT` rather than mutated. Disclose stale or blocked outputs in the handoff; do not quietly backfill them or invent facts. Private career text, source locators, identities, and packet bytes must never enter tracked fixtures or public commits.
+
 ## 2. Instruction Precedence
 
 When instructions conflict, use this order from highest to lowest precedence:

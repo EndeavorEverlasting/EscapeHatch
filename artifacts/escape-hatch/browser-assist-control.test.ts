@@ -16,6 +16,16 @@ test('only public HTTPS application URLs are accepted', () => {
     'https://x.local/page', 'not-a-url']) {
     assert.throws(() => validateApplicationUrl(url), /URL|HTTPS/);
   }
+  const previous = process.env.ESCAPEHATCH_ALLOW_SYNTHETIC_ATS;
+  try {
+    process.env.ESCAPEHATCH_ALLOW_SYNTHETIC_ATS = '1';
+    assert.match(validateApplicationUrl('http://127.0.0.1:8765/apply/step/1'), /^http:\/\/127\.0\.0\.1:8765\//);
+    assert.throws(() => validateApplicationUrl('http://192.168.1.2:8765/x'), /URL|HTTPS/);
+    assert.throws(() => validateApplicationUrl('http://localhost:8765/x'), /URL|HTTPS/);
+  } finally {
+    if (previous === undefined) delete process.env.ESCAPEHATCH_ALLOW_SYNTHETIC_ATS;
+    else process.env.ESCAPEHATCH_ALLOW_SYNTHETIC_ATS = previous;
+  }
 });
 
 test('only whitelisted known contact fields survive, phone is withheld without authority', () => {

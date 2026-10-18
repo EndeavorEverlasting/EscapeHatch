@@ -50,6 +50,13 @@ export function validateApplicationUrl(value: unknown): string {
   let url: URL;
   try { url = new URL(value); } catch { throw new Error('The application URL is invalid.'); }
   const hostname = url.hostname.toLowerCase();
+  // Opt-in only: repository synthetic ATS fixtures on loopback for product proof.
+  // Never treats arbitrary LAN hosts or employer sites as exempt.
+  if (process.env.ESCAPEHATCH_ALLOW_SYNTHETIC_ATS === '1' &&
+      url.protocol === 'http:' && hostname === '127.0.0.1' && url.port &&
+      !url.username && !url.password && /^\d{2,5}$/.test(url.port)) {
+    return url.href;
+  }
   if (url.protocol !== 'https:' || url.username || url.password || url.port ||
       !hostname.includes('.') || hostname.endsWith('.local') || hostname.endsWith('.localhost') || hostname.endsWith('.internal') || hostname.endsWith('.test') ||
       hostname === 'localhost' || hostname === '0.0.0.0' ||

@@ -60,6 +60,12 @@ From artifacts/escape-hatch on a clean, isolated checkout:
 Test suites cover URL/contact/PDF policy and cockpit route-to-action integration
 with **mocked** loopback results. These do not prove Chrome was launched.
 
+Synthetic product proof (repository ATS only): start the managed runtime with
+`ESCAPEHATCH_ALLOW_SYNTHETIC_ATS=1` on an unused port (for example `PORT=21032`), then run
+`node --experimental-strip-types scripts/proof_managed_prepare_synthetic.mjs`. Expect
+`REVIEW_READY`, two intermediate draft advances, and zero terminal commits. The opt-in flag
+permits only `http://127.0.0.1:<port>` URLs; public HTTPS remains the default employer path.
+
 LIVE WIN11 acceptance requires observing:
 1. Launcher state OWNED_HEALTHY with explicit running process and port.
 2. Browser assist page shows Launch Application and Mandiant/custom job URL.

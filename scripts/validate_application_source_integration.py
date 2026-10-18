@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = ROOT / "harness/contracts/application-source-integration.v1.json"
 DISPATCH = ROOT / "harness/reports/application-source-ux-p04-dispatch.v1.json"
 SPEC = ROOT / "docs/APPLICATION_SOURCE_INTEGRATED_UX_P04_P82_2026-10-18.md"
+HANDOFFS = ROOT / "harness/reports/application-source-ux-p04-agent-handoffs.md"
 PARENT = ROOT / "harness/contracts/application-autofill-parent.v1.json"
 
 REQUIRED_LANES = ("F0", "A1", "B1", "C1", "D1", "I1", "R1", "M1")
@@ -28,7 +29,7 @@ def require(value: bool, reason: str) -> None:
         raise ContractError(reason)
 
 
-def validate(contract: dict, manifest: dict, document: str, parent: dict) -> None:
+def validate(contract: dict, manifest: dict, document: str, parent: dict, handoffs: str | None = None) -> None:
     require(isinstance(contract, dict) and contract.get("schema") == "escapehatch/integrated-career-source-ux/v1",
             "integration schema invalid")
     require(contract.get("canonical_owner") == parent.get("owner") == "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md",
@@ -142,6 +143,16 @@ def validate(contract: dict, manifest: dict, document: str, parent: dict) -> Non
     require("App.tsx" in " ".join(lane_map["I1"]["owned"]) and
             "same shared file" in " ".join(lane_map["I1"]["forbidden"]),
             "shared App route writer not serialized")
+    if handoffs is not None:
+        require("PLANNED_NOT_DISPATCHED" in handoffs and "Launch order" in handoffs,
+                "agent handoff incorrectly claims launch or hides order")
+        for lane in manifest["lanes"]:
+            require("## " + lane["id"] + " —" in handoffs,
+                    "missing self-contained agent handoff: " + lane["id"])
+        require(handoffs.count("MISSION:") >= len(manifest["lanes"])
+                and handoffs.count("FORBIDDEN:") >= len(manifest["lanes"])
+                and handoffs.count("NEXT:") >= len(manifest["lanes"]),
+                "lane handoffs lack concrete mission/forbidden/next instructions")
     require(all(x in document for x in (
         "THESIS H1", "Prototype #1", "Baseline/comparator",
         "Measurement:", "Decision rule:", "Phase 1", "Phase 2", "Phase 3",
@@ -154,7 +165,8 @@ def main() -> int:
         validate(json.loads(CONTRACT.read_text(encoding="utf-8")),
                  json.loads(DISPATCH.read_text(encoding="utf-8")),
                  SPEC.read_text(encoding="utf-8"),
-                 json.loads(PARENT.read_text(encoding="utf-8")))
+                 json.loads(PARENT.read_text(encoding="utf-8")),
+                 HANDOFFS.read_text(encoding="utf-8"))
         print("PASS P04/P82 integrated source/application UX architecture; not a live Google/browser proof")
         return 0
     except (ValueError, KeyError, TypeError, OSError) as exc:

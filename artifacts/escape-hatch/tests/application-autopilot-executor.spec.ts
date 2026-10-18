@@ -1,0 +1,136 @@
+import { expect, test, type Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { prepareToFinalReview, type PageInspection, type PreparationDriver } from '../application-autopilot-executor.ts';
+import { type AdapterEvidence, type ControlObservation, type NavigationAuthorization } from '../application-navigation-policy.ts';
+import { startSyntheticAts, type SyntheticAtsEffects, type SyntheticAtsHandle } from '../../../fixtures/application-navigation-ats/server.ts';
+
+// Actual Chromium/HTTP consequence test: only synthetic values, no job seeker data.
+type EvidenceEntry = Pick<AdapterEvidence, 'pageFingerprint' | 'controlId' | 'controlFingerprint' | 'enclosingFormAction' | 'enclosingFormMethod' | 'verifiedEffectClass' | 'evidenceRefs'>;
+type Contract = {schema:string; adapterId:string; atsProvider:string; evidence:EvidenceEntry[]};
+
+let ats: SyntheticAtsHandle;
+let contract: Contract;
+test.beforeAll(async () => {
+  ats = await startSyntheticAts();
+  contract = JSON.parse(readFileSync(fileURLToPath(new URL('../../../fixtures/application-navigation-ats/adapter-contract.v1.json', import.meta.url)), 'utf8')) as Contract;
+});
+test.afterAll(async () => { await ats.close(); });
+
+async function journal(): Promise<SyntheticAtsEffects> {
+  const response = await fetch(ats.origin + '/__effects');
+  expect(response.ok).toBe(true);
+  return await response.json() as SyntheticAtsEffects;
+}
+function permission(): NavigationAuthorization {
+  return {
+    sessionId:'synthetic-runtime-session', opportunityId:'synthetic-opportunity', origin:ats.origin,
+    navigationEnabled:true, allowedEffectClasses:['LOCAL_STEP_ONLY','DRAFT_WRITE_AND_ADVANCE'],
+    allowedDataCategories:['synthetic_cover_note'], expiresAtUtc:new Date(Date.now()+3_600_000).toISOString(),
+  };
+}
+
+async function observe(page: Page): Promise<ControlObservation> {
+  return await page.evaluate(() => {
+    const element = document.querySelector<HTMLElement>('[data-control-id]');
+    if (!element) throw new Error('fixture control absent');
+    const form = element.closest('form');
+    return {
+      accessibleName:(element.textContent || '').trim(),
+      htmlType:element.getAttribute('type'), tag:element.tagName.toLowerCase(),
+      pageUrl:location.href, pageOrigin:location.origin,
+      pageFingerprint:document.documentElement.dataset.pageFp || '',
+      controlId:element.dataset.controlId || '',
+      controlFingerprint:element.dataset.controlFp || '',
+      enclosingFormAction:form?.getAttribute('action') || null,
+      enclosingFormMethod:form?.getAttribute('method') || null,
+    };
+  });
+}
+function trustedEvidence(observation:ControlObservation): AdapterEvidence | null {
+  const entry=contract.evidence.find(e=>e.pageFingerprint===observation.pageFingerprint && e.controlId===observation.controlId);
+  if (!entry) return null;
+  const now=Date.now();
+  return {
+    ...entry, schema:contract.schema, adapterId:contract.adapterId, atsProvider:contract.atsProvider,
+    origin:ats.origin, verifiedAtUtc:new Date(now-60_000).toISOString(), expiresAtUtc:new Date(now+3_600_000).toISOString(),
+  };
+}
+
+function chromiumDriver(page: Page): PreparationDriver {
+  return {
+    async inspect(): Promise<PageInspection> {
+      const control = await observe(page);
+      const errors = await page.locator('[aria-invalid="true"], [role="alert"]').count();
+      const requiredFiles = await page.locator('input[type="file"][required]').count();
+      return {
+        pageFingerprint: control.pageFingerprint, origin:control.pageOrigin, control,
+        trustedEvidence:trustedEvidence(control),
+        unresolvedRequired:[], validationErrors:errors?['synthetic_validation_error']:[],
+        manualGates:[], uploadsVerified:requiredFiles===0,
+      };
+    },
+    async prepareCurrentPage() {
+      // Deterministic fixture-only writer, never an agent. Preserve any present value.
+      const note=page.locator('input[name="note"]');
+      if (await note.count() === 1) {
+        const value=await note.inputValue();
+        if (!value) await note.fill('synthetic-cover-note');
+        if ((await note.inputValue()).length === 0) return {deterministic:true as const,unresolved:['synthetic_note_not_verified']};
+      }
+      return {deterministic:true as const,unresolved:[]};
+    },
+    async activateVerifiedIntermediate(control) {
+      const locator=page.locator('[data-control-id="' + control.controlId + '"]');
+      expect(await locator.count()).toBe(1);
+      expect(await locator.getAttribute('data-control-fp')).toBe(control.controlFingerprint);
+      await locator.click({timeout:5000});
+      await page.waitForFunction(previous => document.documentElement.dataset.pageFp !== previous,
+        control.pageFingerprint, {timeout:5000});
+    },
+  };
+}
+
+test('actual Chromium: Submit → Submit → terminal Submit, only two draft POSTs', async ({page}) => {
+  await page.goto(ats.origin+'/apply/step/1');
+  const before=await journal();
+  const result=await prepareToFinalReview(chromiumDriver(page),permission(),{maxSteps:4});
+  expect(result.state).toBe('REVIEW_READY');
+  expect(result.pagesPrepared).toBe(3);
+  expect(result.intermediateSteps).toBe(2);
+  expect(result.finalActionActivated).toBe(false);
+  expect(page.url()).toContain('/apply/step/3');
+  const after=await journal();
+  expect(after.nativeDrafts.length).toBe(before.nativeDrafts.length+2);
+  expect(after.terminalCommits.length).toBe(before.terminalCommits.length);
+});
+
+test('actual Chromium: SPA Submit advances, terminal fetch never happens',async ({page}) => {
+  await page.goto(ats.origin+'/spa/step/1');
+  const before=await journal();
+  const result=await prepareToFinalReview(chromiumDriver(page),permission(),{maxSteps:3});
+  expect(result.state).toBe('REVIEW_READY');
+  expect(result.intermediateSteps).toBe(1);
+  expect(result.finalActionActivated).toBe(false);
+  const after=await journal();
+  expect(after.spaAdvances.length).toBe(before.spaAdvances.length+1);
+  expect(after.terminalCommits.length).toBe(before.terminalCommits.length);
+});
+
+test('actual Chromium: Next decoy, changed POST action and missing adapter trigger zero HTTP mutation',async ({page}) => {
+  for (const [path,code] of [
+    ['/apply/decoy','terminal_action_reserved_for_operator'],
+    ['/apply/step/1?drift=1','intermediate_navigation_not_authorized'],
+    ['/apply/unmodeled','intermediate_navigation_not_authorized'],
+  ] as const) {
+    await page.goto(ats.origin+path);
+    const before=await journal();
+    const result=await prepareToFinalReview(chromiumDriver(page),permission(),{maxSteps:2});
+    expect(result.code).toBe(code);
+    expect(result.intermediateSteps).toBe(0);
+    const after=await journal();
+    expect(after.terminalCommits.length).toBe(before.terminalCommits.length);
+    expect(after.rejectedDriftPosts.length).toBe(before.rejectedDriftPosts.length);
+    expect(after.unmodeledPosts.length).toBe(before.unmodeledPosts.length);
+  }
+});

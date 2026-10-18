@@ -169,7 +169,23 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           adapterRegistry: JSON.parse(registryRaw) as object,
         };
       }
-      const result = await request('/' + action, body);
+      let result = await request('/' + action, body);
+      let autoFillMessage = '';
+      if (action === 'launch' && result.state === 'application_form_open_review_required') {
+        // Explicit operator launch authorizes the existing bounded DOM filler, not navigation or submission.
+        // If this is a landing/login page, no fill occurs; the manual Fill control remains available.
+        try {
+          const filled = await request('/fill', { profile });
+          result = filled;
+          autoFillMessage = 'Managed Chrome opened the application form. ' +
+            (filled.filled?.length ? 'Filled: ' + filled.filled.join(', ') + '. ' : 'No approved fields were filled. ') +
+            (filled.skipped?.length ? 'Skipped: ' + filled.skipped.join(', ') + '. ' : '') +
+            'Review the employer form before continuing.';
+        } catch (error) {
+          autoFillMessage = 'Managed Chrome opened, but guarded autofill was blocked: ' +
+            (error instanceof Error ? error.message : 'Unknown error') + '. Use Fill after reviewing the page.';
+        }
+      }
       setStatus(result.state || 'idle');
       if (result.preparation) setPreparation(result.preparation);
       if (action === 'launch') {
@@ -192,7 +208,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         Object.entries(result.attachments || {}).map(([kind, state]) => kind + ': ' + state.replaceAll('_', ' ')).join(' · ') +
         '. Confirm the employer form accepted each document.'
       );
-      if (action === 'launch') setMessage('A separate managed Chrome window is opening. Authentication stays under your control.');
+      if (action === 'launch') setMessage(autoFillMessage || 'A separate managed Chrome window is opening. Authentication stays under your control.');
       if (action === 'prepare' && result.preparation) {
         setMessage(
           result.preparation.state + ' (' + result.preparation.code + '). Pages prepared: ' +

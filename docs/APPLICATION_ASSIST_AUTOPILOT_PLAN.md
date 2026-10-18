@@ -796,3 +796,65 @@ That run-scoped manifest is durable orchestration evidence, but **does not satis
 - **PROOF CEILING:** durable planning/provider evidence only.
 - **INTEGRATION STATE:** planning PR only; product/runtime integration branch remains unchanged by this planning pass.
 - **NEXT ACTION:** operator explicitly authorizes `EH-A0 + EH-Q0`; only then may the execution owner dispatch the two contract floors in parallel.
+
+
+## 17. Windows authentication and P08 continuation — 2026-10-18
+
+This is an execution continuation of parent issue #69 and its nine conjunctive gates, not a second architecture or a claim that the parent is complete. The operator explicitly authorized authentication, verification, a committed continuation plan, and guidance. Repository governance and the deterministic EscapeHatch implementation boundary remain in force.
+
+### Recovered floor and preserved work
+
+- Current remote main: `f336c49a3bd621be311a4323f5522691e4fd0696` when refreshed for this plan.
+- The Sources bridge is already incorporated through `f63e420e1d245ec869987f8f9a27987c0de85312`; do not publish a duplicate implementation.
+- Local branch `proof/integrated-p08-20261018` contains repair `ee88c7697911155e1d6ed810a04efdf73857fe37`: required/ARIA-required control inspection plus actual Chromium red/green tests. Its remote publication is still a gate.
+- Original education-eligibility checkout and its dirty files remain separately owned. This continuation uses `private/integrated-implementation`; no reset, cleanup or mutation of other worktrees is authorized.
+- Canonical evidence: `harness/reports/integrated-source-bridge-proof-20261018.md`. Twelve targeted Chromium tests, seventeen executor/control tests, sixteen architecture adversarial tests, typecheck, production build and manifest validators passed at the repair tree. Those are bounded local proofs, not employer runtime proof.
+
+### Gate A — persist and verify GitHub authorization in the executing session
+
+GitHub CLI device authorization is the supported authentication waiter: it polls GitHub while the operator approves in their browser. It does not require a custom local HTTP credential receiver. Never put device codes, passwords, access tokens or credential-file contents in this public plan or repository.
+
+The first browser authorization was accepted, then credential persistence failed because this sandbox cannot write `%APPDATA%/GitHub CLI/hosts.yml`. The normal Windows credential store is also inaccessible here. Use the supported `GH_CONFIG_DIR` override pointing to the isolated checkout's gitignored `private/github-cli-auth` directory. This is private local authentication state, not product Google authorization or hosted identity. Do not use `--show-token`, copy tokens into scripts, or commit the directory. The CLI may fall back to file storage if the OS credential store is inaccessible; do not misreport that fallback as encrypted Windows credential storage.
+
+After browser approval, the executing agent must verify all of the following with the same `GH_CONFIG_DIR`:
+
+1. The waiting `gh auth login --hostname github.com --git-protocol https --web --clipboard` process exits successfully.
+2. `gh auth status` reports a valid account without showing its token.
+3. `gh api user --jq .login` succeeds; `gh api repos/EndeavorEverlasting/EscapeHatch --jq .permissions.push` confirms write authority.
+4. Re-fetch main and inspect overlap before publication. Authentication is not proof of a successful push or runtime launch.
+
+Verified continuation result: the restarted device flow exited 0 with the private configuration override; authenticated account lookup and repository push-permission lookup succeeded, and Git push of `proof/integrated-p08-20261018` succeeded. GitHub CLI reported plaintext file-storage fallback inside the gitignored private directory; this is not Windows credential-vault protection. PR #87 is the publication owner. This closes GitHub access only; it does not change the independent listener-query denial or grant Google authorization.
+
+If credential persistence still fails, preserve the local commits and bundle and report the exact filesystem/credential-store error. Do not repeatedly ask for identical browser approvals without repairing the demonstrated storage failure first.
+
+### Gate B — publish and validate the bounded repair and this plan
+
+Use GitHub CLI's credential helper with the same private configuration context for Git operations. Push the existing branch without force, create or update the owning PR targeting current main, and inspect exact-head checks and reviews. Do not publish the older duplicate Sources branch. Do not silently absorb unrelated work.
+
+Run the parent/source/governance/harness validators and owning product checks on the reconciled exact head. Resolve failures before merge. Provider-side integration remains conditional on current required checks, review/protection requirements and merge authority. A commit, push or PR is not a deployment or a P08 pass.
+
+### Gate C — establish authoritative Windows runtime ownership
+
+The canonical owner is `contracts/local-runtime-lifecycle.v1.json` and `scripts/windows/EscapeHatch-Runtime.ps1`. In this sandbox, both Status and Start for isolated port 21042 returned `Unable to query authoritative TCP listener state ... Access denied`, exit 1. That is an OS listener/process-query gate, independent of GitHub authentication.
+
+The next runtime action is to run the same lifecycle manager from a host context able to query authoritative listener/process state. Use an isolated port and isolated private runtime/browser state for synthetic proof. Inspect Status first; never assume a port is free because HTTP failed. Do not fabricate ownership environment variables, kill an unverified process, weaken the listener check, or grant a general-purpose agent direct employer form mutation authority.
+
+Only after safe ownership is established may the canonical launcher Start the runtime. Require OWNED_HEALTHY and matching runtime identity. Preserve any foreign listener or separately owned browser profile. A production preview server is useful UI proof but is not an owned managed Windows runtime.
+
+### Gate D — execute product-path synthetic proof and protected controls
+
+With an owned isolated runtime, opt into the repository synthetic ATS using `ESCAPEHATCH_ALLOW_SYNTHETIC_ATS=1` and run the canonical `node --experimental-strip-types scripts/proof_managed_prepare_synthetic.mjs` with the matching PORT. Keep synthetic runs away from real saved preferences, private application packages and personal browser profiles.
+
+Acceptance: actual managed Chrome launch, deterministic product `/prepare`, two verified intermediate draft advances, observed final review, `finalActionActivated=false`, and zero terminal commits. Preserve the canonical sanitized receipt. Re-run the required-control negative matrix and the populated-answer positive control after any runtime repair. Mocked loopback replies, static tests and command acknowledgments cannot satisfy this gate.
+
+### Gate E — recover approved inputs and prove the real application journey
+
+Recover selected source revisions, the existing canonical reviewed candidate, approved answer preferences, role-specific documents and exact active opportunity from their registered private owners. Verify actual source content and posting freshness; GitHub sign-in does not authorize Google Drive. Reuse existing authorized Google infrastructure before requesting new consent. No ChatGPT connector credential transfer and no new Google Cloud project by default.
+
+Before real navigation, require a reviewed trusted ATS effect adapter bound to the actual opportunity/session/origin. EscapeHatch alone fills and advances. Agents may inspect and repair implementation; they must not type answers or click through the employer form as a substitute for product behavior. Missing facts, uploads, CAPTCHA/MFA, attestations or ambiguous controls stop with an exact reason. Stop before final Submit. Preserve and verify user edits. Repeat with a genuinely different ATS architecture before claiming cross-architecture readiness.
+
+### Completion and next decision
+
+All nine parent gates remain UNPROVEN until their own required evidence is attached; parent issue #69 remains OPEN. Public hosting and multi-user certification remain separate gates. The immediate sequence is A → B and C → D → E; GitHub authorization does not remove C. No new credential or listener implementation is required unless evidence identifies a defect in the existing canonical owners.
+
+Plan validation: `python scripts/validate_application_autofill_parent.py`; `python scripts/validate_application_source_integration.py`; `python scripts/validate_governance.py`; `python scripts/validate_harness.py`; `git diff --check`. The first executable continuation while the browser authorization is pending is the waiting CLI verification in Gate A; once valid, publish the existing repair/plan and establish Gate C without bypassing ownership checks.

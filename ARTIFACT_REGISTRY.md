@@ -113,6 +113,8 @@ This file is the canonical registry for durable EscapeHatch artifacts. A plausib
 | Managed semantic fill | `artifacts/escape-hatch/managed-form.ts` | tracked product module | fill known values only; preserve inputs and submission boundary | `npm --prefix artifacts/escape-hatch run test:managed-assist` |
 | Managed preference tests | `artifacts/escape-hatch/managed-preferences.test.ts` | tracked synthetic tests | persistence and actual-browser regression controls | `npm --prefix artifacts/escape-hatch run test:managed-assist` |
 
+| Integrated Sources/P08 proof | `harness/reports/integrated-source-bridge-proof-20261018.md` | tracked sanitized evidence | append measured local/runtime continuation; retain historical proof levels, no private payloads or credentials | `python scripts/validate_application_autofill_parent.py` and targeted Chromium regression suites |
+
 ## User-owned local artifacts
 
 The following are intentionally **not** tracked repository artifacts:

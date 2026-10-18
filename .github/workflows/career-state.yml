@@ -47,6 +47,10 @@ jobs:
         run: python scripts/validate_career_claim_fidelity.py
       - name: Validate career artifact propagation
         run: python scripts/validate_career_artifact_propagation.py
+      - name: Validate generated career reconciliation scaffold
+        run: |
+          python scripts/validate_career_artifact_propagation.py --scaffold reviewed_source --source-revision synthetic-r1 > /tmp/career-propagation.json
+          python scripts/validate_career_artifact_propagation.py --input /tmp/career-propagation.json
       - name: Validate application companion
         run: python scripts/validate_application_companion.py
       - name: Test StudySyndicate export

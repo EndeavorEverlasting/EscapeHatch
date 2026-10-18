@@ -32,7 +32,8 @@ test('cockpit owns Launch, Fill and Attach without a Chrome extension', async ({
 
 function assertNeverSubmitted(actions: string[]) {
   expect(actions).toContain('launch');
-  expect(actions).toContain('fill');
+  // Landing and login pages MUST NOT attempt Fill. The action order is checked
+  // separately in tests that actually reach an application form.
   expect(actions).not.toContain('submit');
   expect(actions).not.toContain('next');
 }

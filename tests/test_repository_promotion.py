@@ -35,6 +35,36 @@ class RepositoryPromotionTests(unittest.TestCase):
         cls.guard = load_guard()
         cls.contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
 
+    def test_browser_ci_is_required_before_promotion(self):
+        jobs = self.contract["required_checks_manifest"]["destinations"]["main"]["checks"]
+        matching = [item for item in jobs if item["workflow"] == "Web Cockpit Validation"]
+        self.assertEqual(len(matching), 1)
+        self.assertEqual(matching[0]["job"], "web-cockpit-browser")
+        web = (ROOT / ".github/workflows/web-cockpit.yml").read_text(encoding="utf-8")
+        pr_part = web.split("  pull_request:", 1)[1].split("  push:", 1)[0]
+        self.assertIn("branches: [main]", pr_part)
+        self.assertNotIn("paths:", pr_part)
+        workflow = (ROOT / ".github/workflows/promotion.yml").read_text(encoding="utf-8")
+        self.assertIn("verify-browser --candidate-sha", workflow)
+        self.assertIn("ready_for_review", workflow)
+        self.assertIn("BROWSER_GATE_FAILED: no promotion", workflow)
+        self.assertIn("BROWSER_GATE_TIMEOUT: no promotion", workflow)
+
+    def test_browser_check_fail_closed_against_real_provider_payload(self):
+        name = "web-cockpit-browser"
+        sha = "a" * 40
+        run = dict(name=name, head_sha=sha, id=10, status="completed", conclusion="success")
+        verify = self.guard.observed_browser_check
+        self.assertEqual(verify({"check_runs": [run]}, sha, name)[0], 0)
+        self.assertEqual(verify({"check_runs": []}, sha, name)[0], 2)
+        self.assertEqual(verify({"check_runs": [dict(run, status="in_progress", conclusion=None)]}, sha, name)[0], 2)
+        for conclusion in ("failure", "skipped", "cancelled", "timed_out", "neutral", None):
+            self.assertEqual(verify({"check_runs": [dict(run, conclusion=conclusion)]}, sha, name)[0], 1)
+        self.assertEqual(verify({"check_runs": [dict(run, head_sha="b" * 40)]}, sha, name)[0], 1)
+        self.assertEqual(verify({"not_check_runs": []}, sha, name)[0], 1)
+        # A recent failing rerun must not be masked by an older green attempt.
+        self.assertEqual(verify({"check_runs": [run, dict(run, id=11, conclusion="failure")]}, sha, name)[0], 1)
+
     def test_contract_is_provider_agnostic_and_bound(self):
         # Provider-agnostic at contract, bound to one concrete adapter at runtime
         host = self.contract["host_identity"]

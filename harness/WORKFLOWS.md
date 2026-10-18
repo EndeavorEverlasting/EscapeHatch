@@ -56,6 +56,10 @@ Application pages are modular collections of semantic questions. Employer, ATS v
 
 This workflow does not authorize scraping, automatic navigation, submission, or attestation.
 
+## Career Source Directory
+
+For P04 user-selected local/cloud résumé folders and application tracker sources, read `docs/CAREER_SOURCE_DIRECTORY.md` and use `scripts/career_source_directory.py` to register a source privately, with synthetic verification in `tests/test_career_source_directory.py`. Reuse TokenCorridor's existing Google auth and any authorized provider or synced local folder before considering operator reauthorization. Never request a new Cloud project/client as a default. A registered Google folder is **not** an authenticated document read. P08 requires actual Windows-host résumé text retrieval, reviewed candidate profile import, tracker linkage and local running product evidence.
+
 ## Application Companion
 
 The companion is an adapter around the canonical user-owned career-state contract, not a second career database. The same state boundary must survive browser-extension, Microsoft Store, Play Store, and local-web delivery choices.

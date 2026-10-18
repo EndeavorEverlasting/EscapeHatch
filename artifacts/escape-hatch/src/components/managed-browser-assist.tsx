@@ -1,9 +1,9 @@
-import { useEffect, useState, type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
 import { ArrowUpRight, CheckCircle2, FileUp, LoaderCircle, ShieldCheck } from 'lucide-react';
 import type { Application, Profile } from '@/lib/storage';
 import { ApplicationPreferences } from './application-preferences';
+import { mergeTrackerIntoApplications, parseTrackerSnapshot } from '@/lib/tracker-bridge';
 
-const MANDIANT = 'https://www.google.com/about/careers/applications/jobs/results/132629079244317382-project-manager-americas-pmo-mandiant-consulting';
 const API = '/__escapehatch/managed-assist';
 
 type PreparationResult = {
@@ -74,7 +74,10 @@ const titles: Record<string, string> = {
 };
 
 export function ManagedBrowserAssist({ profile, setProfile, applications, setApplications }: { profile: Profile; setProfile: Dispatch<SetStateAction<Profile>>; applications: Application[]; setApplications: Dispatch<SetStateAction<Application[]>> }) {
-  const [url, setUrl] = useState(MANDIANT);
+  // Never silently reuse an earlier/submitted employer as the next application.
+  const [url, setUrl] = useState('');
+  const [selectedOpportunityId, setSelectedOpportunityId] = useState('');
+  const operatorSelected = useRef(false);
   const [resume, setResume] = useState<File | null>(null);
   const [cover, setCover] = useState<File | null>(null);
   const [status, setStatus] = useState('idle');
@@ -82,6 +85,34 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const [busy, setBusy] = useState(false);
   const [browserOpen, setBrowserOpen] = useState(false);
   const [preparation, setPreparation] = useState<PreparationResult | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    // A direct visit to /assist must receive the same validated tracker state as Home.
+    fetch('/__escapehatch/tracker/status', { credentials: 'same-origin' })
+      .then((response) => response.ok ? response.json() as Promise<{ connection?: string; snapshot?: unknown }> : null)
+      .then((value) => {
+        if (!active || value?.connection !== 'CONNECTED') return;
+        const snapshot = parseTrackerSnapshot(value.snapshot);
+        if (snapshot) setApplications((current) => mergeTrackerIntoApplications(current, snapshot));
+      }).catch(() => { /* Local-only application selections remain available. */ });
+    return () => { active = false; };
+  }, [setApplications]);
+
+  useEffect(() => {
+    if (operatorSelected.current) return;
+    const requestedId = new URLSearchParams(window.location.search).get('opportunityId');
+    const permitted = (item: Application) => !!item.url && item.status !== 'applied' && item.status !== 'closed';
+    const requested = applications.find((item) => item.id === requestedId && permitted(item));
+    const ready = applications.find((item) => permitted(item) &&
+      item.id.startsWith('tracker-') && /provider status:\s*ready to apply/i.test(item.notes) &&
+      /Applied\? unchecked/i.test(item.notes));
+    const next = requested || ready;
+    if (next) {
+      setSelectedOpportunityId(next.id);
+      setUrl(next.url);
+    }
+  }, [applications]);
 
   useEffect(() => {
     let active = true;
@@ -111,7 +142,10 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     try {
       let body: object;
       if (action === 'launch') {
-        const opportunity = applications.find((item) => item.url === url);
+        const opportunity = applications.find((item) => item.id === selectedOpportunityId && item.url === url);
+        if (applications.some((item) => item.url === url && (item.status === 'applied' || item.status === 'closed'))) {
+          throw new Error('This opportunity is already applied or closed. Do not reapply.');
+        }
         body = { url, opportunityId: opportunity?.id || '' };
       } else if (action === 'fill') body = { profile };
       else if (action === 'attach') body = { resume: await privatePdf(resume), cover: await privatePdf(cover) };
@@ -120,12 +154,14 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         // Without registry evidence the control plane fails closed — never invent consequences.
         const registryRaw = window.localStorage.getItem('escapehatch.trustedAdapterRegistry.v1');
         if (!registryRaw) throw new Error('Trusted adapter registry required before Prepare. Load a reviewed registry first.');
-        const opportunity = applications.find((item) => item.url === url);
+        const opportunity = applications.find((item) => item.id === selectedOpportunityId && item.url === url &&
+          item.status !== 'applied' && item.status !== 'closed');
+        if (!opportunity) throw new Error('Select an active saved opportunity before preparing this application.');
         body = {
           profile,
           authorization: {
-            sessionId: 'cockpit-' + (opportunity?.id || 'session'),
-            opportunityId: opportunity?.id || 'unbound-opportunity',
+            sessionId: 'cockpit-' + opportunity.id,
+            opportunityId: opportunity.id,
             navigationEnabled: true,
             allowedEffectClasses: ['LOCAL_STEP_ONLY', 'DRAFT_WRITE_AND_ADVANCE'],
             allowedDataCategories: ['synthetic_cover_note'],
@@ -140,22 +176,11 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         setBrowserOpen(true);
         setPreparation(null);
         setApplications((items) => {
-          const existing = items.find((item) => item.url === url);
+          const existing = items.find((item) => item.id === selectedOpportunityId && item.url === url);
           if (existing) return items.map((item) => item.id === existing.id && item.status === 'saved'
             ? { ...item, status: 'preparing', updatedAt: new Date().toISOString() }
             : item);
-          if (url !== MANDIANT) return items; // Unknown employer is not silently invented.
-          return [{
-            id: 'mandiant-americas-pmo-20261017',
-            company: 'Mandiant Consulting (Google Cloud)',
-            role: 'Project Manager, Americas PMO',
-            url: MANDIANT,
-            status: 'preparing',
-            priority: 'high',
-            notes: 'Opened from the managed browser assistant; submission not confirmed.',
-            nextAction: 'Review employer application; final Submit is operator-only.',
-            updatedAt: new Date().toISOString(),
-          }, ...items];
+          return items; // A custom URL never creates an unverified employer ledger record.
         });
       }
       if (action === 'fill') setMessage(
@@ -182,7 +207,11 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     }
   }
 
-  const handleUrl = (event: ChangeEvent<HTMLInputElement>) => setUrl(event.target.value);
+  const handleUrl = (event: ChangeEvent<HTMLInputElement>) => {
+    operatorSelected.current = true;
+    setSelectedOpportunityId('');
+    setUrl(event.target.value);
+  };
   const button = 'inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50';
   const secondary = 'inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-bold hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50';
 
@@ -216,13 +245,15 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
             <label className="block text-xs font-bold text-muted-foreground">
               Saved opportunity
               <select className="mt-1 w-full rounded-lg border border-input bg-background p-3 text-sm"
-                value={applications.find((application) => application.url === url)?.id || ''}
+                value={selectedOpportunityId}
                 onChange={(event) => {
                   const opportunity = applications.find((item) => item.id === event.target.value);
-                  if (opportunity?.url) setUrl(opportunity.url);
+                  operatorSelected.current = true;
+                  setSelectedOpportunityId(opportunity?.id || '');
+                  setUrl(opportunity?.url || '');
                 }}>
                 <option value="">Current / custom URL</option>
-                {applications.filter((item) => item.url).map((item) => <option key={item.id} value={item.id}>{item.company} — {item.role}</option>)}
+                {applications.filter((item) => item.url && item.status !== 'applied' && item.status !== 'closed').map((item) => <option key={item.id} value={item.id}>{item.company} — {item.role}</option>)}
               </select>
             </label>
           )}

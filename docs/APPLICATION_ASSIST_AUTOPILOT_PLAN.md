@@ -823,6 +823,8 @@ After browser approval, the executing agent must verify all of the following wit
 3. `gh api user --jq .login` succeeds; `gh api repos/EndeavorEverlasting/EscapeHatch --jq .permissions.push` confirms write authority.
 4. Re-fetch main and inspect overlap before publication. Authentication is not proof of a successful push or runtime launch.
 
+Verified continuation result: the restarted device flow exited 0 with the private configuration override; authenticated account lookup and repository push-permission lookup succeeded, and Git push of `proof/integrated-p08-20261018` succeeded. GitHub CLI reported plaintext file-storage fallback inside the gitignored private directory; this is not Windows credential-vault protection. PR #87 is the publication owner. This closes GitHub access only; it does not change the independent listener-query denial or grant Google authorization.
+
 If credential persistence still fails, preserve the local commits and bundle and report the exact filesystem/credential-store error. Do not repeatedly ask for identical browser approvals without repairing the demonstrated storage failure first.
 
 ### Gate B — publish and validate the bounded repair and this plan

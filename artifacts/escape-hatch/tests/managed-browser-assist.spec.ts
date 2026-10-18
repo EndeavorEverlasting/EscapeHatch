@@ -71,3 +71,39 @@ test('Home hands the ready opportunity into managed Chrome instead of reopening 
   await expect(page.getByTestId('managed-job-url')).toHaveValue(readyUrl);
   await expect(page.getByTestId('managed-browser-assist').locator('option[value="tracker-submitted"]')).toHaveCount(0);
 });
+
+test('Launch automatically fills permitted fields when a verified application form opens', async ({ page }) => {
+  const actions: string[] = [];
+  await page.route('**/__escapehatch/managed-assist/**', async (route) => {
+    const action = route.request().url().split('/').at(-1) || '';
+    actions.push(action);
+    const data = action === 'status' ? { ok: true, state: 'idle', browserOpen: false } :
+      action === 'launch' ? { ok: true, state: 'application_form_open_review_required' } :
+      action === 'fill' ? { ok: true, state: 'fields_filled_review_required', filled: ['first_name'], skipped: ['unknown_question'] } :
+      { ok: false, error: 'unexpected_action' };
+    await route.fulfill({ status: data.ok ? 200 : 422, contentType: 'application/json', body: JSON.stringify(data) });
+  });
+  await page.goto('/assist');
+  await page.getByTestId('managed-job-url').fill('https://jobs.ashbyhq.com/synthetic/autofill');
+  await page.getByTestId('button-managed-launch').click();
+  await expect(page.getByText('Known fields filled — review the page')).toBeVisible();
+  await expect(page.getByTestId('managed-browser-feedback')).toContainText('Filled: first_name');
+  await expect(page.getByTestId('managed-browser-feedback')).toContainText('Skipped: unknown_question');
+  expect(actions.filter((value) => value !== 'status')).toEqual(['launch', 'fill']);
+  assertNeverSubmitted(actions);
+});
+
+test('Launch does not autofill the login or posting page', async ({ page }) => {
+  const actions: string[] = [];
+  await page.route('**/__escapehatch/managed-assist/**', async (route) => {
+    const action = route.request().url().split('/').at(-1) || '';
+    actions.push(action);
+    await route.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify({ ok: true, state: action === 'launch' ? 'application_open_review_required' : 'idle' }) });
+  });
+  await page.goto('/assist');
+  await page.getByTestId('managed-job-url').fill('https://jobs.ashbyhq.com/synthetic/login');
+  await page.getByTestId('button-managed-launch').click();
+  expect(actions.filter((value) => value !== 'status')).toEqual(['launch']);
+  assertNeverSubmitted(actions);
+});

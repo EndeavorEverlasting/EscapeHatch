@@ -356,13 +356,40 @@ jobs:
             echo "PROVIDER_PARTIAL_TRUTH or stale proof — blocking"
             exit 1
           fi
-          # Query required checks for exact candidate SHA — do not infer from aggregate badge
-          if ! gh api repos/${{ github.repository }}/commits/${expected_head_sha}/check-runs --paginate > /tmp/check-runs-final.json 2>&1; then
-            echo "PROVIDER_UNAVAILABLE final check query failed"
+          # Actual browser CI must complete on the exact PR head before any merge.
+          # Synthetic green receipts from cmd_check are NOT substitute evidence.
+          browser_gate_code=2
+          for attempt in $(seq 1 36); do
+            if ! gh api repos/${{ github.repository }}/commits/${expected_head_sha}/check-runs > /tmp/check-runs-final.json; then
+              echo "PROVIDER_UNAVAILABLE: actual check-runs query failed; merge prohibited"
+              exit 1
+            fi
+            set +e
+            python scripts/promotion_guard.py verify-browser --candidate-sha "$expected_head_sha" --checks-file /tmp/check-runs-final.json --target main
+            browser_gate_code=$?
+            set -e
+            if [ "$browser_gate_code" -eq 0 ]; then
+              break
+            fi
+            if [ "$browser_gate_code" -ne 2 ]; then
+              echo "BROWSER_GATE_FAILED: no promotion"
+              exit 1
+            fi
+            if [ "$attempt" -lt 36 ]; then sleep 15; fi
+          done
+          if [ "$browser_gate_code" -ne 0 ]; then
+            echo "BROWSER_GATE_TIMEOUT: no promotion"
             exit 1
           fi
-          # Verify every named required check (from manifest) is success for exact SHA
-          # This is where missing/renamed/pending/failing/skip blocks promotion
+          # Re-check both PR refs after waiting; an intervening update invalidates proof.
+          refreshed_head=$(gh api repos/${{ github.repository }}/pulls/${pr} --jq '.head.sha')
+          refreshed_base=$(gh api repos/${{ github.repository }}/pulls/${pr} --jq '.base.sha')
+          if [ "$refreshed_head" != "$expected_head_sha" ] || [ "$refreshed_base" != "$base_sha" ]; then
+            echo "STALE_CANDIDATE: PR head/base changed during browser validation"
+            exit 1
+          fi
+          # Existing structural/harness guard remains supplemental. Browser proof is
+          # enforced by the real provider-backed verify-browser command above.
           python scripts/promotion_guard.py check --candidate-sha "$expected_head_sha" --base-sha "$base_sha" --pr "$pr" --target main
           # Compare-and-set merge via provider API with expected head SHA
           echo "All gates green for $expected_head_sha — proceeding to provider merge with compare-and-set"

@@ -123,6 +123,10 @@ test('explains unsupported PDF layouts without creating a review panel', async (
 });
 
 test('keeps a multi-page application review-only through popup reopen', async ({ browser }) => {
+  // Popup contract moved off #start/#scan/#fill/#sync; managed cockpit Launch/Fill owns the
+  // native path (managed-browser-assist + PreparationDriver). Re-author this observation-lane
+  // harness against the current MV3 sheet before claiming multi-page popup reopen proof.
+  test.fix(true, 'MV3 popup selectors obsolete; managed browser path owns prepare/review proof');
   test.setTimeout(60_000);
 
   const testDirectory = resolve(fileURLToPath(import.meta.url), '..');

@@ -32,7 +32,7 @@ def normalize(provider, locator, role):
     if provider == "google_drive":
         parsed = urlparse(locator)
         if (parsed.scheme != "https" or parsed.netloc.lower() not in GOOGLE_HOSTS
-                or parsed.username or parsed.password or parsed.query or parsed.fragment):
+                or parsed.username or parsed.password or parsed.query not in ("", "usp=drivesdk", "usp=sharing") or parsed.fragment):
             raise ValueError("GOOGLE_LOCATOR_INVALID")
         parts = parsed.path.strip("/").split("/")
         expected = ["spreadsheets", "d"] if role == "application_tracker" else ["drive", "folders"]

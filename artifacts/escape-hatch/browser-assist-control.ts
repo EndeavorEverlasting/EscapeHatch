@@ -5,6 +5,9 @@ import fs from 'node:fs/promises';
 import { chromium, type BrowserContext, type Page } from '@playwright/test';
 import type { Plugin } from 'vite';
 import { isLoopbackAddress, readManagedRuntime } from './runtime-control.ts';
+import { readPreferences, savePreferences, clearPreferences } from './preference-file.ts';
+import { fillSavedPreferences, openApplicationForm } from './managed-form.ts';
+import { emptyPreferences } from './src/lib/application-preferences.ts';
 
 const PREFIX = '/__escapehatch/managed-assist';
 const MAX_BODY = 15 * 1024 * 1024;
@@ -16,6 +19,8 @@ const FIELDS = [
   ['email', ['email'], ['email', 'emailAddress']],
   ['phone', ['tel'], ['phone', 'phoneNumber']],
   ['linkedin_url', [], ['linkedin', 'linkedin_url', 'linkedinUrl']],
+  ['street_address', ['street-address', 'address-line1'], ['street_address', 'address1']],
+  ['country', ['country-name'], ['country']],
   ['city', ['address-level2'], ['city']],
   ['region', ['address-level1'], ['state', 'region']],
   ['postal_code', ['postal-code'], ['postalCode', 'postal_code', 'zip']],
@@ -85,31 +90,7 @@ async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> 
   return parsed as Record<string, unknown>;
 }
 
-async function fillContact(page: Page, profile: Record<string, string>): Promise<{ filled: string[]; skipped: string[] }> {
-  const filled: string[] = [], skipped: string[] = [];
-  for (const [key, autos, names] of FIELDS) {
-    if (!profile[key]) continue;
-    const selectors = [
-      ...autos.map((token) => 'input[autocomplete="' + token + '"]'),
-      ...names.map((token) => 'input[name="' + token + '"],input[id="' + token + '"]'),
-    ];
-    const control = page.locator(selectors.join(','));
-    try {
-      if (await control.count() !== 1 || !await control.isVisible() || !await control.isEnabled() ||
-          (await control.inputValue()).trim()) {
-        skipped.push(key);
-        continue;
-      }
-      const type = ((await control.getAttribute('type')) || 'text').toLowerCase();
-      if (!['text', 'email', 'tel', 'url'].includes(type)) { skipped.push(key); continue; }
-      await control.fill(profile[key], { timeout: 2500 });
-      filled.push(key);
-    } catch { skipped.push(key); }
-  }
-  return { filled, skipped };
-}
-
-async function attachPdfs(page: Page, resume: ReturnType<typeof parsePrivatePdf>, cover: ReturnType<typeof parsePrivatePdf>) {
+export async function attachPdfs(page: Page, resume: ReturnType<typeof parsePrivatePdf>, cover: ReturnType<typeof parsePrivatePdf>) {
   const inputs = await page.locator('input[type="file"]').all();
   const outcome: Record<string, string> = {};
   for (const [kind, file] of [['resume', resume], ['cover', cover]] as const) {
@@ -125,6 +106,25 @@ async function attachPdfs(page: Page, resume: ReturnType<typeof parsePrivatePdf>
         if ((kind === 'resume' ? /\b(resume|r[ée]sum[ée]|cv)\b/i : /\b(cover[\s_-]*letter)\b/i).test(attrs)) matches.push(input);
       } catch { /* page changed; leave control unmodified */ }
     }
+    if (matches.length === 0) {
+      // Portal-based uploaders leave their anonymous file inputs under body. Bind the chooser
+      // to the uniquely labelled upload widget instead of guessing an input by DOM order.
+      const labels = page.locator('label[id$="_label"]').filter({ hasText: kind === 'resume' ? /^Resume:\s*\(Word\/PDF\)/i : /^Cover Letter:\s*\(Word\/PDF\)/i });
+      if (await labels.count() !== 1) { outcome[kind] = 'manual_required'; continue; }
+      const labelId = await labels.getAttribute('id');
+      const widgetId = labelId?.replace(/(?:\.file)?_label$/, '') || '';
+      if (!/^[A-Za-z0-9_.-]{1,100}$/.test(widgetId)) { outcome[kind] = 'manual_required'; continue; }
+      const trigger = page.locator('[id="' + widgetId + '"] .filepicker');
+      if (await trigger.count() !== 1 || !await trigger.isVisible()) { outcome[kind] = 'manual_required'; continue; }
+      try {
+        const chooserPromise = page.waitForEvent('filechooser', { timeout: 5000 });
+        await trigger.click({ timeout: 2500 });
+        const chooser = await chooserPromise;
+        await chooser.setFiles(file, { timeout: 5000 });
+        outcome[kind] = 'attached_to_input_review_required';
+      } catch { outcome[kind] = 'manual_required'; }
+      continue;
+    }
     if (matches.length !== 1) { outcome[kind] = 'manual_required'; continue; }
     try {
       await matches[0].setInputFiles(file, { timeout: 5000 });
@@ -139,6 +139,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
   let page: Page | null = null;
   let busy = false;
   let state = 'idle';
+  let applicationOrigin = '';
   const managed = readManagedRuntime();
   return {
     name: 'escapehatch-managed-browser-assist',
@@ -157,6 +158,11 @@ export function createManagedBrowserAssistPlugin(): Plugin {
           if (page?.isClosed()) { page = null; state = 'browser_closed'; }
           return respond(res, 200, { ok: true, state, browserOpen: Boolean(page), requiresOperatorSubmission: true });
         }
+        if (url.pathname === PREFIX + '/preferences' && req.method === 'GET') {
+          if (req.headers.origin && req.headers.origin !== expectedOrigin || req.headers['sec-fetch-site'] === 'cross-site') return respond(res, 403, { ok: false, error: 'operator_origin_required' });
+          try { return respond(res, 200, { ok: true, preferences: await readPreferences() }); }
+          catch { return respond(res, 422, { ok: false, error: 'Saved preferences could not be read; existing data preserved.' }); }
+        }
         if (req.method !== 'POST' ||
             req.headers.origin !== expectedOrigin ||
             req.headers[ACTION_HEADER] !== 'confirmed' ||
@@ -167,8 +173,11 @@ export function createManagedBrowserAssistPlugin(): Plugin {
         busy = true;
         try {
           const payload = await readJson(req);
+          if (url.pathname === PREFIX + '/preferences') return respond(res, 200, { ok: true, preferences: await savePreferences(payload.preferences) });
+          if (url.pathname === PREFIX + '/preferences/clear') { await clearPreferences(); return respond(res, 200, { ok: true }); }
           if (url.pathname === PREFIX + '/launch') {
             const jobUrl = validateApplicationUrl(payload.url);
+            applicationOrigin = new URL(jobUrl).origin;
             if (!context) {
               const folder = path.join(process.env.LOCALAPPDATA || path.join(homedir(), 'AppData', 'Local'), 'EscapeHatch', 'managed-career-browser');
               await fs.mkdir(folder, { recursive: true });
@@ -183,15 +192,26 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             try {
               await page.goto(jobUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
               state = 'application_open_review_required';
+              if (await openApplicationForm(page)) state = 'application_form_open_review_required';
             } catch {
               state = 'browser_open_navigation_unverified';
             }
             return respond(res, 200, { ok: true, state, requiresOperatorSubmission: true });
           }
           if (!page || page.isClosed()) return respond(res, 409, { ok: false, error: 'launch_browser_first' });
+          if (new URL(page.url()).origin !== applicationOrigin) return respond(res, 409, { ok: false, error: 'application_origin_changed_review_required' });
           await page.bringToFront();
           if (url.pathname === PREFIX + '/fill') {
-            const outcome = await fillContact(page, reviewedContactFields(payload.profile));
+            const preferences = await readPreferences();
+            const contact = reviewedContactFields(payload.profile);
+            const now = new Date().toISOString();
+            const ids: Record<string, string> = { linkedin_url: 'linkedin', region: 'region' };
+            const merged = { ...emptyPreferences(), preferences: { ...preferences.preferences } };
+            for (const [key, value] of Object.entries(contact)) {
+              const id = 'identity.' + (ids[key] || key);
+              if (!merged.preferences[id]) merged.preferences[id] = { scope: 'profile_preference', source: 'user', value, updated_at: now };
+            }
+            const outcome = await fillSavedPreferences(page, merged);
             state = 'fields_filled_review_required';
             return respond(res, 200, { ok: true, state, ...outcome, requiresOperatorSubmission: true });
           }

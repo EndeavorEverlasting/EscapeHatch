@@ -103,6 +103,11 @@ This file is the canonical registry for durable EscapeHatch artifacts. A plausib
 | Local runtime lifecycle contract | `contracts/local-runtime-lifecycle.v1.json` | tracked versioned runtime contract | update identity/state/kill/privacy rules; never add real tokens or local paths | `python scripts/validate_local_runtime_lifecycle.py` |
 | Local runtime lifecycle example fixture | `fixtures/local-runtime-lifecycle.v1.example.json` | tracked synthetic ownership fixture | exercise healthy/adoptable/unhealthy plus foreign/stale/mismatch negatives without real processes | `python scripts/validate_local_runtime_lifecycle.py` |
 | Local runtime lifecycle validator | `scripts/validate_local_runtime_lifecycle.py` | tracked contract validator | update fail-closed lifecycle identity/kill-policy checks | `python scripts/validate_local_runtime_lifecycle.py` |
+| Managed preference schema consumer | `artifacts/escape-hatch/src/lib/application-preferences.ts` | tracked product module | strict imports and exact taxonomy/option matching | `npm --prefix artifacts/escape-hatch run test:managed-assist` |
+| Managed preference local-file adapter | `artifacts/escape-hatch/preference-file.ts` | tracked product module | atomic private Save/read/Clear; no logging values | `npm --prefix artifacts/escape-hatch run test:managed-assist` |
+| Managed preference editor | `artifacts/escape-hatch/src/components/application-preferences.tsx` | tracked product UI | explicit Save/Export/Import/Clear controls | `npm --prefix artifacts/escape-hatch run typecheck` |
+| Managed semantic fill | `artifacts/escape-hatch/managed-form.ts` | tracked product module | fill known values only; preserve inputs and submission boundary | `npm --prefix artifacts/escape-hatch run test:managed-assist` |
+| Managed preference tests | `artifacts/escape-hatch/managed-preferences.test.ts` | tracked synthetic tests | persistence and actual-browser regression controls | `npm --prefix artifacts/escape-hatch run test:managed-assist` |
 
 ## User-owned local artifacts
 

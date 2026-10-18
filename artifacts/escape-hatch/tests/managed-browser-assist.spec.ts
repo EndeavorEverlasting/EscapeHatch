@@ -181,5 +181,6 @@ test('one-click authorization fails closed when the employer was submitted after
   await expect(page.getByTestId('managed-browser-feedback')).toContainText('Automatic launch paused');
   expect(actions).not.toContain('launch');
   expect(actions).not.toContain('fill');
-  assertNeverSubmitted(['launch', ...actions]);
+  expect(actions).not.toContain('submit');
+  expect(actions).not.toContain('next');
 });

@@ -22,6 +22,9 @@ EscapeHatch has canonical governance, an operational harness, a portable career-
 | `android/application-assist/README.md` | EH-M2 Gradle Android Application Assist adapter. |
 | `docs/APPLICATION_ASSIST_MOBILE_M2_P82_PLAN.md` | EH-M2 experiment ladder and acceptance gates. |
 | `harness/reports/eh-m1-corrected-proof-ledger.md` | Corrected EH-M1 proof classifications (KEEP ≠ PROVEN). |
+| `harness/contracts/application-autofill-parent.v1.json` | Whole-product P04 acceptance projection: browser autofill is the parent, source access is a dependency. |
+| `scripts/validate_application_autofill_parent.py` | Mandatory false-completion/closure guard for parent issue #69. |
+| `tests/test_application_autofill_parent.py` | Negative controls against reducing end-to-end autofill to source import or a green subtask. |
 | `browser/application-assist/` | Manifest V3 unpacked extension implementing the assist-session control loop without auto-submit. |
 | `VERSION` | Canonical human-facing EscapeHatch product release SemVer. Exact freshness remains the Git commit. |
 | `contracts/product-release.v1.json` | Product-release scheme, bump matrix, mirror list, cutover, compatibility, and tag policy. |

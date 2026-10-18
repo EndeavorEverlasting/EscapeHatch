@@ -1,5 +1,13 @@
 # EscapeHatch Application Assist Autopilot Plan
 
+> **Operator correction — 2026-10-18. Persistent parent objective:** https://github.com/EndeavorEverlasting/EscapeHatch/issues/69
+>
+> This document owns the implementation path to **deterministic end-to-end preparation of many employers' browser job-application forms**, starting in EscapeHatch with an opportunity and approved profile, selecting current role-specific documents, mapping and filling authorized native/SPA/React fields, attaching PDFs, advancing only evidence-verified nonterminal steps, maintaining session state and user edits, and stopping **before** final submission for the operator. Source directories, Google credential reuse, résumé ingestion, question preference caches, single-page filling, synthetic fixture tests and navigation classifiers are dependencies **not the project objective or completion**.
+>
+> The dated planning-only and historical branch references below describe earlier floors; they **do not** restrict subsequent authorized implementation. Recover actual current main, merged policy/fixture PRs #67/#68, open managed browser PRs #63/#64, source PR #66 and event-chain branches before further P04 dispatch. Use the nine conjunctive acceptance gates and fail-closed closeout projection in `harness/contracts/application-autofill-parent.v1.json`; verify with `python scripts/validate_application_autofill_parent.py`. P08 must observe actual locally launched multi-step application preparation and a second distinct ATS/form archetype before claiming portability. Final submission, certification and legal/sensitive attestations remain manual.
+>
+> **Current parent state: OPEN / NOT YET END-TO-END PROVEN.** Do not stop or report complete at an intermediate capability milestone.
+
 **Canonical plan owner:** `docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md`
 **Plan date:** 2026-09-23
 **Planning floor:** `integration/replit-donor-b01f628-20260921@be4a4c41403d700285084f941f2725a95a9877b5`

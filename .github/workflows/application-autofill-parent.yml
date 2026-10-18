@@ -1,0 +1,32 @@
+name: Application Autofill Parent Integrity
+on:
+  pull_request:
+    paths:
+      - AGENTS.md
+      - docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md
+      - harness/contracts/application-autofill-parent.v1.json
+      - harness/reports/APPLICATION_FORM_AUTOMATION_STATE.md
+      - harness/WORKFLOWS.md
+      - scripts/validate_application_autofill_parent.py
+      - tests/test_application_autofill_parent.py
+      - .github/workflows/application-autofill-parent.yml
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  parent-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Preserve whole-product mission and proof boundaries
+        run: python scripts/validate_application_autofill_parent.py
+      - name: Reject false closure claims
+        run: python -m unittest discover -s tests -p test_application_autofill_parent.py -v
+      - name: Existing harness floor
+        run: python scripts/validate_harness.py

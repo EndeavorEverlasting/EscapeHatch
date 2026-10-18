@@ -1,5 +1,21 @@
 # Application Form Automation State
 
+## Parent objective and proof ceiling — 2026-10-18
+
+**Canonical parent:** https://github.com/EndeavorEverlasting/EscapeHatch/issues/69
+**Executable acceptance gate:** `harness/contracts/application-autofill-parent.v1.json` and `python scripts/validate_application_autofill_parent.py`.
+**State: OPEN.** The objective is a broadly reusable, deterministic browser job-application preparation workflow across ATS form layouts, not merely fetching résumés or filling contact details.
+
+Provider evidence from reviewed PR descriptions (not re-proven by this report):
+- PR #63: managed-Chrome launch/contact fill/private PDF attach implementation and synthetic tests, draft/unmerged; workstation integration proof still needed.
+- PR #64: reports actual Windows Savantage staged form populated, including visible PDF filenames, with operator final submission withheld; draft/unmerged, stacked on #63.
+- PR #66: user-selected source-directory registry, draft/unmerged, does not yet import résumé data into the running browser workflow.
+- PR #67: merged pure navigation consequence classifier; PR #68: merged synthetic identical-Submit persistent-button fixture in Chromium; these are not a verified product navigation executor.
+- Issue #60 and PRs #59/#61/#62: separately owned observer/event lane; evidence stream cannot substitute for browser filling.
+- PRs TokenCorridor #73/#220: existing Google authorization and live-read work; **recover existing credentials**, don't restart Cloud Console setup by default.
+
+**First unproven parent integration gate:** Converge the current managed-browser PR #63/#64 behavior with the merged navigation policy/fixture and user-reviewed profile/opportunity inputs in a noncolliding worktree; validate the actual Windows managed Chrome application through ready-for-operator review. Subsequent gate: independently established cross-archetype/ATS portability. All 9 parent gates remain unproven as an **integrated end-to-end result** until individual evidence receipts satisfy the owning contract. A green PR, a previous successful single application or synthetic navigation check is weaker evidence.
+
 ## Evidence reviewed
 
 Observed application screens demonstrate that one hiring flow can split recurring questions across multiple pages and can place them in an order that another employer may not use. The harness therefore treats page grouping as advisory and canonical question meaning as authoritative.

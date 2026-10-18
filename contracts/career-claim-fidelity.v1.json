@@ -1,0 +1,47 @@
+{
+  "schema": "escapehatch/career-claim-fidelity/v1",
+  "version": 1,
+  "purpose": "Prevent a partial recollection or evidence window from being misrepresented as total project duration or reduced ownership in career artifacts.",
+  "applies_to": [
+    "career_profile",
+    "master_resume",
+    "tailored_resume",
+    "cover_letter",
+    "application_answers",
+    "exported_pdf",
+    "browser_application_fields"
+  ],
+  "principles": {
+    "partial_observation_is_not_total_duration": true,
+    "latest_user_correction_outweighs_derivative_text": true,
+    "default_omit_unverified_project_duration": true,
+    "preserve_factual_functional_ownership": true,
+    "preserve_distinct_employers_and_dates": true,
+    "preserve_author_voice_and_contractions": true,
+    "never_commit_private_career_content": true
+  },
+  "runtime_evidence_contract": {
+    "scope": "One evaluated claim or paragraph at a time. The supplied source record must come from current reviewed user data.",
+    "required_source_fields": [
+      "owner_scope",
+      "duration_verified",
+      "avoid_temporary_cover_framing"
+    ],
+    "allowed_owner_scope": [
+      "owner",
+      "contributor"
+    ],
+    "validation": "Reject duration statements without source-verified total duration, and reject temporary-cover framing that contradicts owner-scope evidence.",
+    "fail_closed_without_source": true,
+    "user_private_inputs": "Untracked, local or connected only; never a tracked fixture."
+  },
+  "delivery_gates": [
+    "source_claims_reconciled",
+    "draft_claim_audit_passed",
+    "human_factual_review",
+    "document_revision_readback",
+    "derived_exports_regenerated",
+    "browser_form_review_before_submit"
+  ],
+  "proof_ceiling": "Contract and synthetic tests guard known linguistic regressions; they do not certify arbitrary semantic truth, current private-source connectivity, real résumé content, PDF freshness, browser autofill, or submission."
+}

@@ -30,6 +30,12 @@ Every agent, lane, sprint, PR, handoff and completion report touching résumé i
 ### Resume presentation quality is contractual
 When an agent creates, refreshes, tailors, exports, or synchronizes a resume or CV, it must read and preserve the registered `contracts/resume-presentation.v1.json` presentation floor unless the user explicitly approves a different style. Content tailoring may change role-specific emphasis, but it must not silently regress typography, ATS-conservative structure, page-layout rules, output consistency, or required rendered-artifact QA. An optional visual projection may follow `contracts/resume-presentation-visual.v1.json` only when the user explicitly requests a non-ATS human-facing layout; that projection is never the default for Application Assist / employer submissions. Real resume content and contact data remain user-owned private inputs and must not be committed to this public repository. The operator folder `Source Resumes Not to Mutate but to Generate/` is read-only reference material.
 
+### Career claim fidelity is contractual
+
+All resume, cover-letter, career-profile, export, and browser-application text must preserve the user's current approved scope and chronology. A well-recalled partial period is **not** the total project duration. The user's explicit correction overrides old agent drafts and derivative PDFs, but factual claims still require evidence or appropriately attributed user testimony. Do not describe a multi-month responsibility as a brief coverage assignment merely because one six-week interval is easy to document. Avoid exact public duration unless the full duration is source-verified and useful.
+
+Before releasing generated text, load `contracts/career-claim-fidelity.v1.json` and run `python scripts/validate_career_claim_fidelity.py`; apply its local `--input` mode to untracked, source-grounded claim paragraphs when available. A passing synthetic check is **not** a proof of arbitrary text semantics, real source ingestion, PDF regeneration, or complete browser application readiness. Private claim records, resumes, contact data, and documents must remain outside this public repository.
+
 ## 2. Instruction Precedence
 
 When instructions conflict, use this order from highest to lowest precedence:

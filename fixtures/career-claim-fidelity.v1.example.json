@@ -1,0 +1,76 @@
+{
+  "schema": "escapehatch/career-claim-fidelity-cases/v1",
+  "synthetic_only": true,
+  "cases": [
+    {
+      "name": "partial-six-weeks-shrunk",
+      "source": {
+        "owner_scope": "owner",
+        "duration_verified": false,
+        "avoid_temporary_cover_framing": true
+      },
+      "draft": "Owned the rollout for more than six weeks while another manager was unavailable.",
+      "expected": "REJECT"
+    },
+    {
+      "name": "compressed-plus-weeks",
+      "source": {
+        "owner_scope": "owner",
+        "duration_verified": false,
+        "avoid_temporary_cover_framing": true
+      },
+      "draft": "Owned rollout responsibilities for 6+ weeks.",
+      "expected": "REJECT"
+    },
+    {
+      "name": "temporary-owner-demotion",
+      "source": {
+        "owner_scope": "owner",
+        "duration_verified": false,
+        "avoid_temporary_cover_framing": true
+      },
+      "draft": "I just filled in for the project manager.",
+      "expected": "REJECT"
+    },
+    {
+      "name": "unverified-months",
+      "source": {
+        "owner_scope": "owner",
+        "duration_verified": false,
+        "avoid_temporary_cover_framing": true
+      },
+      "draft": "Led the rollout for several months.",
+      "expected": "REJECT"
+    },
+    {
+      "name": "ownership-without-duration",
+      "source": {
+        "owner_scope": "owner",
+        "duration_verified": false,
+        "avoid_temporary_cover_framing": true
+      },
+      "draft": "Owned day-to-day rollout delivery, coordinating staffing, escalations, and stakeholder continuity.",
+      "expected": "PASS"
+    },
+    {
+      "name": "explicitly-verified-total",
+      "source": {
+        "owner_scope": "owner",
+        "duration_verified": true,
+        "avoid_temporary_cover_framing": true
+      },
+      "draft": "Owned end-to-end delivery for eight months.",
+      "expected": "PASS"
+    },
+    {
+      "name": "legitimate-contributor",
+      "source": {
+        "owner_scope": "contributor",
+        "duration_verified": false,
+        "avoid_temporary_cover_framing": false
+      },
+      "draft": "I filled in to support deployment coverage.",
+      "expected": "PASS"
+    }
+  ]
+}

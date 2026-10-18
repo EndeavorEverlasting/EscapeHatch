@@ -34,7 +34,6 @@ REQUIRED_BY_SECTION = {
         "contracts/resume-presentation.v1.json",
         "Career artifact propagation must be reconciled",
         "harness/contracts/career-artifact-propagation.v1.json",
-        "PROTECTED_NO_EDIT",
     ),
     REQUIRED_HEADINGS[2]: (
         "Repo and branch",

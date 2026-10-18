@@ -34,6 +34,7 @@ export type Application = {
   priority: Priority;
   notes: string;
   nextAction: string;
+  jobDescription?: string;
   updatedAt: string;
 };
 
@@ -126,12 +127,13 @@ export function parseAnswersStorage(value: unknown): AnswerSnippet[] | null {
 export function parseApplicationsStorage(value: unknown): Application[] | null {
   if (!Array.isArray(value)) return null;
   const applications = value.map((item) => {
-    if (!isRecord(item) || !hasOnlyKeys(item, ['id', 'company', 'role', 'url', 'status', 'priority', 'notes', 'nextAction', 'updatedAt'])) return null;
+    if (!isRecord(item) || !hasOnlyKeys(item, ['id', 'company', 'role', 'url', 'status', 'priority', 'notes', 'nextAction', 'updatedAt', 'jobDescription'])) return null;
     if (!isText(item.id) || !item.id.trim() || !isText(item.company) || !item.company.trim()) return null;
     if (!isText(item.role) || !item.role.trim() || !isText(item.url)) return null;
     if (!isText(item.status) || !applicationStatuses.includes(item.status as ApplicationStatus)) return null;
     if (!isText(item.priority) || !priorities.includes(item.priority as Priority)) return null;
     if (!isText(item.notes) || !isText(item.nextAction) || !isDateString(item.updatedAt)) return null;
+    if (item.jobDescription !== undefined && (typeof item.jobDescription !== 'string' || item.jobDescription.length > 30000)) return null;
     return item as Application;
   });
   return applications.every((application): application is Application => application !== null) ? applications : null;

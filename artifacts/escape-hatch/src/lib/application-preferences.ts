@@ -3,7 +3,7 @@ import taxonomy from '../../../../harness/contracts/application-form-taxonomy.v1
 export const PREFERENCE_KEY = 'escapeHatch.applicationQuestionPreferences.v1';
 export const PREFERENCE_SCHEMA = 'escapehatch-application-question-preferences/v1';
 export type Preference = { scope: 'profile_preference'; value: string; source: 'user'; updated_at: string };
-export type Preferences = { schema_version: typeof PREFERENCE_SCHEMA; exported_at: string; preferences: Record<string, Preference>; job_titles?: string[] };
+export type Preferences = { schema_version: typeof PREFERENCE_SCHEMA; exported_at: string; preferences: Record<string, Preference>; job_titles?: string[]; professional_titles?: string[] };
 export const questions = taxonomy.questions;
 export const emptyPreferences = (): Preferences => ({ schema_version: PREFERENCE_SCHEMA, exported_at: new Date().toISOString(), preferences: {} });
 
@@ -16,10 +16,12 @@ export function parsePreferences(input: unknown): Preferences | null {
   const known = new Set(questions.map(q => q.id));
   const clean = emptyPreferences();
   clean.exported_at = data.exported_at;
-  if (data.job_titles !== undefined) {
-    if (!Array.isArray(data.job_titles) || data.job_titles.length > 100 ||
-        data.job_titles.some(value => typeof value !== 'string' || !value.trim() || value.length > 160)) return null;
-    clean.job_titles = [...new Set(data.job_titles.map(value => value.trim()))];
+  for (const key of ['job_titles', 'professional_titles'] as const) {
+    const titles = data[key];
+    if (titles !== undefined) {
+      if (!Array.isArray(titles) || titles.length > 100 || titles.some(value => typeof value !== 'string' || !value.trim() || value.length > 160)) return null;
+      clean[key] = [...new Set(titles.map(value => value.trim()))];
+    }
   }
   for (const [id, entry] of Object.entries(data.preferences)) {
     if (!known.has(id) || !entry || typeof entry !== 'object' || entry.scope !== 'profile_preference' || entry.source !== 'user' ||
@@ -68,3 +70,34 @@ export const preferenceChoices: Record<string, string[]> = {
   'eeo.disability_status': ['Yes', 'No', 'Prefer not to answer'],
   'eeo.veteran_status': ['I am not a protected veteran', 'I identify as one or more classifications of a protected veteran', 'Prefer not to answer'],
 };
+
+export function expandProfessionalTitles(input: string[]): string[] {
+  const titles = [...new Set(input.map(value => value.trim()).filter(Boolean))];
+  if (!titles.length || titles.length > 4 || titles.some(value => value.length > 160)) return [];
+  const result: string[] = [];
+  function visit(prefix: string[], remaining: string[]) {
+    if (prefix.length && prefix.join(' / ').length <= 160) result.push(prefix.join(' / '));
+    for (const title of remaining) visit([...prefix, title], remaining.filter(value => value !== title));
+  }
+  visit([], titles);
+  return result;
+}
+
+export function suggestProfessionalTitles(titles: string[], role: string, posting: string, experience: string) {
+  const tokens = (text: string) => normalizeQuestion(text).split(' ').map(word => ({ manager: 'manage', management: 'manage', managing: 'manage', engineering: 'engineer', coordination: 'coordinate', coordinator: 'coordinate' }[word] || word)).filter(word => word.length > 2 && !['and', 'the', 'for', 'with', 'senior'].includes(word));
+  const roleWords = new Set(tokens(role)), postingWords = new Set(tokens(posting)), experienceWords = new Set(tokens(experience));
+  const seen = new Set<string>();
+  return titles.flatMap(title => {
+    const key = title.split(' / ').sort().join(' / ');
+    if (seen.has(key)) return [];
+    seen.add(key);
+    const words = [...new Set(tokens(title))];
+    const roleMatches = words.filter(word => roleWords.has(word));
+    const postingMatches = words.filter(word => postingWords.has(word));
+    const experienceMatches = words.filter(word => experienceWords.has(word));
+    // Suggestions require target evidence, not just a title appearing in the user's own history.
+    if (!roleMatches.length && !postingMatches.length) return [];
+    const score = (roleMatches.length * 4 + postingMatches.length + experienceMatches.length) / Math.max(1, words.length);
+    return [{ title, score, evidence: [roleMatches.length ? 'Role: ' + roleMatches.join(', ') : '', postingMatches.length ? 'Posting: ' + postingMatches.join(', ') : '', experienceMatches.length ? 'Reviewed experience: ' + experienceMatches.join(', ') : ''].filter(Boolean).join(' · ') }];
+  }).sort((a, b) => b.score - a.score || a.title.length - b.title.length || a.title.localeCompare(b.title)).slice(0, 3);
+}

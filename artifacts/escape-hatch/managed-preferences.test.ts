@@ -1,10 +1,13 @@
+import { withCareerPreferences } from './career-preferences.ts';
+import { emptyAssistProfile } from './src/lib/assist-contract.ts';
+import { emptyProfile } from './src/lib/storage.ts';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { chromium } from '@playwright/test';
-import { emptyPreferences, parsePreferences, optionMatches, matchQuestion } from './src/lib/application-preferences.ts';
+import { emptyPreferences, parsePreferences, optionMatches, matchQuestion, expandProfessionalTitles, suggestProfessionalTitles } from './src/lib/application-preferences.ts';
 import { savePreferences, readPreferences, clearPreferences } from './preference-file.ts';
 import { fillSavedPreferences, openApplicationForm, internationalPhone, captureMilitaryAnswers } from './managed-form.ts';
 import { attachPdfs, parsePrivatePdf } from './browser-assist-control.ts';
@@ -107,7 +110,7 @@ test('job titles persist separately from salutations; decorated military prompts
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
   try {
     const page = await browser.newPage();
-    await page.setContent(`<label>Professional title<input id="role"></label><label>Salutation<input id="salutation"></label>
+    await page.setContent(`<label>Desired job title<input id="role"></label><label>Salutation<input id="salutation"></label>
       <label>Have you ever served in the U.S. Armed Forces? (Optional)<select id="service"><option value="">Choose</option><option value="n">No</option><option value="y">Yes</option></select></label>
       <fieldset><legend>Protected veteran status [Optional]</legend><label><input type="radio" name="veteran" value="n">I am not a protected veteran</label><label><input type="radio" name="veteran" value="y">I am a protected veteran</label></fieldset>
       <label>Race<input value="Do not capture"></label><button type="submit">Submit</button>`);
@@ -131,4 +134,49 @@ test('job titles persist separately from salutations; decorated military prompts
     await page.setContent('<label>Military service<select><option value="">Choose</option><option selected>No</option></select></label><label>Military service<select><option selected>Yes</option></select></label>');
     assert.deepEqual(await captureMilitaryAnswers(page), {});
   } finally { await browser.close(); }
+});
+
+test('selected canonical career records fill descriptions and education without mixing posting, professional title, or repeated sections', async () => {
+  const profile = emptyAssistProfile({ ...emptyProfile });
+  const provenance = { source: 'user' as const, label: 'Reviewed synthetic record', capturedAt: new Date().toISOString() };
+  profile.experience = [{ id: 'work', company: 'Synthetic Company', title: 'Past Role', dates: '2020-2024', location: '', bullets: ['Delivered synthetic work.'], provenance }];
+  profile.education = [{ id: 'edu', institution: 'Synthetic University', credential: 'Bachelor of Science', fieldOfStudy: 'Systems', dates: '2016-2020', details: 'Synthetic coursework', provenance }];
+  const saved = syntheticPreferences();
+  saved.professional_titles = ['Systems Operator', 'Project Lead'];
+  saved.preferences['identity.professional_title'] = { scope: 'profile_preference', source: 'user', value: 'Systems Operator', updated_at: saved.exported_at };
+  assert.equal(withCareerPreferences(saved, profile, 'Target Role').preferences['education.institution'], undefined);
+  profile.selectedExperienceId = 'work'; profile.selectedEducationId = 'edu';
+  const projected = withCareerPreferences(saved, profile, 'Target Role');
+  assert.deepEqual(parsePreferences(saved)?.professional_titles, saved.professional_titles);
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  try {
+    const page = await browser.newPage();
+    await page.setContent('<label>Professional title<input id="professional"></label><label>Desired job title<input id="target"></label><label>Job title<input id="past"></label><label>Job description<textarea id="description"></textarea></label><label>School<input id="school"></label><label>Degree<input id="degree"></label><label>Field of study<input id="major"></label>');
+    await fillSavedPreferences(page, projected);
+    for (const [id, value] of Object.entries({ professional: 'Systems Operator', target: 'Target Role', past: 'Past Role', description: 'Delivered synthetic work.', school: 'Synthetic University', degree: 'Bachelor of Science', major: 'Systems' })) assert.equal(await page.locator('#' + id).inputValue(), value);
+    await page.setContent('<label>School<input id="one"></label><label>School<input id="two"></label>');
+    const ambiguous = await fillSavedPreferences(page, projected);
+    assert.ok(ambiguous.skipped.includes('education.institution:ambiguous'));
+    assert.equal(await page.locator('#one').inputValue(), '');
+    assert.equal(withCareerPreferences(saved, profile, '').preferences['identity.job_title'], undefined);
+  } finally { await browser.close(); }
+});
+
+
+test('professional title combinations are distinct, bounded and independent of selected target title', () => {
+  const titles = expandProfessionalTitles(['Project Manager', 'Engineer', 'Project Coordinator', 'Senior Technician']);
+  assert.equal(titles.length, 64);
+  assert.equal(new Set(titles).size, 64);
+  assert.ok(titles.includes('Project Manager / Engineer'));
+  assert.ok(titles.includes('Engineer / Project Manager'));
+  assert.deepEqual(expandProfessionalTitles(['A', 'B', 'C', 'D', 'E']), []);
+});
+
+test('professional title suggestions require target evidence and do not mutate the user list', () => {
+  const titles = ['Systems Engineer', 'Retail Supervisor'];
+  const ranked = suggestProfessionalTitles(titles, 'Engineering Lead', 'Build systems and engineering workflows', 'Systems engineer work');
+  assert.equal(ranked[0].title, 'Systems Engineer');
+  assert.match(ranked[0].evidence, /Posting:/);
+  assert.deepEqual(titles, ['Systems Engineer', 'Retail Supervisor']);
+  assert.deepEqual(suggestProfessionalTitles(titles, '', '', 'Systems Engineer'), []);
 });

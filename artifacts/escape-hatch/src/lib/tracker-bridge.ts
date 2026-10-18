@@ -181,6 +181,7 @@ export function mergeTrackerIntoApplications(
     // Preserve operator local edits when notes differ and prior was manually richer.
     byId.set(item.id, {
       ...item,
+      ...(prior.jobDescription !== undefined ? { jobDescription: prior.jobDescription } : {}),
       notes: prior.notes.includes('local edit') ? prior.notes : item.notes,
       nextAction: prior.nextAction && prior.updatedAt > item.updatedAt ? prior.nextAction : item.nextAction,
     });

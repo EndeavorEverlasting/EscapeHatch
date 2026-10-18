@@ -209,3 +209,10 @@ test('storage writes report unavailable or full browser storage without throwing
   assert.equal(writeStoredValue(fullStorage, 'profile', emptyProfile), false);
   assert.equal(writeStoredValue(memoryStorage(), 'profile', emptyProfile), true);
 });
+test('opportunity posting text round-trips without becoming another opportunity field', () => {
+  const application = { id: 'posting', company: 'Synthetic', role: 'Role', url: 'https://example.com', status: 'saved', priority: 'normal', notes: 'Personal notes', nextAction: '', updatedAt: new Date().toISOString(), jobDescription: 'Employer requirements' };
+  const parsed = parseApplicationsStorage([application]);
+  assert.equal(parsed?.[0].jobDescription, 'Employer requirements');
+  assert.equal(parsed?.[0].notes, 'Personal notes');
+  assert.equal(parseApplicationsStorage([{ ...application, jobDescription: 42 }]), null);
+});

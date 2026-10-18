@@ -252,7 +252,7 @@ const stamp = (fileName: string, snippet: string, page?: number): Provenance => 
 
 const clean = (value: string) => value.replace(/\s+/g, ' ').replace(/^[•·▪]\s*/, '').trim();
 const idFor = (section: string, field: string, value: string) => `${section}-${field}-${value.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 48)}`;
-const heading = (line: string) => /^(professional summary|summary|core strengths|skills|selected software\b.*|projects|professional experience|experience|education)$/i.test(line.trim());
+const heading = (line: string) => /^(professional summary|summary|core strengths|skills|selected software\b.*|projects|professional experience|experience|software & product-building experience|education)$/i.test(line.trim());
 const sectionText = (lines: string[], names: RegExp) => {
   const start = lines.findIndex((line) => names.test(line));
   if (start < 0) return [];
@@ -319,7 +319,7 @@ export function parseResumeText(text: string, fileName = 'Imported resume'): Res
     addProposal(proposals, 'projects', 'project', content, 'medium', stamp(fileName, content, 1));
   }
 
-  const experienceLines = sectionText(lines, /^(professional experience|experience)$/i);
+  const experienceLines = [...sectionText(lines, /^(professional experience|experience)$/i), ...sectionText(lines, /^software & product-building experience$/i)];
   const experience: AssistExperience[] = [];
   let current: AssistExperience | null = null;
   for (const line of experienceLines) {
@@ -348,10 +348,15 @@ export function parseResumeText(text: string, fileName = 'Imported resume'): Res
     if (currentBlock.length) educationBlocks.push(currentBlock);
     for (const block of educationBlocks) {
       const first = block[0];
-      const [institution = '', ...rest] = first.split(/\s+\|\s+/);
+      const [header = '', ...parts] = first.split(/\s+\|\s+/);
+      const separated = header.split(/\s+—\s+/);
+      const institution = separated.length > 1 ? separated[0] : header;
+      const credential = separated.length > 1 ? separated.slice(1).join(' — ') : parts.join(' | ');
+      const dates = separated.length > 1 ? parts.join(' | ') : '';
+      const degreeParts = credential.match(/^((?:B\.S\.|B\.A\.|M\.S\.|M\.A\.|Ph\.D\.))\s+([^,]+)(?:,\s*(.*))?$/i);
       const value = block.join('\n');
       const source = stamp(fileName, value, 2);
-      education.push({ id: idFor('education', institution, value), institution: clean(institution), credential: clean(rest.join(' | ')), dates: '', details: block.slice(1).map(clean).join(' '), provenance: source });
+      education.push({ id: idFor('education', institution, value), institution: clean(institution), credential: clean(degreeParts?.[1] || credential), fieldOfStudy: clean(degreeParts?.[2] || ''), dates: clean(dates), details: [degreeParts?.[3] || '', ...block.slice(1)].map(clean).filter(Boolean).join(' '), provenance: source });
       addProposal(proposals, 'education', 'education', value, 'medium', source);
     }
   }

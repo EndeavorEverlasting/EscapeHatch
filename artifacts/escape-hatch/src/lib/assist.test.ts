@@ -293,3 +293,12 @@ test('sensitive and unknown questions fail closed while supported questions matc
   assert.deepEqual(classifyQuestion('Why do you want this role?').id, 'why-this-role');
   assert.deepEqual(classifyQuestion('Favorite color').status, 'unknown');
 });
+test('resume career drafts separate employer, degree, dates and software experience headings', () => {
+  const parsed = parseResumeText('PROFESSIONAL EXPERIENCE\nExample Company — Project Coordinator | 2023-2025\n• Coordinated work.\nSOFTWARE & PRODUCT-BUILDING EXPERIENCE\nExample Studio — Engineer | 2025-Present\n• Built tools.\nEDUCATION\nExample University — B.S. Mathematics | Dec 2016', 'synthetic.txt');
+  assert.equal(parsed.experience.length, 2);
+  assert.equal(parsed.experience[1].company, 'Example Studio');
+  assert.equal(parsed.education[0].institution, 'Example University');
+  assert.equal(parsed.education[0].credential, 'B.S.');
+  assert.equal(parsed.education[0].fieldOfStudy, 'Mathematics');
+  assert.equal(parsed.education[0].dates, 'Dec 2016');
+});

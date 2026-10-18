@@ -1,3 +1,5 @@
+import type { AssistProfile } from '@/lib/assist-contract';
+import { CareerRecords } from './career-records';
 import { useEffect, useRef, useState, type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
 import { ArrowUpRight, CheckCircle2, FileUp, LoaderCircle, ShieldCheck } from 'lucide-react';
 import type { Application, Profile } from '@/lib/storage';
@@ -75,7 +77,7 @@ const titles: Record<string, string> = {
   BLOCKED: 'BLOCKED — fail closed; re-inspect before retry',
 };
 
-export function ManagedBrowserAssist({ profile, setProfile, applications, setApplications }: { profile: Profile; setProfile: Dispatch<SetStateAction<Profile>>; applications: Application[]; setApplications: Dispatch<SetStateAction<Application[]>> }) {
+export function ManagedBrowserAssist({ profile, setProfile, applications, setApplications, assistProfile, setAssistProfile }: { assistProfile: AssistProfile; setAssistProfile: Dispatch<SetStateAction<AssistProfile>>; profile: Profile; setProfile: Dispatch<SetStateAction<Profile>>; applications: Application[]; setApplications: Dispatch<SetStateAction<Application[]>> }) {
   // Never silently reuse an earlier/submitted employer as the next application.
   const [url, setUrl] = useState('');
   const [selectedOpportunityId, setSelectedOpportunityId] = useState('');
@@ -215,7 +217,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           throw new Error('This opportunity is already applied or closed. Do not reapply.');
         }
         body = { url, opportunityId: opportunity?.id || '' };
-      } else if (action === 'fill') body = { profile };
+      } else if (action === 'fill') body = { profile, careerProfile: assistProfile, targetRole: applications.find(item => item.id === selectedOpportunityId)?.role || '' };
       else if (action === 'attach') body = { resume: await privatePdf(resume), cover: await privatePdf(cover) };
       else {
         // Prepare uses a trusted adapter registry supplied by the operator/runtime host.
@@ -243,7 +245,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         // Explicit operator launch authorizes the existing bounded DOM filler, not navigation or submission.
         // If this is a landing/login page, no fill occurs; the manual Fill control remains available.
         try {
-          const filled = await request('/fill', { profile });
+          const filled = await request('/fill', { profile, careerProfile: assistProfile, targetRole: applications.find(item => item.id === selectedOpportunityId)?.role || '' });
           result = filled;
           autoFillMessage = 'Managed Chrome opened the application form. ' +
             (filled.filled?.length ? 'Filled: ' + filled.filled.join(', ') + '. ' : 'No approved fields were filled. ') +
@@ -300,7 +302,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const secondary = 'inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-bold hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50';
 
   return (
-    <><ApplicationPreferences currentRole={applications.find(item => item.id === selectedOpportunityId)?.role} refresh={preferencesRefresh} onEdit={() => setRecordMilitary(false)} onLoad={data => setProfile(current => {
+    <><ApplicationPreferences currentRole={applications.find(item => item.id === selectedOpportunityId)?.role} currentPosting={applications.find(item => item.id === selectedOpportunityId)?.jobDescription || ''} reviewedExperience={assistProfile.experience.filter(item => item.id === assistProfile.selectedExperienceId).map(item => item.title + ' ' + item.bullets.join(' ')).join(' ')} refresh={preferencesRefresh} onEdit={() => setRecordMilitary(false)} onLoad={data => setProfile(current => {
       const next = { ...current };
       for (const key of Object.keys(current) as (keyof Profile)[]) {
         const id = 'identity.' + (key === 'linkedin_url' ? 'linkedin' : key === 'name_prefix' ? 'title' : key);
@@ -308,7 +310,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         if (!next[key] && value) next[key] = value;
       }
       return next;
-    })} /><section className="mb-6 rounded-2xl border border-primary/25 bg-card p-5 shadow-sm sm:p-7" data-testid="managed-browser-assist">
+    })} /><CareerRecords profile={assistProfile} setProfile={setAssistProfile} opportunity={applications.find(item => item.id === selectedOpportunityId)} setApplications={setApplications} /><section className="mb-6 rounded-2xl border border-primary/25 bg-card p-5 shadow-sm sm:p-7" data-testid="managed-browser-assist">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div>
           <p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-primary">Native application launch</p>

@@ -1,3 +1,4 @@
+import { withCareerPreferences } from './career-preferences.ts';
 import { captureMilitaryAnswers } from './managed-form.ts';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { homedir } from 'node:os';
@@ -395,7 +396,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               const id = 'identity.' + (ids[key] || key);
               if (!merged.preferences[id]) merged.preferences[id] = { scope: 'profile_preference', source: 'user', value, updated_at: now };
             }
-            const outcome = await fillSavedPreferences(page, merged);
+            const outcome = await fillSavedPreferences(page, withCareerPreferences(merged, payload.careerProfile, payload.targetRole));
             state = 'fields_filled_review_required';
             return respond(res, 200, { ok: true, state, ...outcome, requiresOperatorSubmission: true });
           }

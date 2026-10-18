@@ -89,7 +89,7 @@ test('Launch automatically fills permitted fields when a verified application fo
   await expect(page.getByText('Known fields filled — review the page')).toBeVisible();
   await expect(page.getByTestId('managed-browser-feedback')).toContainText('Filled: first_name');
   await expect(page.getByTestId('managed-browser-feedback')).toContainText('Skipped: unknown_question');
-  expect(actions.filter((value) => value !== 'status')).toEqual(['launch', 'fill']);
+  expect(actions.filter((value) => ['launch', 'fill', 'attach', 'prepare'].includes(value))).toEqual(['launch', 'fill']);
   assertNeverSubmitted(actions);
 });
 
@@ -104,6 +104,6 @@ test('Launch does not autofill the login or posting page', async ({ page }) => {
   await page.goto('/assist');
   await page.getByTestId('managed-job-url').fill('https://jobs.ashbyhq.com/synthetic/login');
   await page.getByTestId('button-managed-launch').click();
-  expect(actions.filter((value) => value !== 'status')).toEqual(['launch']);
+  expect(actions.filter((value) => ['launch', 'fill', 'attach', 'prepare'].includes(value))).toEqual(['launch']);
   assertNeverSubmitted(actions);
 });

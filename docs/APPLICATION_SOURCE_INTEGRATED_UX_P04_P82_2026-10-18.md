@@ -154,3 +154,69 @@ Then each lane's actual tests (do not confuse proposal with execution):
 See `harness/reports/application-source-ux-p04-dispatch.v1.json` for ordered lanes and exact dependency graph. It is a repository-scoped machine-readable *coordination* artifact. Do not falsely claim it was consumed by TokenCorridor's native dispatch runner, launched parallel worktrees, merged the active PRs, enrolled a Google account, or served an actual UI. On local environment, bind it to the current registry/resolver and native orchestrator, validate manifest/receipt with the native schema, and only then label it `DISPATCHED`.
 
 **Final convergence definition:** users connect their own Google account (or re-use existing authorized path), choose files and verify content, review controlled profile import, pick an opportunity, and have EscapeHatch—not an AI agent—prepare a real application through the nonterminal stages with final Submit untouched. Works without rekeying Cloud credentials for returning operator and without individual Google Cloud projects for new users; preserves isolation between two users. P08 evidence + reviewed main + live runtime; no claim until then.
+
+## 10. Normative cross-interface seam — no agent design latitude
+
+Build a *single* transport-independent product API and bind both views to it. These are proposed contracts until implemented and versioned in product code; no claim that these TypeScript interfaces already exist:
+
+```ts
+type UserPrincipal = { principalId: string; mode: "local_user" | "hosted_authenticated" };
+type SourceConnection = {
+  connectionId: string; principalId: string; provider: "google_drive" | "local_files";
+  providerSubject: string | null; // never an access token or email as database key
+  status: "NOT_CONNECTED" | "AUTH_RECOVERY_REQUIRED" | "AUTHORIZED" |
+          "CONTENT_READ_PROVEN" | "REVOKED" | "ERROR";
+  scopeIds: string[]; lastContentReadAt: string | null;
+};
+type SelectedSource = {
+  sourceId: string; principalId: string; connectionId: string;
+  fileId: string; role: "master_resume" | "role_resume" |
+    "cover_letter" | "application_tracker" | "other";
+  mimeType: string; revision: string; fingerprint: string | null;
+  status: "SELECTED" | "METADATA_READ" | "CONTENT_READ" |
+    "PREVIEW_REVIEW" | "APPROVED" | "STALE" | "UNAVAILABLE";
+};
+type ContentReadReceipt = {
+  sourceId: string; connectionId: string; revision: string;
+  status: "CONTENT_READ" | "METADATA_ONLY" | "AUTH_REQUIRED" | "DENIED" |
+          "UNSUPPORTED" | "EMPTY" | "STALE" | "TRANSIENT_FAILURE";
+  byteCount: number | null; extractedTextLength: number | null;
+  contentHash: string | null; verifiedAt: string | null;
+};
+type ApprovedArtifactBinding = {
+  sourceId: string; revision: string; contentHash: string;
+  canonicalProfileRevision: string; reviewedByPrincipalId: string;
+  approvalAt: string; approved: true;
+};
+type ApplicationPackage = {
+  principalId: string; opportunityId: string;
+  masterProfileRevision: string; resume: ApprovedArtifactBinding;
+  coverLetter: ApprovedArtifactBinding | null;
+  answerPreferenceRevision: string; freshnessCheckedAt: string;
+  status: "READY_TO_PREPARE" | "REVIEW_REQUIRED" | "PREPARING" |
+          "REVIEW_READY_NOT_SUBMITTED";
+};
+interface CareerSourceProvider {
+  getConnectionStatus(principal: UserPrincipal, connectionId: string): Promise<SourceConnection>;
+  listSelected(principal: UserPrincipal, connectionId: string): Promise<SelectedSource[]>;
+  getFileMetadata(principal: UserPrincipal, sourceId: string): Promise<SelectedSource>;
+  readSelectedContent(principal: UserPrincipal, sourceId: string): Promise<ContentReadReceipt>;
+  disconnect(principal: UserPrincipal, connectionId: string): Promise<void>;
+}
+```
+
+**Enforcement:** `readSelectedContent` returns a *receipt* plus a private content stream/handle available only to the existing import pipeline; do not return résumé text, raw file bytes or credentials through public status endpoints. The caller cannot claim `CONTENT_READ` unless the provider read and parser actually returned usable content, identity/revision remained consistent and the receipt was persisted privately. `principalId` is derived from authenticated server/local runtime, never trusted from client input. `ApprovedArtifactBinding` cannot be created from a raw locator or document title.
+
+**Exact UI-A→UI-B operation:**
+1. A user selects a file with Google Picker or local chooser. The source registry creates an idempotent private `SelectedSource`.
+2. Adapter reads exact metadata and then content under the connection's verified user principal; source revision and MIME are checked.
+3. Existing résumé importer creates a staged, source-grounded diff against the canonical candidate profile. User approval updates only explicit affected fields with durable per-field provenance.
+4. Tracker importer maps an exact existing opportunity ID (no guessed new employer). The user binds the role résumé and cover-letter revisions.
+5. The application package is valid only when source hashes/revisions match approval, posting freshness is verified, unanswered required fields are surfaced and the browser session binds the same opportunity.
+6. The existing deterministic browser writer fills approved data; nav classifier/driver advances **only** evidence-verified intermediate controls. It stops at `REVIEW_READY_NOT_SUBMITTED`; no ATS terminal POST can occur.
+7. A later source revision or account disconnect invalidates the *currentness of dependent unsubmitted packages* with traceable revision conflict; historical approved facts remain intact until explicitly revised. The user sees exact stale dependency, not a silent sync.
+
+**API responsibility:** One domain layer may be exposed through local loopback handlers initially and secure hosted endpoints later; the transport changes, the identifiers/policies do not. Local loopback endpoints retain existing Host/Origin/CSRF controls and must never be exposed as public endpoints. Hosted requests derive principal from the authenticated session, enforce per-tenant authorization in database and provider adapter, and are auditable without logging PII. Unknown connection/source/opportunity IDs fail closed without cross-account fallback.
+
+**P82 next falsifier:** if two views cannot round-trip the SAME `ApplicationPackage` without copying approved candidate text into a second store, do not “solve” it with a migration adapter or manual re-export; refactor the shared model and rerun the prototype comparison.
+

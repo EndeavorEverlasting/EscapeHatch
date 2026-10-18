@@ -15,7 +15,7 @@
 - **Non-negotiable:** no second candidate store, no separate standalone Google website, no credentials/PII in public Git, no repeat Cloud Console setup by default, no Chrome agent filling live form, no final Submit/attestation. Private source READ is not metadata or token readiness; a green PR is not a live product.
 
 ## PARALLEL DISPATCH MANIFEST
-`harness/reports/application-source-ux-p04-dispatch.v1.json` is the repository-scoped, machine-readable dependency graph. It is explicitly `PLANNED_NOT_DISPATCHED`. Native TokenCorridor dispatcher must translate/validate against its CURRENT schema and collect execution receipts; do not claim a launch without observed actual agents/worktrees. 
+`harness/reports/application-source-ux-p04-dispatch.v1.json` is the repository-scoped, machine-readable dependency graph. It is explicitly `PLANNED_NOT_DISPATCHED`. Native TokenCorridor dispatcher must translate/validate against its CURRENT schema and collect execution receipts; do not claim a launch without observed actual agents/worktrees.
 
 ---
 

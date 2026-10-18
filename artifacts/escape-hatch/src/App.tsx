@@ -938,19 +938,23 @@ function AnswerForm({ answer, initialDraft, returnFocusRef, fallbackFocusRef, on
   });
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    // Read the actual control at commit time. A rapid Fill -> click can precede
+    // React's next render; stale state must never certify an empty required answer.
+    const submittedTitle = titleRef.current?.value ?? title;
+    const submittedContent = contentRef.current?.value ?? content;
     const nextErrors = {
-      ...(title.trim() ? {} : { title: 'Add a short title before saving.' }),
-      ...(content.trim() ? {} : { content: 'Write an answer before saving.' }),
+      ...(submittedTitle.trim() ? {} : { title: 'Add a short title before saving.' }),
+      ...(submittedContent.trim() ? {} : { content: 'Write an answer before saving.' }),
     };
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
       window.requestAnimationFrame(() => {
-        if (!title.trim()) titleRef.current?.focus();
+        if (!submittedTitle.trim()) titleRef.current?.focus();
         else contentRef.current?.focus();
       });
       return;
     }
-    onSave({ title: title.trim(), category, content: content.trim() });
+    onSave({ title: submittedTitle.trim(), category, content: submittedContent.trim() });
   };
   const dismiss = () => onClose({ title, category, content });
   return <Modal title={answer ? 'Edit answer' : 'New answer'} eyebrow="Answer library" onClose={dismiss} returnFocusRef={returnFocusRef} fallbackFocusRef={fallbackFocusRef}><form onSubmit={submit} className="space-y-5"><Field label="Short title" name="answer-title" value={title} onChange={(event) => { setTitle(event.target.value); if (event.target.value.trim()) clearError('title'); }} placeholder="Why I am interested in this kind of work" required inputRef={titleRef} error={errors.title} data-testid="input-answer-title" /><SelectField label="Category" value={category} onChange={(event) => setCategory(event.target.value)} options={categories.map((item) => ({ value: item, label: item }))} testId="select-answer-category" /><TextArea label="Your answer" name="answer-content" value={content} onChange={(event) => { setContent(event.target.value); if (event.target.value.trim()) clearError('content'); }} placeholder="Write it in your own voice. It does not need to be perfect." required textareaRef={contentRef} error={errors.content} data-testid="textarea-answer-content" /><div className="flex justify-end gap-2 pt-2"><Button type="button" variant="outline" onClick={dismiss} data-testid="button-cancel-answer">Cancel</Button><Button type="submit" data-testid="button-save-answer"><Check size={16} /> Save answer</Button></div></form></Modal>;
@@ -1123,19 +1127,23 @@ function ApplicationForm({ application, initialDraft, returnFocusRef, fallbackFo
   };
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    // Validate the live DOM before committing; React may not have rendered the
+    // immediately preceding edit. Never save a stale company/role after removal.
+    const submittedCompany = companyRef.current?.value ?? form.company;
+    const submittedRole = roleRef.current?.value ?? form.role;
     const nextErrors = {
-      ...(form.company.trim() ? {} : { company: 'Add a company before saving.' }),
-      ...(form.role.trim() ? {} : { role: 'Add a role before saving.' }),
+      ...(submittedCompany.trim() ? {} : { company: 'Add a company before saving.' }),
+      ...(submittedRole.trim() ? {} : { role: 'Add a role before saving.' }),
     };
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
       window.requestAnimationFrame(() => {
-        if (!form.company.trim()) companyRef.current?.focus();
+        if (!submittedCompany.trim()) companyRef.current?.focus();
         else roleRef.current?.focus();
       });
       return;
     }
-    onSave({ ...form, company: form.company.trim(), role: form.role.trim() });
+    onSave({ ...form, company: submittedCompany.trim(), role: submittedRole.trim() });
   };
   const dismiss = () => onClose(form);
   return <Modal title={application ? 'Edit opportunity' : 'Add opportunity'} eyebrow="Application queue" onClose={dismiss} returnFocusRef={returnFocusRef} fallbackFocusRef={fallbackFocusRef}><form onSubmit={submit} className="space-y-5"><div className="grid gap-4 sm:grid-cols-2"><Field label="Company" name="company" value={form.company} onChange={update('company')} placeholder="Company name" required inputRef={companyRef} error={errors.company} data-testid="input-application-company" /><Field label="Role" name="role" value={form.role} onChange={update('role')} placeholder="Role or title" required inputRef={roleRef} error={errors.role} data-testid="input-application-role" /></div><Field label="Job link" name="url" type="url" value={form.url} onChange={update('url')} placeholder="https://..." data-testid="input-application-url" /><div className="grid gap-4 sm:grid-cols-2"><SelectField label="Status" value={form.status} onChange={update('status')} options={(Object.keys(statusLabels) as ApplicationStatus[]).map((key) => ({ value: key, label: statusLabels[key] }))} testId="select-application-status" /><SelectField label="Priority" value={form.priority} onChange={update('priority')} options={[{ value: 'high', label: 'High' }, { value: 'normal', label: 'Normal' }, { value: 'low', label: 'Low' }]} testId="select-application-priority" /></div><Field label="Next action" name="nextAction" value={form.nextAction} onChange={update('nextAction')} placeholder="Read the role brief, ask for a referral..." data-testid="input-application-next-action" /><TextArea label="Notes" name="notes" value={form.notes} onChange={update('notes')} placeholder="What stood out? What do you want to remember?" data-testid="textarea-application-notes" /><div className="flex justify-end gap-2 pt-2"><Button type="button" variant="outline" onClick={dismiss} data-testid="button-cancel-application">Cancel</Button><Button type="submit" data-testid="button-save-application"><Check size={16} /> Save opportunity</Button></div></form></Modal>;

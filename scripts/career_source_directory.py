@@ -116,14 +116,21 @@ def scan_local(entry, limit=500):
         if root.is_file() and entry["role"] == "application_tracker" and root.suffix.lower() in allowed:
             counts[root.suffix.lower()] = 1
         elif root.is_dir():
-            for idx, child in enumerate(root.iterdir()):
-                if idx >= limit:
-                    report["status"] = "SCAN_LIMIT_EXCEEDED"
-                    return report
-                if child.is_symlink() or not child.is_file():
-                    continue
-                if child.suffix.lower() in allowed:
-                    counts[child.suffix.lower()] += 1
+            queue = [(root, 0)]
+            seen = 0
+            while queue:
+                folder, depth = queue.pop(0)
+                for child in folder.iterdir():
+                    seen += 1
+                    if seen > limit:
+                        report["status"] = "SCAN_LIMIT_EXCEEDED"
+                        return report
+                    if child.is_symlink() or child.name.startswith("."):
+                        continue
+                    if child.is_dir() and depth < 3:
+                        queue.append((child, depth + 1))
+                    elif child.is_file() and child.suffix.lower() in allowed:
+                        counts[child.suffix.lower()] += 1
         else:
             return report
     except OSError:

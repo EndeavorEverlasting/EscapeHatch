@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { trackerOpportunityId } from '../src/lib/tracker-bridge';
 
 test('cockpit owns Launch, Fill and Attach without a Chrome extension', async ({ page }) => {
   const seen: string[] = [];
@@ -107,4 +108,78 @@ test('Launch does not autofill the login or posting page', async ({ page }) => {
   await page.getByTestId('button-managed-launch').click();
   expect(actions.filter((value) => ['launch', 'fill', 'attach', 'prepare'].includes(value))).toEqual(['launch']);
   assertNeverSubmitted(actions);
+});
+
+function syntheticSnapshot(status: 'Ready to Apply' | 'Submitted') {
+  const row = {
+    sheetRow: 32, company: 'Thyme Care', role: 'Product Operations Lead',
+    status, appliedCheckbox: status === 'Submitted', priority: 'High',
+    applyUrl: 'https://jobs.ashbyhq.com/thyme-care/synthetic-position',
+  };
+  return {
+    row,
+    snapshot: {
+      schema: 'escapehatch/tracker-snapshot/v1',
+      provider: 'synthetic', spreadsheetId: 'synthetic', sheetName: 'Applications',
+      capturedAtUtc: new Date().toISOString(), contentDigest: 'synthetic',
+      authPath: 'fixture', localGoogleAuthPresent: false,
+      metrics: {}, applications: [row],
+    },
+  };
+}
+
+test('one explicit Home click opens the verified Thyme Care job and fills approved fields exactly once', async ({ page }) => {
+  const { row, snapshot } = syntheticSnapshot('Ready to Apply');
+  const actions: string[] = [];
+  const launches: Array<{ url: string; opportunityId: string }> = [];
+  await page.route('**/__escapehatch/tracker/status', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify({ connection: 'CONNECTED', snapshot }) }));
+  await page.route('**/__escapehatch/managed-assist/**', async (route) => {
+    const action = route.request().url().split('/').at(-1) || '';
+    actions.push(action);
+    if (action === 'launch') launches.push(route.request().postDataJSON());
+    const result = action === 'status' ? { ok: true, state: 'idle', browserOpen: false } :
+      action === 'launch' ? { ok: true, state: 'application_form_open_review_required' } :
+      action === 'fill' ? { ok: true, state: 'fields_filled_review_required', filled: ['first_name'], skipped: ['unknown_question'] } :
+      { ok: false, error: 'unexpected_action' };
+    await route.fulfill({ status: result.ok ? 200 : 422, contentType: 'application/json', body: JSON.stringify(result) });
+  });
+  await page.goto('/');
+  await expect(page.getByTestId('home-next-company-role')).toContainText('Thyme Care');
+  await expect(page.getByTestId('link-prepare-next')).toContainText('Launch & fill in managed Chrome');
+  await page.getByTestId('link-prepare-next').click();
+  await expect(page.getByTestId('managed-job-url')).toHaveValue(row.applyUrl);
+  await expect(page.getByTestId('managed-browser-feedback')).toContainText('Filled: first_name');
+  await expect(page.getByTestId('managed-browser-feedback')).toContainText('Skipped: unknown_question');
+  expect(launches).toEqual([{ url: row.applyUrl, opportunityId: trackerOpportunityId(row) }]);
+  expect(actions.filter((action) => ['launch', 'fill', 'prepare', 'attach'].includes(action))).toEqual(['launch', 'fill']);
+  assertNeverSubmitted(actions);
+  await page.reload();
+  await expect(page.getByTestId('managed-job-url')).toHaveValue(row.applyUrl);
+  expect(launches).toHaveLength(1); // Reload and direct URLs do not carry new user consent.
+});
+
+test('one-click authorization fails closed when the employer was submitted after Home loaded', async ({ page }) => {
+  const ready = syntheticSnapshot('Ready to Apply');
+  const submitted = syntheticSnapshot('Submitted');
+  let reads = 0;
+  const actions: string[] = [];
+  await page.route('**/__escapehatch/tracker/status', (route) => {
+    reads += 1;
+    return route.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify({ connection: 'CONNECTED', snapshot: reads === 1 ? ready.snapshot : submitted.snapshot }) });
+  });
+  await page.route('**/__escapehatch/managed-assist/**', (route) => {
+    actions.push(route.request().url().split('/').at(-1) || '');
+    return route.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify({ ok: true, state: 'idle', browserOpen: false }) });
+  });
+  await page.goto('/');
+  await expect(page.getByTestId('home-next-company-role')).toContainText('Thyme Care');
+  await page.getByTestId('link-prepare-next').click();
+  await expect(page.getByTestId('managed-browser-feedback')).toContainText('Automatic launch paused');
+  expect(actions).not.toContain('launch');
+  expect(actions).not.toContain('fill');
+  assertNeverSubmitted(['launch', ...actions]);
 });

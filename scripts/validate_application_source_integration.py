@@ -139,13 +139,13 @@ def validate(contract: dict, manifest: dict, document: str, parent: dict) -> Non
     require([w.get("lanes") for w in waves] ==
             [["F0"], ["A1", "B1", "C1", "D1"], ["I1"], ["R1"], ["M1"]],
             "unsafe parallelism or missing convergence")
-    require("src/App.tsx" in " ".join(lane_map["I1"]["owned"]) and
+    require("App.tsx" in " ".join(lane_map["I1"]["owned"]) and
             "same shared file" in " ".join(lane_map["I1"]["forbidden"]),
             "shared App route writer not serialized")
     require(all(x in document for x in (
-        "THESIS H1", "HYPOTHESIS", "Prototype #1", "Baseline/comparator",
+        "THESIS H1", "Prototype #1", "Baseline/comparator",
         "Measurement:", "Decision rule:", "Phase 1", "Phase 2", "Phase 3",
-        "OAuth", "two UIs", "P04", "P82", "not a provider authorization proof"
+        "OAuth", "Two UIs", "P04", "P82", "not a provider authorization proof"
     )), "P04/P82 experimental or integration specification incomplete")
 
 

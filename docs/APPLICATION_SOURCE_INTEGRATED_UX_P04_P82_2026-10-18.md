@@ -219,4 +219,3 @@ interface CareerSourceProvider {
 **API responsibility:** One domain layer may be exposed through local loopback handlers initially and secure hosted endpoints later; the transport changes, the identifiers/policies do not. Local loopback endpoints retain existing Host/Origin/CSRF controls and must never be exposed as public endpoints. Hosted requests derive principal from the authenticated session, enforce per-tenant authorization in database and provider adapter, and are auditable without logging PII. Unknown connection/source/opportunity IDs fail closed without cross-account fallback.
 
 **P82 next falsifier:** if two views cannot round-trip the SAME `ApplicationPackage` without copying approved candidate text into a second store, do not “solve” it with a migration adapter or manual re-export; refactor the shared model and rerun the prototype comparison.
-

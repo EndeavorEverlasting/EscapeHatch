@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { prepareToFinalReview, type PageInspection, type PreparationDriver } from '../application-autopilot-executor.ts';
 import { type AdapterEvidence, type ControlObservation, type NavigationAuthorization } from '../application-navigation-policy.ts';
+import { createManagedPreparationDriver, type TrustedAdapterRegistry } from '../managed-preparation-driver.ts';
+import { emptyPreferences } from '../src/lib/application-preferences.ts';
 import { startSyntheticAts, type SyntheticAtsEffects, type SyntheticAtsHandle } from '../../../fixtures/application-navigation-ats/server.ts';
 
 // Actual Chromium/HTTP consequence test: only synthetic values, no job seeker data.
@@ -133,4 +135,23 @@ test('actual Chromium: Next decoy, changed POST action and missing adapter trigg
     expect(after.rejectedDriftPosts.length).toBe(before.rejectedDriftPosts.length);
     expect(after.unmodeledPosts.length).toBe(before.unmodeledPosts.length);
   }
+});
+
+test('production managed PreparationDriver reaches REVIEW_READY on synthetic native ATS', async ({ page }) => {
+  await page.goto(ats.origin + '/apply/step/1');
+  const before = await journal();
+  const auth = permission();
+  const driver = createManagedPreparationDriver({
+    page,
+    authorization: auth,
+    registry: contract as TrustedAdapterRegistry,
+    preferences: emptyPreferences(),
+  });
+  const result = await prepareToFinalReview(driver, auth, { maxSteps: 4 });
+  expect(result.state).toBe('REVIEW_READY');
+  expect(result.finalActionActivated).toBe(false);
+  expect(result.intermediateSteps).toBe(2);
+  const after = await journal();
+  expect(after.nativeDrafts.length).toBe(before.nativeDrafts.length + 2);
+  expect(after.terminalCommits.length).toBe(before.terminalCommits.length);
 });

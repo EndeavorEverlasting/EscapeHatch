@@ -6,6 +6,16 @@ import { ApplicationPreferences } from './application-preferences';
 const MANDIANT = 'https://www.google.com/about/careers/applications/jobs/results/132629079244317382-project-manager-americas-pmo-mandiant-consulting';
 const API = '/__escapehatch/managed-assist';
 
+type PreparationResult = {
+  state: 'REVIEW_READY' | 'REVIEW_REQUIRED' | 'BLOCKED';
+  code: string;
+  pagesPrepared: number;
+  intermediateSteps: number;
+  finalActionActivated: false;
+  evidenceRefs: string[];
+  pendingManual: string[];
+};
+
 type ServerResponse = {
   ok: boolean;
   state?: string;
@@ -15,6 +25,12 @@ type ServerResponse = {
   skipped?: string[];
   attachments?: Record<string, string>;
   requiresOperatorSubmission?: boolean;
+  preparation?: PreparationResult;
+  preparationState?: PreparationResult['state'] | null;
+  preparationCode?: string | null;
+  pagesPrepared?: number;
+  intermediateSteps?: number;
+  pendingManual?: string[];
 };
 
 async function request(endpoint: string, body?: object): Promise<ServerResponse> {
@@ -52,6 +68,9 @@ const titles: Record<string, string> = {
   fields_filled_review_required: 'Known fields filled — review the page',
   attachments_staged_review_required: 'File controls populated — verify attachments',
   browser_closed: 'Managed browser closed',
+  REVIEW_READY: 'REVIEW_READY — final Submit is operator-only',
+  REVIEW_REQUIRED: 'REVIEW_REQUIRED — resolve gates before continuing',
+  BLOCKED: 'BLOCKED — fail closed; re-inspect before retry',
 };
 
 export function ManagedBrowserAssist({ profile, setProfile, applications, setApplications }: { profile: Profile; setProfile: Dispatch<SetStateAction<Profile>>; applications: Application[]; setApplications: Dispatch<SetStateAction<Application[]>> }) {
@@ -62,27 +81,64 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [browserOpen, setBrowserOpen] = useState(false);
+  const [preparation, setPreparation] = useState<PreparationResult | null>(null);
 
   useEffect(() => {
     let active = true;
     request('/status').then((result) => {
-      if (active) { setStatus(result.state || 'idle'); setBrowserOpen(Boolean(result.browserOpen)); }
+      if (active) {
+        setStatus(result.state || 'idle');
+        setBrowserOpen(Boolean(result.browserOpen));
+        if (result.preparationState) {
+          setPreparation({
+            state: result.preparationState,
+            code: result.preparationCode || '',
+            pagesPrepared: result.pagesPrepared || 0,
+            intermediateSteps: result.intermediateSteps || 0,
+            finalActionActivated: false,
+            evidenceRefs: [],
+            pendingManual: result.pendingManual || [],
+          });
+        }
+      }
     }).catch(() => { if (active) setMessage('Managed browser is unavailable until EscapeHatch is started with its Windows launcher.'); });
     return () => { active = false; };
   }, []);
 
-  async function run(action: 'launch' | 'fill' | 'attach') {
+  async function run(action: 'launch' | 'fill' | 'attach' | 'prepare') {
     setBusy(true);
     setMessage('');
     try {
       let body: object;
-      if (action === 'launch') body = { url };
-      else if (action === 'fill') body = { profile };
-      else body = { resume: await privatePdf(resume), cover: await privatePdf(cover) };
+      if (action === 'launch') {
+        const opportunity = applications.find((item) => item.url === url);
+        body = { url, opportunityId: opportunity?.id || '' };
+      } else if (action === 'fill') body = { profile };
+      else if (action === 'attach') body = { resume: await privatePdf(resume), cover: await privatePdf(cover) };
+      else {
+        // Prepare uses a trusted adapter registry supplied by the operator/runtime host.
+        // Without registry evidence the control plane fails closed — never invent consequences.
+        const registryRaw = window.localStorage.getItem('escapehatch.trustedAdapterRegistry.v1');
+        if (!registryRaw) throw new Error('Trusted adapter registry required before Prepare. Load a reviewed registry first.');
+        const opportunity = applications.find((item) => item.url === url);
+        body = {
+          profile,
+          authorization: {
+            sessionId: 'cockpit-' + (opportunity?.id || 'session'),
+            opportunityId: opportunity?.id || 'unbound-opportunity',
+            navigationEnabled: true,
+            allowedEffectClasses: ['LOCAL_STEP_ONLY', 'DRAFT_WRITE_AND_ADVANCE'],
+            allowedDataCategories: ['synthetic_cover_note'],
+          },
+          adapterRegistry: JSON.parse(registryRaw) as object,
+        };
+      }
       const result = await request('/' + action, body);
       setStatus(result.state || 'idle');
+      if (result.preparation) setPreparation(result.preparation);
       if (action === 'launch') {
         setBrowserOpen(true);
+        setPreparation(null);
         setApplications((items) => {
           const existing = items.find((item) => item.url === url);
           if (existing) return items.map((item) => item.id === existing.id && item.status === 'saved'
@@ -112,6 +168,13 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         '. Confirm the employer form accepted each document.'
       );
       if (action === 'launch') setMessage('A separate managed Chrome window is opening. Authentication stays under your control.');
+      if (action === 'prepare' && result.preparation) {
+        setMessage(
+          result.preparation.state + ' (' + result.preparation.code + '). Pages prepared: ' +
+          result.preparation.pagesPrepared + '; intermediate steps: ' + result.preparation.intermediateSteps +
+          '. Final submission remains operator-only.'
+        );
+      }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Action failed.');
     } finally {
@@ -183,8 +246,21 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           {titles[status] || status.replaceAll('_', ' ')}
         </div>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          Your Chrome sign-in remains private. On each new employer page, choose Fill again. EscapeHatch never clicks Submit, Next, or attests for you.
+          Your Chrome sign-in remains private. Fill and Attach stay page-local. Prepare advances only through
+          trusted adapter evidence under the managed-browser progression contract; the MV3 extension still
+          forbids automatic Next/Submit. A button labeled Submit may be intermediate or terminal — the label alone never authorizes a click.
         </p>
+        {preparation && (
+          <div className="mt-3 rounded-lg border border-border bg-card p-3 text-xs leading-5"
+            data-testid="managed-preparation-state" data-preparation-state={preparation.state}>
+            <p className="font-bold">{preparation.state}</p>
+            <p className="mt-1 text-muted-foreground">
+              code={preparation.code} · pages={preparation.pagesPrepared} · intermediates={preparation.intermediateSteps} ·
+              finalActionActivated=false
+              {preparation.pendingManual.length ? ' · pending: ' + preparation.pendingManual.join(', ') : ''}
+            </p>
+          </div>
+        )}
         <div className="mt-4 flex flex-wrap gap-2">
           <button type="button" className={secondary} disabled={busy || !browserOpen} onClick={() => void run('fill')} data-testid="button-managed-fill">
             Fill approved profile and answers
@@ -200,6 +276,10 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           <button type="button" className={secondary} disabled={busy || !browserOpen || (!resume && !cover)}
             onClick={() => void run('attach')} data-testid="button-managed-attach">
             Attach selected PDFs
+          </button>
+          <button type="button" className={button} disabled={busy || !browserOpen}
+            onClick={() => void run('prepare')} data-testid="button-managed-prepare">
+            Prepare to final review
           </button>
         </div>
       </div>

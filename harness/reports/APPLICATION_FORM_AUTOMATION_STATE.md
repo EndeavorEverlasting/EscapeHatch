@@ -14,7 +14,9 @@ Provider evidence from reviewed PR descriptions (not re-proven by this report):
 - Issue #60 and PRs #59/#61/#62: separately owned observer/event lane; evidence stream cannot substitute for browser filling.
 - PRs TokenCorridor #73/#220: existing Google authorization and live-read work; **recover existing credentials**, don't restart Cloud Console setup by default.
 
-**First unproven parent integration gate:** Converge the current managed-browser PR #63/#64 behavior with the merged navigation policy/fixture and user-reviewed profile/opportunity inputs in a noncolliding worktree; validate the actual Windows managed Chrome application through ready-for-operator review. Subsequent gate: independently established cross-archetype/ATS portability. All 9 parent gates remain unproven as an **integrated end-to-end result** until individual evidence receipts satisfy the owning contract. A green PR, a previous successful single application or synthetic navigation check is weaker evidence.
+**First unproven parent integration gate:** Prove the integrated managed-browser + `prepareToFinalReview` product against repository synthetic ATS in the real Windows managed Chromium runtime (cockpit launch → prepare → `REVIEW_READY`, zero terminal commits), then certify an operator-approved live journey (Thyme Care Ashby) without final submission. Cross-archetype portability remains a subsequent gate. All 9 parent gates remain unproven as an **integrated end-to-end result** until individual evidence receipts satisfy the owning contract. A green PR, a previous successful single application or synthetic navigation check is weaker evidence.
+
+**EXEC-1 integration floor (2026-10-18):** Isolated worktree reconciled PR #63 → #64 → #75 onto current `main`, added `contracts/managed-browser-progression.v1.json`, production `managed-preparation-driver.ts`, cockpit `/prepare` + `REVIEW_*`/`BLOCKED` exposure. MV3 session v1 auto-nav prohibition retained.
 
 ## Evidence reviewed
 

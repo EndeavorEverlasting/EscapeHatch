@@ -8,11 +8,22 @@ import { isLoopbackAddress, readManagedRuntime } from './runtime-control.ts';
 import { readPreferences, savePreferences, clearPreferences } from './preference-file.ts';
 import { fillSavedPreferences, openApplicationForm } from './managed-form.ts';
 import { emptyPreferences } from './src/lib/application-preferences.ts';
+import { prepareToFinalReview, type PreparationResult } from './application-autopilot-executor.ts';
+import {
+  ADAPTER_EVIDENCE_SCHEMA,
+  type GrantableEffectClass,
+  type NavigationAuthorization,
+} from './application-navigation-policy.ts';
+import {
+  createManagedPreparationDriver,
+  type TrustedAdapterRegistry,
+} from './managed-preparation-driver.ts';
 
 const PREFIX = '/__escapehatch/managed-assist';
 const MAX_BODY = 15 * 1024 * 1024;
 const MAX_PDF = 5 * 1024 * 1024;
 const ACTION_HEADER = 'x-escapehatch-operator-action';
+const GRANTABLE: GrantableEffectClass[] = ['LOCAL_STEP_ONLY', 'DRAFT_WRITE_AND_ADVANCE'];
 const FIELDS = [
   ['first_name', ['given-name'], ['firstName', 'first_name', 'firstname']],
   ['last_name', ['family-name'], ['lastName', 'last_name', 'lastname']],
@@ -58,6 +69,99 @@ export function reviewedContactFields(value: unknown): Record<string, string> {
     if (typeof text === 'string' && text.trim() && text.length <= 512) safe[key] = text.trim();
   }
   return safe;
+}
+
+export function parseNavigationAuthorization(
+  value: unknown,
+  origin: string,
+): NavigationAuthorization {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('Scoped navigation authorization is required.');
+  }
+  const raw = value as Record<string, unknown>;
+  if (typeof raw.sessionId !== 'string' || !raw.sessionId || raw.sessionId.length > 128) {
+    throw new Error('sessionId is required.');
+  }
+  if (typeof raw.opportunityId !== 'string' || !raw.opportunityId || raw.opportunityId.length > 128) {
+    throw new Error('opportunityId is required.');
+  }
+  if (raw.navigationEnabled !== true) throw new Error('navigationEnabled must be true for prepare.');
+  if (typeof raw.origin === 'string' && raw.origin !== origin) {
+    throw new Error('authorization origin must match the launched application.');
+  }
+  if (Array.isArray(raw.allowedEffectClasses) &&
+      raw.allowedEffectClasses.includes('TERMINAL_APPLICATION_COMMIT')) {
+    throw new Error('TERMINAL_APPLICATION_COMMIT cannot be authorized for automation.');
+  }
+  const allowed = Array.isArray(raw.allowedEffectClasses)
+    ? raw.allowedEffectClasses.filter((item): item is GrantableEffectClass =>
+      GRANTABLE.includes(item as GrantableEffectClass))
+    : [];
+  if (!allowed.length) throw new Error('allowedEffectClasses must include a grantable intermediate class.');
+  const categories = Array.isArray(raw.allowedDataCategories)
+    ? raw.allowedDataCategories.filter((item): item is string =>
+      typeof item === 'string' && item.length > 0 && item.length <= 64)
+    : [];
+  const expiresAtUtc = typeof raw.expiresAtUtc === 'string' && raw.expiresAtUtc
+    ? raw.expiresAtUtc
+    : new Date(Date.now() + 3_600_000).toISOString();
+  if (Number.isNaN(new Date(expiresAtUtc).getTime())) throw new Error('expiresAtUtc is invalid.');
+  return {
+    sessionId: raw.sessionId,
+    opportunityId: raw.opportunityId,
+    origin,
+    navigationEnabled: true,
+    allowedEffectClasses: allowed,
+    allowedDataCategories: categories,
+    expiresAtUtc,
+  };
+}
+
+export function parseTrustedAdapterRegistry(value: unknown): TrustedAdapterRegistry {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('Trusted adapter registry is required.');
+  }
+  const raw = value as Record<string, unknown>;
+  if (raw.schema !== ADAPTER_EVIDENCE_SCHEMA) {
+    throw new Error('Unsupported adapter evidence schema.');
+  }
+  if (typeof raw.adapterId !== 'string' || !raw.adapterId ||
+      typeof raw.atsProvider !== 'string' || !raw.atsProvider) {
+    throw new Error('adapterId and atsProvider are required.');
+  }
+  if (!Array.isArray(raw.evidence) || raw.evidence.length === 0 || raw.evidence.length > 200) {
+    throw new Error('adapter evidence entries are required.');
+  }
+  const evidence = raw.evidence.map((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+      throw new Error('Invalid adapter evidence entry.');
+    }
+    const row = entry as Record<string, unknown>;
+    const effect = row.verifiedEffectClass;
+    if (effect !== 'LOCAL_STEP_ONLY' && effect !== 'DRAFT_WRITE_AND_ADVANCE' &&
+        effect !== 'TERMINAL_APPLICATION_COMMIT') {
+      throw new Error('verifiedEffectClass is invalid.');
+    }
+    if (typeof row.pageFingerprint !== 'string' || typeof row.controlId !== 'string' ||
+        typeof row.controlFingerprint !== 'string' || !Array.isArray(row.evidenceRefs)) {
+      throw new Error('adapter evidence fingerprints are required.');
+    }
+    return {
+      pageFingerprint: row.pageFingerprint,
+      controlId: row.controlId,
+      controlFingerprint: row.controlFingerprint,
+      enclosingFormAction: typeof row.enclosingFormAction === 'string' ? row.enclosingFormAction : null,
+      enclosingFormMethod: typeof row.enclosingFormMethod === 'string' ? row.enclosingFormMethod : null,
+      verifiedEffectClass: effect,
+      evidenceRefs: row.evidenceRefs.filter((ref): ref is string => typeof ref === 'string'),
+    };
+  });
+  return {
+    schema: ADAPTER_EVIDENCE_SCHEMA,
+    adapterId: raw.adapterId,
+    atsProvider: raw.atsProvider,
+    evidence,
+  };
 }
 
 export function parsePrivatePdf(value: unknown): { name: string; mimeType: 'application/pdf'; buffer: Buffer } | null {
@@ -140,6 +244,8 @@ export function createManagedBrowserAssistPlugin(): Plugin {
   let busy = false;
   let state = 'idle';
   let applicationOrigin = '';
+  let opportunityId = '';
+  let preparation: PreparationResult | null = null;
   const managed = readManagedRuntime();
   return {
     name: 'escapehatch-managed-browser-assist',
@@ -156,7 +262,18 @@ export function createManagedBrowserAssistPlugin(): Plugin {
         }
         if (url.pathname === PREFIX + '/status' && req.method === 'GET') {
           if (page?.isClosed()) { page = null; state = 'browser_closed'; }
-          return respond(res, 200, { ok: true, state, browserOpen: Boolean(page), requiresOperatorSubmission: true });
+          return respond(res, 200, {
+            ok: true,
+            state,
+            browserOpen: Boolean(page),
+            requiresOperatorSubmission: true,
+            preparationState: preparation?.state || null,
+            preparationCode: preparation?.code || null,
+            pagesPrepared: preparation?.pagesPrepared ?? 0,
+            intermediateSteps: preparation?.intermediateSteps ?? 0,
+            finalActionActivated: false,
+            pendingManual: preparation?.pendingManual || [],
+          });
         }
         if (url.pathname === PREFIX + '/preferences' && req.method === 'GET') {
           if (req.headers.origin && req.headers.origin !== expectedOrigin || req.headers['sec-fetch-site'] === 'cross-site') return respond(res, 403, { ok: false, error: 'operator_origin_required' });
@@ -178,13 +295,17 @@ export function createManagedBrowserAssistPlugin(): Plugin {
           if (url.pathname === PREFIX + '/launch') {
             const jobUrl = validateApplicationUrl(payload.url);
             applicationOrigin = new URL(jobUrl).origin;
+            opportunityId = typeof payload.opportunityId === 'string' && payload.opportunityId.length <= 128
+              ? payload.opportunityId
+              : '';
+            preparation = null;
             if (!context) {
               const folder = path.join(process.env.LOCALAPPDATA || path.join(homedir(), 'AppData', 'Local'), 'EscapeHatch', 'managed-career-browser');
               await fs.mkdir(folder, { recursive: true });
               context = await chromium.launchPersistentContext(folder, {
                 channel: 'chrome', headless: false, acceptDownloads: false, viewport: null,
               });
-              context.on('close', () => { context = null; page = null; state = 'browser_closed'; });
+              context.on('close', () => { context = null; page = null; state = 'browser_closed'; preparation = null; });
             }
             if (!page || page.isClosed()) page = context.pages()[0] || await context.newPage();
             await page.bringToFront();
@@ -201,6 +322,48 @@ export function createManagedBrowserAssistPlugin(): Plugin {
           if (!page || page.isClosed()) return respond(res, 409, { ok: false, error: 'launch_browser_first' });
           if (new URL(page.url()).origin !== applicationOrigin) return respond(res, 409, { ok: false, error: 'application_origin_changed_review_required' });
           await page.bringToFront();
+          if (url.pathname === PREFIX + '/prepare') {
+            // Operator-triggered deterministic progression only. Never agentic browsing.
+            const authorization = parseNavigationAuthorization(payload.authorization, applicationOrigin);
+            if (opportunityId && authorization.opportunityId !== opportunityId) {
+              return respond(res, 409, { ok: false, error: 'opportunity_binding_mismatch' });
+            }
+            const registry = parseTrustedAdapterRegistry(payload.adapterRegistry);
+            const preferences = await readPreferences();
+            const contact = reviewedContactFields(payload.profile);
+            const now = new Date().toISOString();
+            const ids: Record<string, string> = { linkedin_url: 'linkedin', region: 'region' };
+            const merged = { ...emptyPreferences(), preferences: { ...preferences.preferences } };
+            for (const [key, value] of Object.entries(contact)) {
+              const id = 'identity.' + (ids[key] || key);
+              if (!merged.preferences[id]) {
+                merged.preferences[id] = { scope: 'profile_preference', source: 'user', value, updated_at: now };
+              }
+            }
+            const maxSteps = typeof payload.maxSteps === 'number' && Number.isInteger(payload.maxSteps)
+              ? payload.maxSteps
+              : 10;
+            const driver = createManagedPreparationDriver({
+              page,
+              authorization,
+              registry,
+              preferences: merged,
+              requireUploadsVerified: payload.requireUploadsVerified !== false,
+            });
+            preparation = await prepareToFinalReview(driver, authorization, { maxSteps });
+            state = preparation.state === 'REVIEW_READY'
+              ? 'REVIEW_READY'
+              : preparation.state === 'BLOCKED'
+                ? 'BLOCKED'
+                : 'REVIEW_REQUIRED';
+            return respond(res, 200, {
+              ok: true,
+              state,
+              preparation,
+              requiresOperatorSubmission: true,
+              finalActionActivated: false,
+            });
+          }
           if (url.pathname === PREFIX + '/fill') {
             const preferences = await readPreferences();
             const contact = reviewedContactFields(payload.profile);

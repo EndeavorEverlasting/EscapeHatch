@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { parsePrivatePdf, reviewedContactFields, validateApplicationUrl } from './browser-assist-control.ts';
+import { ADAPTER_EVIDENCE_SCHEMA } from './application-navigation-policy.ts';
+import {
+  parseNavigationAuthorization,
+  parsePrivatePdf,
+  parseTrustedAdapterRegistry,
+  reviewedContactFields,
+  validateApplicationUrl,
+} from './browser-assist-control.ts';
 
 test('only public HTTPS application URLs are accepted', () => {
   assert.match(validateApplicationUrl('https://www.google.com/about/careers/applications/jobs/results/123'), /^https:/);
@@ -28,8 +35,50 @@ test('private PDF validation forbids arbitrary bytes, excessive length and paths
   assert.throws(() => parsePrivatePdf({ name: 'resume.pdf', base64: Buffer.from('junk').toString('base64') }), /PDF/);
 });
 
-test('browser control is scoped to operator actions: no automatic submission or navigation', () => {
-  const verbs = ['launch', 'fill', 'attach', 'status'];
+test('browser control is scoped to operator actions: no terminal submit verb', () => {
+  const verbs = ['launch', 'fill', 'attach', 'prepare', 'status'];
   assert.equal(verbs.includes('submit'), false);
   assert.equal(verbs.includes('next'), false);
+  assert.equal(verbs.includes('prepare'), true);
+});
+
+test('navigation authorization rejects terminal automation and unbound sessions', () => {
+  const origin = 'https://jobs.example.com';
+  const auth = parseNavigationAuthorization({
+    sessionId: 'sess-1',
+    opportunityId: 'opp-1',
+    navigationEnabled: true,
+    allowedEffectClasses: ['DRAFT_WRITE_AND_ADVANCE'],
+    allowedDataCategories: ['synthetic_cover_note'],
+  }, origin);
+  assert.equal(auth.origin, origin);
+  assert.throws(() => parseNavigationAuthorization({
+    sessionId: 'sess-1', opportunityId: 'opp-1', navigationEnabled: true,
+    allowedEffectClasses: ['TERMINAL_APPLICATION_COMMIT'],
+  }, origin), /TERMINAL/);
+  assert.throws(() => parseNavigationAuthorization({
+    sessionId: 'sess-1', opportunityId: 'opp-1', navigationEnabled: false,
+    allowedEffectClasses: ['LOCAL_STEP_ONLY'],
+  }, origin), /navigationEnabled/);
+});
+
+test('trusted adapter registry never accepts page-authored schemas', () => {
+  const registry = parseTrustedAdapterRegistry({
+    schema: ADAPTER_EVIDENCE_SCHEMA,
+    adapterId: 'escapehatch-synthetic-ats@1',
+    atsProvider: 'synthetic-local-ats',
+    evidence: [{
+      pageFingerprint: 'native-step-1',
+      controlId: 'apply-submit',
+      controlFingerprint: 'cta-native-step-1',
+      enclosingFormAction: '/apply/step/1',
+      enclosingFormMethod: 'post',
+      verifiedEffectClass: 'DRAFT_WRITE_AND_ADVANCE',
+      evidenceRefs: ['fixture://proof'],
+    }],
+  });
+  assert.equal(registry.evidence.length, 1);
+  assert.throws(() => parseTrustedAdapterRegistry({
+    schema: 'page-invented/v1', adapterId: 'x', atsProvider: 'y', evidence: [],
+  }), /schema|evidence/i);
 });

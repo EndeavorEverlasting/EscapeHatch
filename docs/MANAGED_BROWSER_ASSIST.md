@@ -21,9 +21,15 @@ origin-scoped/final-submit safety contract.
 6. Choose résumé PDF and cover-letter PDF in the cockpit, then click **Attach selected PDFs**.
    Attachment is attempted only for an unambiguous file input labelled resume/CV or cover
    letter. Check the employer website itself for successful acceptance.
-7. Review questionnaire, employment eligibility, legal/EEO questions and all navigation
-   personally. The system never presses Next, Apply or Submit. Stop before the final Submit
-   button; final submission is an operator decision.
+7. When a trusted adapter registry is loaded for the current ATS archetype, click
+   **Prepare to final review**. EscapeHatch runs the deterministic `prepareToFinalReview`
+   executor through the managed Playwright `PreparationDriver`: fill approved fields,
+   activate only evidence-bound intermediate controls, and stop at `REVIEW_READY`,
+   `REVIEW_REQUIRED`, or `BLOCKED`. A control labeled Submit may be intermediate or
+   terminal; the label alone never grants authority. Final submission stays operator-only.
+8. Without trusted adapter evidence, do not use Prepare on unknown employer sites. Fill and
+   Attach remain available; navigate and submit personally. The MV3 extension session v1
+   prohibition on automatic Next/Submit is unchanged.
 
 ## Architecture
 - Cockpit component: artifacts/escape-hatch/src/components/managed-browser-assist.tsx.

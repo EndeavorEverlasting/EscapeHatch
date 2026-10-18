@@ -19,15 +19,17 @@ class IntegratedSourcesTest(unittest.TestCase):
         cls.manifest = json.loads((ROOT / "harness/reports/application-source-ux-p04-dispatch.v1.json").read_text())
         cls.parent = json.loads((ROOT / "harness/contracts/application-autofill-parent.v1.json").read_text())
         cls.doc = (ROOT / "docs/APPLICATION_SOURCE_INTEGRATED_UX_P04_P82_2026-10-18.md").read_text()
+        cls.handoffs = (ROOT / "harness/reports/application-source-ux-p04-agent-handoffs.md").read_text()
 
-    def check(self, patch=None, manifest_patch=None, parent_patch=None, document=None):
+    def check(self, patch=None, manifest_patch=None, parent_patch=None, document=None, handoffs=None):
         c = copy.deepcopy(self.contract)
         m = copy.deepcopy(self.manifest)
         p = copy.deepcopy(self.parent)
         if patch: patch(c)
         if manifest_patch: manifest_patch(m)
         if parent_patch: parent_patch(p)
-        return validate(c, m, self.doc if document is None else document, p)
+        return validate(c, m, self.doc if document is None else document, p,
+                        self.handoffs if handoffs is None else handoffs)
 
     def rejected(self, **kwargs):
         with self.assertRaises(ContractError):
@@ -88,6 +90,10 @@ class IntegratedSourcesTest(unittest.TestCase):
     def test_writers_cannot_collapse_convergence_into_parallel_wave(self):
         self.rejected(manifest_patch=lambda m: m["lanes"][5].update(forbidden=[]))
         self.rejected(manifest_patch=lambda m: m["lanes"][5].update(owned=["some other file"]))
+
+    def test_every_agent_lane_must_have_standalone_handoff(self):
+        self.rejected(handoffs=self.handoffs.replace("## D1 —", "## MISSING —"))
+        self.rejected(handoffs=self.handoffs.replace("PLANNED_NOT_DISPATCHED", "ALREADY_LAUNCHED"))
 
     def test_P82_admission_must_remain_falsifiable(self):
         self.rejected(document="We should create a beautiful dashboard and integrate later.")

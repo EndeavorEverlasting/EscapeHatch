@@ -1,0 +1,111 @@
+import { useEffect, useRef, useState } from 'react';
+import { Link } from 'wouter';
+import type { AssistProfile, ReviewedProposal } from '../lib/assist-contract';
+import type { Application, Profile } from '../lib/storage';
+import { approveSource, previewLocalSource, sourcePackageStatus, type SourceBinding, type SourcePreview } from '../lib/source-bridge';
+
+export type SourceStateProps = {
+  profile: Profile;
+  assistProfile: AssistProfile;
+  applications: Application[];
+  sourceBindings: SourceBinding[];
+};
+
+export function SourcePackageSummary(props: SourceStateProps) {
+  const [result, setResult] = useState<{ inputs: SourceStateProps; statuses: string[] } | null>(null);
+  useEffect(() => {
+    let active = true;
+    void Promise.all(props.sourceBindings.map((binding) => sourcePackageStatus(binding, props.applications, props.profile, props.assistProfile)))
+      .then((values) => { if (active) setResult({ inputs: props, statuses: values }); }).catch(() => { if (active) setResult(null); });
+    return () => { active = false; };
+  }, [props.sourceBindings, props.applications, props.profile, props.assistProfile]);
+  const statuses = result && result.inputs.sourceBindings === props.sourceBindings && result.inputs.applications === props.applications &&
+    result.inputs.profile === props.profile && result.inputs.assistProfile === props.assistProfile ? result.statuses : [];
+  return <section aria-label="Shared application sources" className="my-5 rounded-xl border border-border bg-card p-5">
+    <h2 className="font-display text-2xl">Application sources</h2>
+    {!props.sourceBindings.length && <p>No source approved for an opportunity yet. <Link href="/sources" className="underline">Choose a source</Link>.</p>}
+    {props.sourceBindings.map((binding, index) => <p key={`${binding.sourceId}:${binding.opportunityId}`} className="mt-3" data-testid="source-binding">
+      <strong>{binding.label}</strong> · {props.applications.find((item) => item.id === binding.opportunityId)?.role ?? 'Unavailable opportunity'}<br />
+      <span role="status">{statuses[index] ?? 'Checking source binding…'}</span>
+    </p>)}
+  </section>;
+}
+
+export function SourcesPage(props: SourceStateProps & {
+  onApprove: (value: { profile: Profile; assist: AssistProfile; bindings: SourceBinding[] }) => void;
+  onForget: () => void;
+}) {
+  const [preview, setPreview] = useState<SourcePreview | null>(null);
+  const [proposals, setProposals] = useState<ReviewedProposal[]>([]);
+  const [opportunityId, setOpportunityId] = useState('');
+  const [feedback, setFeedback] = useState('');
+  const [busy, setBusy] = useState(false);
+  const generation = useRef(0);
+  const current = useRef(props);
+  current.current = props;
+  useEffect(() => () => { generation.current += 1; }, []);
+  const choose = async (file?: File) => {
+    const request = ++generation.current;
+    setPreview(null); setProposals([]);
+    if (!file) return;
+    setBusy(true); setFeedback('Reading selected file locally…');
+    try {
+      const result = await previewLocalSource(file, props.profile, props.assistProfile);
+      if (request !== generation.current) return;
+      setPreview(result); setProposals(result.imported.proposals);
+      setFeedback('Content read. Select the claims to approve; existing values are shown for comparison.');
+    } catch { if (request === generation.current) setFeedback('This file could not be read. Choose a nonempty text file or supported text-based PDF, up to 20 MB.'); }
+    finally { if (request === generation.current) setBusy(false); }
+  };
+  const approve = async () => {
+    if (!preview || busy) return;
+    setBusy(true);
+    const request = ++generation.current;
+    const snapshot = current.current;
+    try {
+      const value = await approveSource(preview, proposals, opportunityId, snapshot.applications, snapshot.profile, snapshot.assistProfile, snapshot.sourceBindings);
+      if (request !== generation.current) return;
+      if (snapshot.profile !== current.current.profile || snapshot.assistProfile !== current.current.assistProfile || snapshot.applications !== current.current.applications || snapshot.sourceBindings !== current.current.sourceBindings) throw new Error('PROFILE_CHANGED_REVIEW_AGAIN');
+      props.onApprove(value); setPreview(null); setProposals([]); setFeedback('Selected claims approved in your existing profile and bound to this opportunity.');
+    } catch (error) { if (request === generation.current) setFeedback(error instanceof Error ? error.message : 'Source approval failed.'); }
+    finally { if (request === generation.current) setBusy(false); }
+  };
+  const existingValue = (proposal: ReviewedProposal) => {
+    if (proposal.section === 'summary') return props.assistProfile.summary;
+    if (proposal.section === 'contact') {
+      if (proposal.field === 'name') return `${props.profile.first_name} ${props.profile.last_name}`.trim();
+      return props.profile[proposal.field as keyof Profile] ?? '';
+    }
+    return 'Existing entries are retained; selected entries are added.';
+  };
+  return <div>
+    <h1 className="font-display text-4xl">Sources &amp; identity</h1>
+    <p className="my-3">Choose a résumé, review its claims, and bind them to an existing opportunity. Your profile stays in this browser.</p>
+    <p className="my-3">Google connection is unavailable in this build. Existing Google credentials are never copied into this page. Locally synced files can be selected below.</p>
+    <label className="block my-4">Résumé source (.txt or .pdf)
+      <input className="block mt-2" type="file" accept=".txt,.pdf" disabled={busy} onChange={(event) => { void choose(event.target.files?.[0]); event.target.value = ''; }} />
+    </label>
+    <label className="block my-4">Opportunity
+      <select aria-label="Opportunity" className="block mt-2 border rounded p-2 bg-card" value={opportunityId} onChange={(event) => setOpportunityId(event.target.value)}>
+        <option value="">Choose an existing opportunity</option>
+        {props.applications.filter((item) => item.status !== 'closed').map((item) => <option key={item.id} value={item.id}>{item.company} — {item.role}</option>)}
+      </select>
+    </label>
+    {!props.applications.length && <Link href="/applications" className="underline">Add an opportunity</Link>}
+    <p role="status" className="my-4">{feedback}</p>
+    {preview && <section aria-label="Source review">
+      <h2 className="font-display text-2xl">Review {preview.imported.fileName}</h2>
+      <p>{preview.byteCount} bytes read. Nothing is saved until you approve selected claims.</p>
+      {proposals.map((proposal) => <label key={proposal.id} className="block my-3 border border-border rounded p-3">
+        <input type="checkbox" checked={proposal.review === 'accepted'} onChange={(event) => setProposals((items) => items.map((item) => item.id === proposal.id ? { ...item, review: event.target.checked ? 'accepted' : 'proposed' } : item))} />
+        <strong className="ml-2">{proposal.section} / {proposal.field}</strong>
+        <span className="block whitespace-pre-wrap">Proposed: {proposal.value}</span>
+        <span className="block whitespace-pre-wrap text-muted-foreground">Current: {existingValue(proposal) || '(empty)'}</span>
+      </label>)}
+      <button className="rounded bg-primary text-primary-foreground px-4 py-2" disabled={busy || !opportunityId || !proposals.some((item) => item.review === 'accepted')} onClick={() => void approve()}>Approve selected claims</button>
+    </section>}
+    <SourcePackageSummary {...props} />
+    {props.sourceBindings.length > 0 && <button className="underline" onClick={props.onForget}>Forget source bindings (keep approved profile)</button>}
+    <p className="my-5"><Link href="/assist" className="underline">Continue to application assist</Link></p>
+  </div>;
+}

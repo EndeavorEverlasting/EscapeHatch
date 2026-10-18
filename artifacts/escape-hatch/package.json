@@ -12,7 +12,8 @@
     "test:browser": "playwright test --config=playwright.config.ts",
     "test": "npm run test:unit && npm run test:browser",
     "test:runtime-control": "node --experimental-strip-types --test runtime-control.test.ts",
-    "test:managed-assist": "node --experimental-strip-types --test browser-assist-control.test.ts managed-preferences.test.ts managed-preparation-driver.test.ts"
+    "test:managed-assist": "node --experimental-strip-types --test browser-assist-control.test.ts managed-preferences.test.ts managed-preparation-driver.test.ts",
+    "test:tracker": "tsx --test src/lib/tracker-bridge.test.ts src/lib/source-bridge.test.ts"
   },
   "devDependencies": {
     "@hookform/resolvers": "^3.10.0",

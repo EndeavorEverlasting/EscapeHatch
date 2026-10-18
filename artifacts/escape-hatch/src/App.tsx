@@ -79,6 +79,22 @@ import {
 import { applyAcceptedResumeImport, extractResumeText, getAcceptedResumeContactPatch, parseResumeText, type ResumeImport } from '@/lib/resume-import';
 import { initialSession, parseAssistSessionStatus, type AssistSession } from '@/lib/assist-session';
 import { ManagedBrowserAssist } from '@/components/managed-browser-assist';
+import { SourcesPage, SourcePackageSummary } from '@/components/sources-page';
+import {
+  SOURCE_BINDINGS_KEY,
+  parseSourceBindings,
+  persistSourceApproval,
+  type SourceBinding,
+} from '@/lib/source-bridge';
+import {
+  connectionFromSnapshot,
+  isSubmittedLocked,
+  mergeTrackerIntoApplications,
+  selectNextActionableOpportunity,
+  trackerRowToApplication,
+  type TrackerConnectionState,
+  type TrackerSnapshot,
+} from '@/lib/tracker-bridge';
 
 const queryClient = new QueryClient();
 
@@ -489,6 +505,7 @@ function AppShell({ children, profile }: { children: ReactNode; profile: Profile
     { href: '/applications', label: 'Applications', icon: BriefcaseBusiness },
     { href: '/answers', label: 'Answer library', icon: Clipboard },
     { href: '/profile', label: 'Profile', icon: UserRound },
+    { href: '/sources', label: 'Sources', icon: FolderOpen },
     { href: '/assist', label: 'Browser assist', icon: RefreshCw },
   ];
   return (
@@ -538,8 +555,48 @@ function PageIntro({ eyebrow, title, description, action }: { eyebrow: string; t
 
 function HomePage({ profile, answers, applications, setApplications }: { profile: Profile; answers: AnswerSnippet[]; applications: Application[]; setApplications: React.Dispatch<React.SetStateAction<Application[]>> }) {
   const completion = profileCompletion(profile);
+  const [tracker, setTracker] = useState<TrackerConnectionState>({ status: 'NOT_CONNECTED', reason: 'Checking tracker…' });
+  const [trackerBusy, setTrackerBusy] = useState(false);
+  useEffect(() => {
+    let activeFetch = true;
+    fetch('/__escapehatch/tracker/status', { credentials: 'same-origin' })
+      .then(async (response) => {
+        const json = await response.json() as { connection?: string; reason?: string; snapshot?: TrackerSnapshot | null };
+        if (!activeFetch) return;
+        if (json.snapshot) {
+          const connected = connectionFromSnapshot(json.snapshot);
+          setTracker(connected);
+          if (connected.status === 'CONNECTED') {
+            setApplications((current) => mergeTrackerIntoApplications(current, connected.snapshot));
+          }
+        } else {
+          setTracker({ status: 'NOT_CONNECTED', reason: json.reason || 'NOT CONNECTED' });
+        }
+      })
+      .catch(() => {
+        if (activeFetch) setTracker({ status: 'NOT_CONNECTED', reason: 'Managed runtime tracker endpoint unavailable.' });
+      });
+    return () => { activeFetch = false; };
+  }, [setApplications]);
+  const hydrateFromTracker = () => {
+    if (tracker.status !== 'CONNECTED') return;
+    setTrackerBusy(true);
+    try {
+      setApplications((current) => mergeTrackerIntoApplications(current, tracker.snapshot));
+    } finally {
+      setTrackerBusy(false);
+    }
+  };
+  const liveSnapshot = tracker.status === 'CONNECTED' ? tracker.snapshot : null;
+  const staleMeta = tracker.status === 'STALE' ? tracker : null;
+  const nextTracker = liveSnapshot ? selectNextActionableOpportunity(liveSnapshot) : null;
+  const nextTrackerApp = nextTracker ? trackerRowToApplication(nextTracker) : null;
+  const nextLocked = nextTracker ? isSubmittedLocked(nextTracker) : false;
   const active = applications.filter((application) => application.status !== 'closed');
-  const next = active.find((application) => application.status !== 'applied' && application.nextAction.trim()) || active.find((application) => application.status !== 'applied') || active[0];
+  const next = nextTrackerApp ||
+    active.find((application) => application.status !== 'applied' && application.nextAction.trim()) ||
+    active.find((application) => application.status !== 'applied') ||
+    active[0];
   const [appliedUndo, setAppliedUndo] = useState<{ applicationId: string; company: string; previousStatus: ApplicationStatus } | null>(null);
   useEffect(() => {
     if (!appliedUndo) return;
@@ -547,7 +604,12 @@ function HomePage({ profile, answers, applications, setApplications }: { profile
     return () => window.clearTimeout(timeout);
   }, [appliedUndo]);
   const markApplied = (application: Application) => {
-    setApplications((items) => items.map((item) => item.id === application.id ? { ...item, status: 'applied', updatedAt: now() } : item));
+    if (application.id.startsWith('tracker-') && application.status === 'applied') return;
+    setApplications((items) => {
+      const prior = items.find((item) => item.id === application.id);
+      if (prior?.status === 'applied' && prior.id.startsWith('tracker-')) return items;
+      return items.map((item) => item.id === application.id ? { ...item, status: 'applied', updatedAt: now() } : item);
+    });
     setAppliedUndo({ applicationId: application.id, company: application.company, previousStatus: application.status });
   };
   const undoMarkApplied = () => {
@@ -555,12 +617,53 @@ function HomePage({ profile, answers, applications, setApplications }: { profile
     setApplications((items) => items.map((item) => item.id === appliedUndo.applicationId ? { ...item, status: appliedUndo.previousStatus, updatedAt: now() } : item));
     setAppliedUndo(null);
   };
+  const metrics = liveSnapshot?.metrics;
+  const stats = metrics
+    ? [
+        { label: 'Tracked roles', value: String(metrics.trackedRoles), caption: `digest ${liveSnapshot.contentDigest.slice(0, 12)}…`, href: '/applications', testId: 'stat-tracked-roles' },
+        { label: 'Submitted', value: String(metrics.submittedStatus), caption: 'status text Submitted (not checkbox alone)', href: '/applications', testId: 'stat-submitted' },
+        { label: 'Ready to apply', value: String(metrics.readyToApply), caption: `${metrics.inProcess} in process · ${metrics.highPriority} high priority`, href: '/applications', testId: 'stat-ready' },
+      ]
+    : tracker.status === 'NOT_CONNECTED' || tracker.status === 'STALE'
+      ? [
+          { label: 'Tracker', value: '—', caption: tracker.status === 'STALE' ? 'Stale — refresh before trusting counts' : 'Not connected — counts withheld', href: '/sources', testId: 'stat-tracker-offline' },
+          { label: 'Local queue', value: String(active.length), caption: 'workspace-only rows (not career source of truth)', href: '/applications', testId: 'stat-local-queue' },
+          { label: 'Reusable answers', value: String(answers.length), caption: 'answers ready to borrow', href: '/answers', testId: 'stat-answers' },
+        ]
+      : [
+          { label: 'In motion', value: String(active.filter((item) => item.status !== 'saved').length), caption: 'applications beyond saved', href: '/applications', testId: 'stat-in-motion' },
+          { label: 'On deck', value: String(active.filter((item) => item.status === 'saved').length), caption: 'opportunities to explore', href: '/applications', testId: 'stat-on-deck' },
+          { label: 'Reusable answers', value: String(answers.length), caption: 'answers ready to borrow', href: '/answers', testId: 'stat-answers' },
+        ];
   return <div>
     <PageIntro eyebrow="Wednesday · your cockpit" title={profile.first_name ? `Keep going, ${displayName(profile)}.` : 'Make room for momentum.'} description="A small, private place to move one good opportunity forward at a time." />
+    <section className="mb-6 rounded-2xl border border-border bg-card p-5 shadow-sm" data-testid="tracker-connection-panel" data-tracker-status={tracker.status}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="font-mono-app text-[10px] uppercase tracking-[.18em] text-muted-foreground">career tracker</p>
+          <p className="mt-2 text-sm font-bold" data-testid="tracker-connection-status">
+            {tracker.status === 'CONNECTED' ? 'CONNECTED' : tracker.status === 'STALE' ? 'STALE' : 'NOT CONNECTED'}
+          </p>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground" data-testid="tracker-connection-reason">
+            {tracker.status === 'CONNECTED'
+              ? `Provenance: ${tracker.snapshot.authPath} · captured ${tracker.snapshot.capturedAtUtc} · sheet ${tracker.snapshot.sheetName}`
+              : tracker.status === 'STALE'
+                ? `${tracker.reason} · captured ${tracker.capturedAtUtc}`
+                : tracker.reason}
+          </p>
+        </div>
+        {tracker.status === 'CONNECTED' && (
+          <Button type="button" variant="outline" disabled={trackerBusy} onClick={hydrateFromTracker} data-testid="button-hydrate-tracker">
+            {trackerBusy ? 'Hydrating…' : 'Refresh applications from tracker'}
+          </Button>
+        )}
+      </div>
+      {staleMeta && <p className="mt-3 text-xs text-muted-foreground" data-testid="tracker-stale-digest">Stale digest {staleMeta.contentDigest.slice(0, 16)}… — metrics hidden until refresh.</p>}
+    </section>
     <div className="grid gap-4 md:grid-cols-[1.35fr_.65fr]">
-      <section className="animate-rise rounded-2xl bg-primary p-6 text-primary-foreground shadow-md sm:p-8">
-        <div className="flex items-start justify-between gap-4"><div><p className="font-mono-app text-[10px] uppercase tracking-[.18em] text-primary-foreground/65">one useful thing</p><h2 className="mt-3 max-w-lg font-display text-3xl leading-tight sm:text-4xl">{next ? `Move ${next.company} one step closer.` : 'Add one opportunity to your queue.'}</h2></div><span className="rounded-full border border-primary-foreground/20 px-3 py-1 font-mono-app text-[10px] uppercase tracking-widest text-primary-foreground/70">next</span></div>
-        {next ? <div className="mt-8 flex flex-col gap-4 rounded-xl bg-primary-foreground/10 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold">{next.nextAction || `Review the ${next.role} opportunity`}</p><p className="mt-1 text-xs text-primary-foreground/65">{next.company} · {next.role}</p></div>{next.status === 'applied' ? <span className="shrink-0 rounded-lg border border-primary-foreground/20 px-3.5 py-2.5 text-sm font-bold text-primary-foreground/80">Applied</span> : <Button variant="quiet" onClick={() => markApplied(next)} data-testid={`button-progress-${next.id}`} className="shrink-0">Mark applied <ArrowRight size={15} /></Button>}</div> : <Link href="/applications" data-testid="link-add-first-application" className="mt-8 inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-3 text-sm font-bold text-foreground transition hover:brightness-95">Add an opportunity <ArrowRight size={15} /></Link>}
+      <section className="animate-rise rounded-2xl bg-primary p-6 text-primary-foreground shadow-md sm:p-8" data-testid="home-next-opportunity">
+        <div className="flex items-start justify-between gap-4"><div><p className="font-mono-app text-[10px] uppercase tracking-[.18em] text-primary-foreground/65">one useful thing</p><h2 className="mt-3 max-w-lg font-display text-3xl leading-tight sm:text-4xl">{next ? `Move ${next.company} one step closer.` : tracker.status === 'CONNECTED' ? 'No Ready-to-Apply opportunities in the tracker.' : 'Connect your tracker or add one opportunity.'}</h2></div><span className="rounded-full border border-primary-foreground/20 px-3 py-1 font-mono-app text-[10px] uppercase tracking-widest text-primary-foreground/70">next</span></div>
+        {next ? <div className="mt-8 flex flex-col gap-4 rounded-xl bg-primary-foreground/10 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold" data-testid="home-next-action">{next.nextAction || `Review the ${next.role} opportunity`}</p><p className="mt-1 text-xs text-primary-foreground/65" data-testid="home-next-company-role">{next.company} · {next.role}</p>{next.url ? <a href={next.url} target="_blank" rel="noreferrer" data-testid="home-next-url" className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-primary-foreground underline">Open posting <ExternalLink size={12} /></a> : null}</div>{next.status === 'applied' || nextLocked ? <span className="shrink-0 rounded-lg border border-primary-foreground/20 px-3.5 py-2.5 text-sm font-bold text-primary-foreground/80" data-testid="home-next-locked">Submitted — do not reapply</span> : <div className="flex shrink-0 flex-col gap-2 sm:items-end"><Link href="/assist" data-testid="link-prepare-next" className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-3.5 py-2.5 text-sm font-bold text-foreground transition hover:brightness-95">Prepare in Browser Assist <ArrowRight size={15} /></Link><Button variant="quiet" onClick={() => markApplied(next)} data-testid={`button-progress-${next.id}`} className="shrink-0">Mark applied <ArrowRight size={15} /></Button></div>}</div> : tracker.status !== 'CONNECTED' ? <Link href="/sources" data-testid="link-connect-tracker" className="mt-8 inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-3 text-sm font-bold text-foreground transition hover:brightness-95">Review Sources <ArrowRight size={15} /></Link> : <Link href="/applications" data-testid="link-add-first-application" className="mt-8 inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-3 text-sm font-bold text-foreground transition hover:brightness-95">Review applications <ArrowRight size={15} /></Link>}
         {appliedUndo && <div role="status" aria-live="polite" data-testid="home-applied-undo-notice" className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary-foreground/20 bg-primary-foreground/10 px-4 py-3 text-sm"><span>Marked {appliedUndo.company} applied.</span><Button type="button" variant="quiet" onClick={undoMarkApplied} data-testid="button-undo-mark-applied">Undo</Button></div>}
       </section>
       <section className="animate-rise-delay-1 rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
@@ -571,7 +674,7 @@ function HomePage({ profile, answers, applications, setApplications }: { profile
       </section>
     </div>
     <div className="mt-10 grid gap-4 md:grid-cols-3">
-       {[{ label: 'In motion', value: active.filter((item) => item.status !== 'saved').length, caption: 'applications beyond saved', href: '/applications' }, { label: 'On deck', value: active.filter((item) => item.status === 'saved').length, caption: 'opportunities to explore', href: '/applications' }, { label: 'Reusable answers', value: answers.length, caption: 'answers ready to borrow', href: '/answers' }].map((stat, index) => <Link href={stat.href} data-testid={`link-stat-${index}`} key={stat.label} className="animate-rise-delay-2 rounded-xl border border-border bg-card p-5 transition hover:-translate-y-0.5 hover:shadow-md"><p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-muted-foreground">{stat.label}</p><p className="mt-4 font-display text-4xl">{stat.value}</p><p className="mt-1 text-xs text-muted-foreground">{stat.caption}</p></Link>)}
+       {stats.map((stat, index) => <Link href={stat.href} data-testid={stat.testId || `link-stat-${index}`} key={stat.label} className="animate-rise-delay-2 rounded-xl border border-border bg-card p-5 transition hover:-translate-y-0.5 hover:shadow-md"><p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-muted-foreground">{stat.label}</p><p className="mt-4 font-display text-4xl">{stat.value}</p><p className="mt-1 text-xs text-muted-foreground">{stat.caption}</p></Link>)}
     </div>
     <div className="mt-10 flex flex-col gap-5 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
       <div><p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-muted-foreground">quiet reminder</p><p className="mt-2 font-display text-2xl">You do not have to finish the whole search today.</p></div>
@@ -883,6 +986,33 @@ function ApplicationsPage({
   draftRecoverySeconds: number;
   draftRecoveryWindowSeconds: DraftRecoverySeconds;
 }) {
+  const [trackerBanner, setTrackerBanner] = useState<{ status: string; detail: string } | null>(null);
+  useEffect(() => {
+    let activeFetch = true;
+    fetch('/__escapehatch/tracker/status', { credentials: 'same-origin' })
+      .then(async (response) => {
+        const json = await response.json() as { connection?: string; reason?: string; snapshot?: TrackerSnapshot | null };
+        if (!activeFetch) return;
+        if (json.snapshot) {
+          const connected = connectionFromSnapshot(json.snapshot);
+          if (connected.status === 'CONNECTED') {
+            setApplications((current) => mergeTrackerIntoApplications(current, connected.snapshot));
+            setTrackerBanner({
+              status: 'CONNECTED',
+              detail: `${connected.snapshot.metrics.trackedRoles} tracked · ${connected.snapshot.metrics.submittedStatus} submitted · ${connected.snapshot.metrics.readyToApply} ready · captured ${connected.snapshot.capturedAtUtc}`,
+            });
+          } else if (connected.status === 'STALE') {
+            setTrackerBanner({ status: 'STALE', detail: connected.reason });
+          }
+        } else {
+          setTrackerBanner({ status: 'NOT_CONNECTED', detail: json.reason || 'NOT CONNECTED' });
+        }
+      })
+      .catch(() => {
+        if (activeFetch) setTrackerBanner({ status: 'NOT_CONNECTED', detail: 'Managed runtime tracker endpoint unavailable.' });
+      });
+    return () => { activeFetch = false; };
+  }, [setApplications]);
   const [filter, setFilter] = useState<'all' | ApplicationStatus>('all');
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<Application | null>(null);
@@ -967,6 +1097,7 @@ function ApplicationsPage({
   };
   return <div>
     <PageIntro eyebrow="Application queue" title="Keep the queue small." description="A short list you can actually move through is more useful than a perfect list you never open." action={<Button ref={pageAddButtonRef} onClick={() => openForm(null)} data-testid="button-add-application"><Plus size={16} /> Add opportunity</Button>} />
+    {trackerBanner && <div role="status" data-testid="applications-tracker-banner" data-tracker-status={trackerBanner.status} className="mb-6 rounded-xl border border-border bg-card px-4 py-3 text-sm"><span className="font-bold">{trackerBanner.status}</span><span className="mt-1 block text-xs text-muted-foreground">{trackerBanner.detail}</span></div>}
     <div role="status" aria-live="polite" aria-atomic="true" data-testid="application-form-announcement" className="sr-only">{formAnnouncement}</div>
     {dismissedDraft && dismissedDraft.expiresAt > Date.now() && <div role="status" aria-live="polite" data-testid="application-draft-notice" className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent/35 bg-accent/10 px-4 py-3 text-sm"><span className="flex flex-wrap items-center gap-x-3 gap-y-1"><span>You have an unsaved opportunity draft.</span><span data-testid="application-draft-recovery-time">Recovery available for {formatRecoveryDuration(draftRecoverySeconds)}</span></span><span className="flex items-center gap-2"><Button type="button" onClick={recoverDraft} data-testid="button-recover-application-draft">Recover draft</Button><Button type="button" variant="quiet" onClick={discardDraft} data-testid="button-discard-application-draft">Discard</Button></span></div>}
     {deleted && <div role="status" aria-live="polite" data-testid="application-undo-notice" className="mb-6 flex items-center justify-between gap-4 rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 text-sm"><span>Opportunity deleted.</span><Button type="button" variant="outline" onClick={undo} data-testid="button-undo-application">Undo</Button></div>}
@@ -1043,6 +1174,9 @@ function AssistProgress({ session }: { session: AssistSession }) {
 
 function AssistPage({
   profile,
+  assistProfile,
+  setAssistProfile,
+  sourceBindings,
   answers,
   applications,
   setProfile,
@@ -1050,13 +1184,15 @@ function AssistPage({
   setApplications,
 }: {
   profile: Profile;
+  assistProfile: AssistProfile;
+  setAssistProfile: React.Dispatch<React.SetStateAction<AssistProfile>>;
+  sourceBindings: SourceBinding[];
   answers: AnswerSnippet[];
   applications: Application[];
   setProfile: React.Dispatch<React.SetStateAction<Profile>>;
   setAnswers: React.Dispatch<React.SetStateAction<AnswerSnippet[]>>;
   setApplications: React.Dispatch<React.SetStateAction<Application[]>>;
 }) {
-  const [assistProfile, setAssistProfile] = useStoredState<AssistProfile>(ASSIST_KEY, emptyAssistProfile(profile), parseAssistProfile);
   const [session, setSession] = useStoredState<AssistSession>(ASSIST_SESSION_KEY, initialSession(), parseAssistSessionStatus);
   const [assistAnswers, setAssistAnswers] = useStoredState<AssistAnswer[]>(ASSIST_ANSWERS_KEY, [], (value) => Array.isArray(value) ? value.filter((item): item is AssistAnswer => Boolean(item && typeof item === 'object' && typeof (item as AssistAnswer).id === 'string' && typeof (item as AssistAnswer).content === 'string')) : null);
   const [resume, setResume] = useState<ResumeImport | null>(null);
@@ -1184,6 +1320,7 @@ function AssistPage({
   return <div>
     <ManagedBrowserAssist profile={profile} setProfile={setProfile} applications={applications} setApplications={setApplications} />
      <PageIntro eyebrow="Browser assist" title="Fill the repeatable parts." description="Launch an application in managed Chrome above. Review your reusable knowledge here, fill known contact fields, and prepare attachments without installing an extension." action={<div className="flex flex-wrap justify-end gap-2"><Button variant="outline" type="button" onClick={() => fileRef.current?.click()} data-testid="button-import-resume"><FileUp size={16} /> Import resume</Button><Button variant="outline" type="button" onClick={exportSync} data-testid="button-export-assist-sync"><FileDown size={16} /> Export assist sync</Button><Button variant="outline" type="button" onClick={exportSession} data-testid="button-export-assist-session"><FileDown size={16} /> Export session status</Button><label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm font-bold hover:bg-secondary"><FileUp size={16} /> Import session<input ref={sessionFileRef} type="file" accept="application/json,.json" onChange={importSession} className="hidden" data-testid="input-import-assist-session" /></label><input ref={fileRef} type="file" accept=".pdf,.txt,text/plain,application/pdf" onChange={importResume} className="hidden" data-testid="input-import-resume" /></div>} />
+    <SourcePackageSummary profile={profile} assistProfile={assistProfile} applications={applications} sourceBindings={sourceBindings} />
     {feedback && <p role="status" aria-live="polite" data-testid="assist-feedback" className="mb-5 rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 text-sm font-bold text-primary">{feedback}</p>}
     <div className="grid gap-5 lg:grid-cols-[1.25fr_.75fr]">
       <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-7">
@@ -1227,6 +1364,8 @@ function NotFoundPage() {
 
 function Router() {
   const [profile, setProfile] = useStoredState<Profile>(PROFILE_KEY, emptyProfile, parseProfileStorage);
+  const [assistProfile, setAssistProfile] = useStoredState<AssistProfile>(ASSIST_KEY, emptyAssistProfile(profile), parseAssistProfile);
+  const [sourceBindings, setSourceBindings] = useStoredState<SourceBinding[]>(SOURCE_BINDINGS_KEY, [], parseSourceBindings);
   const [answers, setAnswers] = useStoredState<AnswerSnippet[]>(ANSWERS_KEY, [], parseAnswersStorage);
   const [applications, setApplications] = useStoredState<Application[]>(APPLICATIONS_KEY, [], parseApplicationsStorage);
   const [draftRecoverySeconds, setDraftRecoverySeconds] = useStoredState(
@@ -1286,7 +1425,7 @@ function Router() {
     setApplications(workspace.applications);
     return persisted;
   };
-  return <AppShell profile={profile}><Switch><Route path="/"><HomePage profile={profile} answers={answers} applications={applications} setApplications={setApplications} /></Route><Route path="/profile"><ProfilePage profile={profile} answers={answers} applications={applications} setProfile={setProfile} setAnswers={setAnswers} setApplications={setApplications} onRestoreWorkspace={restoreWorkspace} draftRecoverySeconds={draftRecoverySeconds} setDraftRecoverySeconds={setDraftRecoverySeconds} /></Route><Route path="/answers"><AnswersPage answers={answers} setAnswers={setAnswers} dismissedDraft={dismissedAnswerDraft} setDismissedDraft={setDismissedAnswerDraft} draftExpiryAnnouncement={answerDraftExpiryAnnouncement} onDraftStarted={() => setAnswerDraftExpiryAnnouncement('')} draftRecoverySeconds={answerDraftRecoverySeconds} draftRecoveryWindowSeconds={draftRecoverySeconds} /></Route><Route path="/applications"><ApplicationsPage applications={applications} setApplications={setApplications} dismissedDraft={dismissedApplicationDraft} setDismissedDraft={setDismissedApplicationDraft} draftExpiryAnnouncement={applicationDraftExpiryAnnouncement} onDraftStarted={() => setApplicationDraftExpiryAnnouncement('')} draftRecoverySeconds={applicationDraftRecoverySeconds} draftRecoveryWindowSeconds={draftRecoverySeconds} /></Route><Route path="/assist"><AssistPage profile={profile} answers={answers} applications={applications} setProfile={setProfile} setAnswers={setAnswers} setApplications={setApplications} /></Route><Route component={NotFoundPage} /></Switch></AppShell>;
+  return <AppShell profile={profile}><Switch><Route path="/"><HomePage profile={profile} answers={answers} applications={applications} setApplications={setApplications} /></Route><Route path="/profile"><ProfilePage profile={profile} answers={answers} applications={applications} setProfile={setProfile} setAnswers={setAnswers} setApplications={setApplications} onRestoreWorkspace={restoreWorkspace} draftRecoverySeconds={draftRecoverySeconds} setDraftRecoverySeconds={setDraftRecoverySeconds} /></Route><Route path="/answers"><AnswersPage answers={answers} setAnswers={setAnswers} dismissedDraft={dismissedAnswerDraft} setDismissedDraft={setDismissedAnswerDraft} draftExpiryAnnouncement={answerDraftExpiryAnnouncement} onDraftStarted={() => setAnswerDraftExpiryAnnouncement('')} draftRecoverySeconds={answerDraftRecoverySeconds} draftRecoveryWindowSeconds={draftRecoverySeconds} /></Route><Route path="/applications"><ApplicationsPage applications={applications} setApplications={setApplications} dismissedDraft={dismissedApplicationDraft} setDismissedDraft={setDismissedApplicationDraft} draftExpiryAnnouncement={applicationDraftExpiryAnnouncement} onDraftStarted={() => setApplicationDraftExpiryAnnouncement('')} draftRecoverySeconds={applicationDraftRecoverySeconds} draftRecoveryWindowSeconds={draftRecoverySeconds} /></Route><Route path="/sources"><SourcesPage profile={profile} assistProfile={assistProfile} applications={applications} sourceBindings={sourceBindings} onApprove={(value) => { persistSourceApproval(getLocalStorage(), value); setProfile(value.profile); setAssistProfile(value.assist); setSourceBindings(value.bindings); }} onForget={() => setSourceBindings([])} /></Route><Route path="/assist"><AssistPage assistProfile={assistProfile} setAssistProfile={setAssistProfile} sourceBindings={sourceBindings} profile={profile} answers={answers} applications={applications} setProfile={setProfile} setAnswers={setAnswers} setApplications={setApplications} /></Route><Route component={NotFoundPage} /></Switch></AppShell>;
 }
 
 function RoutedErrorBoundary({ children }: { children: ReactNode }) {

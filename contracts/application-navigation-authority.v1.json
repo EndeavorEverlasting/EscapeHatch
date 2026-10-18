@@ -1,0 +1,129 @@
+{
+  "schema": "escapehatch/application-navigation-authority/v1",
+  "version": 1,
+  "mission": "Classify the consequence of a candidate application-navigation action before it is activated, by verified effect evidence rather than by label, so intermediate step progression can be distinguished from final application delivery without ever automating submission or attestation.",
+  "relationship_to_session_contract": {
+    "session_contract": "contracts/application-assist-session.v1.json",
+    "note": "The existing forbidden_actions auto_submit and click_next_or_continue remain in force. This contract defines classification and authority evaluation only and grants no click authority by itself. Any future authorization of classified intermediate navigation requires a separate versioned migration of the session contract plus operator-enabled scoped authorization."
+  },
+  "evidence_principle": "A label, DOM control type, step ordinal, URL, heading, or client-side listener alone confers zero authority. The classifier predicts the consequence of an authorized action from trusted, current, pre-validated, context-scoped evidence; it does not guess from marketing text.",
+  "effect_classes": {
+    "LOCAL_STEP_ONLY": {
+      "meaning": "Verified same-application intermediate progression with no unacceptable data disclosure.",
+      "automation_default": "deny",
+      "grantable_to_agent": true,
+      "requires": [
+        "versioned_context_scoped_adapter_evidence",
+        "operator_scoped_navigation_authorization",
+        "fresh_matching_page_and_control_fingerprints"
+      ]
+    },
+    "DRAFT_WRITE_AND_ADVANCE": {
+      "meaning": "Verified step progression that persists or transmits draft information to the employer system.",
+      "automation_default": "deny",
+      "grantable_to_agent": true,
+      "requires": [
+        "versioned_context_scoped_adapter_evidence",
+        "operator_scoped_navigation_authorization",
+        "fresh_matching_page_and_control_fingerprints",
+        "explicit_scoped_data_category_authorization_for_the_disclosure"
+      ]
+    },
+    "TERMINAL_APPLICATION_COMMIT": {
+      "meaning": "Irreversible or effective final delivery of the application, including implicit keyboard submission, regardless of button label.",
+      "automation_default": "deny",
+      "grantable_to_agent": false,
+      "authority": "operator_only",
+      "note": "Never automatable. A misleading Next can be final; a misleading Submit can be intermediate. Neither label is decisive and no agent path may activate a control classified terminal."
+    },
+    "UNKNOWN_OR_COMPOSITE": {
+      "meaning": "Undetermined or mixed consequence, including changed fingerprint, handler, or endpoint; unverified vendor control; missing, stale, or mismatched evidence; or malformed observation.",
+      "automation_default": "deny",
+      "grantable_to_agent": false,
+      "action": "pause_for_operator_decision",
+      "note": "Fail closed. Never click to discover the consequence on a real employer site."
+    }
+  },
+  "invariants": [
+    "accessible_name_html_type_heading_url_or_step_ordinal_alone_confer_no_authority",
+    "unknown_stale_or_mismatched_evidence_fails_closed",
+    "terminal_application_commit_is_operator_only_regardless_of_label_or_authorization",
+    "authorization_never_grants_terminal_application_commit",
+    "adapter_evidence_must_match_origin_page_and_control_fingerprints",
+    "adapter_evidence_is_versioned_scoped_and_expiring_not_a_global_wildcard",
+    "draft_write_requires_explicit_scoped_data_category_authorization",
+    "keyboard_implicit_submit_or_synthetic_events_do_not_bypass_classification",
+    "one_inflight_navigation_action_per_session",
+    "post_action_step_transition_must_be_observed_before_next_action",
+    "a_successful_click_is_not_proof_of_the_intended_transition"
+  ],
+  "classifier": {
+    "function": "classifyNavigationAction",
+    "owner": "artifacts/escape-hatch/application-navigation-policy.ts",
+    "purity": "no_dom_no_network_no_clock_injection_required_beyond_now_parameter",
+    "inputs": [
+      "control_observation",
+      "adapter_evidence_or_null",
+      "navigation_authorization_or_null",
+      "now_utc"
+    ],
+    "output_fields": [
+      "effect_class",
+      "evidence_refs",
+      "confidence",
+      "blockers",
+      "automation_permitted",
+      "requires_operator_action"
+    ],
+    "fail_closed_rule": "Any missing, malformed, expired, future-dated, or context-mismatched input yields UNKNOWN_OR_COMPOSITE with automation_permitted false."
+  },
+  "adapter_evidence": {
+    "schema": "escapehatch/application-navigation-adapter-evidence/v1",
+    "scoping_fields": [
+      "origin",
+      "page_fingerprint",
+      "control_id",
+      "control_fingerprint",
+      "enclosing_form_action",
+      "enclosing_form_method"
+    ],
+    "lifecycle": "versioned, recorded, expiring; one prior observation is never universally safe across other applications, pages, or versions",
+    "prohibited": [
+      "global_wildcard_evidence",
+      "label_only_evidence",
+      "confidence_without_evidence"
+    ]
+  },
+  "authorization": {
+    "binding_fields": [
+      "session_id",
+      "opportunity_id",
+      "origin"
+    ],
+    "grantable_effect_classes": [
+      "LOCAL_STEP_ONLY",
+      "DRAFT_WRITE_AND_ADVANCE"
+    ],
+    "never_grantable_effect_classes": [
+      "TERMINAL_APPLICATION_COMMIT"
+    ],
+    "draft_write_extra_requirement": "non_empty_allowed_data_categories"
+  },
+  "content_policy": {
+    "manual_only": [
+      "passwords",
+      "otp_mfa_captcha",
+      "signatures",
+      "certifications_and_legal_attestations"
+    ],
+    "sensitive_demographics_eeo": "never_inferred_never_logged",
+    "existing_and_user_edited_values": "preserved",
+    "legal_or_current_facts": "require established per-application operator confirmation"
+  },
+  "proof_ceiling": [
+    "repository_contract_and_unit_test_proof_on_synthetic_fixtures",
+    "no_live_browser_navigation_proof",
+    "no_real_ats_effect_semantics_claim",
+    "real_vendor_consequence_requires_independent_adapter_evidence"
+  ]
+}

@@ -930,6 +930,9 @@ function AnswerForm({ answer, initialDraft, returnFocusRef, fallbackFocusRef, on
   const [errors, setErrors] = useState<{ title?: string; content?: string }>({});
   const titleRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLTextAreaElement>(null);
+  // Input handlers synchronously capture the user's last edit, independent of
+  // whether a controlled React state render has committed before the Save click.
+  const requiredDraft = useRef({ title, content });
   const clearError = (key: 'title' | 'content') => setErrors((current) => {
     if (!current[key]) return current;
     const next = { ...current };
@@ -940,8 +943,8 @@ function AnswerForm({ answer, initialDraft, returnFocusRef, fallbackFocusRef, on
     event.preventDefault();
     // Read the actual control at commit time. A rapid Fill -> click can precede
     // React's next render; stale state must never certify an empty required answer.
-    const submittedTitle = titleRef.current?.value ?? title;
-    const submittedContent = contentRef.current?.value ?? content;
+    const submittedTitle = requiredDraft.current.title;
+    const submittedContent = requiredDraft.current.content;
     const nextErrors = {
       ...(submittedTitle.trim() ? {} : { title: 'Add a short title before saving.' }),
       ...(submittedContent.trim() ? {} : { content: 'Write an answer before saving.' }),
@@ -957,7 +960,7 @@ function AnswerForm({ answer, initialDraft, returnFocusRef, fallbackFocusRef, on
     onSave({ title: submittedTitle.trim(), category, content: submittedContent.trim() });
   };
   const dismiss = () => onClose({ title, category, content });
-  return <Modal title={answer ? 'Edit answer' : 'New answer'} eyebrow="Answer library" onClose={dismiss} returnFocusRef={returnFocusRef} fallbackFocusRef={fallbackFocusRef}><form onSubmit={submit} className="space-y-5"><Field label="Short title" name="answer-title" value={title} onChange={(event) => { setTitle(event.target.value); if (event.target.value.trim()) clearError('title'); }} placeholder="Why I am interested in this kind of work" required inputRef={titleRef} error={errors.title} data-testid="input-answer-title" /><SelectField label="Category" value={category} onChange={(event) => setCategory(event.target.value)} options={categories.map((item) => ({ value: item, label: item }))} testId="select-answer-category" /><TextArea label="Your answer" name="answer-content" value={content} onChange={(event) => { setContent(event.target.value); if (event.target.value.trim()) clearError('content'); }} placeholder="Write it in your own voice. It does not need to be perfect." required textareaRef={contentRef} error={errors.content} data-testid="textarea-answer-content" /><div className="flex justify-end gap-2 pt-2"><Button type="button" variant="outline" onClick={dismiss} data-testid="button-cancel-answer">Cancel</Button><Button type="submit" data-testid="button-save-answer"><Check size={16} /> Save answer</Button></div></form></Modal>;
+  return <Modal title={answer ? 'Edit answer' : 'New answer'} eyebrow="Answer library" onClose={dismiss} returnFocusRef={returnFocusRef} fallbackFocusRef={fallbackFocusRef}><form onSubmit={submit} className="space-y-5"><Field label="Short title" name="answer-title" value={title} onChange={(event) => { requiredDraft.current.title = event.target.value; setTitle(event.target.value); if (event.target.value.trim()) clearError('title'); }} placeholder="Why I am interested in this kind of work" required inputRef={titleRef} error={errors.title} data-testid="input-answer-title" /><SelectField label="Category" value={category} onChange={(event) => setCategory(event.target.value)} options={categories.map((item) => ({ value: item, label: item }))} testId="select-answer-category" /><TextArea label="Your answer" name="answer-content" value={content} onChange={(event) => { requiredDraft.current.content = event.target.value; setContent(event.target.value); if (event.target.value.trim()) clearError('content'); }} placeholder="Write it in your own voice. It does not need to be perfect." required textareaRef={contentRef} error={errors.content} data-testid="textarea-answer-content" /><div className="flex justify-end gap-2 pt-2"><Button type="button" variant="outline" onClick={dismiss} data-testid="button-cancel-answer">Cancel</Button><Button type="submit" data-testid="button-save-answer"><Check size={16} /> Save answer</Button></div></form></Modal>;
 }
 
 function statusTone(status: ApplicationStatus) {
@@ -1114,6 +1117,7 @@ function ApplicationForm({ application, initialDraft, returnFocusRef, fallbackFo
   const [errors, setErrors] = useState<{ company?: string; role?: string }>({});
   const companyRef = useRef<HTMLInputElement>(null);
   const roleRef = useRef<HTMLInputElement>(null);
+  const requiredDraft = useRef({ company: form.company, role: form.role });
   const clearError = (key: 'company' | 'role') => setErrors((current) => {
     if (!current[key]) return current;
     const next = { ...current };
@@ -1122,6 +1126,7 @@ function ApplicationForm({ application, initialDraft, returnFocusRef, fallbackFo
   });
   const update = (key: keyof typeof form) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const value = event.target.value;
+    if (key === 'company' || key === 'role') requiredDraft.current[key] = value;
     setForm((current) => ({ ...current, [key]: value }));
     if ((key === 'company' || key === 'role') && value.trim()) clearError(key);
   };
@@ -1129,8 +1134,8 @@ function ApplicationForm({ application, initialDraft, returnFocusRef, fallbackFo
     event.preventDefault();
     // Validate the live DOM before committing; React may not have rendered the
     // immediately preceding edit. Never save a stale company/role after removal.
-    const submittedCompany = companyRef.current?.value ?? form.company;
-    const submittedRole = roleRef.current?.value ?? form.role;
+    const submittedCompany = requiredDraft.current.company;
+    const submittedRole = requiredDraft.current.role;
     const nextErrors = {
       ...(submittedCompany.trim() ? {} : { company: 'Add a company before saving.' }),
       ...(submittedRole.trim() ? {} : { role: 'Add a role before saving.' }),

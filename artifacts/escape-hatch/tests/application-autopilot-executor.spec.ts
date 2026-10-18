@@ -155,3 +155,50 @@ test('production managed PreparationDriver reaches REVIEW_READY on synthetic nat
   expect(after.nativeDrafts.length).toBe(before.nativeDrafts.length + 2);
   expect(after.terminalCommits.length).toBe(before.terminalCommits.length);
 });
+
+test('production driver stops SPA progression for unresolved required controls', async ({ page }) => {
+  for (const markup of [
+    '<label>Unmapped question<input required name="unmapped"></label>',
+    '<label>Required choice<select required><option value="">Choose</option><option value="yes">Yes</option></select></label>',
+    '<label>Required agreement<input required type="checkbox"></label>',
+    '<label>Custom required question<input aria-required="true"></label>',
+    '<label>Unmapped long answer<textarea required></textarea></label>',
+    '<div role="combobox" aria-required="true">Choose an answer</div>',
+    '<label>Invalid email<input type="email" required value="invalid"></label>',
+    '<form><input type="radio" name="choice" checked></form><form><input type="radio" name="choice" aria-required="true"></form>',
+  ]) {
+    await page.goto(ats.origin + '/spa/step/1');
+    await page.evaluate(html => document.body.insertAdjacentHTML('afterbegin', html), markup);
+    const before = await journal();
+    const auth = permission();
+    const driver = createManagedPreparationDriver({ page, authorization: auth, registry: contract as TrustedAdapterRegistry, preferences: emptyPreferences() });
+    const result = await prepareToFinalReview(driver, auth, { maxSteps: 3 });
+    expect(result.state).toBe('REVIEW_REQUIRED');
+    expect(result.code).toBe('required_preparation_unverified');
+    expect(result.pendingManual).toContain('required_control_0');
+    expect(result.intermediateSteps).toBe(0);
+    const after = await journal();
+    expect(after.spaAdvances.length).toBe(before.spaAdvances.length);
+    expect(after.terminalCommits.length).toBe(before.terminalCommits.length);
+  }
+});
+
+test('production driver preserves populated required answers and ignores hidden disabled controls', async ({ page }) => {
+  await page.goto(ats.origin + '/spa/step/1');
+  await page.evaluate(() => document.body.insertAdjacentHTML('afterbegin', `
+    <label>Unmapped question<input required value="synthetic-user-answer"></label>
+    <form><input type="radio" name="same-form-choice" aria-required="true"><input type="radio" name="same-form-choice" checked></form>
+    <input required style="display:none"><input required disabled><input type="hidden" required>
+  `));
+  const before = await journal();
+  const auth = permission();
+  const driver = createManagedPreparationDriver({ page, authorization: auth, registry: contract as TrustedAdapterRegistry, preferences: emptyPreferences() });
+  const result = await prepareToFinalReview(driver, auth, { maxSteps: 3 });
+  expect(result.state).toBe('REVIEW_READY');
+  expect(result.intermediateSteps).toBe(1);
+  expect(result.finalActionActivated).toBe(false);
+  await expect(page.locator('input[value="synthetic-user-answer"]')).toHaveValue('synthetic-user-answer');
+  const after = await journal();
+  expect(after.spaAdvances.length).toBe(before.spaAdvances.length + 1);
+  expect(after.terminalCommits.length).toBe(before.terminalCommits.length);
+});

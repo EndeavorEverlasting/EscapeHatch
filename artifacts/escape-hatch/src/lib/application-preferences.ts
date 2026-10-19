@@ -3,7 +3,7 @@ import taxonomy from '../../../../harness/contracts/application-form-taxonomy.v1
 export const PREFERENCE_KEY = 'escapeHatch.applicationQuestionPreferences.v1';
 export const PREFERENCE_SCHEMA = 'escapehatch-application-question-preferences/v1';
 export type Preference = { scope: 'profile_preference'; value: string; source: 'user'; updated_at: string };
-export type Preferences = { schema_version: typeof PREFERENCE_SCHEMA; exported_at: string; preferences: Record<string, Preference>; job_titles?: string[]; professional_titles?: string[] };
+export type Preferences = { schema_version: typeof PREFERENCE_SCHEMA; exported_at: string; preferences: Record<string, Preference>; job_titles?: string[]; professional_titles?: string[]; require_document_review?: boolean };
 export const questions = taxonomy.questions;
 export const emptyPreferences = (): Preferences => ({ schema_version: PREFERENCE_SCHEMA, exported_at: new Date().toISOString(), preferences: {} });
 
@@ -16,6 +16,10 @@ export function parsePreferences(input: unknown): Preferences | null {
   const known = new Set(questions.map(q => q.id));
   const clean = emptyPreferences();
   clean.exported_at = data.exported_at;
+  if (data.require_document_review !== undefined) {
+    if (typeof data.require_document_review !== 'boolean') return null;
+    clean.require_document_review = data.require_document_review;
+  }
   for (const key of ['job_titles', 'professional_titles'] as const) {
     const titles = data[key];
     if (titles !== undefined) {

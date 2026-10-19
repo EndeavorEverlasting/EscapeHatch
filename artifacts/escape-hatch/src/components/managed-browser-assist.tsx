@@ -1,3 +1,4 @@
+import { OpportunityDocuments, useOpportunityDocuments } from './opportunity-documents';
 import type { AssistProfile } from '@/lib/assist-contract';
 import { CareerRecords } from './career-records';
 import { useEffect, useRef, useState, type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
@@ -49,20 +50,6 @@ async function request(endpoint: string, body?: object): Promise<ServerResponse>
   return json;
 }
 
-async function privatePdf(file: File | null) {
-  if (!file) return null;
-  if (!/\.pdf$/i.test(file.name) || file.size > 5 * 1024 * 1024 || file.size === 0) {
-    throw new Error('Choose a PDF smaller than 5 MB.');
-  }
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  if (String.fromCharCode(...bytes.slice(0, 5)) !== '%PDF-') throw new Error('The selected file is not a PDF.');
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += 8192) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
-  }
-  return { name: file.name, base64: btoa(binary) };
-}
-
 const titles: Record<string, string> = {
   idle: 'Ready to launch',
   browser_open: 'Chrome opened — verify the application',
@@ -87,8 +74,8 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const [verifiedNextReadyId, setVerifiedNextReadyId] = useState<string | null>(null);
   const [trackerChecked, setTrackerChecked] = useState(false);
   const [runtimeChecked, setRuntimeChecked] = useState(false);
-  const [resume, setResume] = useState<File | null>(null);
-  const [cover, setCover] = useState<File | null>(null);
+  const documents = useOpportunityDocuments(selectedOpportunityId, url);
+  const [autoPrepareRequested, setAutoPrepareRequested] = useState(false);
   const [status, setStatus] = useState('idle');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -205,6 +192,13 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     return () => { cancelled = true; clearTimeout(timer); };
   }, [recordMilitary, browserOpen]);
 
+  useEffect(() => {
+    if (!autoPrepareRequested || busy || documents.loading || !browserOpen) return;
+    setAutoPrepareRequested(false);
+    if (!documents.canUpload) { setMessage('Automatic preparation paused: save the opportunity documents and complete required review.'); return; }
+    void run('prepare');
+  }, [autoPrepareRequested, busy, documents.loading, documents.canUpload, browserOpen]);
+
   async function run(action: 'launch' | 'fill' | 'attach' | 'prepare') {
     setBusy(true);
     setMessage('');
@@ -218,17 +212,20 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         }
         body = { url, opportunityId: opportunity?.id || '' };
       } else if (action === 'fill') body = { profile, careerProfile: assistProfile, targetRole: applications.find(item => item.id === selectedOpportunityId)?.role || '' };
-      else if (action === 'attach') body = { resume: await privatePdf(resume), cover: await privatePdf(cover) };
+      else if (action === 'attach') {
+        if (!documents.canUpload) throw new Error('Save opportunity documents and complete required review before uploading.');
+        body = { opportunityId: selectedOpportunityId, url };
+      }
       else {
         // Prepare uses a trusted adapter registry supplied by the operator/runtime host.
         // Without registry evidence the control plane fails closed — never invent consequences.
         const registryRaw = window.localStorage.getItem('escapehatch.trustedAdapterRegistry.v1');
-        if (!registryRaw) throw new Error('Trusted adapter registry required before Prepare. Load a reviewed registry first.');
+        if (!documents.canUpload) throw new Error('Save opportunity documents and complete required review before preparing.');
         const opportunity = applications.find((item) => item.id === selectedOpportunityId && item.url === url &&
           item.status !== 'applied' && item.status !== 'closed');
         if (!opportunity) throw new Error('Select an active saved opportunity before preparing this application.');
         body = {
-          profile,
+          profile, careerProfile: assistProfile, targetRole: opportunity.role, opportunityId: opportunity.id, url,
           authorization: {
             sessionId: 'cockpit-' + opportunity.id,
             opportunityId: opportunity.id,
@@ -236,7 +233,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
             allowedEffectClasses: ['LOCAL_STEP_ONLY', 'DRAFT_WRITE_AND_ADVANCE'],
             allowedDataCategories: ['synthetic_cover_note'],
           },
-          adapterRegistry: JSON.parse(registryRaw) as object,
+          adapterRegistry: registryRaw ? JSON.parse(registryRaw) as object : null,
         };
       }
       let result = await request('/' + action, body);
@@ -260,6 +257,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       if (result.preparation) setPreparation(result.preparation);
       if (action === 'launch') {
         setBrowserOpen(true);
+        if (documents.data?.requireReview === false) setAutoPrepareRequested(true);
         setPreparation(null);
         setApplications((items) => {
           const existing = items.find((item) => item.id === selectedOpportunityId && item.url === url);
@@ -358,6 +356,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         </div>
       </div>
 
+      <OpportunityDocuments documents={documents} disabled={busy || !selectedOpportunityId} onBypass={() => { if (browserOpen) setAutoPrepareRequested(true); }} />
       <div className="mt-5 rounded-xl bg-secondary/55 p-4">
         <div className="flex items-center gap-2 text-sm font-bold"><CheckCircle2 className="text-primary" size={16} />
           {titles[status] || status.replaceAll('_', ' ')}
@@ -388,19 +387,11 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           <button type="button" className={secondary} disabled={busy || !browserOpen} onClick={() => void run('fill')} data-testid="button-managed-fill">
             Fill approved profile and answers
           </button>
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5 text-sm font-bold">
-            <FileUp size={15} /> {resume ? 'Resume selected' : 'Choose résumé PDF'}
-            <input className="sr-only" type="file" accept=".pdf,application/pdf" onChange={(event) => setResume(event.target.files?.[0] || null)} />
-          </label>
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5 text-sm font-bold">
-            <FileUp size={15} /> {cover ? 'Letter selected' : 'Choose cover PDF'}
-            <input className="sr-only" type="file" accept=".pdf,application/pdf" onChange={(event) => setCover(event.target.files?.[0] || null)} />
-          </label>
-          <button type="button" className={secondary} disabled={busy || !browserOpen || (!resume && !cover)}
+          <button type="button" className={secondary} disabled={busy || documents.loading || !browserOpen || !documents.canUpload}
             onClick={() => void run('attach')} data-testid="button-managed-attach">
             Attach selected PDFs
           </button>
-          <button type="button" className={button} disabled={busy || !browserOpen}
+          <button type="button" className={button} disabled={busy || documents.loading || !browserOpen || !documents.canUpload}
             onClick={() => void run('prepare')} data-testid="button-managed-prepare">
             Prepare to final review
           </button>
@@ -409,7 +400,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       {message && <p role="status" aria-live="polite" data-testid="managed-browser-feedback"
         className="mt-4 rounded-xl border border-border p-3 text-sm leading-6">{message}</p>}
       <p className="mt-4 text-xs text-muted-foreground">
-        Files are transferred only to your loopback runtime on your explicit click, held in memory, and never committed.
+        Selected PDFs are saved privately for this opportunity. Employer upload is a separate action gated by your review setting; private documents are never committed.
         A file input being populated does not prove the employer accepted an upload.
       </p>
     </section></>

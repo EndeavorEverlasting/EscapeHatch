@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Page } from '@playwright/test';
 import { matchQuestion, normalizeQuestion, questions, safeDiscoveredQuestion, parsePreferences, type Preferences } from './src/lib/application-preferences.ts';
 
+export type QuestionDescriptor = { question: string; normalized_question: string; question_id: string | null };
 export type CapturedAnswer = { question: string; normalized_question: string; question_id: string | null; value: string; source: 'user'; captured_at: string };
 export function mergeCapturedAnswer(data: Preferences, event: CapturedAnswer): Preferences {
   if (event.source !== 'user' || typeof event.value !== 'string' || !event.value.trim() || event.value.length > 512 || !Number.isFinite(Date.parse(event.captured_at))) return data;
@@ -83,7 +84,21 @@ export async function installAnswerMemory(page: Page, onAnswer: (event: Captured
   await page.evaluate(installCapture, config);
   return async () => { enabled = false; };
 }
-export async function scanQuestionCatalog(page: Page): Promise<{ question: string; normalized_question: string; question_id: string | null }[]> {
+export async function scanQuestionCatalog(page: Page): Promise<QuestionDescriptor[]> {
   const prompts = await page.evaluate(() => (window as unknown as { __escapeHatchQuestionCatalog?: () => string[] }).__escapeHatchQuestionCatalog?.() || []);
   return [...new Set(prompts)].slice(0, 100).filter(question => matchQuestion(question) || safeDiscoveredQuestion(question)).map(question => ({ question, normalized_question: normalizeQuestion(question), question_id: matchQuestion(question) }));
+}
+
+
+// Discovery records a question, never an answer or permission to reuse one.
+export function mergeQuestionCatalog(data: Preferences, catalog: QuestionDescriptor[]): Preferences {
+  let candidate = data;
+  for (const item of catalog.slice(0, 100)) {
+    if (!safeDiscoveredQuestion(item.question)) continue;
+    const key = normalizeQuestion(item.question);
+    if (candidate.discovered_answers?.[key]) continue;
+    const next: Preferences = { ...candidate, discovered_answers: { ...candidate.discovered_answers, [key]: { question: item.question, value: '', source: 'observed_question', updated_at: new Date().toISOString(), accepted: false } } };
+    candidate = parsePreferences(next) || candidate;
+  }
+  return candidate;
 }

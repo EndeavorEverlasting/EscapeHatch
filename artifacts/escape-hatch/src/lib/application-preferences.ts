@@ -3,7 +3,7 @@ import taxonomy from '../../../../harness/contracts/application-form-taxonomy.v1
 export const PREFERENCE_KEY = 'escapeHatch.applicationQuestionPreferences.v1';
 export const PREFERENCE_SCHEMA = 'escapehatch-application-question-preferences/v1';
 export type Preference = { scope: 'profile_preference'; value: string; source: 'user'; updated_at: string };
-export type DiscoveredAnswer = { question: string; value: string; source: 'user'; updated_at: string; accepted: boolean };
+export type DiscoveredAnswer = { question: string; value: string; source: 'user' | 'observed_question'; updated_at: string; accepted: boolean };
 export type Preferences = { schema_version: typeof PREFERENCE_SCHEMA; exported_at: string; preferences: Record<string, Preference>; optional_omissions?: string[]; discovered_answers?: Record<string, DiscoveredAnswer>; job_titles?: string[]; professional_titles?: string[]; require_document_review?: boolean };
 export const questions = taxonomy.questions;
 export const emptyPreferences = (): Preferences => ({ schema_version: PREFERENCE_SCHEMA, exported_at: new Date().toISOString(), preferences: {} });
@@ -34,8 +34,8 @@ export function parsePreferences(input: unknown): Preferences | null {
     if (!data.discovered_answers || typeof data.discovered_answers !== 'object' || Array.isArray(data.discovered_answers) || Object.keys(data.discovered_answers).length > 100) return null;
     clean.discovered_answers = {};
     for (const [key, item] of Object.entries(data.discovered_answers)) {
-      if (!item || typeof item.question !== 'string' || !safeDiscoveredQuestion(item.question) || key !== normalizeQuestion(item.question) || typeof item.value !== 'string' || !item.value.trim() || item.value.length > 512 || item.source !== 'user' || typeof item.accepted !== 'boolean' || typeof item.updated_at !== 'string' || Number.isNaN(Date.parse(item.updated_at))) return null;
-      clean.discovered_answers[key] = { question: item.question, value: item.value.trim(), source: 'user', updated_at: item.updated_at, accepted: item.accepted };
+      if (!item || typeof item.question !== 'string' || !safeDiscoveredQuestion(item.question) || key !== normalizeQuestion(item.question) || typeof item.value !== 'string' || item.value.length > 512 || !['user', 'observed_question'].includes(item.source) || typeof item.accepted !== 'boolean' || (item.source === 'observed_question' ? item.value !== '' || item.accepted : !item.value.trim()) || typeof item.updated_at !== 'string' || Number.isNaN(Date.parse(item.updated_at))) return null;
+      clean.discovered_answers[key] = { question: item.question, value: item.value.trim(), source: item.source, updated_at: item.updated_at, accepted: item.accepted };
     }
   }
   for (const [id, entry] of Object.entries(data.preferences)) {
@@ -132,10 +132,10 @@ export function safeDiscoveredQuestion(question: string): boolean {
 export function discoveredValue(prompt: string, data: Preferences): string | null {
   if (!safeDiscoveredQuestion(prompt)) return null;
   const answer = data.discovered_answers?.[normalizeQuestion(prompt)];
-  return answer?.accepted === true ? answer.value : null;
+  return answer?.source === 'user' && answer.accepted === true && answer.value.trim() ? answer.value : null;
 }
 export function acceptDiscoveredAnswer(data: Preferences, normalizedQuestion: string): Preferences {
   const item = data.discovered_answers?.[normalizedQuestion];
-  if (!item || !safeDiscoveredQuestion(item.question)) return data;
+  if (!item || item.source !== 'user' || !item.value.trim() || !safeDiscoveredQuestion(item.question)) return data;
   return { ...data, discovered_answers: { ...data.discovered_answers, [normalizedQuestion]: { ...item, accepted: true } } };
 }

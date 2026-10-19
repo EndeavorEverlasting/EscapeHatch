@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from '@playwright/test';
 import { emptyPreferences, matchQuestion, acceptDiscoveredAnswer, discoveredValue, parsePreferences } from './src/lib/application-preferences.ts';
-import { installAnswerMemory, mergeCapturedAnswer, scanQuestionCatalog, type CapturedAnswer } from './managed-answer-memory.ts';
+import { installAnswerMemory, mergeCapturedAnswer, mergeQuestionCatalog, scanQuestionCatalog, type CapturedAnswer } from './managed-answer-memory.ts';
 import { fillSavedPreferences } from './managed-form.ts';
 
 test('canonical website, pronouns and interview accommodation are independent explicit preferences', async () => {
@@ -117,5 +117,33 @@ test('dispose and reinstall on one Page isolates callbacks across navigation', a
     await page.getByLabel('Website').pressSequentially('ignored');
     await page.getByLabel('Website').blur();
     assert.equal(second.length,countSecond);
+  } finally {await browser.close();}
+});
+
+
+test('unanswered encountered question persists without fill until explicit user answer and acceptance', async () => {
+  const browser = await chromium.launch({channel:'chrome',headless:true});
+  try {
+    const page = await browser.newPage();
+    await page.setContent('<label>Preferred working environment<input></label><label>Bank account<input></label>');
+    const stop = await installAnswerMemory(page,() => {});
+    let data = mergeQuestionCatalog(emptyPreferences(), await scanQuestionCatalog(page));
+    const key = 'preferred working environment';
+    assert.deepEqual(data.discovered_answers?.[key]?.source,'observed_question');
+    assert.equal(data.discovered_answers?.[key]?.value,'');
+    assert.ok(parsePreferences(data));
+    assert.equal(data.discovered_answers?.['bank account'],undefined);
+    assert.equal(discoveredValue(key,data),null);
+    assert.deepEqual(acceptDiscoveredAnswer(data,key),data);
+    await fillSavedPreferences(page,data);
+    assert.equal(await page.getByLabel('Preferred working environment').inputValue(),'');
+    data = mergeCapturedAnswer(data,{question:'Preferred working environment',normalized_question:key,question_id:null,value:'Remote',source:'user',captured_at:new Date().toISOString()});
+    data = acceptDiscoveredAnswer(data,key);
+    data = mergeQuestionCatalog(data,await scanQuestionCatalog(page));
+    assert.equal(data.discovered_answers?.[key]?.source,'user');
+    await fillSavedPreferences(page,data);
+    assert.equal(await page.getByLabel('Preferred working environment').inputValue(),'Remote');
+    assert.equal(parsePreferences({...data,discovered_answers:{[key]:{...data.discovered_answers![key],source:'observed_question',accepted:true}}}),null);
+    await stop();
   } finally {await browser.close();}
 });

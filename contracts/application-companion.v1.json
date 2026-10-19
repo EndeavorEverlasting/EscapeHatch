@@ -14,25 +14,37 @@
   "surfaces": [
     {
       "id": "browser_extension",
-      "distribution": ["browser_store", "side_load"],
+      "distribution": [
+        "browser_store",
+        "side_load"
+      ],
       "storage_adapter": "extension_local_or_user_selected_store",
       "public_hosting_required": false
     },
     {
       "id": "windows_store_app",
-      "distribution": ["microsoft_store", "side_load"],
+      "distribution": [
+        "microsoft_store",
+        "side_load"
+      ],
       "storage_adapter": "platform_app_data_or_user_selected_store",
       "public_hosting_required": false
     },
     {
       "id": "android_store_app",
-      "distribution": ["play_store", "side_load"],
+      "distribution": [
+        "play_store",
+        "side_load"
+      ],
       "storage_adapter": "platform_app_data_or_user_selected_store",
       "public_hosting_required": false
     },
     {
       "id": "local_web_app",
-      "distribution": ["stable_loopback_origin", "packaged_webview"],
+      "distribution": [
+        "stable_loopback_origin",
+        "packaged_webview"
+      ],
       "storage_adapter": "stable_origin_or_user_selected_store",
       "public_hosting_required": false
     }
@@ -76,7 +88,13 @@
       "never_accept_or_apply_attestation"
     ],
     "submission_boundary": "user_performs_submission",
-    "attestation_policy": "manual_only"
+    "attestation_policy": "manual_only",
+    "extension_observation": {
+      "session_owner": "contracts/application-assist-session.v1.json",
+      "receipt": "extension_local_metadata_only",
+      "queue_projection": "not_implemented_requires_validated_career_state_reducer",
+      "submit_proxy": "unavailable_until_trusted_terminal_adapter_and_separate_reviewed_authority"
+    }
   },
   "sync": {
     "default": "disabled",
@@ -92,7 +110,10 @@
       }
     ],
     "conflict_policy": {
-      "identity": ["state_id", "revision"],
+      "identity": [
+        "state_id",
+        "revision"
+      ],
       "same_revision_same_hash": "noop",
       "one_side_strictly_newer_and_other_unchanged": "fast_forward_when_sync_enabled",
       "divergence": "preserve_both_and_require_resolution",

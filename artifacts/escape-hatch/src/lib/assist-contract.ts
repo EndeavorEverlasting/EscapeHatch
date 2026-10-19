@@ -53,6 +53,7 @@ export type AssistEducation = {
   id: string;
   institution: string;
   credential: string;
+  fieldOfStudy?: string;
   dates: string;
   details: string;
   provenance: Provenance;
@@ -71,6 +72,8 @@ export type AssistProfile = {
   education: AssistEducation[];
   proposals: ReviewedProposal[];
   approvedAt?: string;
+  selectedExperienceId?: string;
+  selectedEducationId?: string;
 };
 
 export type AssistAnswer = AnswerSnippet & {

@@ -123,3 +123,12 @@ test('parseTrackerSnapshot rejects wrong schema and recomputes metrics from rows
   assert.equal(parsed?.metrics.submittedStatus, 1);
   assert.equal(parsed?.metrics.trackedRoles, 1);
 });
+
+test('tracker refresh preserves locally saved employer posting', () => {
+  const now = new Date().toISOString();
+  const snapshot = { schema: 'escapehatch/tracker-snapshot/v1', provider: 'synthetic', spreadsheetId: 'test', sheetName: 'Applications', capturedAtUtc: now, contentDigest: 'synthetic', authPath: 'fixture', localGoogleAuthPresent: false, metrics: {}, applications: [{ sheetRow: 1, company: 'Synthetic', role: 'Role', status: 'Ready to Apply', appliedCheckbox: false, priority: 'High', applyUrl: 'https://example.com/apply' }] };
+  const initial = mergeTrackerIntoApplications([], snapshot as Parameters<typeof mergeTrackerIntoApplications>[1]);
+  initial[0].jobDescription = 'Locally saved employer posting';
+  const refreshed = mergeTrackerIntoApplications(initial, snapshot as Parameters<typeof mergeTrackerIntoApplications>[1]);
+  assert.equal(refreshed[0].jobDescription, 'Locally saved employer posting');
+});

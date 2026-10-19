@@ -94,3 +94,75 @@ Validation: `npm --prefix artifacts/escape-hatch run test:managed-assist` exerci
 The launch function can open an explicitly recognized application-entry button (exact accessible name, no enclosing form, no submit/reset type), then verifies Contact Details is visible. Unknown entry controls stay manual. React-style state widgets require choosing and verifying an actual option; typing search text is not reported as selection. Telephone values are normalized to international format only from an explicit international number or saved US/Canada country, and a failed text-retention check restores the prior input. Element handles remain tied to observed controls when the form inserts hidden inputs.
 
 For upload widgets with anonymous portal inputs, the runtime uses the unique labelled Resume/Cover Letter widget and its filechooser event. It never picks an anonymous input by DOM position. The attachment API still reports staging; employer-side filename/status readback is required to claim acceptance.
+
+## Reusable job titles, binary choices, and military-answer recording
+
+On Browser assist, select a saved opportunity and choose **Add selected role to my job titles**.
+Review the **job title** dropdown and choose **Save Preferences**. The optional `job_titles` list
+and selected `identity.job_title` survive export/import and disk reads. **Salutation** remains
+`identity.title`; a desired role never overwrites an honorific or an employment-history title.
+Only exact recognized job-title prompts use the selected value; previous/current employment
+history prompts stay unmapped. Changing opportunity does not silently select a new title.
+
+Binary reusable questions, gender, and race/ethnicity use dropdowns with a blank **Not answered** choice. Existing custom
+imported answers remain visible instead of being silently discarded. Military service
+(`military.service_history`) and protected-veteran status (`eeo.veteran_status`) are separate
+questions: neither fact is inferred from the other, disability, or any resume.
+
+After launching the managed application, enable **Record my veteran/service answers from this
+managed application** and select the answer on the employer form. While enabled and the cockpit
+page remains open, EscapeHatch polls recognized native selects/radio groups every 1.5 seconds,
+including a selection already present when recording starts. It stores only the selected option
+text for these two explicit categories in the existing private preferences file. Blank, placeholder,
+ambiguous, duplicate, unsupported custom widgets and other question categories are not captured.
+Decorated optional/required prompts and U.S. punctuation are normalized, and option text inside a
+label is excluded from question matching. The recording status reports saved or unresolved state;
+it never establishes that an employer accepted or submitted an application.
+
+Recording is opt-in, stops on cockpit departure/reload or relaunch, pauses on failed requests or
+origin changes, and is disabled when editing/importing preferences to avoid replacing unsaved
+edits. It never clicks an employer control or stores raw form contents. The optional MV3 metadata
+listener is a different lane and is not silently upgraded by this managed-runtime change.
+
+The preferences destination defaults to `<running-checkout>/private/application-question-preferences.json`;
+`ESCAPEHATCH_PREFERENCES_FILE` overrides it. Import Preferences stages a valid JSON export; Save
+Preferences persists it. Resume source review and PDF attachment selection are separate workflows.
+
+## Work, education, posting context, and operator professional titles
+
+Browser assist now exposes **Reusable work and education**, backed by the existing canonical
+`AssistProfile.experience` and `AssistProfile.education` collections. Import a text/PDF resume to
+stage drafts, choose a source record, review/edit it, then use **Save reviewed work record** or
+**Save reviewed education record**. New records append without replacing separately saved records.
+The selected record IDs determine what Fill may reuse. Education includes institution, credential,
+field of study, dates and details; work includes employer, actual employment title, dates, location
+and responsibilities. TXT intake is bounded to 5 MB; PDF intake retains the bounded existing parser.
+Imports do not approve facts or overwrite reviewed profile records.
+
+The selected records and explicit review are stored in the cockpit browser under the existing
+`escape-hatch-assist-profile` key. Existing reviewed-sync export/import carries these records and
+selections. The managed Fill request projects only selected records through `career-preferences.ts`;
+it does not persist a competing copy in the private preferences file. Repeated/ambiguous native
+fields remain unresolved, and custom education search widgets and multi-record ATS layout mapping
+are not claimed. The generic **Job title** prompt maps to the selected employment record; desired
+job-title prompts map to the current opportunity; **Professional title** maps to the selected
+operator title. No professional identity substitutes for an employment-history fact.
+
+**Employer job description** is saved only as the selected Application's optional `jobDescription`.
+It survives workspace backup/restore and tracker merges with other local application fields. It is
+context and is never emitted as a work-history description or used as instructions. Its editor
+supports 30,000 characters. Existing notes remain separate.
+
+**Selected professional title** has its own `professional_titles` list and
+`identity.professional_title` selection in the existing private preferences schema. Users type any
+new title in **New professional title**, choose **Add professional title**, and Save Preferences.
+They may enter up to four semicolon-separated titles and choose **Add title combinations** to add
+ordered combinations; the active title is selected independently. Lists support up to 100 entries,
+preserve imported custom entries, and ship empty. No operator's real titles, work, education,
+posting text or preferences are embedded in source or fixtures as product defaults.
+
+Professional-title suggestions are a deterministic, local lexical ranking of the user's own saved
+titles against the role, opportunity posting and selected reviewed experience. The top three show
+the matching word evidence. Suggestions require target evidence, never select or save a title
+automatically, and do not establish qualifications or semantic role fit. A missing match stays
+unresolved. This is a bounded first suggestion engine, not a trained classification model.

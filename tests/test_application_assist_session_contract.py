@@ -48,7 +48,17 @@ class ApplicationAssistSessionContractTests(unittest.TestCase):
         self.assertEqual(set(self.manifest["permissions"]), {"activeTab", "scripting", "storage"})
         self.assertNotIn("host_permissions", self.manifest)
         self.assertNotIn("content_scripts", self.manifest)
-        self.assertNotIn("background", self.manifest)
+        self.assertEqual(self.manifest.get("background"), {"service_worker": "worker.js"})
+        self.assertEqual(self.contract["surfaces"]["browser_extension"]["background_service"], "worker.js_read_only_submission_observation")
+        self.assertFalse(self.contract["submission_observation"]["operator_submit_proxy"]["implemented"])
+        observation = self.contract["submission_observation"]
+        self.assertEqual(observation["scope"], "same_tab_same_origin_same_path")
+        self.assertEqual(observation["restart"], "block_require_explicit_rearm")
+        self.assertEqual(observation["receipt_scope"], "extension_local_metadata_only_no_queue_projection")
+        for name in ("submission-observer.js", "worker.js"):
+            source = (BROWSER / name).read_text(encoding="utf-8")
+            for action in (".click(", ".submit(", ".requestSubmit(", "fetch(", "XMLHttpRequest"):
+                self.assertNotIn(action, source)
 
     def test_controls_exist(self) -> None:
         for control_id in (

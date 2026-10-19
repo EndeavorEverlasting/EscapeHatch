@@ -1,23 +1,53 @@
+import { createHash } from 'node:crypto';
 import { expect, test } from '@playwright/test';
 import { trackerOpportunityId } from '../src/lib/tracker-bridge';
 
+test('only persisted bound submission evidence advances the queue and survives reload', async ({ page }) => {
+  let confirmed = false;
+  const receipt = { opportunityId: 'synthetic-receipt', sessionId: 'session', attemptId: 'attempt',
+    applicationOrigin: 'https://jobs.ashbyhq.com', applicationPath: '/synthetic/receipt/application',
+    observedAt: '2026-10-19T12:00:00Z', source: 'same_session_page_confirmation',
+    evidenceCode: 'APPLICATION_RECEIVED_AFTER_USER_SUBMIT' };
+  await page.route('**/__escapehatch/managed-assist/**', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+    ok: true, state: 'application_form_open_review_required', browserOpen: true,
+    listeners: { recordingAnswers: true, savedAnswers: 0, opportunityId: receipt.opportunityId, error: '',
+      submission: { state: confirmed ? 'CONFIRMED' : 'PENDING', reason: 'Synthetic observation' }, receipts: confirmed ? [receipt] : [] },
+  }) }));
+  await mockDocuments(page);
+  await page.goto('/assist');
+  await page.evaluate(() => localStorage.setItem('escape-hatch-applications', JSON.stringify([{ id: 'synthetic-receipt',
+    company: 'Synthetic', role: 'Role', url: 'https://jobs.ashbyhq.com/synthetic/receipt', status: 'saved',
+    priority: 'normal', notes: '', nextAction: '', updatedAt: '2026-10-18T12:00:00Z' }])));
+  await page.reload();
+  await expect(page.getByText('Synthetic observation')).toBeVisible();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('escape-hatch-applications')!)[0].status)).toBe('saved');
+  confirmed = true;
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('escape-hatch-applications')!)[0].status)).toBe('applied');
+  await page.reload();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('escape-hatch-applications')!)[0].submissionEvidence.attemptId)).toBe('attempt');
+});
+
 test('cockpit owns Launch, Fill and Attach without a Chrome extension', async ({ page }) => {
   const seen: string[] = [];
+  let launched = false;
   await page.route('**/__escapehatch/managed-assist/**', async (route) => {
     const url = new URL(route.request().url());
     const action = url.pathname.split('/').at(-1) || '';
     seen.push(action);
+    if (action === 'launch') launched = true;
     const body = action === 'status'
-      ? { ok: true, state: 'idle', browserOpen: false }
+      ? { ok: true, state: 'idle', browserOpen: launched }
       : { ok: true, state: action === 'launch' ? 'application_open_review_required' :
           action === 'fill' ? 'fields_filled_review_required' : 'attachments_staged_review_required',
           filled: [], skipped: [], attachments: { resume: 'attached_to_input_review_required' } };
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
   });
+  await mockDocuments(page);
   await page.goto('/assist');
+  await page.evaluate(() => localStorage.setItem('escape-hatch-applications', JSON.stringify([{ id: 'document-opportunity', company: 'Synthetic', role: 'Role', url: 'https://jobs.ashbyhq.com/synthetic/entry', status: 'saved', priority: 'normal', notes: '', nextAction: '', updatedAt: new Date().toISOString() }])));
+  await page.goto('/assist?opportunityId=document-opportunity');
   await expect(page.getByTestId('managed-browser-assist')).toBeVisible();
-  await expect(page.getByTestId('managed-job-url')).toHaveValue('');
-  await page.getByTestId('managed-job-url').fill('https://jobs.ashbyhq.com/synthetic/entry');
+  await expect(page.getByTestId('managed-job-url')).toHaveValue('https://jobs.ashbyhq.com/synthetic/entry');
   await page.getByTestId('button-managed-launch').click();
   await expect(page.getByText('Application opened — sign in if requested')).toBeVisible();
   await page.getByTestId('button-managed-fill').click();
@@ -25,10 +55,16 @@ test('cockpit owns Launch, Fill and Attach without a Chrome extension', async ({
   await page.getByTestId('managed-browser-assist').locator('input[type="file"]').first().setInputFiles({
     name: 'synthetic-resume.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\\nfixture'),
   });
+  await expect(page.getByTestId('button-managed-attach')).toBeDisabled();
+  await page.getByRole('button', { name: 'I reviewed this résumé', exact: true }).click();
   await page.getByTestId('button-managed-attach').click();
   await expect(page.getByTestId('managed-browser-feedback')).toContainText('resume: attached to input review required');
   expect(seen).toContain('attach');
   assertNeverSubmitted(seen);
+  await page.getByTestId('select-assist-milestone').selectOption('document-opportunity');
+  await page.getByTestId('button-record-assist-milestone').click();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('escape-hatch-applications')!)[0].nextAction))
+    .toBe('Application submitted — follow up when appropriate');
 });
 
 function assertNeverSubmitted(actions: string[]) {
@@ -67,7 +103,7 @@ test('Home hands the ready opportunity into managed Chrome instead of reopening 
   const launched = page.waitForRequest('**/__escapehatch/managed-assist/launch');
   await page.getByTestId('button-managed-launch').click();
   const body = (await launched).postDataJSON();
-  expect(body).toEqual({ url: readyUrl, opportunityId: 'tracker-ready' });
+  expect(body).toEqual({ url: readyUrl, opportunityId: 'tracker-ready', employerName: 'Synthetic Next' });
   await expect(page.getByText('Application opened — sign in if requested')).toBeVisible();
   await page.goto('/assist?opportunityId=tracker-submitted');
   await expect(page.getByTestId('managed-job-url')).toHaveValue(readyUrl);
@@ -152,7 +188,7 @@ test('one explicit Home click opens the verified Thyme Care job and fills approv
   await expect(page.getByTestId('managed-job-url')).toHaveValue(row.applyUrl);
   await expect(page.getByTestId('managed-browser-feedback')).toContainText('Filled: first_name');
   await expect(page.getByTestId('managed-browser-feedback')).toContainText('Skipped: unknown_question');
-  expect(launches).toEqual([{ url: row.applyUrl, opportunityId: trackerOpportunityId(row) }]);
+  expect(launches).toEqual([{ url: row.applyUrl, opportunityId: trackerOpportunityId(row), employerName: 'Thyme Care' }]);
   expect(actions.filter((action) => ['launch', 'fill', 'prepare', 'attach'].includes(action))).toEqual(['launch', 'fill']);
   assertNeverSubmitted(actions);
   await page.reload();
@@ -183,4 +219,135 @@ test('one-click authorization fails closed when the employer was submitted after
   expect(actions).not.toContain('fill');
   expect(actions).not.toContain('submit');
   expect(actions).not.toContain('next');
+});
+
+test('reusable role list and binary dropdowns persist through the preferences API', async ({ page }) => {
+  let saved: Record<string, unknown> = { schema_version: 'escapehatch-application-question-preferences/v1', exported_at: new Date().toISOString(), preferences: {} };
+  await page.route('**/__escapehatch/managed-assist/**', async route => {
+    const action = new URL(route.request().url()).pathname.split('/').at(-1);
+    if (action === 'preferences' && route.request().method() === 'POST') saved = route.request().postDataJSON().preferences;
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(action === 'preferences' ? { ok: true, preferences: saved } : { ok: true, state: 'idle', browserOpen: true, recorded: [] }) });
+  });
+  await page.goto('/assist');
+  await page.evaluate(() => localStorage.setItem('escape-hatch-applications', JSON.stringify([{ id: 'synthetic-title', company: 'Synthetic', role: 'Synthetic Role', url: 'https://example.com/apply', status: 'saved', priority: 'normal', notes: '', nextAction: '', updatedAt: new Date().toISOString() }])));
+  await page.reload();
+  await page.getByLabel('Saved opportunity').selectOption('synthetic-title');
+  await page.getByRole('button', { name: 'Add selected role to my job titles: Synthetic Role', exact: true }).click();
+  await expect(page.getByLabel('Target opportunity title', { exact: true })).toHaveValue('Synthetic Role');
+  await expect(page.getByLabel('Salutation (Mr., Ms., Dr.)')).toHaveValue('');
+  await page.getByLabel('have you ever served in the us armed forces', { exact: true }).selectOption('No');
+  await page.getByLabel('Are you currently a US Citizen?', { exact: true }).selectOption('Yes');
+  await page.getByLabel('gender', { exact: true }).selectOption('Male');
+  await page.getByLabel('race / ethnicity', { exact: true }).selectOption('Hispanic or Latino');
+  await page.getByRole('button', { name: 'Save Preferences', exact: true }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Preferences saved on this computer' })).toBeVisible();
+  expect(saved.job_titles).toEqual(['Synthetic Role']);
+  expect((saved.preferences as Record<string, { value: string }>)['eeo.gender'].value).toBe('Male');
+  expect((saved.preferences as Record<string, { value: string }>)['eeo.race_ethnicity'].value).toBe('Hispanic or Latino');
+  await page.reload();
+  await expect(page.getByLabel('Target opportunity title', { exact: true })).toHaveValue('Synthetic Role');
+  await expect(page.getByLabel('have you ever served in the us armed forces', { exact: true })).toHaveValue('No');
+  await page.getByLabel('Record my veteran/service answers from this managed application').check();
+  await expect(page.getByRole('status').filter({ hasText: 'Listening for a recognized' })).toBeVisible();
+  await page.getByLabel('Record my veteran/service answers from this managed application').uncheck();
+});
+
+test('career records and independent professional titles persist with opportunity-only posting', async ({ page }) => {
+  let saved = { schema_version: 'escapehatch-application-question-preferences/v1', exported_at: new Date().toISOString(), preferences: {} };
+  await page.route('**/__escapehatch/managed-assist/**', async route => {
+    const action = new URL(route.request().url()).pathname.split('/').at(-1);
+    if (action === 'preferences' && route.request().method() === 'POST') saved = route.request().postDataJSON().preferences;
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(action === 'preferences' ? { ok: true, preferences: saved } : { ok: true, state: 'idle', browserOpen: false }) });
+  });
+  await page.goto('/assist');
+  await page.evaluate(() => localStorage.setItem('escape-hatch-applications', JSON.stringify([{ id: 'career-role', company: 'Synthetic', role: 'Target Role', url: 'https://example.com/apply', status: 'saved', priority: 'normal', notes: '', nextAction: '', updatedAt: new Date().toISOString() }])));
+  await page.reload();
+  await page.getByLabel('Saved opportunity').selectOption('career-role');
+  await expect(page.getByLabel('Selected professional title', { exact: true }).locator('option')).toHaveText(['Not answered']);
+  await page.getByLabel('New professional title', { exact: true }).fill('Systems Operator');
+  await page.getByRole('button', { name: 'Add professional title', exact: true }).click();
+  await page.getByLabel('New professional title', { exact: true }).fill('Delivery Lead');
+  await page.getByRole('button', { name: 'Add professional title', exact: true }).click();
+  await page.getByLabel('Selected professional title', { exact: true }).selectOption('Systems Operator');
+  await page.getByRole('button', { name: 'Save Preferences', exact: true }).click();
+  await page.getByLabel('Work company', { exact: true }).fill('Synthetic Company');
+  await page.getByLabel('Work title', { exact: true }).fill('Past Role');
+  await page.getByLabel('Work responsibilities', { exact: true }).fill('Reviewed responsibilities');
+  await page.getByRole('button', { name: 'Save reviewed work record' }).click();
+  await page.getByLabel('Education institution', { exact: true }).fill('Synthetic University');
+  await page.getByLabel('Education credential', { exact: true }).fill('Bachelor of Science');
+  await page.getByRole('button', { name: 'Save reviewed education record' }).click();
+  await page.getByLabel('Employer job description', { exact: true }).fill('Employer requirements, not my history');
+  await page.getByRole('button', { name: 'Save employer posting' }).click();
+  await page.getByLabel('Employer job description', { exact: true }).fill('Systems engineering for the target role');
+  await page.getByRole('button', { name: 'Save employer posting' }).click();
+  const choice = page.getByRole('button', { name: 'Choose professional title: Systems Operator', exact: true });
+  await page.getByLabel('Selected professional title', { exact: true }).selectOption('Delivery Lead');
+  await expect(choice).toHaveAttribute('aria-pressed', 'false');
+  await choice.click();
+  await expect(choice).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByLabel('Selected professional title', { exact: true })).toHaveValue('Systems Operator');
+  await page.getByRole('button', { name: 'Save Preferences', exact: true }).click();
+  await page.getByText('How suggestions work', { exact: true }).click();
+  await expect(page.getByText('Matching evidence is read-only.', { exact: false })).toBeVisible();
+  await page.getByLabel('Employer job description', { exact: true }).fill('Employer requirements, not my history');
+  await page.getByRole('button', { name: 'Save employer posting' }).click();
+  await page.reload();
+  await page.getByLabel('Saved opportunity').selectOption('career-role');
+  await expect(page.getByLabel('Selected professional title', { exact: true })).toHaveValue('Systems Operator');
+  await expect(page.getByLabel('Selected professional title', { exact: true }).locator('option')).toHaveText(['Not answered', 'Systems Operator', 'Delivery Lead']);
+  await expect(page.getByLabel('Work responsibilities', { exact: true })).toHaveValue('Reviewed responsibilities');
+  await expect(page.getByLabel('Education institution', { exact: true })).toHaveValue('Synthetic University');
+  await expect(page.getByLabel('Employer job description', { exact: true })).toHaveValue('Employer requirements, not my history');
+});
+
+async function mockDocuments(page: import('@playwright/test').Page) {
+  const packages = new Map<string, { opportunityId: string; url: string; documents: Record<string, { name: string; sha256: string; size: number; reviewedAt?: string }> }>();
+  let requireReview = true;
+  await page.route('**/__escapehatch/managed-assist/documents/**', async route => {
+    const url = new URL(route.request().url()), action = url.pathname.split('/').at(-1);
+    const body = route.request().method() === 'POST' ? route.request().postDataJSON() : Object.fromEntries(url.searchParams);
+    const key = JSON.stringify([body.opportunityId, body.url]);
+    const value = packages.get(key) || { opportunityId: body.opportunityId, url: body.url, documents: {} };
+    if (action === 'stage') { const bytes = Buffer.from(body.file.base64, 'base64'); value.documents[body.kind] = { name: body.file.name, sha256: createHash('sha256').update(bytes).digest('hex'), size: bytes.length }; }
+    if (action === 'review') value.documents[body.kind].reviewedAt = new Date().toISOString();
+    if (action === 'policy') requireReview = body.requireReview;
+    packages.set(key, value);
+    if (action === 'file') return route.fulfill({ status: 200, contentType: 'application/pdf', body: '%PDF-1.4\nsynthetic' });
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, package: value, requireReview }) });
+  });
+}
+
+test('document review binds both files, persists, invalidates replacements, and review-off automatically requests safe preparation', async ({ page }) => {
+  const actions: string[] = [];
+  await page.route('**/__escapehatch/managed-assist/**', async route => {
+    const action = new URL(route.request().url()).pathname.split('/').at(-1) || '';
+    if (route.request().method() === 'POST') actions.push(action);
+    const response = action === 'status' ? { ok: true, browserOpen: true, state: 'application_open_review_required' } :
+      action === 'prepare' ? { ok: true, state: 'BLOCKED', preparation: { state: 'BLOCKED', code: 'trusted_adapter_registry_required', pagesPrepared: 0, intermediateSteps: 0, finalActionActivated: false, evidenceRefs: [], pendingManual: [] } } : { ok: true, state: 'idle' };
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(response) });
+  });
+  await mockDocuments(page);
+  await page.goto('/assist');
+  await page.evaluate(() => localStorage.setItem('escape-hatch-applications', JSON.stringify([{ id: 'review-opportunity', company: 'Synthetic', role: 'Role', url: 'https://jobs.example.test/apply', status: 'saved', priority: 'normal', notes: '', nextAction: '', updatedAt: new Date().toISOString() }])));
+  await page.goto('/assist?opportunityId=review-opportunity');
+  await expect(page.getByRole('checkbox', { name: 'Require my review before document upload' })).toBeChecked();
+  await page.getByLabel('Choose résumé PDF', { exact: true }).setInputFiles({ name: 'resume.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\nresume') });
+  await page.getByLabel('Choose cover PDF', { exact: true }).setInputFiles({ name: 'cover.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\ncover') });
+  await expect(page.getByTestId('button-managed-attach')).toBeDisabled();
+  await page.getByRole('button', { name: 'Preview résumé', exact: true }).click();
+  await expect(page.getByTitle('Selected document preview')).toBeVisible();
+  await page.getByRole('button', { name: 'I reviewed this résumé', exact: true }).click();
+  await expect(page.getByTestId('button-managed-attach')).toBeDisabled();
+  await page.getByRole('button', { name: 'I reviewed this cover letter', exact: true }).click();
+  await expect(page.getByTestId('button-managed-attach')).toBeEnabled();
+  await page.reload();
+  await expect(page.getByTestId('button-managed-attach')).toBeEnabled();
+  await page.getByLabel('Choose résumé PDF', { exact: true }).setInputFiles({ name: 'resume.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\nchanged') });
+  await expect(page.getByTestId('button-managed-attach')).toBeDisabled();
+  await page.getByRole('checkbox', { name: 'Require my review before document upload' }).uncheck();
+  await expect(page.getByTestId('managed-browser-feedback')).toContainText('trusted_adapter_registry_required');
+  expect(actions).toContain('prepare');
+  expect(actions).not.toContain('submit');
+  await expect(page.getByText('Not confirmed reviewed', { exact: false })).toBeVisible();
 });

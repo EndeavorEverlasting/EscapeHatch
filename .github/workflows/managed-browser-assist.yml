@@ -36,6 +36,7 @@ jobs:
         with:
           node-version: "22"
       - run: npm install --no-audit --no-fund
+      - run: npx playwright install --with-deps chrome
       - run: npm run test:managed-assist
       - run: npm run typecheck
       - run: npm run build

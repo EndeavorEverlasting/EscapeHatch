@@ -181,8 +181,12 @@ export function mergeTrackerIntoApplications(
     // Preserve operator local edits when notes differ and prior was manually richer.
     byId.set(item.id, {
       ...item,
+      ...(['applied', 'follow_up', 'closed'].includes(prior.status) && ['saved', 'preparing'].includes(item.status)
+        ? { status: prior.status, updatedAt: prior.updatedAt } : {}),
+      ...(prior.submissionEvidence ? { submissionEvidence: prior.submissionEvidence } : {}),
+      ...(prior.jobDescription !== undefined ? { jobDescription: prior.jobDescription } : {}),
       notes: prior.notes.includes('local edit') ? prior.notes : item.notes,
-      nextAction: prior.nextAction && prior.updatedAt > item.updatedAt ? prior.nextAction : item.nextAction,
+      nextAction: prior.nextAction && ((['applied', 'follow_up', 'closed'].includes(prior.status) && ['saved', 'preparing'].includes(item.status)) || prior.updatedAt > item.updatedAt) ? prior.nextAction : item.nextAction,
     });
   }
   return [...byId.values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));

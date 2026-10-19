@@ -1,3 +1,7 @@
+import { OpportunityDocumentStore, documentScope, type DocumentKind } from './opportunity-documents.ts';
+import { ManagedListeners } from './managed-listeners.ts';
+import { withCareerPreferences } from './career-preferences.ts';
+import { captureMilitaryAnswers } from './managed-form.ts';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { homedir } from 'node:os';
 import path from 'node:path';
@@ -5,7 +9,7 @@ import fs from 'node:fs/promises';
 import { chromium, type BrowserContext, type Page } from '@playwright/test';
 import type { Plugin } from 'vite';
 import { isLoopbackAddress, readManagedRuntime } from './runtime-control.ts';
-import { readPreferences, savePreferences, clearPreferences } from './preference-file.ts';
+import { readPreferences, updatePreferences, clearPreferences, mergePreferenceEdits } from './preference-file.ts';
 import { fillSavedPreferences, openApplicationForm } from './managed-form.ts';
 import { emptyPreferences } from './src/lib/application-preferences.ts';
 import { prepareToFinalReview, type PreparationResult } from './application-autopilot-executor.ts';
@@ -159,7 +163,7 @@ export function parseTrustedAdapterRegistry(value: unknown): TrustedAdapterRegis
       controlFingerprint: row.controlFingerprint,
       enclosingFormAction: typeof row.enclosingFormAction === 'string' ? row.enclosingFormAction : null,
       enclosingFormMethod: typeof row.enclosingFormMethod === 'string' ? row.enclosingFormMethod : null,
-      verifiedEffectClass: effect,
+      verifiedEffectClass: effect as GrantableEffectClass | 'TERMINAL_APPLICATION_COMMIT',
       evidenceRefs: row.evidenceRefs.filter((ref): ref is string => typeof ref === 'string'),
     };
   });
@@ -246,14 +250,25 @@ export async function attachPdfs(page: Page, resume: ReturnType<typeof parsePriv
 }
 
 export function createManagedBrowserAssistPlugin(): Plugin {
-  let context: BrowserContext | null = null;
-  let page: Page | null = null;
-  let busy = false;
-  let state = 'idle';
-  let applicationOrigin = '';
-  let opportunityId = '';
-  let preparation: PreparationResult | null = null;
   const managed = readManagedRuntime();
+  // Vite reloads its config in the same process. Keep the live browser connection
+  // and listener handles rather than orphaning the operator's application.
+  type SessionCache = { context: BrowserContext | null; page: Page | null; state: string;
+    applicationOrigin: string; applicationUrl: string; opportunityId: string;
+    preparation: PreparationResult | null; listeners: ManagedListeners; busy: boolean };
+  const cacheHost = globalThis as typeof globalThis & { [key: symbol]: SessionCache };
+  const cacheKey = Symbol.for('escapehatch.managed-browser.' + (managed?.identity.instanceId || 'unmanaged'));
+  const cache = cacheHost[cacheKey] ||= { context: null, page: null, state: 'idle', applicationOrigin: '', applicationUrl: '',
+    opportunityId: '', preparation: null, busy: false, listeners: new ManagedListeners() };
+  let context = cache.context;
+  let page = cache.page;
+  let state = cache.state;
+  let applicationOrigin = cache.applicationOrigin;
+  let applicationUrl = cache.applicationUrl;
+  const documentStore = new OpportunityDocumentStore();
+  let opportunityId = cache.opportunityId;
+  let preparation = cache.preparation;
+  const listeners = cache.listeners;
   return {
     name: 'escapehatch-managed-browser-assist',
     configureServer(server) {
@@ -269,6 +284,9 @@ export function createManagedBrowserAssistPlugin(): Plugin {
         }
         if (url.pathname === PREFIX + '/status' && req.method === 'GET') {
           if (page?.isClosed()) { page = null; state = 'browser_closed'; }
+          let listenerState;
+          try { listenerState = await listeners.status(); }
+          catch { return respond(res, 422, { ok: false, error: 'Submission evidence unavailable; existing records preserved.' }); }
           return respond(res, 200, {
             ok: true,
             state,
@@ -280,6 +298,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             intermediateSteps: preparation?.intermediateSteps ?? 0,
             finalActionActivated: false,
             pendingManual: preparation?.pendingManual || [],
+            listeners: listenerState,
           });
         }
         if (url.pathname === PREFIX + '/preferences' && req.method === 'GET') {
@@ -287,21 +306,57 @@ export function createManagedBrowserAssistPlugin(): Plugin {
           try { return respond(res, 200, { ok: true, preferences: await readPreferences() }); }
           catch { return respond(res, 422, { ok: false, error: 'Saved preferences could not be read; existing data preserved.' }); }
         }
+        if (url.pathname.startsWith(PREFIX + '/documents/') && req.method === 'GET') {
+          if (req.headers.origin && req.headers.origin !== expectedOrigin || req.headers['sec-fetch-site'] === 'cross-site') return respond(res, 403, { ok: false, error: 'operator_origin_required' });
+          try {
+            const scope = documentScope(url.searchParams.get('opportunityId'), url.searchParams.get('url'));
+            validateApplicationUrl(scope.url);
+            if (url.pathname === PREFIX + '/documents/status') return respond(res, 200, { ok: true, package: await documentStore.read(scope.opportunityId, scope.url), requireReview: (await readPreferences()).require_document_review !== false });
+            if (url.pathname === PREFIX + '/documents/file') {
+              const kind = url.searchParams.get('kind');
+              if (kind !== 'resume' && kind !== 'cover') throw new Error('Invalid document kind.');
+              const file = await documentStore.file(scope.opportunityId, scope.url, kind);
+              if (!file) return respond(res, 404, { ok: false, error: 'document_not_found' });
+              res.statusCode = 200; res.setHeader('Content-Type', 'application/pdf'); res.setHeader('Cache-Control', 'no-store'); res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('Content-Disposition', 'inline; filename="' + file.name + '"'); return res.end(file.buffer);
+            }
+            return respond(res, 404, { ok: false, error: 'unknown_document_action' });
+          } catch { return respond(res, 422, { ok: false, error: 'Private documents unavailable. Existing documents preserved.' }); }
+        }
         if (req.method !== 'POST' ||
             req.headers.origin !== expectedOrigin ||
             req.headers[ACTION_HEADER] !== 'confirmed' ||
             req.headers['sec-fetch-site'] === 'cross-site') {
           return respond(res, 403, { ok: false, error: 'operator_origin_required' });
         }
-        if (busy) return respond(res, 409, { ok: false, error: 'action_in_progress' });
-        busy = true;
+        if (cache.busy) return respond(res, 409, { ok: false, error: 'action_in_progress' });
+        cache.busy = true;
         try {
           const payload = await readJson(req);
-          if (url.pathname === PREFIX + '/preferences') return respond(res, 200, { ok: true, preferences: await savePreferences(payload.preferences) });
-          if (url.pathname === PREFIX + '/preferences/clear') { await clearPreferences(); return respond(res, 200, { ok: true }); }
+          if (url.pathname === PREFIX + '/preferences') return respond(res, 200, { ok: true,
+            preferences: await updatePreferences(current => mergePreferenceEdits(current, payload.preferences, payload.removedQuestions)) });
+          if (url.pathname === PREFIX + '/preferences/clear') { await listeners.setRecording(false); await clearPreferences(); return respond(res, 200, { ok: true }); }
+          if (url.pathname.startsWith(PREFIX + '/documents/')) {
+            const scope = documentScope(payload.opportunityId, payload.url); validateApplicationUrl(scope.url);
+            const kind = payload.kind;
+            if (url.pathname === PREFIX + '/documents/policy') {
+              if (typeof payload.requireReview !== 'boolean') throw new Error('Choose a document review setting.');
+              await updatePreferences(current => ({ ...current, require_document_review: payload.requireReview as boolean }));
+            } else {
+              if (kind !== 'resume' && kind !== 'cover') throw new Error('Invalid document kind.');
+              if (url.pathname === PREFIX + '/documents/stage') {
+                const file = parsePrivatePdf(payload.file); if (!file) throw new Error('Choose a PDF.');
+                await documentStore.stage(scope.opportunityId, scope.url, kind, file);
+              } else if (url.pathname === PREFIX + '/documents/review') {
+                if (payload.confirmed !== true) throw new Error('Confirm that you reviewed this exact document.');
+                await documentStore.review(scope.opportunityId, scope.url, kind, payload.sha256);
+              } else return respond(res, 404, { ok: false, error: 'unknown_document_action' });
+            }
+            return respond(res, 200, { ok: true, package: await documentStore.read(scope.opportunityId, scope.url), requireReview: (await readPreferences()).require_document_review !== false });
+          }
           if (url.pathname === PREFIX + '/launch') {
             const jobUrl = validateApplicationUrl(payload.url);
             applicationOrigin = new URL(jobUrl).origin;
+            applicationUrl = jobUrl;
             opportunityId = typeof payload.opportunityId === 'string' && payload.opportunityId.length <= 128
               ? payload.opportunityId
               : '';
@@ -312,7 +367,11 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               context = await chromium.launchPersistentContext(folder, {
                 channel: 'chrome', headless: false, acceptDownloads: false, viewport: null,
               });
-              context.on('close', () => { context = null; page = null; state = 'browser_closed'; preparation = null; });
+              context.on('close', () => {
+                context = null; page = null; state = 'browser_closed'; preparation = null;
+                Object.assign(cache, { context, page, state, preparation });
+                void listeners.dispose();
+              });
             }
             if (!page || page.isClosed()) page = context.pages()[0] || await context.newPage();
             await page.bringToFront();
@@ -324,16 +383,43 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             } catch {
               state = 'browser_open_navigation_unverified';
             }
+            if (state === 'application_form_open_review_required' && opportunityId) {
+              await listeners.attach(page, { opportunityId, applicationUrl: page.url(),
+                employerName: typeof payload.employerName === 'string' ? payload.employerName.slice(0, 160) : '' });
+              await listeners.arm();
+            }
             return respond(res, 200, { ok: true, state, requiresOperatorSubmission: true });
           }
           if (!page || page.isClosed()) return respond(res, 409, { ok: false, error: 'launch_browser_first' });
           if (new URL(page.url()).origin !== applicationOrigin) return respond(res, 409, { ok: false, error: 'application_origin_changed_review_required' });
           await page.bringToFront();
+          if (url.pathname === PREFIX + '/listeners') {
+            if (payload.opportunityId !== opportunityId || payload.url !== applicationUrl) throw new Error('Select the application bound to this browser.');
+            if (typeof payload.recordAnswers === 'boolean') await listeners.setRecording(payload.recordAnswers);
+            if (payload.trackSubmission === true) await listeners.arm();
+            if (payload.trackSubmission === false) await listeners.disarm();
+            return respond(res, 200, { ok: true, listeners: await listeners.status() });
+          }
+          if (url.pathname === PREFIX + '/questions') return respond(res, 200, { ok: true, questions: await listeners.catalog(page) });
+          if ([PREFIX + '/attach', PREFIX + '/prepare'].includes(url.pathname)) {
+            const scope = documentScope(payload.opportunityId, payload.url);
+            const live = new URL(page.url()), launched = new URL(applicationUrl);
+            if (!opportunityId || scope.opportunityId !== opportunityId || scope.url !== launched.href ||
+              (live.pathname !== launched.pathname && !live.pathname.startsWith(launched.pathname.replace(/\/$/, '') + '/'))) throw new Error('Document opportunity binding changed; relaunch the selected opportunity.');
+          }
           if (url.pathname === PREFIX + '/prepare') {
             // Operator-triggered deterministic progression only. Never agentic browsing.
             const authorization = parseNavigationAuthorization(payload.authorization, applicationOrigin);
             if (opportunityId && authorization.opportunityId !== opportunityId) {
               return respond(res, 409, { ok: false, error: 'opportunity_binding_mismatch' });
+            }
+            const uploadPolicy = (await readPreferences()).require_document_review !== false;
+            const packageFiles = await documentStore.forUpload(opportunityId, applicationUrl, uploadPolicy);
+            await attachPdfs(page, packageFiles.resume, packageFiles.cover);
+            if (!payload.adapterRegistry) {
+              preparation = { state: 'BLOCKED', code: 'trusted_adapter_registry_required', pagesPrepared: 0, intermediateSteps: 0, finalActionActivated: false, evidenceRefs: [], pendingManual: ['Verify employer uploads and supply trusted navigation evidence.'] };
+              state = preparation.state;
+              return respond(res, 200, { ok: true, state, preparation, requiresOperatorSubmission: true, reviewPolicy: packageFiles.reviewPolicy });
             }
             const registry = parseTrustedAdapterRegistry(payload.adapterRegistry);
             const preferences = await readPreferences();
@@ -354,8 +440,21 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               page,
               authorization,
               registry,
-              preferences: merged,
-              requireUploadsVerified: payload.requireUploadsVerified !== false,
+              preferences: withCareerPreferences(merged, payload.careerProfile, payload.targetRole),
+              prepareAttachments: async () => {
+                const current = await documentStore.forUpload(opportunityId, applicationUrl, (await readPreferences()).require_document_review !== false);
+                await attachPdfs(page!, current.resume, current.cover);
+              },
+              verifyAttachments: async () => {
+                // Only an adapter's explicit document receipt is sufficient for automated progression.
+                for (const kind of ['resume', 'cover'] as const) {
+                  const file = packageFiles[kind]; if (!file) continue;
+                  const receipt = page!.locator('[data-document-kind="' + kind + '"][data-upload-status="accepted"]');
+                  if (await receipt.count() !== 1 || await receipt.getAttribute('data-filename') !== file.name) return false;
+                }
+                return true;
+              },
+              requireUploadsVerified: true,
             });
             preparation = await prepareToFinalReview(driver, authorization, { maxSteps });
             state = preparation.state === 'REVIEW_READY'
@@ -371,6 +470,19 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               finalActionActivated: false,
             });
           }
+          if (url.pathname === PREFIX + '/capture-military') {
+            const answers = await captureMilitaryAnswers(page);
+            if (new URL(page.url()).origin !== applicationOrigin) throw new Error('application_origin_changed_review_required');
+            const preferences = await readPreferences();
+            const recorded: string[] = [];
+            for (const [id, value] of Object.entries(answers)) {
+              if (preferences.preferences[id]?.value === value) continue;
+              preferences.preferences[id] = { scope: 'profile_preference', source: 'user', value, updated_at: new Date().toISOString() };
+              recorded.push(id);
+            }
+            if (recorded.length) await updatePreferences(current => mergePreferenceEdits(current, preferences));
+            return respond(res, 200, { ok: true, recorded });
+          }
           if (url.pathname === PREFIX + '/fill') {
             const preferences = await readPreferences();
             const contact = reviewedContactFields(payload.profile);
@@ -381,24 +493,26 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               const id = 'identity.' + (ids[key] || key);
               if (!merged.preferences[id]) merged.preferences[id] = { scope: 'profile_preference', source: 'user', value, updated_at: now };
             }
-            const outcome = await fillSavedPreferences(page, merged);
+            const outcome = await fillSavedPreferences(page, withCareerPreferences(merged, payload.careerProfile, payload.targetRole), typeof payload.employerName === 'string' ? payload.employerName.slice(0, 160) : '');
             state = 'fields_filled_review_required';
             return respond(res, 200, { ok: true, state, ...outcome, requiresOperatorSubmission: true });
           }
           if (url.pathname === PREFIX + '/attach') {
-            const resume = parsePrivatePdf(payload.resume);
-            const cover = parsePrivatePdf(payload.cover);
-            if (!resume && !cover) throw new Error('Choose a resume or cover-letter PDF first.');
-            const outcome = await attachPdfs(page, resume, cover);
+            if (payload.resume || payload.cover) throw new Error('Save the selected documents to this opportunity before attaching.');
+            const packageFiles = await documentStore.forUpload(opportunityId, applicationUrl, (await readPreferences()).require_document_review !== false);
+            const outcome = await attachPdfs(page, packageFiles.resume, packageFiles.cover);
             state = 'attachments_staged_review_required';
-            return respond(res, 200, { ok: true, state, attachments: outcome, requiresOperatorSubmission: true });
+            return respond(res, 200, { ok: true, state, attachments: outcome, reviewPolicy: packageFiles.reviewPolicy, requiresOperatorSubmission: true });
           }
           return respond(res, 404, { ok: false, error: 'unknown_action' });
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Operation failed.';
           // Never log URLs, profile values, job forms, tokens or private document contents.
           return respond(res, 422, { ok: false, error: message.slice(0, 160) });
-        } finally { busy = false; }
+        } finally {
+          Object.assign(cache, { context, page, state, applicationOrigin, applicationUrl, opportunityId, preparation });
+          cache.busy = false;
+        }
       });
     },
   };

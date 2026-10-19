@@ -128,3 +128,7 @@ When no artifact exists yet, the next action must create or repair the next owne
 ## 8. Governance Ownership
 
 `AGENTS.md` owns repository-wide agent governance. Changes to this doctrine must be deliberate, reviewable, and validated by the repository governance validator. Task prompts may specialize behavior inside their bounded scope but may not silently create a second governance authority.
+
+## 9. Trifecta workflow shorthand
+
+When the operator invokes **trifecta**, resolve and apply TokenCorridor's **P08 Live Runtime Proof Executor**, **P82 Prototype-Measure-Refine Delivery Loop**, and **P07 Repo Sprint Executor** together. See `docs/agent/TRIFECTA.md` for canonical source locations, invocation boundaries, and proof reporting. This is a workflow reference under this governance contract, not a second governance authority. Missing prompt infrastructure or unavailable proof must be reported explicitly; the shorthand never grants credential access, personal-data disclosure, or final application submission authority.

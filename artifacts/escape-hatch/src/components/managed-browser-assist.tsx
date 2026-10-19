@@ -1,3 +1,7 @@
+import { OpportunityDocuments, useOpportunityDocuments } from './opportunity-documents';
+import { reconcileSubmissionReceipts } from '@/lib/submission-reconciliation';
+import type { AssistProfile } from '@/lib/assist-contract';
+import { CareerRecords } from './career-records';
 import { useEffect, useRef, useState, type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
 import { ArrowUpRight, CheckCircle2, FileUp, LoaderCircle, ShieldCheck } from 'lucide-react';
 import type { Application, Profile } from '@/lib/storage';
@@ -23,6 +27,7 @@ type ServerResponse = {
   browserOpen?: boolean;
   error?: string;
   filled?: string[];
+  recorded?: string[];
   skipped?: string[];
   attachments?: Record<string, string>;
   requiresOperatorSubmission?: boolean;
@@ -32,6 +37,8 @@ type ServerResponse = {
   pagesPrepared?: number;
   intermediateSteps?: number;
   pendingManual?: string[];
+  listeners?: { recordingAnswers: boolean; savedAnswers: number; opportunityId: string; error: string;
+    submission: { state: string; reason: string; receipt: unknown | null } | null; receipts: unknown[] };
 };
 
 async function request(endpoint: string, body?: object): Promise<ServerResponse> {
@@ -44,20 +51,6 @@ async function request(endpoint: string, body?: object): Promise<ServerResponse>
   const json = await response.json() as ServerResponse;
   if (!response.ok || !json.ok) throw new Error(json.error || 'Local browser action failed.');
   return json;
-}
-
-async function privatePdf(file: File | null) {
-  if (!file) return null;
-  if (!/\.pdf$/i.test(file.name) || file.size > 5 * 1024 * 1024 || file.size === 0) {
-    throw new Error('Choose a PDF smaller than 5 MB.');
-  }
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  if (String.fromCharCode(...bytes.slice(0, 5)) !== '%PDF-') throw new Error('The selected file is not a PDF.');
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += 8192) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
-  }
-  return { name: file.name, base64: btoa(binary) };
 }
 
 const titles: Record<string, string> = {
@@ -74,7 +67,7 @@ const titles: Record<string, string> = {
   BLOCKED: 'BLOCKED — fail closed; re-inspect before retry',
 };
 
-export function ManagedBrowserAssist({ profile, setProfile, applications, setApplications }: { profile: Profile; setProfile: Dispatch<SetStateAction<Profile>>; applications: Application[]; setApplications: Dispatch<SetStateAction<Application[]>> }) {
+export function ManagedBrowserAssist({ profile, setProfile, applications, setApplications, assistProfile, setAssistProfile }: { assistProfile: AssistProfile; setAssistProfile: Dispatch<SetStateAction<AssistProfile>>; profile: Profile; setProfile: Dispatch<SetStateAction<Profile>>; applications: Application[]; setApplications: Dispatch<SetStateAction<Application[]>> }) {
   // Never silently reuse an earlier/submitted employer as the next application.
   const [url, setUrl] = useState('');
   const [selectedOpportunityId, setSelectedOpportunityId] = useState('');
@@ -84,13 +77,18 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const [verifiedNextReadyId, setVerifiedNextReadyId] = useState<string | null>(null);
   const [trackerChecked, setTrackerChecked] = useState(false);
   const [runtimeChecked, setRuntimeChecked] = useState(false);
-  const [resume, setResume] = useState<File | null>(null);
-  const [cover, setCover] = useState<File | null>(null);
+  const documents = useOpportunityDocuments(selectedOpportunityId, url);
+  const [autoPrepareRequested, setAutoPrepareRequested] = useState(false);
   const [status, setStatus] = useState('idle');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [recordMilitary, setRecordMilitary] = useState(false);
+  const [preferencesRefresh, setPreferencesRefresh] = useState(0);
+  const [recordingMessage, setRecordingMessage] = useState('');
   const [browserOpen, setBrowserOpen] = useState(false);
   const [preparation, setPreparation] = useState<PreparationResult | null>(null);
+  const [listenerStatus, setListenerStatus] = useState<ServerResponse['listeners']>();
+  const seenAnswers = useRef(0);
 
   useEffect(() => {
     let active = true;
@@ -116,7 +114,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   }, [setApplications]);
 
   useEffect(() => {
-    if (operatorSelected.current) return;
+    if (operatorSelected.current || browserOpen) return;
     const requestedId = new URLSearchParams(window.location.search).get('opportunityId');
     const permitted = (item: Application) => !!item.url && item.status !== 'applied' && item.status !== 'closed';
     const requested = applications.find((item) => item.id === requestedId && permitted(item));
@@ -128,7 +126,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       setSelectedOpportunityId(next.id);
       setUrl(next.url);
     }
-  }, [applications]);
+  }, [applications, browserOpen]);
 
   useEffect(() => {
     let active = true;
@@ -136,6 +134,8 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       if (active) {
         setStatus(result.state || 'idle');
         setBrowserOpen(Boolean(result.browserOpen));
+        setListenerStatus(result.listeners);
+        if (result.listeners?.receipts?.length) setApplications(current => reconcileSubmissionReceipts(current, result.listeners!.receipts));
         if (result.preparationState) {
           setPreparation({
             state: result.preparationState,
@@ -152,6 +152,37 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       .finally(() => { if (active) setRuntimeChecked(true); });
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    if (!browserOpen) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    async function observe() {
+      try {
+        const result = await request('/status');
+        if (cancelled) return;
+        setListenerStatus(result.listeners);
+        if (result.listeners) {
+          setApplications(current => reconcileSubmissionReceipts(current, result.listeners!.receipts));
+          if (result.listeners.savedAnswers !== seenAnswers.current) {
+            seenAnswers.current = result.listeners.savedAnswers;
+            setPreferencesRefresh(value => value + 1);
+          }
+        }
+        if (!result.browserOpen) { setBrowserOpen(false); return; }
+      } catch { if (!cancelled) setRecordingMessage('Listener connection interrupted. No submission is assumed.'); }
+      if (!cancelled) timer = setTimeout(observe, 1500);
+    }
+    void observe();
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [browserOpen, setApplications]);
+
+  async function updateListeners(change: { recordAnswers?: boolean; trackSubmission?: boolean }) {
+    try {
+      const result = await request('/listeners', { ...change, opportunityId: selectedOpportunityId, url });
+      setListenerStatus(result.listeners);
+    } catch (error) { setRecordingMessage(error instanceof Error ? error.message : 'Listener update failed.'); }
+  }
 
   useEffect(() => {
     if (!explicitLaunchId || autoLaunchAttempted.current || !trackerChecked || !runtimeChecked) return;
@@ -178,29 +209,61 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     void run('launch');
   }, [applications, explicitLaunchId, runtimeChecked, trackerChecked, selectedOpportunityId, url, verifiedNextReadyId]);
 
+  useEffect(() => {
+    if (!recordMilitary || !browserOpen) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    async function record() {
+      try {
+        const result = await request('/capture-military', {});
+        if (cancelled) return;
+        if (result.recorded?.length) {
+          setPreferencesRefresh(value => value + 1);
+          setRecordingMessage('Saved your selected veteran/service answer on this computer.');
+        } else setRecordingMessage('Listening for a recognized native veteran/service select or radio answer. Unknown or ambiguous fields remain unsaved.');
+        timer = setTimeout(record, 1500);
+      } catch {
+        if (!cancelled) { setRecordMilitary(false); setRecordingMessage('Recording paused: verify the managed application origin and restart recording.'); }
+      }
+    }
+    void record();
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [recordMilitary, browserOpen]);
+
+  useEffect(() => {
+    if (!autoPrepareRequested || busy || documents.loading || !browserOpen) return;
+    setAutoPrepareRequested(false);
+    if (!documents.canUpload) { setMessage('Automatic preparation paused: save the opportunity documents and complete required review.'); return; }
+    void run('prepare');
+  }, [autoPrepareRequested, busy, documents.loading, documents.canUpload, browserOpen]);
+
   async function run(action: 'launch' | 'fill' | 'attach' | 'prepare') {
     setBusy(true);
     setMessage('');
     try {
       let body: object;
       if (action === 'launch') {
+        setRecordMilitary(false);
         const opportunity = applications.find((item) => item.id === selectedOpportunityId && item.url === url);
         if (applications.some((item) => item.url === url && (item.status === 'applied' || item.status === 'closed'))) {
           throw new Error('This opportunity is already applied or closed. Do not reapply.');
         }
-        body = { url, opportunityId: opportunity?.id || '' };
-      } else if (action === 'fill') body = { profile };
-      else if (action === 'attach') body = { resume: await privatePdf(resume), cover: await privatePdf(cover) };
+        body = { url, opportunityId: opportunity?.id || '', employerName: opportunity?.company || '' };
+      } else if (action === 'fill') body = { profile, careerProfile: assistProfile, targetRole: applications.find(item => item.id === selectedOpportunityId)?.role || '', employerName: applications.find(item => item.id === selectedOpportunityId)?.company || '' };
+      else if (action === 'attach') {
+        if (!documents.canUpload) throw new Error('Save opportunity documents and complete required review before uploading.');
+        body = { opportunityId: selectedOpportunityId, url };
+      }
       else {
         // Prepare uses a trusted adapter registry supplied by the operator/runtime host.
         // Without registry evidence the control plane fails closed — never invent consequences.
         const registryRaw = window.localStorage.getItem('escapehatch.trustedAdapterRegistry.v1');
-        if (!registryRaw) throw new Error('Trusted adapter registry required before Prepare. Load a reviewed registry first.');
+        if (!documents.canUpload) throw new Error('Save opportunity documents and complete required review before preparing.');
         const opportunity = applications.find((item) => item.id === selectedOpportunityId && item.url === url &&
           item.status !== 'applied' && item.status !== 'closed');
         if (!opportunity) throw new Error('Select an active saved opportunity before preparing this application.');
         body = {
-          profile,
+          profile, careerProfile: assistProfile, targetRole: opportunity.role, opportunityId: opportunity.id, url,
           authorization: {
             sessionId: 'cockpit-' + opportunity.id,
             opportunityId: opportunity.id,
@@ -208,7 +271,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
             allowedEffectClasses: ['LOCAL_STEP_ONLY', 'DRAFT_WRITE_AND_ADVANCE'],
             allowedDataCategories: ['synthetic_cover_note'],
           },
-          adapterRegistry: JSON.parse(registryRaw) as object,
+          adapterRegistry: registryRaw ? JSON.parse(registryRaw) as object : null,
         };
       }
       let result = await request('/' + action, body);
@@ -217,7 +280,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         // Explicit operator launch authorizes the existing bounded DOM filler, not navigation or submission.
         // If this is a landing/login page, no fill occurs; the manual Fill control remains available.
         try {
-          const filled = await request('/fill', { profile });
+          const filled = await request('/fill', { profile, careerProfile: assistProfile, targetRole: applications.find(item => item.id === selectedOpportunityId)?.role || '', employerName: applications.find(item => item.id === selectedOpportunityId)?.company || '' });
           result = filled;
           autoFillMessage = 'Managed Chrome opened the application form. ' +
             (filled.filled?.length ? 'Filled: ' + filled.filled.join(', ') + '. ' : 'No approved fields were filled. ') +
@@ -232,6 +295,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       if (result.preparation) setPreparation(result.preparation);
       if (action === 'launch') {
         setBrowserOpen(true);
+        if (documents.data?.requireReview === false) setAutoPrepareRequested(true);
         setPreparation(null);
         setApplications((items) => {
           const existing = items.find((item) => item.id === selectedOpportunityId && item.url === url);
@@ -240,6 +304,9 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
             : item);
           return items; // A custom URL never creates an unverified employer ledger record.
         });
+      }
+      if (action === 'fill' || action === 'launch') {
+        await request('/questions', {}).then(() => setPreferencesRefresh(value => value + 1)).catch(() => {});
       }
       if (action === 'fill') setMessage(
         (result.filled?.length ? 'Filled: ' + result.filled.join(', ') + '. ' : 'No fields filled. ') +
@@ -274,7 +341,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const secondary = 'inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-bold hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50';
 
   return (
-    <><ApplicationPreferences onLoad={data => setProfile(current => {
+    <><ApplicationPreferences currentRole={applications.find(item => item.id === selectedOpportunityId)?.role} currentPosting={applications.find(item => item.id === selectedOpportunityId)?.jobDescription || ''} reviewedExperience={assistProfile.experience.filter(item => item.id === assistProfile.selectedExperienceId).map(item => item.title + ' ' + item.bullets.join(' ')).join(' ')} refresh={preferencesRefresh} onEdit={() => setRecordMilitary(false)} onLoad={data => setProfile(current => {
       const next = { ...current };
       for (const key of Object.keys(current) as (keyof Profile)[]) {
         const id = 'identity.' + (key === 'linkedin_url' ? 'linkedin' : key === 'name_prefix' ? 'title' : key);
@@ -282,7 +349,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         if (!next[key] && value) next[key] = value;
       }
       return next;
-    })} /><section className="mb-6 rounded-2xl border border-primary/25 bg-card p-5 shadow-sm sm:p-7" data-testid="managed-browser-assist">
+    })} /><CareerRecords profile={assistProfile} setProfile={setAssistProfile} opportunity={applications.find(item => item.id === selectedOpportunityId)} setApplications={setApplications} /><section className="mb-6 rounded-2xl border border-primary/25 bg-card p-5 shadow-sm sm:p-7" data-testid="managed-browser-assist">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div>
           <p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-primary">Native application launch</p>
@@ -330,6 +397,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         </div>
       </div>
 
+      <OpportunityDocuments documents={documents} disabled={busy || !selectedOpportunityId} onBypass={() => { if (browserOpen) setAutoPrepareRequested(true); }} />
       <div className="mt-5 rounded-xl bg-secondary/55 p-4">
         <div className="flex items-center gap-2 text-sm font-bold"><CheckCircle2 className="text-primary" size={16} />
           {titles[status] || status.replaceAll('_', ' ')}
@@ -350,23 +418,31 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
             </p>
           </div>
         )}
+        <label className="mt-3 block text-sm">
+          <input type="checkbox" checked={recordMilitary} disabled={!browserOpen || busy}
+            onChange={event => setRecordMilitary(event.target.checked)} /> Record my veteran/service answers from this managed application
+        </label>
+        <p className="text-xs">While enabled and this page stays open, selected native dropdown/radio answers are saved locally for reuse. Protected-veteran status and military service are separate facts. Other fields and custom widgets are not recorded.</p>
+        <p role="status" className="text-xs">{recordingMessage}</p>
+        <section className="mt-4 rounded-lg border border-border bg-card p-3 text-sm" aria-label="Answer memory and submission tracking">
+          <label className="flex items-start gap-2"><input type="checkbox" checked={listenerStatus?.recordingAnswers ?? false} disabled={!browserOpen || busy}
+            onChange={event => void updateListeners({ recordAnswers: event.target.checked })} />Remember answers I enter in this application</label>
+          <p className="mt-1 text-xs text-muted-foreground">Recognized answers are saved locally. New questions appear in reusable answers for review. Passwords, files, agreements and certifications are excluded.</p>
+          <label className="mt-3 flex items-start gap-2"><input type="checkbox" checked={!!listenerStatus?.submission && !['DISARMED', 'BLOCKED'].includes(listenerStatus.submission.state)}
+            disabled={!browserOpen || busy || listenerStatus?.submission?.state === 'CONFIRMED'} onChange={event => void updateListeners({ trackSubmission: event.target.checked })} />Track my submission when I click Submit in Chrome</label>
+          <p className="mt-2" role="status" data-testid="submission-listener-status">{listenerStatus?.error || listenerStatus?.submission?.reason || 'Launch an application to connect tracking. Final submission stays yours.'}</p>
+          {listenerStatus?.submission?.state === 'CONFIRMED' && listenerStatus.receipts?.some(receipt => !!receipt && typeof receipt === 'object' && 'opportunityId' in receipt && receipt.opportunityId === selectedOpportunityId) && <p className="mt-2 font-semibold">Employer confirmation received. This application is marked Applied in your local queue.</p>}
+          <p className="mt-2 text-xs text-muted-foreground">A click or page change alone never marks an application Applied. Tracking waits for explicit application-received confirmation. External tracker sync is separate.</p>
+        </section>
         <div className="mt-4 flex flex-wrap gap-2">
           <button type="button" className={secondary} disabled={busy || !browserOpen} onClick={() => void run('fill')} data-testid="button-managed-fill">
             Fill approved profile and answers
           </button>
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5 text-sm font-bold">
-            <FileUp size={15} /> {resume ? 'Resume selected' : 'Choose résumé PDF'}
-            <input className="sr-only" type="file" accept=".pdf,application/pdf" onChange={(event) => setResume(event.target.files?.[0] || null)} />
-          </label>
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5 text-sm font-bold">
-            <FileUp size={15} /> {cover ? 'Letter selected' : 'Choose cover PDF'}
-            <input className="sr-only" type="file" accept=".pdf,application/pdf" onChange={(event) => setCover(event.target.files?.[0] || null)} />
-          </label>
-          <button type="button" className={secondary} disabled={busy || !browserOpen || (!resume && !cover)}
+          <button type="button" className={secondary} disabled={busy || documents.loading || !browserOpen || !documents.canUpload}
             onClick={() => void run('attach')} data-testid="button-managed-attach">
             Attach selected PDFs
           </button>
-          <button type="button" className={button} disabled={busy || !browserOpen}
+          <button type="button" className={button} disabled={busy || documents.loading || !browserOpen || !documents.canUpload}
             onClick={() => void run('prepare')} data-testid="button-managed-prepare">
             Prepare to final review
           </button>
@@ -375,7 +451,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       {message && <p role="status" aria-live="polite" data-testid="managed-browser-feedback"
         className="mt-4 rounded-xl border border-border p-3 text-sm leading-6">{message}</p>}
       <p className="mt-4 text-xs text-muted-foreground">
-        Files are transferred only to your loopback runtime on your explicit click, held in memory, and never committed.
+        Selected PDFs are saved privately for this opportunity. Employer upload is a separate action gated by your review setting; private documents are never committed.
         A file input being populated does not prove the employer accepted an upload.
       </p>
     </section></>

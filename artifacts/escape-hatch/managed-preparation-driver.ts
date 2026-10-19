@@ -41,6 +41,8 @@ export type ManagedPreparationDriverOptions = {
   preferences: Preferences;
   /** When false, missing file inputs do not block progression (default true). */
   requireUploadsVerified?: boolean;
+  prepareAttachments?: () => Promise<void>;
+  verifyAttachments?: () => Promise<boolean>;
 };
 
 function hasText(value: unknown): value is string {
@@ -166,7 +168,7 @@ export function createManagedPreparationDriver(
           unresolvedRequired: await collectUnresolvedRequired(page),
           validationErrors: [],
           manualGates: origin !== authorization.origin ? ['application_origin_changed'] : ['page_fingerprint_missing'],
-          uploadsVerified: await uploadsVerified(page, requireUploads),
+          uploadsVerified: await uploadsVerified(page, requireUploads) && (!options.verifyAttachments || await options.verifyAttachments()),
         };
       }
       const trustedEvidence = control
@@ -180,12 +182,13 @@ export function createManagedPreparationDriver(
         unresolvedRequired: await collectUnresolvedRequired(page),
         validationErrors: await collectValidationErrors(page),
         manualGates: control ? [] : ['no_unique_fingerprinted_control'],
-        uploadsVerified: await uploadsVerified(page, requireUploads),
+        uploadsVerified: await uploadsVerified(page, requireUploads) && (!options.verifyAttachments || await options.verifyAttachments()),
       };
     },
 
     async prepareCurrentPage(): Promise<PreparationReceipt> {
       const outcome = await fillSavedPreferences(page, preferences);
+      await options.prepareAttachments?.();
       const unresolved = outcome.skipped.filter(
         (item) =>
           item.endsWith(':missing_or_current_confirmation_required') ||

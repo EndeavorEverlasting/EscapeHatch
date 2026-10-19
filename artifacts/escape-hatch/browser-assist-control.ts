@@ -462,7 +462,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               const id = 'identity.' + (ids[key] || key);
               if (!merged.preferences[id]) merged.preferences[id] = { scope: 'profile_preference', source: 'user', value, updated_at: now };
             }
-            const outcome = await fillSavedPreferences(page, withCareerPreferences(merged, payload.careerProfile, payload.targetRole));
+            const outcome = await fillSavedPreferences(page, withCareerPreferences(merged, payload.careerProfile, payload.targetRole), typeof payload.employerName === 'string' ? payload.employerName.slice(0, 160) : '');
             state = 'fields_filled_review_required';
             return respond(res, 200, { ok: true, state, ...outcome, requiresOperatorSubmission: true });
           }

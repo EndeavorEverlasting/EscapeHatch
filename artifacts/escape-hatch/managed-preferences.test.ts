@@ -40,6 +40,57 @@ test('explicit preferences survive process-independent disk reads; invalid impor
   } finally { await fs.rm(directory, { recursive: true, force: true }); }
 });
 
+test('Ashby entry opens only the same job application and verifies its contact form without submitting', async () => {
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  try {
+    const page = await browser.newPage();
+    let mode = 'valid';
+    await page.route('https://jobs.ashbyhq.com/**', route => route.fulfill({ contentType: 'text/html', body:
+      route.request().url().endsWith('/application')
+        ? '<div role="tabpanel" aria-label="Application"><form onsubmit="window.submitted=true;return false"><label>Name<input></label><label>Email<input type="email"></label><button>Submit Application</button></form></div>'
+        : '<a href="' + (mode === 'foreign' ? 'https://example.test/other/application' : mode === 'other-job' ? '/synthetic/other/application' : '/synthetic/job/application') + '">Apply for this Job</a>' }));
+    await page.goto('https://jobs.ashbyhq.com/synthetic/job');
+    assert.equal(await openApplicationForm(page), true);
+    assert.equal(page.url(), 'https://jobs.ashbyhq.com/synthetic/job/application');
+    assert.equal(await page.evaluate(() => (window as unknown as { submitted?: boolean }).submitted), undefined);
+    for (mode of ['foreign', 'other-job']) {
+      await page.goto('https://jobs.ashbyhq.com/synthetic/job');
+      assert.equal(await openApplicationForm(page), false);
+      assert.equal(page.url(), 'https://jobs.ashbyhq.com/synthetic/job');
+    }
+  } finally { await browser.close(); }
+});
+
+test('binary toggles reuse exact preferences, bind employer wording, preserve selections and exclude submit controls', async () => {
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  try {
+    const page = await browser.newPage();
+    const preferences = syntheticPreferences();
+    for (const [id, value] of Object.entries({ 'employment.work_authorization_proof': 'Yes', 'employment.current_employee': 'No', 'employment.lower_48_resident': 'Yes' })) {
+      preferences.preferences[id] = { scope: 'profile_preference', value, source: 'user', updated_at: preferences.exported_at };
+    }
+    const group = (id: string, prompt: string) => `<section><label id="${id}_label">${prompt}</label><div>${['Yes','No'].map(value => `<button type="button" aria-pressed="false" onclick="this.setAttribute('aria-pressed','true')">${value}</button>`).join('')}</div></section>`;
+    await page.setContent('<form onsubmit="window.submitted=true;return false">' +
+      group('authorized', 'Are you legally authorized to work in the United States?') +
+      group('employee', 'Are you a current employee of Synthetic Health?') +
+      group('location', 'Do you live within the lower 48 United States?') +
+      group('unknown', 'Do you agree to our terms?') + '<button type="submit" aria-pressed="false">Yes</button></form>');
+    let result = await fillSavedPreferences(page, preferences, 'Synthetic Health');
+    assert.ok(result.filled.includes('employment.work_authorization_proof'));
+    assert.ok(result.filled.includes('employment.current_employee'));
+    assert.ok(result.filled.includes('employment.lower_48_resident'));
+    assert.equal(await page.locator('section').nth(1).getByRole('button', { name: 'No', exact: true }).getAttribute('aria-pressed'), 'true');
+    assert.equal(await page.locator('section').nth(3).locator('[aria-pressed="true"]').count(), 0);
+    assert.equal(await page.evaluate(() => (window as unknown as { submitted?: boolean }).submitted), undefined);
+    result = await fillSavedPreferences(page, preferences, 'Synthetic Health');
+    assert.ok(result.skipped.includes('employment.current_employee:preserved'));
+    await page.setContent(group('employee', 'Are you a current employee of Another Employer?'));
+    result = await fillSavedPreferences(page, preferences, 'Synthetic Health');
+    assert.equal(result.filled.length, 0);
+    assert.equal(await page.locator('[aria-pressed="true"]').count(), 0);
+  } finally { await browser.close(); }
+});
+
 test('real browser fills reordered saved answers, preserves existing values, and never checks agreements or submits', async () => {
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
   try {

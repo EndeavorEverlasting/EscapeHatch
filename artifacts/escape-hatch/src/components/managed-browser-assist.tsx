@@ -211,7 +211,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           throw new Error('This opportunity is already applied or closed. Do not reapply.');
         }
         body = { url, opportunityId: opportunity?.id || '' };
-      } else if (action === 'fill') body = { profile, careerProfile: assistProfile, targetRole: applications.find(item => item.id === selectedOpportunityId)?.role || '' };
+      } else if (action === 'fill') body = { profile, careerProfile: assistProfile, targetRole: applications.find(item => item.id === selectedOpportunityId)?.role || '', employerName: applications.find(item => item.id === selectedOpportunityId)?.company || '' };
       else if (action === 'attach') {
         if (!documents.canUpload) throw new Error('Save opportunity documents and complete required review before uploading.');
         body = { opportunityId: selectedOpportunityId, url };
@@ -242,7 +242,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         // Explicit operator launch authorizes the existing bounded DOM filler, not navigation or submission.
         // If this is a landing/login page, no fill occurs; the manual Fill control remains available.
         try {
-          const filled = await request('/fill', { profile, careerProfile: assistProfile, targetRole: applications.find(item => item.id === selectedOpportunityId)?.role || '' });
+          const filled = await request('/fill', { profile, careerProfile: assistProfile, targetRole: applications.find(item => item.id === selectedOpportunityId)?.role || '', employerName: applications.find(item => item.id === selectedOpportunityId)?.company || '' });
           result = filled;
           autoFillMessage = 'Managed Chrome opened the application form. ' +
             (filled.filled?.length ? 'Filled: ' + filled.filled.join(', ') + '. ' : 'No approved fields were filled. ') +

@@ -40,8 +40,11 @@ export function normalizeQuestion(text: string) {
   return text.normalize('NFKC').toLowerCase().replace(/\bu\.s\.(?:a\.)?/g, 'us').replace(/\((?:required|optional|voluntary|select one|please select)\)|\[(?:required|optional)\]|\brequired\b/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
-export function matchQuestion(prompt: string): string | null {
-  const text = normalizeQuestion(prompt);
+export function matchQuestion(prompt: string, employerName = ''): string | null {
+  let text = normalizeQuestion(prompt);
+  const employer = normalizeQuestion(employerName);
+  if (employer && text === 'are you a current employee of ' + employer) text = 'are you a current employee of this company';
+  if (employer && text === 'have you previously been employed by ' + employer) text = 'have you previously been employed by this company';
   const matches = questions.filter(q => q.aliases.some(alias => normalizeQuestion(alias) === text));
   return matches.length === 1 ? matches[0].id : null;
 }
@@ -66,6 +69,7 @@ export function optionMatches(value: string, option: string): boolean {
 
 export const preferenceChoices: Record<string, string[]> = {
   'employment.work_authorization_proof': ['Yes', 'No'],
+  'employment.lower_48_resident': ['Yes', 'No'],
   'employment.current_employee': ['Yes', 'No'],
   'employment.previous_employee': ['Yes', 'No'],
   'eeo.gender': ['Male', 'Female', 'Non-binary', 'Prefer to self-describe', 'Prefer not to answer'],

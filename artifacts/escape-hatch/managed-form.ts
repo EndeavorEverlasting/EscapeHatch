@@ -14,6 +14,28 @@ export function internationalPhone(value: string, country: string): string | nul
 }
 
 export async function openApplicationForm(page: Page): Promise<boolean> {
+  const current = new URL(page.url());
+  if (current.origin === 'https://jobs.ashbyhq.com' && /^\/[^/]+\/[^/]+\/?$/.test(current.pathname)) {
+    // Ashby exposes a normal, same-job application-entry link outside the form.
+    // Never classify an Apply/Submit button inside a form as entry navigation.
+    const entry = page.getByRole('link', { name: 'Apply for this Job', exact: true });
+    try {
+      await entry.waitFor({ state: 'visible', timeout: 5000 });
+      if (await entry.count() !== 1 || !await entry.isEnabled()) return false;
+      const href = await entry.getAttribute('href');
+      if (!href) return false;
+      const target = new URL(href, current);
+      if (target.origin !== current.origin || target.pathname !== current.pathname.replace(/\/$/, '') + '/application' ||
+          target.search || target.hash || target.username || target.password ||
+          !await entry.evaluate(element => !element.closest('form'))) return false;
+      await entry.click({ timeout: 5000 });
+      await page.waitForURL(target.href, { timeout: 10000 });
+      const form = page.getByRole('tabpanel', { name: 'Application', exact: true });
+      await form.getByRole('textbox', { name: /^Name\*?$/ }).waitFor({ state: 'visible', timeout: 10000 });
+      await form.getByRole('textbox', { name: /^Email\*?$/ }).waitFor({ state: 'visible', timeout: 5000 });
+      return true;
+    } catch { return false; }
+  }
   const entries = page.getByRole('button', { name: /^Apply for this position(?: button)?$/ });
   const count = await entries.count();
   // Some job pages repeat the same entry at top and bottom. Neither may be a form submit.
@@ -30,12 +52,12 @@ export async function openApplicationForm(page: Page): Promise<boolean> {
   return true;
 }
 
-async function inspectPreferenceFields(page: Page) {
+async function inspectPreferenceFields(page: Page, employerName = '') {
   // Hold observed elements, not nth-based locators: React may insert hidden controls after a selection.
-  const controls = await page.locator('input,textarea,select').elementHandles();
+  const controls = await page.locator('input,textarea,select,button[type="button"][aria-pressed]').elementHandles();
   const descriptors = await Promise.all(controls.map(control => control.evaluate(element => {
     const field = element as HTMLInputElement;
-    const type = field.tagName === 'SELECT' ? 'select' : field.type || 'text';
+    const type = field.tagName === 'BUTTON' ? 'toggle' : field.tagName === 'SELECT' ? 'select' : field.type || 'text';
     const labels = Array.from(field.labels || []).map(label => {
       const copy = label.cloneNode(true) as Element;
       copy.querySelectorAll('input,select,textarea,button').forEach(control => control.remove());
@@ -53,14 +75,14 @@ async function inspectPreferenceFields(page: Page) {
       if (previous && /label$/i.test(previous.id)) prompts.push(previous.textContent || '');
     }
     const selectWidget = field.closest('.Select');
-    return { type, name: field.name, prompts, readonly: field.readOnly, option: labels.join(' ').trim() || field.value,
+    return { type, name: field.name, prompts, readonly: field.readOnly, option: type === 'toggle' ? field.textContent?.trim() || '' : labels.join(' ').trim() || field.value,
       role: field.getAttribute('role'), selectWidget: Boolean(selectWidget),
       selectedText: selectWidget?.querySelector('[role="option"][aria-selected="true"]')?.textContent?.trim() || '' };
   })));
   const available = await Promise.all(controls.map(async (control, i) =>
-    !descriptors[i].readonly && ['text', 'email', 'tel', 'url', 'textarea', 'select', 'radio'].includes(descriptors[i].type) &&
+    !descriptors[i].readonly && ['text', 'email', 'tel', 'url', 'textarea', 'select', 'radio', 'toggle'].includes(descriptors[i].type) &&
     await control.isVisible() && await control.isEnabled()));
-  const ids = descriptors.map(d => [...new Set(d.prompts.map(matchQuestion).filter((id): id is string => id !== null))]);
+  const ids = descriptors.map(d => [...new Set(d.prompts.map(prompt => matchQuestion(prompt, employerName)).filter((id): id is string => id !== null))]);
   return { controls, descriptors, available, ids };
 }
 
@@ -89,10 +111,10 @@ export async function captureMilitaryAnswers(page: Page): Promise<Record<string,
   return Object.fromEntries(Object.entries(answers).filter(([, value]) => value.trim() && value.length <= 512 && !/^(select|choose|please select|select one)(?:\b|$)/i.test(value)));
 }
 
-// This routine changes values only. It never clicks buttons, checks agreements, or navigates.
-export async function fillSavedPreferences(page: Page, preferences: Preferences): Promise<FillOutcome> {
+// Changes field values and explicit binary toggles only; never activates navigation, agreements or submission.
+export async function fillSavedPreferences(page: Page, preferences: Preferences, employerName = ''): Promise<FillOutcome> {
   const result: FillOutcome = { filled: [], skipped: [] };
-  const { controls, descriptors, available, ids } = await inspectPreferenceFields(page);
+  const { controls, descriptors, available, ids } = await inspectPreferenceFields(page, employerName);
   for (let index = 0; index < controls.length; index++) {
     const control = controls[index], descriptor = descriptors[index];
     if (['hidden', 'file', 'checkbox', 'password', 'submit', 'button', 'reset'].includes(descriptor.type)) continue;
@@ -112,7 +134,20 @@ export async function fillSavedPreferences(page: Page, preferences: Preferences)
       // Prefer the actual tel control only when present; multiple tel controls still fail closed.
       if (id === 'identity.phone' && peers.some(i => descriptors[i].type === 'tel')) peers = peers.filter(i => descriptors[i].type === 'tel');
       if (!peers.includes(index)) continue;
-      if (descriptor.type === 'radio') {
+      if (descriptor.type === 'toggle') {
+        if (peers.length !== 2 || peers.some(i => descriptors[i].type !== 'toggle') ||
+            new Set(peers.map(i => descriptors[i].option.toLowerCase())).size !== 2 ||
+            peers.some(i => !/^(yes|no)$/i.test(descriptors[i].option)) || !/^(yes|no)$/i.test(value)) {
+          result.skipped.push(id + ':ambiguous_toggle'); continue;
+        }
+        if ((await Promise.all(peers.map(i => controls[i].getAttribute('aria-pressed')))).includes('true')) {
+          result.skipped.push(id + ':preserved'); continue;
+        }
+        const matches = peers.filter(i => optionMatches(value, descriptors[i].option));
+        if (matches.length !== 1 || matches[0] !== index) continue;
+        await control.click({ timeout: 2500 });
+        if (await control.getAttribute('aria-pressed') !== 'true') throw new Error('not retained');
+      } else if (descriptor.type === 'radio') {
         const group = peers.filter(i => descriptors[i].type === 'radio' && descriptors[i].name === descriptor.name);
         if (!descriptor.name || group.length !== peers.length) { result.skipped.push(id + ':ambiguous'); continue; }
         if (await Promise.all(group.map(i => controls[i].isChecked())).then(values => values.some(Boolean))) {

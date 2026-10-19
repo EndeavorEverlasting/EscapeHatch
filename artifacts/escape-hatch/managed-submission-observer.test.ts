@@ -31,7 +31,7 @@ before(async () => {
   });
   await new Promise<void>(resolve => server.listen(0, '0.0.0.0', resolve));
   origin = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
-  browser = await chromium.launch({ headless: true, executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe' });
+  browser = await chromium.launch({ headless: true, ...(process.env.PLAYWRIGHT_CHROMIUM_PATH ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH } : { channel: 'chrome' }) });
 });
 after(async () => { await browser?.close(); await new Promise<void>(resolve => server?.close(() => resolve())); });
 

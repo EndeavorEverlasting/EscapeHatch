@@ -88,6 +88,14 @@ test('binary toggles reuse exact preferences, bind employer wording, preserve se
     result = await fillSavedPreferences(page, preferences, 'Synthetic Health');
     assert.equal(result.filled.length, 0);
     assert.equal(await page.locator('[aria-pressed="true"]').count(), 0);
+    await page.setContent('<div class="ashby-application-form-field-entry"><label>Are you a current employee of Synthetic Health?</label><div><button aria-pressed="false" onclick="this.setAttribute(\'aria-pressed\',\'true\')">Yes</button><button aria-pressed="false" onclick="this.setAttribute(\'aria-pressed\',\'true\')">No</button></div></div>');
+    result = await fillSavedPreferences(page, preferences, 'Synthetic Health');
+    assert.ok(result.filled.includes('employment.current_employee'));
+    assert.equal(await page.getByRole('button', { name: 'No', exact: true }).getAttribute('aria-pressed'), 'true');
+    await page.setContent('<form onsubmit="window.submitted=true;return false"><div class="ashby-application-form-field-entry"><label>Are you a current employee of Synthetic Health?</label><div><button aria-pressed="false">Yes</button><button aria-pressed="false">No</button></div></div></form>');
+    result = await fillSavedPreferences(page, preferences, 'Synthetic Health');
+    assert.equal(result.filled.length, 0);
+    assert.equal(await page.evaluate(() => (window as unknown as { submitted?: boolean }).submitted), undefined);
   } finally { await browser.close(); }
 });
 

@@ -54,10 +54,12 @@ export async function openApplicationForm(page: Page): Promise<boolean> {
 
 async function inspectPreferenceFields(page: Page, employerName = '') {
   // Hold observed elements, not nth-based locators: React may insert hidden controls after a selection.
-  const controls = await page.locator('input,textarea,select,button[type="button"][aria-pressed]').elementHandles();
+  const controls = await page.locator('input,textarea,select,button[aria-pressed]').elementHandles();
   const descriptors = await Promise.all(controls.map(control => control.evaluate(element => {
     const field = element as HTMLInputElement;
-    const type = field.tagName === 'BUTTON' ? 'toggle' : field.tagName === 'SELECT' ? 'select' : field.type || 'text';
+    const safeToggle = field.tagName === 'BUTTON' && (field.getAttribute('type') === 'button' ||
+      !field.hasAttribute('type') && !(field as unknown as HTMLButtonElement).form);
+    const type = field.tagName === 'BUTTON' ? (safeToggle ? 'toggle' : 'submit') : field.tagName === 'SELECT' ? 'select' : field.type || 'text';
     const labels = Array.from(field.labels || []).map(label => {
       const copy = label.cloneNode(true) as Element;
       copy.querySelectorAll('input,select,textarea,button').forEach(control => control.remove());
@@ -68,6 +70,11 @@ async function inspectPreferenceFields(page: Page, employerName = '') {
     const named = [field.name, field.id].flatMap(id => [document.getElementById(id + '_label')?.textContent || '', id.replace(/^user\./, '').replace(/_/g, ' ')]);
     const eeoId = field.id.match(/__systemfield_eeoc_(gender|race|veteran_status)-labeled-radio-\d+$/)?.[1];
     const prompts = [eeoId?.replace(/_/g, ' ') || '', ...labels, ...labelled, field.getAttribute('aria-label') || '', group?.querySelector('legend')?.textContent || '', ...named];
+    // Ashby groups plain labels and binary buttons without label IDs or a form element.
+    const ashbyEntry = field.closest('.ashby-application-form-field-entry');
+    if (ashbyEntry) for (const child of Array.from(ashbyEntry.children)) {
+      if (child.tagName === 'LABEL') prompts.push(child.textContent || '');
+    }
     // React forms commonly separate their prompt and radio choices into adjacent sibling groups.
     let ancestor: Element | null = field.parentElement;
     for (let depth = 0; ancestor && depth < 3; depth++, ancestor = ancestor.parentElement) {

@@ -147,3 +147,36 @@ test('unanswered encountered question persists without fill until explicit user 
     await stop();
   } finally {await browser.close();}
 });
+
+
+test('controller and catalog reject sibling jobs and cross-origin navigation', async () => {
+  const browser = await chromium.launch({channel:'chrome',headless:true});
+  try {
+    const page = await browser.newPage();
+    await page.route('https://**/*', route => route.fulfill({contentType:'text/html',body:'<label>Website<input></label>'}));
+    await page.goto('https://example.test/job-one/application');
+    const events: CapturedAnswer[] = [];
+    await installAnswerMemory(page,event => {events.push(event);});
+    await page.getByLabel('Website').pressSequentially('one');
+    await page.getByLabel('Website').blur();
+    const count = events.length;
+    for (const url of ['https://example.test/job-two/application','https://other.test/job-one/application']) {
+      await page.goto(url);
+      await page.getByLabel('Website').pressSequentially('forbidden');
+      await page.getByLabel('Website').blur();
+      assert.equal(events.length,count);
+      assert.deepEqual(await scanQuestionCatalog(page),[]);
+    }
+  } finally {await browser.close();}
+});
+
+test('captured employer relationship is a question candidate, never a global employer answer', () => {
+  const event: CapturedAnswer = {question:'Are you a current employee of Example Employer?',question_id:'employment.current_employee',normalized_question:'are you a current employee of example employer',value:'No',source:'user',captured_at:new Date().toISOString(),employer_name:'Example Employer'};
+  const data = mergeCapturedAnswer(emptyPreferences(),event);
+  assert.equal(data.preferences['employment.current_employee'],undefined);
+  assert.equal(data.discovered_answers?.[event.normalized_question]?.value,'No');
+  assert.equal(data.discovered_answers?.[event.normalized_question]?.accepted,false);
+  const generic = mergeCapturedAnswer(emptyPreferences(),{...event,question:'Current employee',normalized_question:'current employee'});
+  assert.equal(generic.preferences['employment.current_employee'],undefined);
+  assert.equal(generic.discovered_answers?.['current employee employer example employer']?.value,'No');
+});

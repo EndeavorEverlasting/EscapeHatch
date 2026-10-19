@@ -3,30 +3,34 @@ import type { Page } from '@playwright/test';
 import { matchQuestion, normalizeQuestion, questions, safeDiscoveredQuestion, parsePreferences, type Preferences } from './src/lib/application-preferences.ts';
 
 export type QuestionDescriptor = { question: string; normalized_question: string; question_id: string | null };
-export type CapturedAnswer = { question: string; normalized_question: string; question_id: string | null; value: string; source: 'user'; captured_at: string };
+export type CapturedAnswer = { question: string; normalized_question: string; question_id: string | null; value: string; source: 'user'; captured_at: string; employer_name?: string };
 export function mergeCapturedAnswer(data: Preferences, event: CapturedAnswer): Preferences {
   if (event.source !== 'user' || typeof event.value !== 'string' || !event.value.trim() || event.value.length > 512 || !Number.isFinite(Date.parse(event.captured_at))) return data;
-  const id = matchQuestion(event.question) || (event.question_id && questions.some(q => q.id === event.question_id) && /^employment\.(current|previous)_employee$/.test(event.question_id) ? event.question_id : null);
+  const matched = matchQuestion(event.question);
+  const relationship = /^employment\.(current|previous)_employee$/.test(matched || event.question_id || '');
+  const id = relationship ? null : matched;
+  const prompt = relationship && matched ? (event.employer_name?.trim() ? event.question + ' (employer: ' + event.employer_name.trim() + ')' : '') : event.question;
   let candidate: Preferences;
   if (id) {
     const owner = questions.find(q => q.id === id)!;
     if (owner.automation_policy !== 'fill_if_explicit_preference' || owner.confirmation_policy !== 'until_changed') return data;
     candidate = { ...data, preferences: { ...data.preferences, [id]: { scope: 'profile_preference', value: event.value.trim(), source: 'user', updated_at: event.captured_at } } };
   } else {
-    if (!safeDiscoveredQuestion(event.question)) return data;
-    const key = normalizeQuestion(event.question);
-    candidate = { ...data, discovered_answers: { ...data.discovered_answers, [key]: { question: event.question, value: event.value.trim(), source: 'user', updated_at: event.captured_at, accepted: false } } };
+    if (!safeDiscoveredQuestion(prompt)) return data;
+    const key = normalizeQuestion(prompt);
+    candidate = { ...data, discovered_answers: { ...data.discovered_answers, [key]: { question: prompt, value: event.value.trim(), source: 'user', updated_at: event.captured_at, accepted: false } } };
   }
   return parsePreferences(candidate) || data;
 }
 
 // Runs in the document before navigation. Values cross the bridge on user events,
 // rather than polling after a React route change has discarded the controls.
-function installCapture(config: { binding: string; nonce: string; aliases: Record<string, string>; blocked: string[]; employer: string }) {
+function installCapture(config: { binding: string; nonce: string; aliases: Record<string, string>; blocked: string[]; employer: string; origin: string; pathname: string }) {
   const state = window as unknown as Record<string, any>;
   const sentinel = config.binding + "_installed";
   if (state[sentinel]) return;
   state[sentinel] = true;
+  const inScope = () => location.origin === config.origin && location.pathname === config.pathname;
   const normalize = (text: string) => text.normalize('NFKC').toLowerCase().replace(/\bu\.s\.(?:a\.)?/g, 'us').replace(/\((?:required|optional|voluntary|select one|please select)\)|\[(?:required|optional)\]|\brequired\b/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
   const describe = (field: HTMLInputElement) => {
     const labels = Array.from(field.labels || []).map(label => { const copy = label.cloneNode(true) as Element; copy.querySelectorAll('input,select,textarea,button').forEach(e => e.remove()); return copy.textContent || ''; });
@@ -36,12 +40,12 @@ function installCapture(config: { binding: string; nonce: string; aliases: Recor
     if (new Set(known.map(p => config.aliases[normalize(p)])).size > 1) return '';
     return known.length ? known[0] : prompts[0] || '';
   };
-  state.__escapeHatchQuestionCatalog = () => Array.from(document.querySelectorAll('input,textarea,select,button[aria-pressed]')).filter(element => {
+  state.__escapeHatchQuestionCatalog = () => !inScope() ? [] : Array.from(document.querySelectorAll('input,textarea,select,button[aria-pressed]')).filter(element => {
     const input = element as HTMLInputElement;
     return !['password','hidden','file','checkbox','submit','reset'].includes(input.type) && input.getClientRects().length;
   }).map(e => describe(e as HTMLInputElement)).filter(Boolean);
   const listener = (event: Event) => {
-    if (!event.isTrusted) return;
+    if (!event.isTrusted || !inScope()) return;
     const target = event.target instanceof Element ? event.target.closest('input,textarea,select,button[aria-pressed]') as HTMLInputElement | null : null;
     if (!target || target.disabled || target.readOnly || !target.getClientRects().length) return;
     const toggle = target.tagName === 'BUTTON' && (target.getAttribute('type') === 'button' || !target.hasAttribute('type') && !(target as unknown as HTMLButtonElement).form) && target.hasAttribute('aria-pressed');
@@ -55,7 +59,7 @@ function installCapture(config: { binding: string; nonce: string; aliases: Recor
     if (!value?.trim() || value.length > 512 || /^(select|choose|please select|select one)(?:\b|$)/i.test(value)) return;
     const send = () => {
       if (toggle && target.getAttribute('aria-pressed') !== 'true') return;
-      void state[config.binding]({ question: prompt, normalized_question: normalized, question_id: canonical || null, value, source: 'user', captured_at: new Date().toISOString() }, config.nonce);
+      void state[config.binding]({ question: prompt, normalized_question: normalized, question_id: canonical || null, value, source: 'user', captured_at: new Date().toISOString(), employer_name: config.employer }, config.nonce);
     };
     if (toggle) setTimeout(send, 0); else send();
   };
@@ -73,13 +77,16 @@ export async function installAnswerMemory(page: Page, onAnswer: (event: Captured
     aliases[normalizeQuestion('Are you a current employee of ' + employerName)] = 'employment.current_employee';
     aliases[normalizeQuestion('Have you previously been employed by ' + employerName)] = 'employment.previous_employee';
   }
+  const scope = new URL(page.url());
   const binding = '__escapeHatchRememberUserAnswer_' + randomUUID().replace(/-/g, '');
   const nonce = randomUUID();
   let enabled = true;
   await page.exposeBinding(binding, async ({ frame }, event: CapturedAnswer, proof: string) => {
-    if (enabled && proof === nonce && frame === page.mainFrame()) await onAnswer(event);
+    if (!enabled || proof !== nonce || frame !== page.mainFrame()) return;
+    const actual = new URL(frame.url());
+    if (actual.origin === scope.origin && actual.pathname === scope.pathname) await onAnswer(event);
   });
-  const config = { binding, nonce, aliases, blocked, employer: employerName };
+  const config = { binding, nonce, aliases, blocked, employer: employerName, origin: scope.origin, pathname: scope.pathname };
   await page.addInitScript(installCapture, config);
   await page.evaluate(installCapture, config);
   return async () => { enabled = false; };

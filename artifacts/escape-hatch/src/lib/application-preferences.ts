@@ -61,6 +61,9 @@ export function optionMatches(value: string, option: string): boolean {
 }
 
 export const preferenceChoices: Record<string, string[]> = {
+  'employment.work_authorization_proof': ['Yes', 'No'],
+  'employment.current_employee': ['Yes', 'No'],
+  'employment.previous_employee': ['Yes', 'No'],
   'eeo.gender': ['Male', 'Female', 'Non-binary', 'Prefer to self-describe', 'Prefer not to answer'],
   'eeo.race_ethnicity': ['American Indian or Alaska Native', 'Asian', 'Black or African American', 'Hispanic or Latino', 'Native Hawaiian or Other Pacific Islander', 'White', 'Two or more races', 'Prefer not to answer'],
   'employment.us_citizenship': ['Yes', 'No'],

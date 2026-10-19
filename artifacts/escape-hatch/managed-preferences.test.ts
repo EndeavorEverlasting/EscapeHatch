@@ -180,3 +180,22 @@ test('professional title suggestions require target evidence and do not mutate t
   assert.deepEqual(titles, ['Systems Engineer', 'Retail Supervisor']);
   assert.deepEqual(suggestProfessionalTitles(titles, '', '', 'Systems Engineer'), []);
 });
+
+test('full name and exact decorated EEO metadata fill without changing existing values or submitting', async () => {
+  const preferences = syntheticPreferences();
+  preferences.preferences['identity.last_name'] = { scope: 'profile_preference', source: 'user', value: 'Candidate', updated_at: preferences.exported_at };
+  preferences.preferences['eeo.veteran_status'] = { scope: 'profile_preference', source: 'user', value: 'I am not a protected veteran', updated_at: preferences.exported_at };
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  try {
+    const page = await browser.newPage();
+    await page.setContent('<form onsubmit="window.submitted=true;return false"><label>Name*<input id="name"></label><label><input type="radio" name="gender" id="fixture__systemfield_eeoc_gender-labeled-radio-0">Male</label><label><input type="radio" name="gender" id="fixture__systemfield_eeoc_gender-labeled-radio-1">Female</label><label><input type="radio" name="veteran" id="fixture__systemfield_eeoc_veteran_status-labeled-radio-0">I am not a protected veteran</label><button>Submit</button></form>');
+    const result = await fillSavedPreferences(page, withCareerPreferences(preferences, null, ''));
+    const explicit = { ...preferences, preferences: { ...preferences.preferences, 'identity.full_name': { scope: 'profile_preference' as const, source: 'user' as const, value: 'Synthetic Middle Candidate', updated_at: preferences.exported_at } } };
+    assert.equal(withCareerPreferences(explicit, null, '').preferences['identity.full_name'].value, 'Synthetic Middle Candidate');
+    assert.ok(result.filled.includes('identity.full_name'));
+    assert.ok(result.filled.includes('eeo.veteran_status'));
+    assert.equal(await page.locator('#name').inputValue(), 'Synthetic Candidate');
+    assert.equal(await page.locator('[name="gender"]').first().isChecked(), true);
+    assert.equal(await page.evaluate(() => (window as unknown as { submitted?: boolean }).submitted), undefined);
+  } finally { await browser.close(); }
+});

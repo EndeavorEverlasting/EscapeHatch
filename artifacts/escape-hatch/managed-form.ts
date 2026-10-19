@@ -44,7 +44,8 @@ async function inspectPreferenceFields(page: Page) {
     const labelled = (field.getAttribute('aria-labelledby') || '').split(/\s+/).map(id => document.getElementById(id)?.textContent || '');
     const group = field.closest('fieldset');
     const named = [field.name, field.id].flatMap(id => [document.getElementById(id + '_label')?.textContent || '', id.replace(/^user\./, '').replace(/_/g, ' ')]);
-    const prompts = [...labels, ...labelled, field.getAttribute('aria-label') || '', group?.querySelector('legend')?.textContent || '', ...named];
+    const eeoId = field.id.match(/__systemfield_eeoc_(gender|race|veteran_status)-labeled-radio-\d+$/)?.[1];
+    const prompts = [eeoId?.replace(/_/g, ' ') || '', ...labels, ...labelled, field.getAttribute('aria-label') || '', group?.querySelector('legend')?.textContent || '', ...named];
     // React forms commonly separate their prompt and radio choices into adjacent sibling groups.
     let ancestor: Element | null = field.parentElement;
     for (let depth = 0; ancestor && depth < 3; depth++, ancestor = ancestor.parentElement) {

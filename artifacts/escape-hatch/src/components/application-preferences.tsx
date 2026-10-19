@@ -44,7 +44,7 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
     <p className="mt-2 text-sm text-muted-foreground">Save your own answers once. Leave unknown facts blank. Review the employer form before submitting. Agreements and certifications stay manual.</p>
     <fieldset disabled={!ready || busy}>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        {questions.filter(q => q.automation_policy === 'fill_if_explicit_preference' && q.confirmation_policy === 'until_changed' && !q.id.startsWith('experience.') && !['education.institution', 'education.credential', 'education.field_of_study', 'education.dates', 'education.details'].includes(q.id)).map(q => {
+        {questions.filter(q => q.automation_policy === 'fill_if_explicit_preference' && q.confirmation_policy === 'until_changed' && q.id !== 'identity.full_name' && !q.id.startsWith('experience.') && !['education.institution', 'education.credential', 'education.field_of_study', 'education.dates', 'education.details'].includes(q.id)).map(q => {
           const label = q.id === 'identity.title' ? 'Salutation (Mr., Ms., Dr.)' : q.id === 'identity.job_title' ? 'Target opportunity title' : q.id === 'identity.professional_title' ? 'Selected professional title' : q.aliases[0];
           const value = data.preferences[q.id]?.value || '';
           const choices = q.id === 'identity.job_title' ? [...new Set([...(data.job_titles || []), ...(value ? [value] : [])])] : q.id === 'identity.professional_title' ? [...new Set([...(data.professional_titles || []), ...(value ? [value] : [])])] : preferenceChoices[q.id];
@@ -65,16 +65,31 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
           </label>;
         })}
       </div>
-      <div className="mt-4 rounded border border-border p-3">
-        <h3 className="font-bold">Suggested professional titles for this opportunity</h3>
-        <p>Deterministic word matching against the role, posting and reviewed experience. Suggestions are not a qualification assessment. Choose a title, then Save Preferences; no selection changes automatically.</p>
-        {suggestProfessionalTitles(data.professional_titles || [], currentRole || '', currentPosting, reviewedExperience).map(item => <div key={item.title}>
-          <button type="button" onClick={() => {
-            setDirty(true); onEdit?.(); setData(current => ({ ...current, preferences: { ...current.preferences, 'identity.professional_title': { scope: 'profile_preference', source: 'user', value: item.title, updated_at: new Date().toISOString() } } }));
-          }}>Use professional title: {item.title}</button><p className="text-xs">{item.evidence}</p>
-        </div>)}
-        {!suggestProfessionalTitles(data.professional_titles || [], currentRole || '', currentPosting, reviewedExperience).length && <p>No matching target evidence yet. Add your titles and the opportunity posting.</p>}
-      </div>
+      <section className="mt-5 rounded-xl border border-primary/25 bg-secondary/30 p-4" aria-label="Professional title suggestions">
+        <h3 className="font-display text-xl">Choose a professional title</h3>
+        <p className="mt-2 text-sm">Choose a suggestion below, or use the Selected professional title dropdown above. Save Preferences to keep your choice.</p>
+        <details className="my-3 rounded-lg border border-border bg-card p-3 text-sm">
+          <summary className="cursor-pointer font-semibold">How suggestions work</summary>
+          <p className="mt-2">Suggestions compare your saved titles with the selected opportunity, its employer posting, and your reviewed work record. Choose the opportunity in Saved opportunity. Edit its employer posting and your reviewed work record in Reusable work and education. Add your own titles using New professional title.</p>
+          <p className="mt-2">Matching evidence is read-only. Suggestions use deterministic word matching and do not assess qualifications or change your choice automatically.</p>
+        </details>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {suggestProfessionalTitles(data.professional_titles || [], currentRole || '', currentPosting, reviewedExperience).map(item => {
+            const selected = data.preferences['identity.professional_title']?.value === item.title;
+            return <div key={item.title} className={'flex flex-col rounded-xl border-2 p-4 ' + (selected ? 'border-primary bg-primary/5' : 'border-border bg-card')}>
+              <p className="font-semibold">{item.title}</p>
+              <p className="mt-2 flex-1 text-xs leading-5 text-muted-foreground">{item.evidence}</p>
+              <button type="button" aria-label={'Choose professional title: ' + item.title} aria-pressed={selected}
+                className={'mt-3 rounded-lg border px-3 py-2 text-sm font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ' + (selected ? 'border-primary bg-primary text-primary-foreground' : 'border-primary text-primary hover:bg-primary/10')}
+                onClick={() => {
+                  setDirty(true); onEdit?.(); setData(current => ({ ...current, preferences: { ...current.preferences, 'identity.professional_title': { scope: 'profile_preference', source: 'user', value: item.title, updated_at: new Date().toISOString() } } }));
+                  setMessage('Title selected. Save Preferences to keep this choice.');
+                }}>{selected ? 'Selected' : 'Choose this title'}</button>
+            </div>;
+          })}
+        </div>
+        {!suggestProfessionalTitles(data.professional_titles || [], currentRole || '', currentPosting, reviewedExperience).length && <p className="mt-3 text-sm">No matching target evidence yet. Add your titles and the opportunity posting.</p>}
+      </section>
       <div className="mt-4 flex flex-wrap gap-3">
         <label className="block w-full">New professional title<input className="mt-1 block w-full rounded border border-input bg-background p-2" aria-label="New professional title" maxLength={160} value={newTitle} onChange={event => setNewTitle(event.target.value)} /></label>
         <button type="button" disabled={!newTitle.trim()} onClick={() => {

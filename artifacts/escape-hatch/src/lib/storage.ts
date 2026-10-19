@@ -1,3 +1,5 @@
+import { parseSubmissionEvidence, type SubmissionEvidence } from './submission-reconciliation.ts';
+
 export type Profile = {
   name_prefix: string;
   first_name: string;
@@ -35,6 +37,7 @@ export type Application = {
   notes: string;
   nextAction: string;
   jobDescription?: string;
+  submissionEvidence?: SubmissionEvidence;
   updatedAt: string;
 };
 
@@ -127,7 +130,8 @@ export function parseAnswersStorage(value: unknown): AnswerSnippet[] | null {
 export function parseApplicationsStorage(value: unknown): Application[] | null {
   if (!Array.isArray(value)) return null;
   const applications = value.map((item) => {
-    if (!isRecord(item) || !hasOnlyKeys(item, ['id', 'company', 'role', 'url', 'status', 'priority', 'notes', 'nextAction', 'updatedAt', 'jobDescription'])) return null;
+    if (!isRecord(item) || !hasOnlyKeys(item, ['id', 'company', 'role', 'url', 'status', 'priority', 'notes', 'nextAction', 'updatedAt', 'jobDescription', 'submissionEvidence'])) return null;
+    if (item.submissionEvidence !== undefined && !parseSubmissionEvidence(item.submissionEvidence)) return null;
     if (!isText(item.id) || !item.id.trim() || !isText(item.company) || !item.company.trim()) return null;
     if (!isText(item.role) || !item.role.trim() || !isText(item.url)) return null;
     if (!isText(item.status) || !applicationStatuses.includes(item.status as ApplicationStatus)) return null;

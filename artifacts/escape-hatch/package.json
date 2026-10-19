@@ -8,11 +8,11 @@
     "build": "vite build --config vite.config.ts",
     "serve": "vite preview --config vite.config.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test:unit": "tsx --test src/lib/storage.test.ts src/lib/assist.test.ts src/lib/assist-session.test.ts",
+    "test:unit": "tsx --test src/lib/storage.test.ts src/lib/assist.test.ts src/lib/assist-session.test.ts src/lib/submission-reconciliation.test.ts",
     "test:browser": "playwright test --config=playwright.config.ts",
     "test": "npm run test:unit && npm run test:browser",
     "test:runtime-control": "node --experimental-strip-types --test runtime-control.test.ts",
-    "test:managed-assist": "node --experimental-strip-types --test browser-assist-control.test.ts managed-preferences.test.ts managed-preparation-driver.test.ts opportunity-documents.test.ts",
+    "test:managed-assist": "node --experimental-strip-types --test browser-assist-control.test.ts managed-preferences.test.ts managed-preparation-driver.test.ts opportunity-documents.test.ts managed-answer-memory.test.ts managed-submission-observer.test.ts managed-listeners.test.ts",
     "test:tracker": "tsx --test src/lib/tracker-bridge.test.ts src/lib/source-bridge.test.ts"
   },
   "devDependencies": {

@@ -10,6 +10,7 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [clearRequested, setClearRequested] = useState(false);
+  const [removedQuestions, setRemovedQuestions] = useState<string[]>([]);
   async function load() {
     try {
       const response = await fetch(API, { credentials: 'same-origin' });
@@ -26,10 +27,10 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
       const response = await fetch(API + (clear ? '/clear' : ''), {
         method: 'POST', credentials: 'same-origin',
         headers: { 'content-type': 'application/json', 'x-escapehatch-operator-action': 'confirmed' },
-        body: JSON.stringify(clear ? {} : { preferences: { ...data, exported_at: new Date().toISOString() } }),
+        body: JSON.stringify(clear ? {} : { preferences: { ...data, exported_at: new Date().toISOString() }, removedQuestions }),
       });
       if (!response.ok) throw new Error();
-      await load(); setDirty(false); setClearRequested(false);
+      await load(); setDirty(false); setClearRequested(false); setRemovedQuestions([]);
       setMessage(clear ? 'Saved preferences cleared on this computer.' : 'Preferences saved on this computer. Fill will reuse these explicit answers.');
     } catch { setMessage('Save failed. Your edits remain here; no successful persistence is claimed.'); }
     finally { setBusy(false); }
@@ -49,6 +50,7 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
           const value = data.preferences[q.id]?.value || '';
           const choices = q.id === 'identity.job_title' ? [...new Set([...(data.job_titles || []), ...(value ? [value] : [])])] : q.id === 'identity.professional_title' ? [...new Set([...(data.professional_titles || []), ...(value ? [value] : [])])] : preferenceChoices[q.id];
           const change = (value: string) => {
+            setRemovedQuestions(current => value.trim() ? current.filter(id => id !== q.id) : [...new Set([...current, q.id])]);
             setDirty(true); onEdit?.();
             setData(current => { const preferences = { ...current.preferences };
               if (value.trim()) preferences[q.id] = { scope: 'profile_preference', source: 'user', value, updated_at: new Date().toISOString() };
@@ -65,6 +67,23 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
           </label>;
         })}
       </div>
+      <label className="mt-4 flex items-start gap-2 text-sm"><input type="checkbox" checked={data.optional_omissions?.includes('identity.pronouns') || false}
+        onChange={event => { const omit = event.target.checked; setDirty(true); onEdit?.(); setData(current => ({ ...current,
+          optional_omissions: omit ? [...new Set([...(current.optional_omissions || []), 'identity.pronouns'])] : (current.optional_omissions || []).filter(id => id !== 'identity.pronouns') })); }} />Leave pronoun fields blank when optional; use my saved answer when required</label>
+      {!!Object.keys(data.discovered_answers || {}).length && <section className="mt-5 rounded-lg border border-border p-4" aria-label="Questions remembered from applications">
+        <h3 className="font-display text-xl">Questions remembered from applications</h3>
+        <p className="mt-2 text-sm">Answer a new question here once and save it for exact-question reuse. Agreements and certifications stay manual.</p>
+        {Object.entries(data.discovered_answers || {}).map(([key, answer]) => <div key={key} className="mt-3">
+          <label className="block text-sm">{answer.question}<input aria-label={'Saved answer: ' + answer.question} value={answer.value}
+            className="mt-1 block w-full rounded border border-input bg-background p-2" maxLength={512}
+            onChange={event => { const value = event.target.value; setDirty(true); onEdit?.(); setData(current => ({ ...current,
+              discovered_answers: { ...current.discovered_answers, [key]: { ...answer, value, source: value.trim() ? 'user' : 'observed_question',
+                accepted: !!value.trim(), updated_at: new Date().toISOString() } } })); }} /></label>
+          <label className="mt-1 flex gap-2 text-xs"><input type="checkbox" checked={answer.accepted} disabled={!answer.value.trim()}
+            onChange={event => { const accepted = event.target.checked; setDirty(true); onEdit?.(); setData(current => ({ ...current,
+              discovered_answers: { ...current.discovered_answers, [key]: { ...answer, accepted, updated_at: new Date().toISOString() } } })); }} />Reuse this exact answer on later applications</label>
+        </div>)}
+      </section>}
       <section className="mt-5 rounded-xl border border-primary/25 bg-secondary/30 p-4" aria-label="Professional title suggestions">
         <h3 className="font-display text-xl">Choose a professional title</h3>
         <p className="mt-2 text-sm">Choose a suggestion below, or use the Selected professional title dropdown above. Save Preferences to keep your choice.</p>

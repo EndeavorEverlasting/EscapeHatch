@@ -133,7 +133,7 @@ export async function fillSavedPreferences(page: Page, preferences: Preferences,
     if (['hidden', 'file', 'checkbox', 'password', 'submit', 'button', 'reset'].includes(descriptor.type)) continue;
     if (ids[index].length !== 1) { result.skipped.push('unmapped_or_ambiguous'); continue; }
     const id = ids[index][0];
-    if (preferences.optional_omissions?.includes(id) && !await control.evaluate(element => (element as HTMLInputElement).required === true || element.getAttribute('aria-required') === 'true')) { result.skipped.push(id + ':optional_omitted'); continue; }
+    if (preferences.optional_omissions?.includes(id) && !await control.evaluate(element => (element as HTMLInputElement).required === true || (element as Element).getAttribute('aria-required') === 'true')) { result.skipped.push(id + ':optional_omitted'); continue; }
     let value = id.startsWith('discovered:') ? discoveredValue(id.slice(11), preferences) : reusableValue(id, preferences);
     if (id === 'identity.phone' && value) value = internationalPhone(value, reusableValue('identity.country', preferences) || '');
     // Conditional detail is applicable only when a clearance is held. Never invent a clearance.
@@ -187,7 +187,7 @@ export async function fillSavedPreferences(page: Page, preferences: Preferences,
             await option.waitFor({ state: 'visible', timeout: 2500 });
             if (await option.count() !== 1) throw new Error('ambiguous option');
             await option.click({ timeout: 2500 });
-            const selected = await control.evaluate(element => element.closest('.Select')?.querySelector('[role="option"][aria-selected="true"]')?.textContent?.trim());
+            const selected = await control.evaluate(element => (element as Element).closest('.Select')?.querySelector('[role="option"][aria-selected="true"]')?.textContent?.trim());
             if (!selected || !optionMatches(value, selected)) throw new Error('selection not retained');
           } catch {
             await control.fill(existing, { timeout: 2500 });

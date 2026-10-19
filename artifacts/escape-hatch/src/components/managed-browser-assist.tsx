@@ -1,4 +1,5 @@
 import { OpportunityDocuments, useOpportunityDocuments } from './opportunity-documents';
+import { reconcileSubmissionReceipts } from '@/lib/submission-reconciliation';
 import type { AssistProfile } from '@/lib/assist-contract';
 import { CareerRecords } from './career-records';
 import { useEffect, useRef, useState, type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
@@ -36,6 +37,8 @@ type ServerResponse = {
   pagesPrepared?: number;
   intermediateSteps?: number;
   pendingManual?: string[];
+  listeners?: { recordingAnswers: boolean; savedAnswers: number; opportunityId: string; error: string;
+    submission: { state: string; reason: string; receipt: unknown | null } | null; receipts: unknown[] };
 };
 
 async function request(endpoint: string, body?: object): Promise<ServerResponse> {
@@ -84,6 +87,8 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const [recordingMessage, setRecordingMessage] = useState('');
   const [browserOpen, setBrowserOpen] = useState(false);
   const [preparation, setPreparation] = useState<PreparationResult | null>(null);
+  const [listenerStatus, setListenerStatus] = useState<ServerResponse['listeners']>();
+  const seenAnswers = useRef(0);
 
   useEffect(() => {
     let active = true;
@@ -109,7 +114,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   }, [setApplications]);
 
   useEffect(() => {
-    if (operatorSelected.current) return;
+    if (operatorSelected.current || browserOpen) return;
     const requestedId = new URLSearchParams(window.location.search).get('opportunityId');
     const permitted = (item: Application) => !!item.url && item.status !== 'applied' && item.status !== 'closed';
     const requested = applications.find((item) => item.id === requestedId && permitted(item));
@@ -121,7 +126,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       setSelectedOpportunityId(next.id);
       setUrl(next.url);
     }
-  }, [applications]);
+  }, [applications, browserOpen]);
 
   useEffect(() => {
     let active = true;
@@ -129,6 +134,8 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       if (active) {
         setStatus(result.state || 'idle');
         setBrowserOpen(Boolean(result.browserOpen));
+        setListenerStatus(result.listeners);
+        if (result.listeners?.receipts?.length) setApplications(current => reconcileSubmissionReceipts(current, result.listeners!.receipts));
         if (result.preparationState) {
           setPreparation({
             state: result.preparationState,
@@ -145,6 +152,37 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       .finally(() => { if (active) setRuntimeChecked(true); });
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    if (!browserOpen) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    async function observe() {
+      try {
+        const result = await request('/status');
+        if (cancelled) return;
+        setListenerStatus(result.listeners);
+        if (result.listeners) {
+          setApplications(current => reconcileSubmissionReceipts(current, result.listeners!.receipts));
+          if (result.listeners.savedAnswers !== seenAnswers.current) {
+            seenAnswers.current = result.listeners.savedAnswers;
+            setPreferencesRefresh(value => value + 1);
+          }
+        }
+        if (!result.browserOpen) { setBrowserOpen(false); return; }
+      } catch { if (!cancelled) setRecordingMessage('Listener connection interrupted. No submission is assumed.'); }
+      if (!cancelled) timer = setTimeout(observe, 1500);
+    }
+    void observe();
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [browserOpen, setApplications]);
+
+  async function updateListeners(change: { recordAnswers?: boolean; trackSubmission?: boolean }) {
+    try {
+      const result = await request('/listeners', { ...change, opportunityId: selectedOpportunityId, url });
+      setListenerStatus(result.listeners);
+    } catch (error) { setRecordingMessage(error instanceof Error ? error.message : 'Listener update failed.'); }
+  }
 
   useEffect(() => {
     if (!explicitLaunchId || autoLaunchAttempted.current || !trackerChecked || !runtimeChecked) return;
@@ -210,7 +248,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         if (applications.some((item) => item.url === url && (item.status === 'applied' || item.status === 'closed'))) {
           throw new Error('This opportunity is already applied or closed. Do not reapply.');
         }
-        body = { url, opportunityId: opportunity?.id || '' };
+        body = { url, opportunityId: opportunity?.id || '', employerName: opportunity?.company || '' };
       } else if (action === 'fill') body = { profile, careerProfile: assistProfile, targetRole: applications.find(item => item.id === selectedOpportunityId)?.role || '', employerName: applications.find(item => item.id === selectedOpportunityId)?.company || '' };
       else if (action === 'attach') {
         if (!documents.canUpload) throw new Error('Save opportunity documents and complete required review before uploading.');
@@ -266,6 +304,9 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
             : item);
           return items; // A custom URL never creates an unverified employer ledger record.
         });
+      }
+      if (action === 'fill' || action === 'launch') {
+        await request('/questions', {}).then(() => setPreferencesRefresh(value => value + 1)).catch(() => {});
       }
       if (action === 'fill') setMessage(
         (result.filled?.length ? 'Filled: ' + result.filled.join(', ') + '. ' : 'No fields filled. ') +
@@ -383,6 +424,16 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         </label>
         <p className="text-xs">While enabled and this page stays open, selected native dropdown/radio answers are saved locally for reuse. Protected-veteran status and military service are separate facts. Other fields and custom widgets are not recorded.</p>
         <p role="status" className="text-xs">{recordingMessage}</p>
+        <section className="mt-4 rounded-lg border border-border bg-card p-3 text-sm" aria-label="Answer memory and submission tracking">
+          <label className="flex items-start gap-2"><input type="checkbox" checked={listenerStatus?.recordingAnswers ?? false} disabled={!browserOpen || busy}
+            onChange={event => void updateListeners({ recordAnswers: event.target.checked })} />Remember answers I enter in this application</label>
+          <p className="mt-1 text-xs text-muted-foreground">Recognized answers are saved locally. New questions appear in reusable answers for review. Passwords, files, agreements and certifications are excluded.</p>
+          <label className="mt-3 flex items-start gap-2"><input type="checkbox" checked={!!listenerStatus?.submission && !['DISARMED', 'BLOCKED'].includes(listenerStatus.submission.state)}
+            disabled={!browserOpen || busy || listenerStatus?.submission?.state === 'CONFIRMED'} onChange={event => void updateListeners({ trackSubmission: event.target.checked })} />Track my submission when I click Submit in Chrome</label>
+          <p className="mt-2" role="status" data-testid="submission-listener-status">{listenerStatus?.error || listenerStatus?.submission?.reason || 'Launch an application to connect tracking. Final submission stays yours.'}</p>
+          {listenerStatus?.submission?.state === 'CONFIRMED' && listenerStatus.receipts?.some(receipt => !!receipt && typeof receipt === 'object' && 'opportunityId' in receipt && receipt.opportunityId === selectedOpportunityId) && <p className="mt-2 font-semibold">Employer confirmation received. This application is marked Applied in your local queue.</p>}
+          <p className="mt-2 text-xs text-muted-foreground">A click or page change alone never marks an application Applied. Tracking waits for explicit application-received confirmation. External tracker sync is separate.</p>
+        </section>
         <div className="mt-4 flex flex-wrap gap-2">
           <button type="button" className={secondary} disabled={busy || !browserOpen} onClick={() => void run('fill')} data-testid="button-managed-fill">
             Fill approved profile and answers

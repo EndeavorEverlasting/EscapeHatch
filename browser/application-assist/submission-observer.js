@@ -40,13 +40,15 @@
     const norm = text => text.replace(/\s+/g, ' ').trim().replaceAll('’', "'");
     const controls = () => Array.from(document.querySelectorAll('#root button')).filter(node => visible(node) && /^submit application$/i.test(norm(node.innerText)));
     const inspect = () => {
-      const headings = Array.from(document.querySelectorAll('#root h1, #root h2, #root [role="status"]')).filter(visible);
-      const receipt = /^(?:we(?:'ve| have) received your application|your application (?:has been|was) (?:successfully )?submitted|application submitted successfully)[.!]?$/i;
+      const headings = Array.from(document.querySelectorAll('#root h1, #root h2, #root [role="status"], #root [role="alert"], #root div')).filter(visible);
+      const receipt = /^(?:Success )?(?:we(?:'ve| have) received your application|your application (?:has been|was) (?:successfully )?submitted|application submitted successfully)[.!]?(?: We'll contact you if there are next steps\.)?$/i;
       const buttons = controls();
-      const receiptText = headings.some(node => receipt.test(norm(node.innerText)));
-      return { success: buttons.length === 0 && receiptText, receiptText,
+      const matches = headings.filter(node => receipt.test(norm(node.innerText)));
+      const distinct = matches.filter(node => !matches.some(other => other !== node && node.contains(other)));
+      const receiptText = distinct.length > 0;
+      return { success: buttons.length === 0 && distinct.length === 1, receiptText,
         terminalCount: buttons.length, enabled: buttons.length === 1 && !buttons[0].matches(':disabled, [aria-disabled="true"]'),
-        invalid: Array.from(document.querySelectorAll('[aria-invalid="true"], [role="alert"]')).some(node => visible(node) && (node.getAttribute('aria-invalid') === 'true' || /required|invalid|error|failed|could not|unable|try again/i.test(node.innerText))) };
+        invalid: Array.from(document.querySelectorAll('#root div')).some(node => visible(node) && /^we couldn.t submit your application\b/i.test(norm(node.innerText))) || Array.from(document.querySelectorAll('[aria-invalid="true"], [role="alert"]')).some(node => visible(node) && (node.getAttribute('aria-invalid') === 'true' || /required|invalid|error|failed|could not|unable|try again/i.test(node.innerText))) };
     };
     let stopped = false;
     const report = (kind, trusted = false) => {

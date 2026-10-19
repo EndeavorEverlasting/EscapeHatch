@@ -15,6 +15,8 @@ if(mode==='reload') { location.href='/job/confirmation'; return; }
 if(mode==='drift') { location.href='/other-job'; return; }
 if(mode==='origin') { location.href=location.origin.replace('127.0.0.1','localhost')+'/job/confirmation'; return; }
 if(mode==='pending'||mode==='invalid') return;
+if(mode==='spam') { document.querySelector('#root').insertAdjacentHTML('beforeend', "<div>We couldn&apos;t submit your application<p>Your application submission was flagged as possible spam.</p></div>"); return; }
+if(mode==='ashby-success') { document.querySelector('#root').innerHTML="<h1>Product Operations Lead</h1><div><div>Success</div><div>Your application was successfully submitted. We'll contact you if there are next steps.</div></div>"; return; }
 if(mode==='reject') { document.querySelector('#root').insertAdjacentHTML('beforeend','<p role="alert">Unable to submit. Try again.</p>'); return; }
 if(mode==='ambiguous') { document.querySelector('#root').innerHTML='<h1>Thanks!</h1>'; return; }
 if(mode==='posting') { document.querySelector('#root').innerHTML='<article>We have received your application.</article><h1>Apply</h1>'; return; }
@@ -40,7 +42,7 @@ async function fixture(mode = 'spa') {
   const observer = await installManagedSubmissionObserver(page, {
     opportunityId: 'synthetic-opportunity', sessionId: 'synthetic-session',
     applicationUrl: `${origin}/job`, submitSelector: '#submit',
-    successSelector: '#root h1, #root h2, #root [role="status"]',
+    successSelector: '#root h1, #root h2, #root [role="status"], #root div',
     confirmationPaths: ['/job/confirmation'], onChange: state => changes.push(state.state),
   });
   return { page, observer, changes };
@@ -58,7 +60,7 @@ test('unarmed user click does not record submission', async () => {
   finally { await page.close(); }
 });
 
-for (const mode of ['spa', 'reload']) test(`${mode} receipt follows human click and emits one minimal idempotent receipt`, async () => {
+for (const mode of ['spa', 'reload', 'ashby-success']) test(`${mode} receipt follows human click and emits one minimal idempotent receipt`, async () => {
   const { page, observer, changes } = await fixture(mode);
   try {
     await observer.arm(); await click(page);
@@ -82,7 +84,7 @@ for (const mode of ['pending', 'ambiguous', 'posting']) test(`${mode} is not con
   finally { await page.close(); }
 });
 
-for (const mode of ['invalid', 'reject']) test(`${mode} remains validation failed`, async () => {
+for (const mode of ['invalid', 'reject', 'spam']) test(`${mode} remains validation failed`, async () => {
   const { page, observer } = await fixture(mode);
   try { await observer.arm(); await click(page); await until(() => observer.snapshot().state === 'VALIDATION_FAILED'); assert.equal(observer.snapshot().receipt, null); }
   finally { await page.close(); }

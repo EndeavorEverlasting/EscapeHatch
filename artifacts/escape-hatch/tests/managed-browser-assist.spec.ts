@@ -2,14 +2,41 @@ import { createHash } from 'node:crypto';
 import { expect, test } from '@playwright/test';
 import { trackerOpportunityId } from '../src/lib/tracker-bridge';
 
+test('only persisted bound submission evidence advances the queue and survives reload', async ({ page }) => {
+  let confirmed = false;
+  const receipt = { opportunityId: 'synthetic-receipt', sessionId: 'session', attemptId: 'attempt',
+    applicationOrigin: 'https://jobs.ashbyhq.com', applicationPath: '/synthetic/receipt/application',
+    observedAt: '2026-10-19T12:00:00Z', source: 'same_session_page_confirmation',
+    evidenceCode: 'APPLICATION_RECEIVED_AFTER_USER_SUBMIT' };
+  await page.route('**/__escapehatch/managed-assist/**', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+    ok: true, state: 'application_form_open_review_required', browserOpen: true,
+    listeners: { recordingAnswers: true, savedAnswers: 0, opportunityId: receipt.opportunityId, error: '',
+      submission: { state: confirmed ? 'CONFIRMED' : 'PENDING', reason: 'Synthetic observation' }, receipts: confirmed ? [receipt] : [] },
+  }) }));
+  await mockDocuments(page);
+  await page.goto('/assist');
+  await page.evaluate(() => localStorage.setItem('escape-hatch-applications', JSON.stringify([{ id: 'synthetic-receipt',
+    company: 'Synthetic', role: 'Role', url: 'https://jobs.ashbyhq.com/synthetic/receipt', status: 'saved',
+    priority: 'normal', notes: '', nextAction: '', updatedAt: '2026-10-18T12:00:00Z' }])));
+  await page.reload();
+  await expect(page.getByText('Synthetic observation')).toBeVisible();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('escape-hatch-applications')!)[0].status)).toBe('saved');
+  confirmed = true;
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('escape-hatch-applications')!)[0].status)).toBe('applied');
+  await page.reload();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('escape-hatch-applications')!)[0].submissionEvidence.attemptId)).toBe('attempt');
+});
+
 test('cockpit owns Launch, Fill and Attach without a Chrome extension', async ({ page }) => {
   const seen: string[] = [];
+  let launched = false;
   await page.route('**/__escapehatch/managed-assist/**', async (route) => {
     const url = new URL(route.request().url());
     const action = url.pathname.split('/').at(-1) || '';
     seen.push(action);
+    if (action === 'launch') launched = true;
     const body = action === 'status'
-      ? { ok: true, state: 'idle', browserOpen: false }
+      ? { ok: true, state: 'idle', browserOpen: launched }
       : { ok: true, state: action === 'launch' ? 'application_open_review_required' :
           action === 'fill' ? 'fields_filled_review_required' : 'attachments_staged_review_required',
           filled: [], skipped: [], attachments: { resume: 'attached_to_input_review_required' } };
@@ -72,7 +99,7 @@ test('Home hands the ready opportunity into managed Chrome instead of reopening 
   const launched = page.waitForRequest('**/__escapehatch/managed-assist/launch');
   await page.getByTestId('button-managed-launch').click();
   const body = (await launched).postDataJSON();
-  expect(body).toEqual({ url: readyUrl, opportunityId: 'tracker-ready' });
+  expect(body).toEqual({ url: readyUrl, opportunityId: 'tracker-ready', employerName: 'Synthetic Next' });
   await expect(page.getByText('Application opened — sign in if requested')).toBeVisible();
   await page.goto('/assist?opportunityId=tracker-submitted');
   await expect(page.getByTestId('managed-job-url')).toHaveValue(readyUrl);
@@ -157,7 +184,7 @@ test('one explicit Home click opens the verified Thyme Care job and fills approv
   await expect(page.getByTestId('managed-job-url')).toHaveValue(row.applyUrl);
   await expect(page.getByTestId('managed-browser-feedback')).toContainText('Filled: first_name');
   await expect(page.getByTestId('managed-browser-feedback')).toContainText('Skipped: unknown_question');
-  expect(launches).toEqual([{ url: row.applyUrl, opportunityId: trackerOpportunityId(row) }]);
+  expect(launches).toEqual([{ url: row.applyUrl, opportunityId: trackerOpportunityId(row), employerName: 'Thyme Care' }]);
   expect(actions.filter((action) => ['launch', 'fill', 'prepare', 'attach'].includes(action))).toEqual(['launch', 'fill']);
   assertNeverSubmitted(actions);
   await page.reload();

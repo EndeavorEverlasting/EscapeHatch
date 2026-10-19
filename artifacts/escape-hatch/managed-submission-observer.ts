@@ -111,10 +111,13 @@ export async function installManagedSubmissionObserver(page: Page, options: Subm
       const controls = terminals();
       const containers = Array.from(document.querySelectorAll(successSelector)).filter(visible);
       // Explicit receipt language only. Generic Thanks, a URL or a hidden posting quote fails closed.
-      const receiptPattern = /^(?:we(?:'ve| have) received your application|your application (?:has been|was) (?:successfully )?submitted|application submitted successfully)[.!]?$/i;
-      const receiptText = containers.some(element => receiptPattern.test(normalize((element as HTMLElement).innerText).replaceAll('’', "'")));
-      const success = controls.length === 0 && containers.length === 1 && receiptText;
-      const invalid = Array.from(document.querySelectorAll('[role="alert"], [aria-invalid="true"], .ashby-application-form-error')).some(element => visible(element) && (element.getAttribute('aria-invalid') === 'true' || /required|invalid|error|failed|could not|unable|try again/i.test((element as HTMLElement).innerText)));
+      const receiptPattern = /^(?:Success )?(?:we(?:'ve| have) received your application|your application (?:has been|was) (?:successfully )?submitted|application submitted successfully)[.!]?(?: We'll contact you if there are next steps\.)?$/i;
+      const matches = containers.filter(element => receiptPattern.test(normalize((element as HTMLElement).innerText).replaceAll('\u2019', "'")));
+      const distinct = matches.filter(element => !matches.some(other => other !== element && element.contains(other)));
+      const receiptText = distinct.length > 0;
+      const success = controls.length === 0 && distinct.length === 1;
+      const rejected = Array.from(document.querySelectorAll('#root div')).some(element => visible(element) && /^we couldn.t submit your application\b/i.test(normalize((element as HTMLElement).innerText)));
+      const invalid = rejected || Array.from(document.querySelectorAll('[role="alert"], [aria-invalid="true"], .ashby-application-form-error')).some(element => visible(element) && (element.getAttribute('aria-invalid') === 'true' || /required|invalid|error|failed|could not|couldn.t|unable|try again|possible spam|flagged/i.test((element as HTMLElement).innerText)));
       void report({ kind, url: location.href, documentId, success, invalid, nonce });
       return { success, invalid, receiptText, terminalCount: controls.length, terminalEnabled: controls.length === 1 && !controls[0].matches(':disabled, [aria-disabled="true"]') };
     };

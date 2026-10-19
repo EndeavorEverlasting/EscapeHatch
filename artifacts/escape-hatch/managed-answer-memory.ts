@@ -23,8 +23,9 @@ export function mergeCapturedAnswer(data: Preferences, event: CapturedAnswer): P
 // rather than polling after a React route change has discarded the controls.
 function installCapture(config: { binding: string; nonce: string; aliases: Record<string, string>; blocked: string[]; employer: string }) {
   const state = window as unknown as Record<string, any>;
-  if (state.__escapeHatchAnswerMemory) return;
-  state.__escapeHatchAnswerMemory = true;
+  const sentinel = config.binding + "_installed";
+  if (state[sentinel]) return;
+  state[sentinel] = true;
   const normalize = (text: string) => text.normalize('NFKC').toLowerCase().replace(/\bu\.s\.(?:a\.)?/g, 'us').replace(/\((?:required|optional|voluntary|select one|please select)\)|\[(?:required|optional)\]|\brequired\b/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
   const describe = (field: HTMLInputElement) => {
     const labels = Array.from(field.labels || []).map(label => { const copy = label.cloneNode(true) as Element; copy.querySelectorAll('input,select,textarea,button').forEach(e => e.remove()); return copy.textContent || ''; });
@@ -39,7 +40,7 @@ function installCapture(config: { binding: string; nonce: string; aliases: Recor
     return !['password','hidden','file','checkbox','submit','reset'].includes(input.type) && input.getClientRects().length;
   }).map(e => describe(e as HTMLInputElement)).filter(Boolean);
   const listener = (event: Event) => {
-    if (!event.isTrusted || !state.__escapeHatchAnswerMemory) return;
+    if (!event.isTrusted) return;
     const target = event.target instanceof Element ? event.target.closest('input,textarea,select,button[aria-pressed]') as HTMLInputElement | null : null;
     if (!target || target.disabled || target.readOnly || !target.getClientRects().length) return;
     const toggle = target.tagName === 'BUTTON' && (target.getAttribute('type') === 'button' || !target.hasAttribute('type') && !(target as unknown as HTMLButtonElement).form) && target.hasAttribute('aria-pressed');
@@ -71,7 +72,7 @@ export async function installAnswerMemory(page: Page, onAnswer: (event: Captured
     aliases[normalizeQuestion('Are you a current employee of ' + employerName)] = 'employment.current_employee';
     aliases[normalizeQuestion('Have you previously been employed by ' + employerName)] = 'employment.previous_employee';
   }
-  const binding = '__escapeHatchRememberUserAnswer';
+  const binding = '__escapeHatchRememberUserAnswer_' + randomUUID().replace(/-/g, '');
   const nonce = randomUUID();
   let enabled = true;
   await page.exposeBinding(binding, async ({ frame }, event: CapturedAnswer, proof: string) => {
@@ -80,7 +81,7 @@ export async function installAnswerMemory(page: Page, onAnswer: (event: Captured
   const config = { binding, nonce, aliases, blocked, employer: employerName };
   await page.addInitScript(installCapture, config);
   await page.evaluate(installCapture, config);
-  return async () => { enabled = false; if (!page.isClosed()) await page.evaluate(() => { (window as unknown as Record<string, any>).__escapeHatchAnswerMemory = false; }); };
+  return async () => { enabled = false; };
 }
 export async function scanQuestionCatalog(page: Page): Promise<{ question: string; normalized_question: string; question_id: string | null }[]> {
   const prompts = await page.evaluate(() => (window as unknown as { __escapeHatchQuestionCatalog?: () => string[] }).__escapeHatchQuestionCatalog?.() || []);

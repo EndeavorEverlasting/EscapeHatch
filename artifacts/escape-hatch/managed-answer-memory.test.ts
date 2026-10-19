@@ -33,7 +33,8 @@ test('trusted edits cross event binding before SPA navigation; script changes an
     await page.locator('#web').evaluate(e => { (e as HTMLInputElement).value='https://untrusted.test'; e.dispatchEvent(new Event('input',{bubbles:true})); });
     await page.evaluate(async () => {
       const windowBridge = window as unknown as Record<string, any>;
-      await windowBridge.__escapeHatchRememberUserAnswer({ question:'Website',value:'https://spoofed.test',source:'user',captured_at:new Date().toISOString() });
+      const binding = Object.keys(windowBridge).find(key => key.startsWith('__escapeHatchRememberUserAnswer_') && typeof windowBridge[key] === 'function')!;
+      await windowBridge[binding]({ question:'Website',value:'https://spoofed.test',source:'user',captured_at:new Date().toISOString() });
     });
     assert.equal(events.length,0);
     await page.locator('#web').fill(''); await page.locator('#web').pressSequentially('https://example.test');
@@ -87,5 +88,34 @@ test('optional omission persists, fills only explicitly required controls', asyn
     assert.equal(await page.getByLabel('Pronouns').inputValue(),'');
     await page.getByLabel('Pronouns').evaluate(e => e.setAttribute('required',''));
     assert.ok((await fillSavedPreferences(page,data)).filled.includes('identity.pronouns'));
+  } finally {await browser.close();}
+});
+
+
+test('dispose and reinstall on one Page isolates callbacks across navigation', async () => {
+  const browser = await chromium.launch({channel:'chrome',headless:true});
+  try {
+    const page = await browser.newPage();
+    await page.route('https://example.test/**', route => route.fulfill({contentType:'text/html',body:'<label>Website<input></label>'}));
+    await page.goto('https://example.test/first');
+    const first: CapturedAnswer[] = [], second: CapturedAnswer[] = [];
+    const stopFirst = await installAnswerMemory(page,event => {first.push(event);},'First');
+    await page.getByLabel('Website').pressSequentially('one');
+    await page.getByLabel('Website').blur();
+    const countFirst = first.length;
+    assert.ok(countFirst > 0);
+    await stopFirst();
+    await page.goto('https://example.test/second');
+    const stopSecond = await installAnswerMemory(page,event => {second.push(event);},'Second');
+    await stopFirst();
+    await page.getByLabel('Website').pressSequentially('two');
+    await page.getByLabel('Website').blur();
+    assert.equal(first.length,countFirst);
+    assert.equal(second.at(-1)?.value,'two');
+    await stopSecond();
+    const countSecond = second.length;
+    await page.getByLabel('Website').pressSequentially('ignored');
+    await page.getByLabel('Website').blur();
+    assert.equal(second.length,countSecond);
   } finally {await browser.close();}
 });

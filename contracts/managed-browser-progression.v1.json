@@ -6,7 +6,8 @@
     "session_contract": "contracts/application-assist-session.v1.json",
     "mv3_extension_surface": "browser/application-assist",
     "invariant": "This contract does not amend or weaken the MV3 extension session v1 forbidden_actions auto_submit and click_next_or_continue. Extension-side automatic navigation remains prohibited.",
-    "authority_surface": "managed_playwright_browser_only"
+    "authority_surface": "managed_playwright_browser_only",
+    "read_only_observer_note": "The optional MV3 submission observer grants observation and same-path reinjection only, never terminal click authority. It does not change managed final_action_activated_always_false."
   },
   "relationship_to_navigation_authority": {
     "contract": "contracts/application-navigation-authority.v1.json",
@@ -56,6 +57,10 @@
     "component": "artifacts/escape-hatch/src/components/managed-browser-assist.tsx",
     "control_plane": "artifacts/escape-hatch/browser-assist-control.ts",
     "endpoint": "/__escapehatch/managed-assist/prepare",
-    "required_states_visible": ["REVIEW_READY", "REVIEW_REQUIRED", "BLOCKED"]
+    "required_states_visible": [
+      "REVIEW_READY",
+      "REVIEW_REQUIRED",
+      "BLOCKED"
+    ]
   }
 }

@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "description": "Same-application assist session that fills only policy-gated identity fields through a canonical Fill Plan. Never submits.",
   "permissions": ["activeTab", "scripting", "storage"],
+  "background": { "service_worker": "worker.js" },
   "action": {
     "default_title": "EscapeHatch Application Assist",
     "default_popup": "popup.html"

@@ -21,7 +21,7 @@
         "storage"
       ],
       "host_permissions": "none",
-      "background_service": "none",
+      "background_service": "worker.js_read_only_submission_observation",
       "always_on_content_script": false
     }
   },
@@ -165,5 +165,29 @@
     "fill_requires": "user_confirmed_primary",
     "principle": "observed_or_previously_used_contact_is_not_preferred_contact_authority",
     "privacy_tradeoff": "operator_may_choose_a_more_direct_or_database_joining_channel_when_they_explicitly_value_control_and_reachability"
+  },
+  "submission_observation": {
+    "owner": "browser/application-assist/submission-observer.js",
+    "worker": "browser/application-assist/worker.js",
+    "storage_key": "escapeHatch.applicationSubmissionObservation.v1",
+    "start": "explicit_trusted_popup_click",
+    "adapter": "ashby_exact_application_path_only",
+    "scope": "same_tab_same_origin_same_path",
+    "full_navigation": "same_path_reinjection_under_existing_activeTab_grant",
+    "cross_origin_or_path_change": "block_require_explicit_rearm",
+    "restart": "block_require_explicit_rearm",
+    "expiry_minutes": 30,
+    "receipt_requires": [
+      "trusted_user_terminal_click",
+      "fresh_explicit_application_received_confirmation",
+      "no_visible_validation_error"
+    ],
+    "receipt_scope": "extension_local_metadata_only_no_queue_projection",
+    "operator_submit_proxy": {
+      "implemented": false,
+      "blocker": "missing_versioned_terminal_effect_and_attestation_adapter",
+      "unattended_auto_submit": "forbidden",
+      "agent_submit": "forbidden"
+    }
   }
 }

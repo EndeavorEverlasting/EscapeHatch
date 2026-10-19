@@ -61,6 +61,10 @@ test('cockpit owns Launch, Fill and Attach without a Chrome extension', async ({
   await expect(page.getByTestId('managed-browser-feedback')).toContainText('resume: attached to input review required');
   expect(seen).toContain('attach');
   assertNeverSubmitted(seen);
+  await page.getByTestId('select-assist-milestone').selectOption('document-opportunity');
+  await page.getByTestId('button-record-assist-milestone').click();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('escape-hatch-applications')!)[0].nextAction))
+    .toBe('Application submitted — follow up when appropriate');
 });
 
 function assertNeverSubmitted(actions: string[]) {

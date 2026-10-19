@@ -1296,7 +1296,8 @@ function AssistPage({
   };
   const recordMilestone = () => {
     if (!milestone) return;
-    setApplications((items) => items.map((item) => item.id === milestone ? { ...item, status: 'applied', updatedAt: now() } : item));
+    setApplications((items) => items.map((item) => item.id === milestone ? { ...item, status: 'applied',
+      nextAction: 'Application submitted — follow up when appropriate', updatedAt: now() } : item));
     setFeedback('Applied milestone recorded by you. EscapeHatch did not infer it from page progress.');
   };
   const importSession = (event: ChangeEvent<HTMLInputElement>) => {

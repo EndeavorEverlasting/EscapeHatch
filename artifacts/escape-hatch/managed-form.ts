@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { matchQuestion, optionMatches, reusableValue, type Preferences } from './src/lib/application-preferences.ts';
+import { matchQuestion, normalizeQuestion, discoveredValue, optionMatches, reusableValue, type Preferences } from './src/lib/application-preferences.ts';
 
 export type FillOutcome = { filled: string[]; skipped: string[] };
 
@@ -122,12 +122,19 @@ export async function captureMilitaryAnswers(page: Page): Promise<Record<string,
 export async function fillSavedPreferences(page: Page, preferences: Preferences, employerName = ''): Promise<FillOutcome> {
   const result: FillOutcome = { filled: [], skipped: [] };
   const { controls, descriptors, available, ids } = await inspectPreferenceFields(page, employerName);
+  for (let i = 0; i < controls.length; i++) {
+    if (!ids[i].length) {
+      const candidates = [...new Set(descriptors[i].prompts.filter(prompt => discoveredValue(prompt, preferences)).map(normalizeQuestion))];
+      if (candidates.length === 1) ids[i] = ['discovered:' + candidates[0]];
+    }
+  }
   for (let index = 0; index < controls.length; index++) {
     const control = controls[index], descriptor = descriptors[index];
     if (['hidden', 'file', 'checkbox', 'password', 'submit', 'button', 'reset'].includes(descriptor.type)) continue;
     if (ids[index].length !== 1) { result.skipped.push('unmapped_or_ambiguous'); continue; }
     const id = ids[index][0];
-    let value = reusableValue(id, preferences);
+    if (preferences.optional_omissions?.includes(id) && !await control.evaluate(element => (element as HTMLInputElement).required === true || element.getAttribute('aria-required') === 'true')) { result.skipped.push(id + ':optional_omitted'); continue; }
+    let value = id.startsWith('discovered:') ? discoveredValue(id.slice(11), preferences) : reusableValue(id, preferences);
     if (id === 'identity.phone' && value) value = internationalPhone(value, reusableValue('identity.country', preferences) || '');
     // Conditional detail is applicable only when a clearance is held. Never invent a clearance.
     if (id === 'employment.clearance_details' && reusableValue('employment.current_clearance', preferences) === 'No') value = 'N/A';

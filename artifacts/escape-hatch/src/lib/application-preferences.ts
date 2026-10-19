@@ -3,7 +3,8 @@ import taxonomy from '../../../../harness/contracts/application-form-taxonomy.v1
 export const PREFERENCE_KEY = 'escapeHatch.applicationQuestionPreferences.v1';
 export const PREFERENCE_SCHEMA = 'escapehatch-application-question-preferences/v1';
 export type Preference = { scope: 'profile_preference'; value: string; source: 'user'; updated_at: string };
-export type Preferences = { schema_version: typeof PREFERENCE_SCHEMA; exported_at: string; preferences: Record<string, Preference>; job_titles?: string[]; professional_titles?: string[]; require_document_review?: boolean };
+export type DiscoveredAnswer = { question: string; value: string; source: 'user'; updated_at: string; accepted: boolean };
+export type Preferences = { schema_version: typeof PREFERENCE_SCHEMA; exported_at: string; preferences: Record<string, Preference>; optional_omissions?: string[]; discovered_answers?: Record<string, DiscoveredAnswer>; job_titles?: string[]; professional_titles?: string[]; require_document_review?: boolean };
 export const questions = taxonomy.questions;
 export const emptyPreferences = (): Preferences => ({ schema_version: PREFERENCE_SCHEMA, exported_at: new Date().toISOString(), preferences: {} });
 
@@ -14,7 +15,9 @@ export function parsePreferences(input: unknown): Preferences | null {
       !data.preferences || typeof data.preferences !== 'object' || Array.isArray(data.preferences) ||
       new TextEncoder().encode(JSON.stringify(data)).length > 65536) return null;
   const known = new Set(questions.map(q => q.id));
+  if (data.optional_omissions !== undefined && (!Array.isArray(data.optional_omissions) || data.optional_omissions.length > 100 || data.optional_omissions.some(id => typeof id !== 'string' || !known.has(id)))) return null;
   const clean = emptyPreferences();
+  if (data.optional_omissions) clean.optional_omissions = [...new Set(data.optional_omissions)];
   clean.exported_at = data.exported_at;
   if (data.require_document_review !== undefined) {
     if (typeof data.require_document_review !== 'boolean') return null;
@@ -25,6 +28,14 @@ export function parsePreferences(input: unknown): Preferences | null {
     if (titles !== undefined) {
       if (!Array.isArray(titles) || titles.length > 100 || titles.some(value => typeof value !== 'string' || !value.trim() || value.length > 160)) return null;
       clean[key] = [...new Set(titles.map(value => value.trim()))];
+    }
+  }
+  if (data.discovered_answers !== undefined) {
+    if (!data.discovered_answers || typeof data.discovered_answers !== 'object' || Array.isArray(data.discovered_answers) || Object.keys(data.discovered_answers).length > 100) return null;
+    clean.discovered_answers = {};
+    for (const [key, item] of Object.entries(data.discovered_answers)) {
+      if (!item || typeof item.question !== 'string' || !safeDiscoveredQuestion(item.question) || key !== normalizeQuestion(item.question) || typeof item.value !== 'string' || !item.value.trim() || item.value.length > 512 || item.source !== 'user' || typeof item.accepted !== 'boolean' || typeof item.updated_at !== 'string' || Number.isNaN(Date.parse(item.updated_at))) return null;
+      clean.discovered_answers[key] = { question: item.question, value: item.value.trim(), source: 'user', updated_at: item.updated_at, accepted: item.accepted };
     }
   }
   for (const [id, entry] of Object.entries(data.preferences)) {
@@ -111,4 +122,20 @@ export function suggestProfessionalTitles(titles: string[], role: string, postin
     const score = (roleMatches.length * 4 + postingMatches.length + experienceMatches.length) / Math.max(1, words.length);
     return [{ title, score, evidence: [roleMatches.length ? 'Role: ' + roleMatches.join(', ') : '', postingMatches.length ? 'Posting: ' + postingMatches.join(', ') : '', experienceMatches.length ? 'Reviewed experience: ' + experienceMatches.join(', ') : ''].filter(Boolean).join(' · ') }];
   }).sort((a, b) => b.score - a.score || a.title.length - b.title.length || a.title.localeCompare(b.title)).slice(0, 3);
+}
+
+// Unknown prompts are candidates only; legal, credentials and sensitive disclosures never graduate.
+export function safeDiscoveredQuestion(question: string): boolean {
+  const text = normalizeQuestion(question);
+  return text.length >= 4 && text.length <= 300 && !matchQuestion(question) && !/\b(password|secret|token|social security|ssn|birth|bank|account|credit|card|routing|passport|nationality|citizenship|health|insurance|medication|diagnosis|tax|medical|disability|accommodation|veteran|race|ethnicity|gender|religion|sexual|criminal|convict|felony|legal|certify|certification|attest|agree|consent|signature|salary|compensation|authorization|sponsor|clearance)\b/.test(text);
+}
+export function discoveredValue(prompt: string, data: Preferences): string | null {
+  if (!safeDiscoveredQuestion(prompt)) return null;
+  const answer = data.discovered_answers?.[normalizeQuestion(prompt)];
+  return answer?.accepted === true ? answer.value : null;
+}
+export function acceptDiscoveredAnswer(data: Preferences, normalizedQuestion: string): Preferences {
+  const item = data.discovered_answers?.[normalizedQuestion];
+  if (!item || !safeDiscoveredQuestion(item.question)) return data;
+  return { ...data, discovered_answers: { ...data.discovered_answers, [normalizedQuestion]: { ...item, accepted: true } } };
 }

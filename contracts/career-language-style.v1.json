@@ -1,0 +1,26 @@
+{
+  "schema": "escapehatch/career-language-style/v1",
+  "version": 1,
+  "purpose": "Protect author voice and narrowly authorized edits in career artifacts without storing personal career content.",
+  "source_authority": {
+    "private_policy": "Career Narrative Positioning Standard section 17 (operator-controlled remote Google Doc)",
+    "current_source": "latest provider revision and exact owner comment",
+    "publication": "generic synthetic-only repository checks"
+  },
+  "principles": {
+    "avoid_canned_x_not_y": true,
+    "do_not_ban_all_dashes": true,
+    "permit_explicitly_approved_true_contrast": true,
+    "comment_edits_only_within_authorized_scope": true,
+    "preserve_other_author_changes": true,
+    "no_fact_promotion_from_stylistic_edits": true,
+    "private_inputs_never_tracked": true
+  },
+  "runtime": {
+    "voice_check": "Detect known first-person false antithesis and not-just-but templates. Findings indicate a style violation unless user explicitly approves a necessary factual contrast.",
+    "edit_check": "Compare before/after paragraph arrays; every changed index must be explicitly authorized by the matching owner comment. Do not silently update adjacent author edits.",
+    "source_required_for_edit_check": true,
+    "mode": "Synthetic CI and optional untracked private JSON input; not a full semantic language model."
+  },
+  "proof_ceiling": "Detects specified patterns and unapproved line changes only; does not understand arbitrary meaning, access Google Docs comments itself, prove PDF freshness, or authorize factual claims."
+}

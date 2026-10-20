@@ -1,0 +1,92 @@
+{
+  "synthetic_only": true,
+  "cases": [
+    {
+      "id": "v1-canned-em-dash",
+      "type": "voice",
+      "text": "I build coordination systems—not spreadsheets.",
+      "expected": "REJECT"
+    },
+    {
+      "id": "v2-canned-comma",
+      "type": "voice",
+      "text": "I do practical engineering, not paperwork.",
+      "expected": "REJECT"
+    },
+    {
+      "id": "v3-not-just-but",
+      "type": "voice",
+      "text": "I do not just document work, but make systems endure.",
+      "expected": "REJECT"
+    },
+    {
+      "id": "v4-direct-positive",
+      "type": "voice",
+      "text": "I validate software with tests and working evidence before closing a task.",
+      "expected": "PASS"
+    },
+    {
+      "id": "v5-legitimate-dash",
+      "type": "voice",
+      "text": "Built two services—one for intake and one for reporting.",
+      "expected": "PASS"
+    },
+    {
+      "id": "v6-operator-approved-exception",
+      "type": "voice",
+      "text": "I build tools—not one-off decks.",
+      "operator_approved_factual_contrast": true,
+      "expected": "PASS"
+    },
+    {
+      "id": "s1-comment-only-pass",
+      "type": "comment_scope",
+      "before": [
+        "Summary edited by owner",
+        "I build systems—not reports.",
+        "Education unchanged"
+      ],
+      "after": [
+        "Summary edited by owner",
+        "I build durable systems that teams can operate.",
+        "Education unchanged"
+      ],
+      "allowed_change_indices": [
+        1
+      ],
+      "expected": "PASS"
+    },
+    {
+      "id": "s2-unrequested-change-reject",
+      "type": "comment_scope",
+      "before": [
+        "Owner's latest summary",
+        "I do X, not Y.",
+        "Experience"
+      ],
+      "after": [
+        "Agent revised summary",
+        "I deliver X with proof.",
+        "Experience"
+      ],
+      "allowed_change_indices": [
+        1
+      ],
+      "expected": "REJECT"
+    },
+    {
+      "id": "s3-no-authority-reject",
+      "type": "comment_scope",
+      "before": [
+        "A",
+        "B"
+      ],
+      "after": [
+        "A",
+        "C"
+      ],
+      "allowed_change_indices": [],
+      "expected": "REJECT"
+    }
+  ]
+}

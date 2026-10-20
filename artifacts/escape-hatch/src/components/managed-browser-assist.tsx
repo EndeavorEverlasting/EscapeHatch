@@ -263,7 +263,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           item.status !== 'applied' && item.status !== 'closed');
         if (!opportunity) throw new Error('Select an active saved opportunity before preparing this application.');
         body = {
-          profile, careerProfile: assistProfile, targetRole: opportunity.role, opportunityId: opportunity.id, url,
+          profile, careerProfile: assistProfile, targetRole: opportunity.role, employerName: opportunity.company, opportunityId: opportunity.id, url,
           authorization: {
             sessionId: 'cockpit-' + opportunity.id,
             opportunityId: opportunity.id,
@@ -275,8 +275,9 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         };
       }
       let result = await request('/' + action, body);
+      const launchedApplicationForm = action === 'launch' && result.state === 'application_form_open_review_required';
       let autoFillMessage = '';
-      if (action === 'launch' && result.state === 'application_form_open_review_required') {
+      if (launchedApplicationForm) {
         // Explicit operator launch authorizes the existing bounded DOM filler, not navigation or submission.
         // If this is a landing/login page, no fill occurs; the manual Fill control remains available.
         try {
@@ -295,7 +296,9 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       if (result.preparation) setPreparation(result.preparation);
       if (action === 'launch') {
         setBrowserOpen(true);
-        if (documents.data?.requireReview === false) setAutoPrepareRequested(true);
+        // A previously reviewed exact PDF is already authorized for staging:
+        // don't make the operator press Fill and Attach again after launch.
+        if (launchedApplicationForm && documents.canUpload) setAutoPrepareRequested(true);
         setPreparation(null);
         setApplications((items) => {
           const existing = items.find((item) => item.id === selectedOpportunityId && item.url === url);
@@ -322,6 +325,8 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         setMessage(
           result.preparation.state + ' (' + result.preparation.code + '). Pages prepared: ' +
           result.preparation.pagesPrepared + '; intermediate steps: ' + result.preparation.intermediateSteps +
+          (result.filled?.length ? '. Filled approved fields: ' + result.filled.join(', ') : '') +
+          (result.attachments ? '. Document staging: ' + Object.entries(result.attachments).map(([kind, status]) => kind + '=' + status.replaceAll('_', ' ')).join(', ') : '') +
           '. Final submission remains operator-only.'
         );
       }

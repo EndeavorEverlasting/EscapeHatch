@@ -351,3 +351,51 @@ test('document review binds both files, persists, invalidates replacements, and 
   expect(actions).not.toContain('submit');
   await expect(page.getByText('Not confirmed reviewed', { exact: false })).toBeVisible();
 });
+
+
+test('one Launch reuses previously reviewed exact PDFs and stops at review when navigation is untrusted', async ({ page }) => {
+  const actions: string[] = [];
+  const jobUrl = 'https://jobs.example.test/apply/reviewed';
+  await page.route('**/__escapehatch/managed-assist/**', async route => {
+    const action = new URL(route.request().url()).pathname.split('/').at(-1) || '';
+    if (route.request().method() === 'POST') actions.push(action);
+    const body = action === 'status'
+      ? { ok: true, state: 'idle', browserOpen: false }
+      : action === 'launch'
+      ? { ok: true, state: 'application_form_open_review_required' }
+      : action === 'fill'
+      ? { ok: true, state: 'fields_filled_review_required', filled: ['name'], skipped: [] }
+      : action === 'prepare'
+      ? { ok: true, state: 'REVIEW_REQUIRED', preparation: {
+          state: 'REVIEW_REQUIRED', code: 'trusted_navigation_evidence_missing',
+          pagesPrepared: 1, intermediateSteps: 0, finalActionActivated: false,
+          evidenceRefs: [], pendingManual: ['trusted_navigation_evidence_unavailable'],
+        }, filled: ['name'], attachments: { resume: 'attached_to_input_review_required' } }
+      : { ok: true, state: 'idle' };
+    if (action === 'prepare') {
+      const posted = route.request().postDataJSON();
+      expect(posted.adapterRegistry).toBeNull();
+      expect(posted.opportunityId).toBe('synthetic-reviewed');
+      expect(posted.employerName).toBe('Synthetic Employer');
+    }
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
+  });
+  await mockDocuments(page);
+  await page.goto('/assist');
+  await page.evaluate(url => localStorage.setItem('escape-hatch-applications', JSON.stringify([{
+    id: 'synthetic-reviewed', company: 'Synthetic Employer', role: 'Role', url,
+    status: 'saved', priority: 'normal', notes: '', nextAction: '', updatedAt: new Date().toISOString(),
+  }])), jobUrl);
+  await page.goto('/assist?opportunityId=synthetic-reviewed');
+  await page.getByLabel('Choose résumé PDF', { exact: true }).setInputFiles({
+    name: 'synthetic-reviewed.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\\nfixture'),
+  });
+  await page.getByRole('button', { name: 'I reviewed this résumé', exact: true }).click();
+  await expect(page.getByText(/You confirmed review on/)).toBeVisible();
+  await page.getByTestId('button-managed-launch').click();
+  await expect.poll(() => actions.filter(name => ['launch', 'fill', 'prepare'].includes(name))).toEqual(['launch', 'fill', 'prepare']);
+  await expect(page.getByTestId('managed-preparation-state')).toHaveAttribute('data-preparation-state', 'REVIEW_REQUIRED');
+  await expect(page.getByTestId('managed-browser-feedback')).toContainText('Final submission remains operator-only');
+  expect(actions).not.toContain('submit');
+  expect(actions).not.toContain('next');
+});

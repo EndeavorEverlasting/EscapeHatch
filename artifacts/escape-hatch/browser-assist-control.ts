@@ -1,3 +1,4 @@
+import { prepareWithoutTrustedNavigation } from './managed-prepare-fallback.ts';
 import { OpportunityDocumentStore, documentScope, type DocumentKind } from './opportunity-documents.ts';
 import { ManagedListeners } from './managed-listeners.ts';
 import { withCareerPreferences } from './career-preferences.ts';
@@ -413,16 +414,9 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             if (opportunityId && authorization.opportunityId !== opportunityId) {
               return respond(res, 409, { ok: false, error: 'opportunity_binding_mismatch' });
             }
-            const uploadPolicy = (await readPreferences()).require_document_review !== false;
-            const packageFiles = await documentStore.forUpload(opportunityId, applicationUrl, uploadPolicy);
-            await attachPdfs(page, packageFiles.resume, packageFiles.cover);
-            if (!payload.adapterRegistry) {
-              preparation = { state: 'BLOCKED', code: 'trusted_adapter_registry_required', pagesPrepared: 0, intermediateSteps: 0, finalActionActivated: false, evidenceRefs: [], pendingManual: ['Verify employer uploads and supply trusted navigation evidence.'] };
-              state = preparation.state;
-              return respond(res, 200, { ok: true, state, preparation, requiresOperatorSubmission: true, reviewPolicy: packageFiles.reviewPolicy });
-            }
-            const registry = parseTrustedAdapterRegistry(payload.adapterRegistry);
             const preferences = await readPreferences();
+            const uploadPolicy = preferences.require_document_review !== false;
+            const packageFiles = await documentStore.forUpload(opportunityId, applicationUrl, uploadPolicy);
             const contact = reviewedContactFields(payload.profile);
             const now = new Date().toISOString();
             const ids: Record<string, string> = { linkedin_url: 'linkedin', region: 'region' };
@@ -433,6 +427,27 @@ export function createManagedBrowserAssistPlugin(): Plugin {
                 merged.preferences[id] = { scope: 'profile_preference', source: 'user', value, updated_at: now };
               }
             }
+            const approvedPreferences = withCareerPreferences(merged, payload.careerProfile, payload.targetRole);
+            if (!payload.adapterRegistry) {
+              // Safe useful work does not require authorizing unknown navigation.
+              // The operator's scoped Prepare action can fill and stage reviewed
+              // files; terminal/intermediate clicks remain wholly unavailable.
+              const fallback = await prepareWithoutTrustedNavigation({
+                fill: () => fillSavedPreferences(page!, approvedPreferences,
+                  typeof payload.employerName === 'string' ? payload.employerName.slice(0, 160) : ''),
+                attach: () => attachPdfs(page!, packageFiles.resume, packageFiles.cover),
+                expectedUploads: (['resume', 'cover'] as const).filter(kind => Boolean(packageFiles[kind])),
+              });
+              preparation = fallback.preparation;
+              state = preparation.state;
+              return respond(res, 200, {
+                ok: true, state, ...fallback,
+                requiresOperatorSubmission: true, reviewPolicy: packageFiles.reviewPolicy,
+                finalActionActivated: false,
+              });
+            }
+            const registry = parseTrustedAdapterRegistry(payload.adapterRegistry);
+            await attachPdfs(page, packageFiles.resume, packageFiles.cover);
             const maxSteps = typeof payload.maxSteps === 'number' && Number.isInteger(payload.maxSteps)
               ? payload.maxSteps
               : 10;
@@ -440,7 +455,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               page,
               authorization,
               registry,
-              preferences: withCareerPreferences(merged, payload.careerProfile, payload.targetRole),
+              preferences: approvedPreferences,
               prepareAttachments: async () => {
                 const current = await documentStore.forUpload(opportunityId, applicationUrl, (await readPreferences()).require_document_review !== false);
                 await attachPdfs(page!, current.resume, current.cover);

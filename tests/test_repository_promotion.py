@@ -132,6 +132,29 @@ class RepositoryPromotionTests(unittest.TestCase):
         self.assertEqual(receipt["status"], "READY")
         self.assertIn("expected_head_sha", receipt["compare_and_set"])
 
+    def test_duplicate_required_check_evidence_blocks_in_any_order(self):
+        candidate = self.guard.Candidate(head_sha="a" * 40, base_sha="b" * 40)
+        required = self.guard.load_required_checks()
+        green = [self.guard.CheckResult(r["workflow"], r["job"], r["name"], "success", candidate.head_sha) for r in required]
+        first = required[0]
+        for conclusion, sha in (("failure", candidate.head_sha), ("pending", candidate.head_sha),
+                                ("skipped", candidate.head_sha), ("success", "c" * 40),
+                                ("success", candidate.head_sha)):
+            duplicate = self.guard.CheckResult(first["workflow"], first["job"], first["name"], conclusion, sha)
+            for checks in ([duplicate, *green], [*green, duplicate]):
+                with self.subTest(conclusion=conclusion, sha=sha, duplicate_first=checks[0] is duplicate):
+                    receipt = self.guard.promotion_guard_evaluate(candidate, required, checks)
+                    self.assertEqual(receipt["status"], "BLOCKED")
+                    self.assertIn("ambiguous duplicate required check", receipt["reason"])
+
+    def test_unrelated_duplicate_checks_do_not_block_required_evidence(self):
+        candidate = self.guard.Candidate(head_sha="a" * 40, base_sha="b" * 40)
+        required = self.guard.load_required_checks()
+        checks = [self.guard.CheckResult(r["workflow"], r["job"], r["name"], "success", candidate.head_sha) for r in required]
+        extra = self.guard.CheckResult("optional", "optional", "optional", "failure", candidate.head_sha)
+        receipt = self.guard.promotion_guard_evaluate(candidate, required, [extra, *checks, extra])
+        self.assertEqual(receipt["status"], "READY")
+
     def test_harness_failure_blocks(self):
         candidate = self.guard.Candidate(head_sha="a"*40, base_sha="b"*40)
         required = self.guard.load_required_checks()

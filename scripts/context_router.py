@@ -1,0 +1,170 @@
+#!/usr/bin/env python3
+"""Deterministic, source-pinned context routing for EscapeHatch repository agents.
+
+This is a repository-agent adapter, not a model API. External host prompts,
+tools, memories, latency and token use are UNMEASURED until a host supplies them.
+"""
+from __future__ import annotations
+import argparse
+import hashlib
+import json
+import re
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+POLICY_PATH = "harness/context/sources.v1.json"
+LANE_HINTS = {
+    "application": ("application", "ats", "resume", "cover letter", "employer", "autofill", "puzzle"),
+    "runtime": ("launch", "startup", "windows", "bootstrap", "port", "desktop", "installer"),
+    "context": ("context", "prompt", "token", "retrieval", "attention", "agent skill"),
+    "harness": ("harness", "governance", "validator", "registry", "workflow"),
+}
+
+
+def load_policy(root: Path) -> dict:
+    policy = json.loads((root / POLICY_PATH).read_text(encoding="utf-8"))
+    if policy.get("schema") != "escapehatch-model-context/v1":
+        raise ValueError("CONTEXT_SCHEMA_UNSUPPORTED")
+    sources = policy["sources"]
+    if not sources:
+        raise ValueError("CONTEXT_SOURCE_IDS_INVALID")
+    for name, entry in sources.items():
+        path = Path(entry["path"])
+        if not name or path.is_absolute() or ".." in path.parts or str(path) in ("", "."):
+            raise ValueError(f"CONTEXT_PATH_UNSAFE:{name}")
+        if entry["mode"] not in ("full", "outline") or entry["authority"] < 2:
+            raise ValueError(f"CONTEXT_AUTHORITY_INVALID:{name}")
+        if entry.get("always") and not entry.get("required"):
+            raise ValueError(f"CONTEXT_ALWAYS_MUST_BE_REQUIRED:{name}")
+    if not set(policy["baseline_unconditional"]).issubset(sources):
+        raise ValueError("CONTEXT_BASELINE_UNKNOWN_SOURCE")
+    if not set(policy["lanes"]).issuperset(LANE_HINTS):
+        raise ValueError("CONTEXT_LANES_INCOMPLETE")
+    return policy
+
+
+def resolve_lane(task: str, requested: str, policy: dict) -> str:
+    if requested != "auto":
+        if requested not in policy["lanes"]:
+            raise ValueError("CONTEXT_UNKNOWN_LANE")
+        return requested
+    matches = [lane for lane, hints in LANE_HINTS.items()
+               if any(re.search(r"\b" + re.escape(hint) + r"\b", task.lower()) for hint in hints)]
+    return matches[0] if len(matches) == 1 else "general"
+
+
+def outline(text: str, suffix: str) -> str:
+    if suffix == ".json":
+        value = json.loads(text)
+        return "JSON keys: " + ", ".join(sorted(value) if isinstance(value, dict) else []) + "\n"
+    if suffix in (".md", ".markdown"):
+        headings = [line.strip() for line in text.splitlines() if re.match(r"^#{1,4} ", line)]
+        return "\n".join(headings[:80]) + ("\n[HEADINGS_TRUNCATED]\n" if len(headings) > 80 else "\n")
+    symbols = re.findall(r"(?m)^(?:export )?(?:async )?(?:function|class|def)\s+([A-Za-z_][\w]*)", text)
+    return "Symbols: " + ", ".join(symbols[:80]) + (" [TRUNCATED]" if len(symbols) > 80 else "") + "\n"
+
+
+def select(root: Path, task: str, lane: str = "auto", budget: int = 32768) -> dict:
+    policy = load_policy(root)
+    picked = resolve_lane(task, lane, policy)
+    if budget < 1:
+        raise ValueError("CONTEXT_BUDGET_INVALID")
+    original_bytes = 0
+    for key in policy["baseline_unconditional"]:
+        path = root / policy["sources"][key]["path"]
+        if not path.is_file():
+            raise ValueError(f"CONTEXT_BASELINE_SOURCE_MISSING:{key}")
+        original_bytes += len(path.read_bytes())
+    entries = []
+    for key, spec in policy["sources"].items():
+        if not (spec.get("always") or picked in spec["triggers"]):
+            continue
+        path = root / spec["path"]
+        if not path.is_file():
+            if spec.get("required"):
+                raise ValueError(f"CONTEXT_REQUIRED_SOURCE_MISSING:{key}")
+            entries.append({"id": key, "path": spec["path"], "state": "MISSING_REFERENCE",
+                            "authority": spec["authority"]})
+            continue
+        raw = path.read_bytes()
+        payload = raw.decode("utf-8") if spec["mode"] == "full" else outline(raw.decode("utf-8"), path.suffix)
+        entries.append({"id": key, "path": spec["path"], "owner": spec["owner"],
+                        "sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw),
+                        "authority": spec["authority"], "always": spec.get("always", False),
+                        "required": spec.get("required", False), "mode": spec["mode"],
+                        "payload": payload, "state": "SELECTED"})
+    entries.sort(key=lambda e: (not e.get("always", False), e["authority"], e["id"]))
+    used_bytes = sum(len(e.get("payload", "").encode("utf-8")) for e in entries)
+    if used_bytes > budget:
+        raise ValueError(f"CONTEXT_BUDGET_EXCEEDED:{used_bytes}>{budget}:USE_TARGETED_RETRIEVAL")
+    return {"schema": "escapehatch-context-selection/v1", "lane": picked,
+            "policy_sha256": hashlib.sha256((root / POLICY_PATH).read_bytes()).hexdigest(),
+            "baseline_unconditional_bytes": original_bytes, "candidate_payload_bytes": used_bytes,
+            "savings_bytes": original_bytes - used_bytes, "selected": entries,
+            "external_context": {key: {**val, "status": "UNMEASURED"}
+                                 for key, val in policy["external_context"].items()},
+            "warning": "Repository-file payload only; host token/latency/cost and private runtime not measured."}
+
+
+def verify_receipt(root: Path, receipt: dict) -> None:
+    """Stale policy or source identity invalidates a previous model context."""
+    policy = load_policy(root)
+    if receipt.get("policy_sha256") != hashlib.sha256((root / POLICY_PATH).read_bytes()).hexdigest():
+        raise ValueError("CONTEXT_POLICY_STALE")
+    for entry in receipt.get("selected", []):
+        key = entry.get("id")
+        if key not in policy["sources"] or entry.get("path") != policy["sources"][key]["path"]:
+            raise ValueError("CONTEXT_RECEIPT_SOURCE_MISMATCH")
+        path = root / entry["path"]
+        if not path.is_file() or entry.get("sha256") != hashlib.sha256(path.read_bytes()).hexdigest():
+            raise ValueError(f"CONTEXT_SOURCE_STALE:{key}")
+    if not any(entry.get("id") == "governance" for entry in receipt.get("selected", [])):
+        raise ValueError("CONTEXT_GOVERNANCE_NOT_PRESENT")
+
+
+def compact_trace(source: str, maximum_lines: int = 48) -> list[str]:
+    """Only emit line number, signal category and digest; never raw log secrets."""
+    if maximum_lines < 1:
+        raise ValueError("CONTEXT_TRACE_LIMIT_INVALID")
+    labels = ("ERROR", "FAIL", "BLOCKED", "DENIED", "CONFLICT", "WARNING", "FATAL",
+              "PASS", "COMMIT", "RECEIPT", "SHA256")
+    pattern = re.compile(r"\b(" + "|".join(labels) + r")\b", re.I)
+    signals = [(i + 1, line[:320]) for i, line in enumerate(source.splitlines()) if pattern.search(line)]
+    if len(signals) > maximum_lines:
+        early = maximum_lines // 2
+        signals = signals[:early] + signals[-(maximum_lines - early):]
+    return [f"L{number}: {pattern.search(text).group(1).upper()} sha256={hashlib.sha256(text.encode('utf-8')).hexdigest()[:12]}"
+            for number, text in signals]
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--root", type=Path, default=ROOT)
+    parser.add_argument("--task", default="repository maintenance")
+    parser.add_argument("--lane", default="auto")
+    parser.add_argument("--budget-bytes", type=int, default=32768)
+    parser.add_argument("--trace", type=Path)
+    parser.add_argument("--max-trace-lines", type=int, default=48)
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--verify-receipt", type=Path)
+    args = parser.parse_args()
+    try:
+        if args.verify_receipt:
+            verify_receipt(args.root.resolve(), json.loads(args.verify_receipt.read_text(encoding="utf-8")))
+        result = select(args.root.resolve(), args.task, args.lane, args.budget_bytes)
+        if args.trace:
+            result["trace_signatures"] = compact_trace(args.trace.read_text(encoding="utf-8"),
+                                                       args.max_trace_lines)
+        rendered = json.dumps(result, indent=2, ensure_ascii=False)
+        if args.output:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(rendered + "\n", encoding="utf-8")
+        print(rendered)
+        return 0
+    except (ValueError, OSError, UnicodeError, json.JSONDecodeError) as exc:
+        print(f"CONTEXT_ROUTING_BLOCKED: {exc}")
+        return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

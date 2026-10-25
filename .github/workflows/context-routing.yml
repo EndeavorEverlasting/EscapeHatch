@@ -1,0 +1,41 @@
+name: Context Routing Contract
+
+on:
+  push:
+    paths:
+      - "scripts/context_router.py"
+      - "tests/test_context_router*.py"
+      - "harness/context/**"
+      - "harness/WORKFLOWS.md"
+      - ".github/workflows/context-routing.yml"
+  pull_request:
+    paths:
+      - "scripts/context_router.py"
+      - "tests/test_context_router.py"
+      - "harness/context/**"
+      - "harness/WORKFLOWS.md"
+      - ".github/workflows/context-routing.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Compile context router
+        run: python -m py_compile scripts/context_router.py tests/test_context_router.py tests/test_context_router_escalation.py
+      - name: Verify negative and positive routing
+        run: python -m unittest discover -s tests -p 'test_context_router*.py' -v
+      - name: Measure lane-specific repository payloads
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/context_router.py --lane general --task "ordinary scoped maintenance" --metrics-only
+          python scripts/context_router.py --lane application --task "prepare employer application" --metrics-only
+          python scripts/context_router.py --lane runtime --task "recover Windows launch" --metrics-only
+          python scripts/context_router.py --lane context --task "measure context load" --metrics-only

@@ -20,9 +20,20 @@ function Run([string]$Action, [string]$Source = $sourceA, [int]$Expected = 0) {
     return ($output -join "`n")
 }
 
+function Run-Adapter([string]$Name, [int]$Expected = 0) {
+    $adapter = Join-Path $sourceB $Name
+    $output = @(& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $adapter -AppDataRoot $appData -ShortcutRoot $shortcuts -TestMode 2>&1)
+    Assert-True ($LASTEXITCODE -eq $Expected) "$Name exit was $LASTEXITCODE, expected $Expected. $($output -join ' ')"
+    return ($output -join "`n")
+}
+
 function Fixture-Source([string]$Root) {
     New-Item -ItemType Directory -Path (Join-Path $Root 'scripts\windows') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $Root 'artifacts\escape-hatch') -Force | Out-Null
+    Copy-Item -LiteralPath $installer -Destination (Join-Path $Root 'scripts\windows\EscapeHatch-Install.ps1')
+    foreach ($adapter in @('Close-EscapeHatch.ps1', 'Status-EscapeHatch.ps1')) {
+        Copy-Item -LiteralPath (Join-Path $repo $adapter) -Destination (Join-Path $Root $adapter)
+    }
     '{}' | Set-Content -LiteralPath (Join-Path $Root 'artifacts\escape-hatch\package.json')
     '# synthetic launcher' | Set-Content -LiteralPath (Join-Path $Root 'Launch-EscapeHatch.ps1')
     @'
@@ -32,8 +43,8 @@ $state = Join-Path $root 'runtime-state.txt'
 $current = if (Test-Path -LiteralPath $state) { (Get-Content -LiteralPath $state -Raw).Trim() } else { 'STOPPED' }
 switch ($Action) {
  'Start' { 'OWNED_HEALTHY' | Set-Content -LiteralPath $state; Write-Host 'ESCAPEHATCH_STATE=OWNED_HEALTHY' }
- 'Stop' { 'STOPPED' | Set-Content -LiteralPath $state; Write-Host 'ESCAPEHATCH_STATE=STOPPED' }
- 'Status' { Write-Host "ESCAPEHATCH_STATE=$current" }
+ 'Stop' { if ($current -eq 'FOREIGN_CONFLICT') { Write-Host 'ESCAPEHATCH_STATE=FOREIGN_CONFLICT'; exit 2 }; 'STOPPED' | Set-Content -LiteralPath $state; Write-Host 'ESCAPEHATCH_STATE=STOPPED' }
+ 'Status' { Write-Host "ESCAPEHATCH_STATE=$current"; if ($current -eq 'FOREIGN_CONFLICT') { exit 2 } }
  default { exit 1 }
 }
 exit 0
@@ -42,6 +53,19 @@ exit 0
 try {
     Fixture-Source $sourceA
     Fixture-Source $sourceB
+    Case 'Path normalization preserves drive and UNC roots without using drive-relative paths'
+    $tokens = $null; $parseErrors = $null
+    $ast = [Management.Automation.Language.Parser]::ParseFile($installer, [ref]$tokens, [ref]$parseErrors)
+    Assert-True ($parseErrors.Count -eq 0) 'installer parser failed'
+    $fullPathFunction = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Full-Path' }, $true)
+    Assert-True ($null -ne $fullPathFunction) 'normalization owner missing'
+    Invoke-Expression $fullPathFunction.Extent.Text
+    $driveRoot = [IO.Path]::GetPathRoot($env:SystemRoot)
+    Assert-True ((Full-Path $driveRoot) -ceq $driveRoot) 'drive root lost its trailing separator'
+    $uncRoot = '\\synthetic\share\'
+    Assert-True ((Full-Path $uncRoot) -ceq [IO.Path]::GetPathRoot($uncRoot)) 'UNC root was changed'
+    Assert-True ((Full-Path (Join-Path $fixture 'child\')) -ceq (Join-Path $fixture 'child')) 'non-root trailing separator not normalized'
+
     Case 'Inspect performs no user-root writes'
     $inspect = Run 'Inspect'
     $inspect | Out-Host
@@ -61,13 +85,42 @@ try {
     Assert-True ((Get-Content -LiteralPath $receipt -Raw) -ceq $first) 'repeat install changed receipt'
     Assert-True (($first | ConvertFrom-Json).shortcuts[0].ownership -eq 'CREATED') 'shortcut ownership wrong'
 
+    Case 'Install repairs a deleted owned shortcut and records its replacement idempotently'
+    Remove-Item -LiteralPath $shortcut -Force
+    $repair = Run 'Install'
+    Assert-True ($repair -match 'INSTALL_SHORTCUT=REPAIRED') 'missing owned shortcut not repaired'
+    Assert-True (Test-Path -LiteralPath $shortcut -PathType Leaf) 'replacement shortcut missing'
+    $repaired = Get-Content -LiteralPath $receipt -Raw
+    Assert-True (($repaired | ConvertFrom-Json).shortcuts[0].sha256 -ceq (Get-FileHash -LiteralPath $shortcut -Algorithm SHA256).Hash.ToLowerInvariant()) 'replacement hash not recorded'
+    Run 'Install' | Out-Host
+    Assert-True ((Get-Content -LiteralPath $receipt -Raw) -ceq $repaired) 'repeat repair changed receipt'
+
+    Case 'Bootstrap repairs a deleted owned shortcut without changing the selected source'
+    Remove-Item -LiteralPath $shortcut -Force
+    $repair = Run 'Bootstrap' $sourceB
+    Assert-True ($repair -match 'INSTALL_SHORTCUT=REPAIRED') 'Bootstrap did not repair owned shortcut'
+    Assert-True ((Get-Content -LiteralPath $receipt -Raw | ConvertFrom-Json).sourceRoot -eq $sourceA) 'repair repointed selected source'
+
     Case 'Bootstrap from another worktree honors selected source'
     Run 'Bootstrap' $sourceB | Out-Host
     Assert-True ((Get-Content -LiteralPath (Join-Path $sourceA 'runtime-state.txt') -Raw).Trim() -eq 'OWNED_HEALTHY') 'selected source did not start'
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $sourceB 'runtime-state.txt'))) 'Bootstrap silently repointed source'
 
+    Case 'Sibling Status and Close adapters use the installed source without provisioning dependencies'
+    $status = Run-Adapter 'Status-EscapeHatch.ps1'
+    Assert-True ($status -match 'ESCAPEHATCH_STATE=OWNED_HEALTHY') 'Status ignored installed source'
+    Run-Adapter 'Close-EscapeHatch.ps1' | Out-Host
+    Assert-True ((Get-Content -LiteralPath (Join-Path $sourceA 'runtime-state.txt') -Raw).Trim() -eq 'STOPPED') 'Close did not stop selected source'
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $sourceB 'runtime-state.txt'))) 'adapter operated on its own checkout'
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $sourceA 'artifacts\escape-hatch\node_modules'))) 'adapter installed dependencies'
+    Run 'Bootstrap' $sourceB | Out-Host
+
     Case 'Uninstall refuses changed shortcut before stopping runtime'
     [IO.File]::AppendAllText($shortcut, 'modified')
+    $changedShortcutHash = (Get-FileHash -LiteralPath $shortcut -Algorithm SHA256).Hash
+    Run 'Install' | Out-Host
+    Run 'Bootstrap' $sourceB | Out-Host
+    Assert-True ((Get-FileHash -LiteralPath $shortcut -Algorithm SHA256).Hash -ceq $changedShortcutHash) 'install/bootstrap overwrote modified shortcut'
     $output = Run 'Uninstall' $sourceA 1
     Assert-True ($output -match 'INSTALL_SHORTCUT_CHANGED') 'modified shortcut did not report safety gate'
     Assert-True (Test-Path -LiteralPath $receipt) 'changed shortcut lost installation receipt'
@@ -99,6 +152,10 @@ try {
     'synthetic-preexisting-shortcut' | Set-Content -LiteralPath $shortcut
     Run 'Install' | Out-Host
     Assert-True ((Get-Content -LiteralPath $receipt -Raw | ConvertFrom-Json).shortcuts[0].ownership -eq 'ADOPTED') 'preexisting shortcut not adopted'
+    Remove-Item -LiteralPath $shortcut -Force
+    Run 'Install' | Out-Host
+    Assert-True (-not (Test-Path -LiteralPath $shortcut)) 'missing adopted shortcut was recreated'
+    'synthetic-preexisting-shortcut' | Set-Content -LiteralPath $shortcut
     Run 'Uninstall' | Out-Host
     Assert-True ((Get-Content -LiteralPath $shortcut -Raw).Trim() -eq 'synthetic-preexisting-shortcut') 'adopted shortcut removed'
 
@@ -107,6 +164,8 @@ try {
     'FOREIGN_CONFLICT' | Set-Content -LiteralPath (Join-Path $sourceA 'runtime-state.txt')
     Run 'Uninstall' $sourceA 1 | Out-Host
     Run 'Install' $sourceB 1 | Out-Host
+    Run-Adapter 'Status-EscapeHatch.ps1' 2 | Out-Host
+    Run-Adapter 'Close-EscapeHatch.ps1' 2 | Out-Host
     Assert-True (Test-Path -LiteralPath $receipt) 'foreign conflict lost receipt'
     Assert-True ((Get-Content -LiteralPath (Join-Path $sourceA 'runtime-state.txt') -Raw).Trim() -eq 'FOREIGN_CONFLICT') 'foreign runtime mutated'
 

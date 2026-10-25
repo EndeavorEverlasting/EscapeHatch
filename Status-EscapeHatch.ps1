@@ -1,17 +1,16 @@
-<# Friendly EscapeHatch status adapter.
-   Does not inspect or terminate processes itself.
-#>
+<# Resolve the installed source; the canonical runtime manager owns process safety. #>
 [CmdletBinding()]
-param()
-
+param(
+    [string]$AppDataRoot = '',
+    [string]$ShortcutRoot = '',
+    [switch]$TestMode
+)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-
-$manager = Join-Path $PSScriptRoot 'scripts\windows\EscapeHatch-Runtime.ps1'
-if (-not (Test-Path -LiteralPath $manager -PathType Leaf)) {
-    Write-Host "ERROR: lifecycle manager missing at $manager" -ForegroundColor Red
+$installer = Join-Path $PSScriptRoot 'scripts\windows\EscapeHatch-Install.ps1'
+if (-not (Test-Path -LiteralPath $installer -PathType Leaf)) {
+    Write-Host 'ERROR: EscapeHatch installation owner is missing.' -ForegroundColor Red
     exit 1
 }
-
-& $manager -Action Status
+& $installer -Action Status -AppDataRoot $AppDataRoot -ShortcutRoot $ShortcutRoot -TestMode:$TestMode
 exit $LASTEXITCODE

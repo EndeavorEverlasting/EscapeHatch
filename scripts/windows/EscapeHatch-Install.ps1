@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('Inspect', 'Install', 'Bootstrap', 'Uninstall')]
+    [ValidateSet('Inspect', 'Install', 'Bootstrap', 'Uninstall', 'Status', 'Stop')]
     [string]$Action = 'Inspect',
     [string]$SourceRoot = '',
     [string]$AppDataRoot = '',
@@ -13,7 +13,11 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 function Full-Path([string]$Value) {
-    return [IO.Path]::GetFullPath($Value).TrimEnd('\', '/')
+    $full = [IO.Path]::GetFullPath($Value)
+    $root = [IO.Path]::GetPathRoot($full)
+    $trimmed = $full.TrimEnd('\', '/')
+    if ($trimmed.Length -le $root.TrimEnd('\', '/').Length) { return $root }
+    return $trimmed
 }
 function Same-Path([string]$Left, [string]$Right) {
     return [string]::Equals((Full-Path $Left), (Full-Path $Right), [StringComparison]::OrdinalIgnoreCase)
@@ -97,17 +101,37 @@ function Test-NodeVersion([string]$Executable) {
 function Make-Shortcut([string]$Root) {
     $parent = Split-Path -Parent $shortcutPath
     New-Item -ItemType Directory -Path $parent -Force | Out-Null
+    $temporary = Join-Path $parent ('EscapeHatch.' + [Guid]::NewGuid().ToString('N') + '.lnk')
     $shell = New-Object -ComObject WScript.Shell
     try {
-        $link = $shell.CreateShortcut($shortcutPath)
+        $link = $shell.CreateShortcut($temporary)
         $link.TargetPath = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
         $link.Arguments = '-NoProfile -ExecutionPolicy Bypass -File "' + (Join-Path $Root 'Launch-EscapeHatch.ps1') + '"'
         $link.WorkingDirectory = $Root
         $link.Description = 'Open your private EscapeHatch application workspace'
         $link.Save()
+        # Publish without overwrite: an externally created path wins the race.
+        [IO.File]::Move($temporary, $shortcutPath)
     } finally {
         if ($null -ne $shell) { [void][Runtime.InteropServices.Marshal]::ReleaseComObject($shell) }
+        if (Test-Path -LiteralPath $temporary -PathType Leaf) { Remove-Item -LiteralPath $temporary -Force }
     }
+}
+
+function Repair-OwnedShortcuts($Item, [string]$Root) {
+    $changed = $false
+    foreach ($entry in @($Item.shortcuts)) {
+        if ($entry.ownership -ne 'CREATED') { continue }
+        if (Test-Path -LiteralPath $entry.path) {
+            if (-not (Test-Path -LiteralPath $entry.path -PathType Leaf)) { throw 'INSTALL_SHORTCUT_INVALID: existing shortcut path is not a file.' }
+            if ((File-Hash $entry.path) -cne $entry.sha256) { Write-Host 'INSTALL_SHORTCUT=MODIFIED_PRESERVED' }
+            continue
+        }
+        Make-Shortcut $Root
+        $entry.sha256 = File-Hash $entry.path
+        $changed = $true
+    }
+    if ($changed) { Save-Receipt $Item; Write-Host 'INSTALL_SHORTCUT=REPAIRED' }
 }
 
 $exitCode = 0
@@ -146,6 +170,15 @@ try {
     try { $locked = $mutex.WaitOne([TimeSpan]::FromSeconds(20)) } catch [Threading.AbandonedMutexException] { $locked = $true }
     if (-not $locked) { throw 'INSTALL_LOCK_TIMEOUT: another installation action is active.' }
     $receipt = Read-Receipt
+    if ($Action -in @('Status', 'Stop')) {
+        # Sibling adapters follow the same installation selection as Bootstrap.
+        # These operations never install dependencies or repair shortcuts.
+        $selected = if ($null -ne $receipt) { [string]$receipt.sourceRoot } else { $SourceRoot }
+        Require-Source $selected
+        $manager = Join-Path $selected 'scripts\windows\EscapeHatch-Runtime.ps1'
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $manager -Action $Action
+        exit $LASTEXITCODE
+    }
     if ($Action -eq 'Uninstall') {
         if ($null -eq $receipt) { Write-Host 'ESCAPEHATCH_INSTALLATION=NOT_INSTALLED'; exit 0 }
         # Validate every deletion candidate before touching either runtime or shortcut.
@@ -191,6 +224,8 @@ try {
         if (-not (Test-Path -LiteralPath $shortcutPath -PathType Leaf)) { throw 'INSTALL_SHORTCUT_INVALID: existing shortcut path is not a file.' }
         $receipt = [ordered]@{ schema = 'escapehatch-installation/v1'; sourceRoot = $selected; installedAtUtc = [DateTime]::UtcNow.ToString('o'); shortcuts = @([ordered]@{ path = $shortcutPath; sha256 = File-Hash $shortcutPath; ownership = $owned }) }
         Save-Receipt $receipt
+    } else {
+        Repair-OwnedShortcuts $receipt $selected
     }
     Write-Host 'ESCAPEHATCH_INSTALLATION=INSTALLED'
     if ($Action -eq 'Bootstrap') {

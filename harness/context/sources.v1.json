@@ -184,5 +184,29 @@
       "load": "explicit-private-read-only",
       "measured": false
     }
-  }
+  },
+  "tool_routing": {
+    "general": [
+      "repository.read"
+    ],
+    "harness": [
+      "repository.read",
+      "local.validators"
+    ],
+    "context": [
+      "repository.read",
+      "local.validators",
+      "context.receipts"
+    ],
+    "runtime": [
+      "repository.read",
+      "local.runtime.observe"
+    ],
+    "application": [
+      "repository.read",
+      "local.ats.observe",
+      "local.artifacts.read"
+    ]
+  },
+  "tool_route_status": "ADVISORY_UNTIL_HOST_ENFORCES"
 }

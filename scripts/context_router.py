@@ -190,18 +190,30 @@ def compact_mission(value: dict) -> dict:
     return result
 
 def compact_trace(source: str, maximum_lines: int = 48) -> list[str]:
-    """Only emit line number, signal category and digest; never raw log secrets."""
+    """Preserve important decision/failure signatures; never emit raw log contents."""
     if maximum_lines < 1:
         raise ValueError("CONTEXT_TRACE_LIMIT_INVALID")
-    labels = ("ERROR", "FAIL", "BLOCKED", "DENIED", "CONFLICT", "WARNING", "FATAL",
-              "PASS", "COMMIT", "RECEIPT", "SHA256")
-    pattern = re.compile(r"\b(" + "|".join(labels) + r")\b", re.I)
-    signals = [(i + 1, line[:320]) for i, line in enumerate(source.splitlines()) if pattern.search(line)]
-    if len(signals) > maximum_lines:
-        early = maximum_lines // 2
-        signals = signals[:early] + signals[-(maximum_lines - early):]
-    return [f"L{number}: {pattern.search(text).group(1).upper()} sha256={hashlib.sha256(text.encode('utf-8')).hexdigest()[:12]}"
-            for number, text in signals]
+    critical = {"FATAL", "ERROR", "FAIL", "BLOCKED", "DENIED", "CONFLICT",
+                "DECISION", "UNRESOLVED", "NEXT ACTION"}
+    labels = tuple(critical) + ("WARNING", "PASS", "COMMIT", "RECEIPT", "SHA256")
+    pattern = re.compile(r"\b(" + "|".join(sorted(labels, key=len, reverse=True)) + r")\b", re.I)
+    signals = [(number + 1, match.group(1).upper(), line[:320])
+               for number, line in enumerate(source.splitlines())
+               if (match := pattern.search(line))]
+    essential = [s for s in signals if s[1] in critical]
+    if len(essential) >= maximum_lines:
+        first = maximum_lines // 2
+        selected = essential[:first] + essential[-(maximum_lines - first):]
+    else:
+        space = maximum_lines - len(essential)
+        optional = [s for s in signals if s[1] not in critical]
+        left = space // 2
+        right = space - left
+        selected = essential + optional[:left] + (optional[-right:] if right else [])
+        selected = list({row[0]: row for row in selected}.values())
+    selected.sort(key=lambda row: row[0])
+    return [f"L{number}: {kind} sha256={hashlib.sha256(text.encode('utf-8')).hexdigest()[:12]}"
+            for number, kind, text in selected]
 
 
 def main() -> int:

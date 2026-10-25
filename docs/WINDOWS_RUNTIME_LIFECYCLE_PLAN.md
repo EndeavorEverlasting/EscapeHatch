@@ -124,7 +124,10 @@ and source replacement. Hosted Windows lifecycle passed on `4e470fe`. Hosted nor
 exposed an intermittent answer-dialog closure; a deterministic synthetic browser probe traced it to
 opening requestAnimationFrame autofocus stealing the input focus before keyboard clearing. The same
 family reproduced in application editing during stress. The modal focus owner and retained controls
-must close this observed defect before browser proof can be promoted.
+closed this observed defect by setting initial focus before paint while retaining passive keyboard and
+return-focus cleanup. Both retained delayed-frame regressions failed before repair; 42 repeated focus,
+validation, Escape and return-focus controls pass afterward. Typecheck and production build pass.
+The full combined exact-head hosted suite remains the release gate; earlier green heads do not certify it.
 
 The standalone app has no usable Google lease on the observed workstation; the conversation connector
 does not transfer that permission. The real read-only adapter is fault-injection tested, but autonomous

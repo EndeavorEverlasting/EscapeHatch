@@ -48,6 +48,24 @@ class EscalationTests(unittest.TestCase):
             router.select(self.root, "application", "application", 32768,
                           require_full=("application_plan",))
 
+    def test_missing_required_application_parent_in_receipt_is_rejected(self):
+        receipt = router.select(self.root, "application", "application", 50000)
+        receipt["selected"] = [x for x in receipt["selected"] if x["id"] != "application_parent"]
+        with self.assertRaisesRegex(ValueError, "CONTEXT_RECEIPT_REQUIRED_SOURCE_OMITTED"):
+            router.verify_receipt(self.root, receipt)
+
+    def test_rewriting_selected_payload_breaks_reuse(self):
+        receipt = router.select(self.root, "general", "general")
+        receipt["selected"][0]["payload"] = "incorrect summary"
+        with self.assertRaisesRegex(ValueError, "CONTEXT_RECEIPT_PAYLOAD_MISMATCH"):
+            router.verify_receipt(self.root, receipt)
+
+    def test_duplicate_source_entry_is_rejected(self):
+        receipt = router.select(self.root, "general", "general")
+        receipt["selected"].append(dict(receipt["selected"][0]))
+        with self.assertRaisesRegex(ValueError, "CONTEXT_RECEIPT_DUPLICATE_SOURCE"):
+            router.verify_receipt(self.root, receipt)
+
     def test_symlink_escape_blocks(self):
         external = Path(self.temp.name).parent / (Path(self.temp.name).name + "-fixture")
         external.write_text("outside")

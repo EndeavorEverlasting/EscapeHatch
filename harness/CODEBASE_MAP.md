@@ -86,6 +86,14 @@ The resolver verifies origin and requested remote head, preserves dirty/differen
 
 ## Product entry points
 
+The first-action guide and per-opportunity artifact workbench are documented in
+`docs/GUIDED_APPLICATION_WORKBENCH.md`. `src/components/guided-start.tsx` (under
+`artifacts/escape-hatch/`) leads to existing Sources and Applications. The
+`application-requirements.ts` managed inspector supplies current-page-only metadata to
+`src/lib/application-puzzle.ts` and `src/components/application-puzzle.tsx` without
+creating persistence, approval or submission authority. Run `npm --prefix
+artifacts/escape-hatch run test:workbench` and the registered workbench browser tests.
+
 Canonical product persistence remains `contracts/career-state.v1.schema.json`; `scripts/validate_career_state.py` validates it. `contracts/application-companion.v1.json` defines the delivery/privacy/synchronization boundary for clients that read and write that user-owned career state. `contracts/resume-presentation.v1.json` defines the visual/structural quality boundary for resume outputs while leaving private resume content user-owned. `scripts/export_study_guidance.py` exports typed guidance to StudySyndicate.
 
 The companion contract is surface-agnostic at the state boundary. Browser extensions, Microsoft Store apps, Play Store apps, and local web runtimes may use different storage/runtime adapters without creating separate career-state formats. Public hosting and a public profile are optional, not prerequisites.

@@ -21,6 +21,16 @@ This file is the canonical registry for durable EscapeHatch artifacts. A plausib
 
 | Artifact | Owner path | Type | How to produce/update | Validation |
 | --- | --- | --- | --- | --- |
+| Guided workbench evidence | `docs/GUIDED_APPLICATION_WORKBENCH.md` | tracked bounded implementation/evidence | update with accepted behavior and measured proof | workbench tests and harness validator |
+| Guided-start interface | `artifacts/escape-hatch/src/components/guided-start.tsx` | tracked first-action guide | reuse profile and opportunity state | workbench browser tests |
+| Artifact drop intake | `artifacts/escape-hatch/src/components/artifact-dropzone.tsx` | tracked chooser/drop component | share existing source and document validators | workbench browser tests |
+| Application puzzle interface | `artifacts/escape-hatch/src/components/application-puzzle.tsx` | tracked current-form workbench | consume scoped inspection and canonical documents | workbench browser tests |
+| Application puzzle projection | `artifacts/escape-hatch/src/lib/application-puzzle.ts` | tracked pure scoped projection | expire/reset current-page evidence | `npm --prefix artifacts/escape-hatch run test:workbench` |
+| Application puzzle model proof | `artifacts/escape-hatch/src/lib/application-puzzle.test.ts` | tracked synthetic tests | add scope/staleness regressions | `npm --prefix artifacts/escape-hatch run test:workbench` |
+| Read-only application requirements | `artifacts/escape-hatch/application-requirements.ts` | tracked managed-page inspector | read scoped visible control metadata only | workbench unit/browser tests |
+| Guided workbench browser proof | `artifacts/escape-hatch/tests/application-workbench.spec.ts` | tracked synthetic journeys | prove drag/review/scope/layout/refresh | canonical Playwright configuration |
+| Application requirements middleware proof | `artifacts/escape-hatch/tests/application-requirements-control.spec.ts` | tracked real loopback middleware/browser proof | reject cross-origin/wrong-job reads and preserve DOM | canonical Playwright configuration |
+| Guided workbench dispatch record | `Outputs/prompt-parallel-dispatch/manifest.json` | tracked execution record, canonical validation blocked | native read-only review plus primary writer | schema/runner unavailable; see workbench evidence |
 | Agent governance doctrine | `AGENTS.md` | tracked canonical contract | governance sprint only | `python scripts/validate_governance.py` |
 | Harness manifest | `harness/manifest.v1.json` | tracked machine-readable registry | harness sprint only | `python scripts/validate_harness.py` |
 | Codebase map | `harness/CODEBASE_MAP.md` | tracked operator/agent map | update when structure/commands change | `python scripts/validate_harness.py` |

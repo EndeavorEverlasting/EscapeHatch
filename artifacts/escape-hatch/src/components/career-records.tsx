@@ -20,7 +20,7 @@ export function CareerRecords({ profile, setProfile, opportunity, setApplication
     <h2 className="font-display text-2xl">Reusable work and education</h2>
     <p>Keep your responsibilities separate from the employer posting. Choose one reviewed record of each kind for filling. Repeated or ambiguous employer sections stay manual.</p>
     <label className="block my-3">Load work and education drafts from résumé (.txt or .pdf)
-      <input type="file" accept=".txt,.pdf" onChange={async event => {
+      <input className="max-w-full" type="file" accept=".txt,.pdf" onChange={async event => {
         const file = event.target.files?.[0]; if (!file) return;
         try {
           if (file.size > 5 * 1024 * 1024) throw new Error('Resume exceeds size limit');

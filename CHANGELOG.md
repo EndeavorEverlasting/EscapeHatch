@@ -5,6 +5,17 @@ Product identity is owned by `VERSION`. Exact freshness is the Git commit (and a
 
 Schema/protocol versions (`escapehatch-*/vN`, contract `version` integers) are independent and are not product releases.
 
+## [1.1.0]
+
+### Added
+
+- Guided source-first onboarding with shared drag-and-drop artifact intake.
+- Per-opportunity current-form requirement puzzle with explicit review and evidence boundaries.
+
+### Preserved
+
+- Existing local persistence, managed preparation, and manual final submission.
+
 ## [1.0.0] - 2026-09-11
 
 ### Cutover

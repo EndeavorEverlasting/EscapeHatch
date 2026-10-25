@@ -31,3 +31,6 @@ OC-EscapeHatch-RunTime-Glitch.md
 *.synctex.gz
 *.fls
 *.fdb_latexmk
+
+# Disposable browser evidence (synthetic screenshots and traces)
+artifacts/escape-hatch/test-results/

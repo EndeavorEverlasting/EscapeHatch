@@ -1,0 +1,37 @@
+{
+  "lanes": [
+    {
+      "mission": "Read-only review of evidence sources and safety tests",
+      "mutation_surfaces": [],
+      "return_contract": "file:line findings and bounded acceptance tests",
+      "lane_id": "review",
+      "adapter": "collaboration.spawn_agent"
+    },
+    {
+      "mission": "Implement and validate guided artifact assembly",
+      "mutation_surfaces": [
+        "artifacts/escape-hatch/src",
+        "artifacts/escape-hatch/tests",
+        "docs/GUIDED_APPLICATION_WORKBENCH.md"
+      ],
+      "lane_id": "implementation",
+      "adapter": "primary agent"
+    }
+  ],
+  "graph": {
+    "max_width": 2,
+    "parallel_disposition": "REQUIRED"
+  },
+  "blockers": [
+    "harness/contracts/prompt-parallel-dispatch.v1.json absent",
+    "scripts/prompt_parallel_dispatch.py absent"
+  ],
+  "status": "BLOCKED_CANONICAL_VALIDATION_NATIVE_EXECUTION_AVAILABLE",
+  "schema_version": "prompt-parallel-dispatch/v1",
+  "base_ref": {
+    "provider_default_head": "9cc71711fb8152ea869ba2530a06f88b7ef4949a"
+  },
+  "run_id": "guided-application-workbench-20261025",
+  "convergence_owner": "primary agent",
+  "repository": "EndeavorEverlasting/EscapeHatch"
+}

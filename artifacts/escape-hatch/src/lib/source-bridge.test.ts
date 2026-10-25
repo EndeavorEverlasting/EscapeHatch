@@ -9,6 +9,22 @@ const corpus = 'Synthetic Candidate\nsynthetic@example.invalid\nSummary\nBuilds 
 const file = (text = corpus) => new File([text], 'synthetic.txt', { type: 'text/plain' });
 const fresh = () => ({ profile: { ...emptyProfile }, assist: emptyAssistProfile({ ...emptyProfile }) });
 
+test('source-first review saves grounded facts without inventing a job or binding', async () => {
+  const { profile, assist } = fresh();
+  const preview = await previewLocalSource(file(), profile, assist);
+  const proposals = preview.imported.proposals.map(item => ({ ...item, review: 'accepted' as const }));
+  const result = await approveSource(preview, proposals, '', [], profile, assist, []);
+  assert.equal(result.profile.email, 'synthetic@example.invalid');
+  assert.deepEqual(result.bindings, []);
+  assert.equal(result.assist.proposals[0].provenance.revision, preview.revision);
+  await assert.rejects(approveSource(preview, [{ ...proposals[0], value: 'forged' }], '', [], profile, assist, []), /MISMATCH/);
+  await assert.rejects(approveSource(preview, proposals, '', [], { ...profile, city: 'edited' }, assist, []), /PROFILE_CHANGED/);
+  const bound = await approveSource(preview, proposals, application.id, [application], profile, assist, []);
+  const newPreview = await previewLocalSource(file(), bound.profile, bound.assist);
+  const imported = await approveSource(newPreview, newPreview.imported.proposals.map(item => ({ ...item, review: 'accepted' as const })), '', [], bound.profile, bound.assist, bound.bindings);
+  assert.deepEqual(imported.bindings, bound.bindings);
+});
+
 test('read stages claims without mutation and hashes actual bytes rather than filename', async () => {
   const { profile, assist } = fresh();
   const before = JSON.stringify({ profile, assist });

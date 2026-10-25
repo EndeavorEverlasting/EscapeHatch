@@ -10,6 +10,8 @@ Owned: guided-start, artifact-dropzone, application-puzzle, application-requirem
 
 Release classification: compatible user-visible feature (`minor`). The canonical `scripts/product_version.py bump --change minor` generator advances `VERSION` to 1.1.0, synchronizes `browser/application-assist/manifest.json`, and records `CHANGELOG.md`. No release tag/publication is claimed by this source mutation.
 
+Provider CI exposed a release-fixture dependency on the real repository version: the temporary 1.0.0 mirror test monkeypatched a module constant, while a default argument still read the real VERSION (now 1.1.0). The bounded test repair passes the temporary workspace's version explicitly to mirror check/sync; production release policy and generator are unchanged. Validation: `python tests/test_product_version.py` and `python scripts/validate_product_version.py`.
+
 Existing `source-bridge.ts` owns claim provenance/revision validation and atomic persistence. Existing private opportunity-document store owns exact PDF digests and review. No puzzle storage or alternate approval authority is introduced. A blank opportunity means profile-only review; nonempty missing/closed IDs still fail.
 
 ## Design decision
@@ -88,6 +90,7 @@ Feature and bounded stability ownership, relative to this repository root:
 - `browser/application-assist/manifest.json` (canonical generated version mirror only)
 - `Outputs/prompt-parallel-dispatch/manifest.json`
 - `harness/CODEBASE_MAP.md`
+- `tests/test_product_version.py`
 - `docs/GUIDED_APPLICATION_WORKBENCH.md`
 - `artifacts/escape-hatch/application-requirements.ts`
 - `artifacts/escape-hatch/browser-assist-control.ts`

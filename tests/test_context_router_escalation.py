@@ -38,9 +38,9 @@ class EscalationTests(unittest.TestCase):
             router.select(self.root, "anything", require_full=("unknown-id",))
 
     def test_required_missing_source_blocks(self):
-        (self.root / "harness/CODEBASE_MAP.md").unlink()
+        (self.root / "scripts/windows/EscapeHatch-Runtime.ps1").unlink()
         with self.assertRaisesRegex(ValueError, "CONTEXT_REQUIRED_SOURCE_MISSING"):
-            router.select(self.root, "anything", require_full=("codebase_map",))
+            router.select(self.root, "anything", require_full=("runtime_manager",))
 
     def test_full_required_source_never_silently_truncates(self):
         (self.root / "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md").write_text("example\n" * 15000)

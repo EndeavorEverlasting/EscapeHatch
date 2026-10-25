@@ -107,7 +107,7 @@ class ContextRoutingTests(unittest.TestCase):
     def test_receipt_rejects_missing_governance(self):
         receipt = router.select(self.root, "anything")
         receipt["selected"] = [e for e in receipt["selected"] if e["id"] != "governance"]
-        with self.assertRaisesRegex(ValueError, "CONTEXT_GOVERNANCE_NOT_PRESENT"):
+        with self.assertRaisesRegex(ValueError, "CONTEXT_RECEIPT_REQUIRED_SOURCE_OMITTED:governance"):
             router.verify_receipt(self.root, receipt)
 
 

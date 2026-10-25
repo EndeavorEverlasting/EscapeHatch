@@ -31,6 +31,7 @@ type ServerResponse = {
   error?: string;
   filled?: string[];
   evidenceSummary?: string;
+  networkDiagnosis?: { code: 'VPN_INTERFERENCE_SUSPECTED' | 'NETWORK_FAILURE_UNATTRIBUTED' | 'NAVIGATION_FAILURE_UNCLASSIFIED'; causeVerified: false; vpnCandidateDetected: boolean } | null;
   recorded?: string[];
   skipped?: string[];
   attachments?: Record<string, string>;
@@ -143,6 +144,9 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     request('/status').then((result) => {
       if (active) {
         setStatus(result.state || 'idle');
+        if (result.state === 'browser_open_navigation_unverified' && result.networkDiagnosis?.code === 'VPN_INTERFERENCE_SUSPECTED') {
+          setMessage('Navigation failed and a VPN tunnel error was detected. VPN interference is suspected, not proven. Your VPN has not been changed.');
+        }
         setBrowserOpen(Boolean(result.browserOpen));
         setCurrentPage(result.currentPage || null);
         setListenerStatus(result.listeners);
@@ -333,7 +337,11 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         Object.entries(result.attachments || {}).map(([kind, state]) => kind + ': ' + state.replaceAll('_', ' ')).join(' · ') +
         '. ' + (result.evidenceSummary || 'Confirm the employer form accepted each document.')
       );
-      if (action === 'launch') setMessage(autoFillMessage || 'A separate managed Chrome window is opening. Authentication stays under your control.');
+      if (action === 'launch') setMessage(result.networkDiagnosis?.code === 'VPN_INTERFERENCE_SUSPECTED'
+        ? 'Application navigation failed with a tunnel/proxy error and a VPN-like interface present. VPN interference is suspected, not proven. The VPN was not modified.'
+        : result.state === 'browser_open_navigation_unverified'
+          ? 'Chrome opened but application navigation was not verified. Check connectivity and the employer page; no form completion is claimed.'
+          : autoFillMessage || 'A separate managed Chrome window is opening. Authentication stays under your control.');
       if (action === 'prepare' && result.preparation) {
         setMessage(
           result.preparation.state + ' (' + result.preparation.code + '). Pages prepared: ' +

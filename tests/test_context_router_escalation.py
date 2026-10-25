@@ -73,6 +73,24 @@ class EscalationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "CONTEXT_RECEIPT_DUPLICATE_SOURCE"):
             router.verify_receipt(self.root, receipt)
 
+    def test_baseline_path_symlink_is_rejected_before_read(self):
+        external = Path(self.temp.name).parent / (Path(self.temp.name).name + "-baseline-fixture")
+        external.write_text("outside fixture")
+        path = self.root / "harness/CODEBASE_MAP.md"
+        path.unlink()
+        try:
+            path.symlink_to(external)
+            with self.assertRaisesRegex(ValueError, "CONTEXT_BASELINE_SOURCE_ESCAPES_REPOSITORY"):
+                router.select(self.root, "general", "general")
+        finally:
+            external.unlink(missing_ok=True)
+
+    def test_powershell_outline_keeps_hyphenated_names(self):
+        src = "function Get-RuntimeState { }\nfunction Start-ColdRuntime { }"
+        view = router.outline(src, ".ps1")
+        self.assertIn("Get-RuntimeState", view)
+        self.assertIn("Start-ColdRuntime", view)
+
     def test_symlink_escape_blocks(self):
         external = Path(self.temp.name).parent / (Path(self.temp.name).name + "-fixture")
         external.write_text("outside")

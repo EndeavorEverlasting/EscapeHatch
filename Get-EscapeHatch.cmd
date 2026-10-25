@@ -72,8 +72,8 @@ if exist "%SOURCE%" (
     echo It has NOT been modified. Select an empty folder or the original checkout.
     exit /b 4
   )
-  for /f "delims=" %%G in ('git -C "%SOURCE%" remote get-url origin 2^>nul') do set "ORIGIN=%%G"
-  if /I not "%ORIGIN%"=="https://github.com/EndeavorEverlasting/EscapeHatch.git" (
+  git -C "%SOURCE%" remote get-url origin 2>nul | findstr /I /X /C:"https://github.com/EndeavorEverlasting/EscapeHatch.git" >nul
+  if errorlevel 1 (
     echo ERROR: Existing checkout has a different remote. Preserved unchanged.
     exit /b 4
   )

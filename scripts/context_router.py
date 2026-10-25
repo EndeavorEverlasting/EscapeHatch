@@ -146,6 +146,7 @@ def main() -> int:
     parser.add_argument("--trace", type=Path)
     parser.add_argument("--max-trace-lines", type=int, default=48)
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--metrics-only", action="store_true", help="Print measured repository payload without contents")
     parser.add_argument("--verify-receipt", type=Path)
     args = parser.parse_args()
     try:
@@ -159,7 +160,13 @@ def main() -> int:
         if args.output:
             args.output.parent.mkdir(parents=True, exist_ok=True)
             args.output.write_text(rendered + "\n", encoding="utf-8")
-        print(rendered)
+        if args.metrics_only:
+            summary = {key: result[key] for key in ("lane", "baseline_unconditional_bytes", "candidate_payload_bytes", "savings_bytes")}
+            summary["selected_ids"] = [entry["id"] for entry in result["selected"]]
+            summary["external_context"] = "UNMEASURED"
+            print(json.dumps(summary, sort_keys=True))
+        else:
+            print(rendered)
         return 0
     except (ValueError, OSError, UnicodeError, json.JSONDecodeError) as exc:
         print(f"CONTEXT_ROUTING_BLOCKED: {exc}")

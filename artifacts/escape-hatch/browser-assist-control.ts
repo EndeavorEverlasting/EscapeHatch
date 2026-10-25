@@ -1,4 +1,5 @@
 import { prepareWithoutTrustedNavigation } from './managed-prepare-fallback.ts';
+import { fieldProgressState, attachmentProgressState, evidenceDescription } from './managed-progress-evidence.ts';
 import { assertInspectionScope, inspectApplicationRequirements } from './application-requirements.ts';
 import { OpportunityDocumentStore, documentScope, type DocumentKind } from './opportunity-documents.ts';
 import { ManagedListeners } from './managed-listeners.ts';
@@ -515,15 +516,15 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               if (!merged.preferences[id]) merged.preferences[id] = { scope: 'profile_preference', source: 'user', value, updated_at: now };
             }
             const outcome = await fillSavedPreferences(page, withCareerPreferences(merged, payload.careerProfile, payload.targetRole), typeof payload.employerName === 'string' ? payload.employerName.slice(0, 160) : '');
-            state = 'fields_filled_review_required';
-            return respond(res, 200, { ok: true, state, ...outcome, requiresOperatorSubmission: true });
+            state = fieldProgressState(outcome);
+            return respond(res, 200, { ok: true, state, ...outcome, evidenceSummary: evidenceDescription(state), requiresOperatorSubmission: true });
           }
           if (url.pathname === PREFIX + '/attach') {
             if (payload.resume || payload.cover) throw new Error('Save the selected documents to this opportunity before attaching.');
             const packageFiles = await documentStore.forUpload(opportunityId, applicationUrl, (await readPreferences()).require_document_review !== false);
             const outcome = await attachPdfs(page, packageFiles.resume, packageFiles.cover);
-            state = 'attachments_staged_review_required';
-            return respond(res, 200, { ok: true, state, attachments: outcome, reviewPolicy: packageFiles.reviewPolicy, requiresOperatorSubmission: true });
+            state = attachmentProgressState(outcome);
+            return respond(res, 200, { ok: true, state, evidenceSummary: evidenceDescription(state), attachments: outcome, reviewPolicy: packageFiles.reviewPolicy, requiresOperatorSubmission: true });
           }
           return respond(res, 404, { ok: false, error: 'unknown_action' });
         } catch (error) {

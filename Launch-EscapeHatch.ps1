@@ -1,17 +1,14 @@
 <# EscapeHatch one-click Windows launcher.
-   Delegates all lifecycle behavior to the canonical repository-owned manager.
+   Bootstrap resolves the installed source and dependencies before canonical Start.
 #>
 [CmdletBinding()]
 param()
-
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-
-$manager = Join-Path $PSScriptRoot 'scripts\windows\EscapeHatch-Runtime.ps1'
-if (-not (Test-Path -LiteralPath $manager -PathType Leaf)) {
-    Write-Host "ERROR: lifecycle manager missing at $manager" -ForegroundColor Red
+$installer = Join-Path $PSScriptRoot 'scripts\windows\EscapeHatch-Install.ps1'
+if (-not (Test-Path -LiteralPath $installer -PathType Leaf)) {
+    Write-Host "ERROR: EscapeHatch bootstrap is missing." -ForegroundColor Red
     exit 1
 }
-
-& $manager -Action Start
+& $installer -Action Bootstrap
 exit $LASTEXITCODE

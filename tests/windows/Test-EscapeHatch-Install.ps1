@@ -19,6 +19,7 @@ function Run([string]$Action, [string]$Source = $sourceA, [int]$Expected = 0) {
     Assert-True ($LASTEXITCODE -eq $Expected) "$Action exit was $LASTEXITCODE, expected $Expected. $($output -join ' ')"
     return ($output -join "`n")
 }
+
 function Fixture-Source([string]$Root) {
     New-Item -ItemType Directory -Path (Join-Path $Root 'scripts\windows') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $Root 'artifacts\escape-hatch') -Force | Out-Null
@@ -128,3 +129,7 @@ try {
     if (-not $resolved.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase) -or [IO.Path]::GetFileName($resolved) -notmatch '^eh-install-[a-f0-9]{32}$') { throw 'TEST_CLEANUP_ROOT_INVALID' }
     if (Test-Path -LiteralPath $resolved) { Remove-Item -LiteralPath $resolved -Recurse -Force }
 }
+
+# Expected negative child commands leave LASTEXITCODE=1. CI dot-sources this
+# script, so explicitly return success only after assertions and cleanup finish.
+exit 0

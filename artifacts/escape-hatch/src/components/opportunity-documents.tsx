@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArtifactDropzone } from './artifact-dropzone';
+import { sameApplicationUrl } from '@/lib/application-puzzle';
 
 export type ReviewDocument = { name: string; sha256: string; size: number; reviewedAt?: string };
 export type ReviewPackage = { opportunityId: string; url: string; documents: Partial<Record<'resume' | 'cover', ReviewDocument>> };
@@ -14,6 +15,7 @@ async function pdfPayload(file: File) {
 }
 export function useOpportunityDocuments(opportunityId: string, url: string) {
   const [state, setState] = useState<State | null>(null), [loading, setLoading] = useState(false), [error, setError] = useState('');
+  const [intakePending, setIntakePending] = useState(false);
   const scopeKey = JSON.stringify([opportunityId, url]);
   const currentKey = useRef(scopeKey);
   const generation = useRef(0);
@@ -34,45 +36,91 @@ export function useOpportunityDocuments(opportunityId: string, url: string) {
     } catch (error) { if (currentKey.current === key && generation.current === revision) setError(error instanceof Error ? error.message : 'Document action failed.'); throw error; }
     finally { if (currentKey.current === key && generation.current === revision) setLoading(false); }
   }, [opportunityId, url]);
-  useEffect(() => { setState(null); if (opportunityId && url) void request('status').catch(() => {}); }, [request, opportunityId, url]);
-  const bound = state?.package.opportunityId === opportunityId && state.package.url === url;
+  useEffect(() => { setState(null); setIntakePending(false); if (opportunityId && url) void request('status').catch(() => {}); }, [request, opportunityId, url]);
+  const bound = state?.package.opportunityId === opportunityId && sameApplicationUrl(state.package.url, url);
   const data = bound ? state : null;
-  const canUpload = Boolean(data && data.package.documents.resume && (!data.requireReview || Object.values(data.package.documents).every(item => item.reviewedAt)));
-  return { data, loading, error, canUpload, request, scopeKey };
+  const canUpload = Boolean(!intakePending && data && data.package.documents.resume && (!data.requireReview || Object.values(data.package.documents).every(item => item.reviewedAt)));
+  return { data, loading, error, canUpload, request, scopeKey, intakePending, setIntakePending };
 }
 export function OpportunityDocuments({ documents, disabled, onBypass }: { documents: ReturnType<typeof useOpportunityDocuments>; disabled: boolean; onBypass: () => void }) {
   const data = documents.data;
   const [preview, setPreview] = useState<{ scope: string; kind: 'resume' | 'cover' } | null>(null);
   const [notice, setNotice] = useState<{ scope: string; text: string } | null>(null);
+  const [intakeMessages, setIntakeMessages] = useState({ resume: '', cover: '' });
   const currentScope = useRef(documents.scopeKey); currentScope.current = documents.scopeKey;
-  const intakeGeneration = useRef(0);
-  useEffect(() => { intakeGeneration.current += 1; return () => { intakeGeneration.current += 1; }; }, [documents.scopeKey]);
+  const intakeGeneration = useRef({ resume: 0, cover: 0 });
+  const pendingIntakes = useRef<{ resume: number | null; cover: number | null }>({ resume: null, cover: null });
+  const failedIntakes = useRef({ resume: false, cover: false });
+  const pendingBypassScope = useRef<string | null>(null);
+  const onBypassRef = useRef(onBypass); onBypassRef.current = onBypass;
+  const stagingQueue = useRef<Promise<unknown>>(Promise.resolve());
+  useEffect(() => {
+    const invalidate = () => {
+      intakeGeneration.current.resume += 1; intakeGeneration.current.cover += 1;
+      pendingIntakes.current = { resume: null, cover: null };
+      failedIntakes.current = { resume: false, cover: false };
+      pendingBypassScope.current = null;
+    };
+    invalidate(); setIntakeMessages({ resume: '', cover: '' }); return invalidate;
+  }, [documents.scopeKey]);
+  function updateIntakeGate() {
+    const blocked = Object.values(pendingIntakes.current).some(value => value !== null) || Object.values(failedIntakes.current).some(Boolean);
+    documents.setIntakePending(blocked);
+    if (!blocked && pendingBypassScope.current === currentScope.current) {
+      pendingBypassScope.current = null;
+      onBypassRef.current();
+    }
+  }
   const [pendingPolicy, setPendingPolicy] = useState<{ scope: string; value: boolean } | null>(null);
   const fileUrl = (kind: 'resume' | 'cover') => API + 'file?' + new URLSearchParams({ opportunityId: data?.package.opportunityId || '', url: data?.package.url || '', kind });
   return <section className="my-4 rounded-xl border border-border bg-card p-4" aria-label="Opportunity document review">
     <h3 className="font-display text-xl">Documents and review</h3>
     <p className="mt-2 text-sm">Selected files are saved privately for this opportunity. Selecting a file does not upload it to the employer or mean you reviewed it.</p>
-    <label className="my-3 flex items-start gap-2 text-sm font-semibold"><input type="checkbox" aria-label="Require my review before document upload" checked={pendingPolicy?.scope === documents.scopeKey ? pendingPolicy.value : data?.requireReview !== false} disabled={disabled || documents.loading || !data}
-      onChange={event => { const requireReview = event.target.checked; setPendingPolicy({ scope: documents.scopeKey, value: requireReview }); void documents.request('policy', { requireReview }).then(() => { if (!requireReview) onBypass(); }).catch(() => {}).finally(() => setPendingPolicy(null)); }} />Require my review before document upload</label>
+    <label className="my-3 flex items-start gap-2 text-sm font-semibold"><input type="checkbox" aria-label="Require my review before document upload" checked={pendingPolicy?.scope === documents.scopeKey ? pendingPolicy.value : data?.requireReview !== false} disabled={disabled || documents.loading || documents.intakePending || !data}
+      onChange={event => { const requireReview = event.target.checked; if (requireReview) pendingBypassScope.current = null; setPendingPolicy({ scope: documents.scopeKey, value: requireReview }); void documents.request('policy', { requireReview }).then(() => { if (!requireReview) { pendingBypassScope.current = documents.scopeKey; updateIntakeGate(); } }).catch(() => {}).finally(() => setPendingPolicy(null)); }} />Require my review before document upload</label>
     <details className="text-xs text-muted-foreground"><summary className="min-h-11 cursor-pointer py-3 font-bold">How document review works</summary><p className="leading-5">Review on: confirm each exact file before uploading. Review off: your explicit start/launch reuses saved documents and attempts preparation to final review. Turning review off never marks a file reviewed. Missing documents, unknown answers, failed uploads or missing trusted navigation evidence still stop preparation. Final Submit stays yours.</p></details>
     <div className="mt-3 grid gap-3 sm:grid-cols-2">{(['resume', 'cover'] as const).map(kind => {
       const item = data?.package.documents[kind], label = kind === 'resume' ? 'résumé' : 'cover letter';
       return <div key={kind} className="document-slot rounded-lg border border-border p-3">
         <ArtifactDropzone label={kind === 'resume' ? 'Choose résumé PDF' : 'Choose cover PDF'} hint={`Drop this job’s ${label} here. PDF up to 5 MB; saved privately, then reviewed separately.`} accept=".pdf,application/pdf" disabled={disabled || documents.loading || !data} onFile={async file => {
           const scope = documents.scopeKey;
-          const intake = ++intakeGeneration.current;
+          const intake = ++intakeGeneration.current[kind];
+          pendingIntakes.current[kind] = intake;
+          failedIntakes.current[kind] = false;
+          setIntakeMessages(current => ({ ...current, [kind]: `Reading ${file.name} locally…` }));
+          updateIntakeGate();
           try {
             const payload = await pdfPayload(file);
-            if (currentScope.current !== scope || intake !== intakeGeneration.current) return;
-            const saved = await documents.request('stage', { kind, file: payload });
-            if (currentScope.current !== scope || intake !== intakeGeneration.current) return;
-            if (saved?.requireReview === false) onBypass();
+            if (currentScope.current !== scope || intake !== intakeGeneration.current[kind]) return;
+            // Reads are independent; the runtime accepts one mutation at a time.
+            // Re-check scope/version when a queued slot actually reaches staging.
+            const staging = stagingQueue.current.catch(() => {}).then(() => {
+              if (currentScope.current !== scope || intake !== intakeGeneration.current[kind]) return;
+              return documents.request('stage', { kind, file: payload });
+            });
+            stagingQueue.current = staging;
+            const saved = await staging;
+            if (currentScope.current !== scope || intake !== intakeGeneration.current[kind]) return;
+            if (saved?.requireReview === false) pendingBypassScope.current = scope;
+            setIntakeMessages(current => ({ ...current, [kind]: '' }));
             setNotice({ scope, text: 'Saved privately. Review status is tied to the current file version.' });
-          } catch (error) { if (currentScope.current === scope && intake === intakeGeneration.current) setNotice({ scope, text: error instanceof Error ? error.message : 'Could not save file.' }); }
+          } catch (error) {
+            if (currentScope.current === scope && intake === intakeGeneration.current[kind]) {
+              failedIntakes.current[kind] = true;
+              setIntakeMessages(current => ({ ...current, [kind]: error instanceof Error ? error.message : 'Could not save file.' }));
+              setNotice({ scope, text: 'A selected file was not saved. Check its document box and choose a valid file before preparing.' });
+            }
+          } finally {
+            if (currentScope.current === scope && intake === intakeGeneration.current[kind]) {
+              pendingIntakes.current[kind] = null;
+              updateIntakeGate();
+            }
+          }
         }} />
+        <p role="status" className="mt-2 break-words text-sm">{intakeMessages[kind]}</p>
         {item ? <><p className="mt-2 break-words text-sm">{item.name}</p><p className="text-xs">{item.reviewedAt ? 'You confirmed review on ' + new Date(item.reviewedAt).toLocaleString() : 'Not confirmed reviewed'}{data?.requireReview === false ? ' · Review checkpoint disabled' : ''}</p>
           <button className="mt-2 rounded border border-primary px-3 py-2 text-sm" type="button" disabled={disabled || documents.loading} onClick={() => setPreview({ scope: documents.scopeKey, kind })}>Preview {label}</button>
-          <button className="mt-2 ml-2 rounded border border-primary px-3 py-2 text-sm" type="button" disabled={disabled || documents.loading || Boolean(item.reviewedAt)} onClick={() => { void documents.request('review', { kind, sha256: item.sha256, confirmed: true }).catch(() => {}); }}>I reviewed this {label}</button>
+          <button className="mt-2 ml-2 rounded border border-primary px-3 py-2 text-sm" type="button" disabled={disabled || documents.loading || documents.intakePending || Boolean(item.reviewedAt)} onClick={() => { void documents.request('review', { kind, sha256: item.sha256, confirmed: true }).catch(() => {}); }}>I reviewed this {label}</button>
         </> : <p className="mt-2 text-sm">No {label} saved for this opportunity.</p>}
       </div>;
     })}</div>

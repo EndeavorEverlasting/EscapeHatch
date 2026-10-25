@@ -1,5 +1,6 @@
 import { useOpportunityDocuments } from './opportunity-documents';
 import { ApplicationPuzzle } from './application-puzzle';
+import type { CurrentApplicationPage } from '@/lib/application-puzzle';
 import { reconcileSubmissionReceipts } from '@/lib/submission-reconciliation';
 import type { AssistProfile } from '@/lib/assist-contract';
 import { CareerRecords } from './career-records';
@@ -26,6 +27,7 @@ type ServerResponse = {
   ok: boolean;
   state?: string;
   browserOpen?: boolean;
+  currentPage?: CurrentApplicationPage | null;
   error?: string;
   filled?: string[];
   recorded?: string[];
@@ -87,6 +89,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const [preferencesRefresh, setPreferencesRefresh] = useState(0);
   const [recordingMessage, setRecordingMessage] = useState('');
   const [browserOpen, setBrowserOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState<CurrentApplicationPage | null>(null);
   const [preparation, setPreparation] = useState<PreparationResult | null>(null);
   const [formObservation, setFormObservation] = useState<{ opportunityId: string; url: string; revision: number } | null>(null);
   const [listenerStatus, setListenerStatus] = useState<ServerResponse['listeners']>();
@@ -136,6 +139,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       if (active) {
         setStatus(result.state || 'idle');
         setBrowserOpen(Boolean(result.browserOpen));
+        setCurrentPage(result.currentPage || null);
         setListenerStatus(result.listeners);
         if (result.listeners?.receipts?.length) setApplications(current => reconcileSubmissionReceipts(current, result.listeners!.receipts));
         if (result.preparationState) {
@@ -163,6 +167,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       try {
         const result = await request('/status');
         if (cancelled) return;
+        setCurrentPage(result.currentPage || null);
         setListenerStatus(result.listeners);
         if (result.listeners) {
           setApplications(current => reconcileSubmissionReceipts(current, result.listeners!.receipts));
@@ -172,7 +177,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           }
         }
         if (!result.browserOpen) { setBrowserOpen(false); return; }
-      } catch { if (!cancelled) setRecordingMessage('Listener connection interrupted. No submission is assumed.'); }
+      } catch { if (!cancelled) { setCurrentPage(null); setRecordingMessage('Listener connection interrupted. No submission is assumed.'); } }
       if (!cancelled) timer = setTimeout(observe, 1500);
     }
     void observe();
@@ -389,7 +394,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           </label>
         </div>
         <div className="flex flex-col justify-end gap-2">
-          <button className={button} type="button" disabled={busy || !url.trim()} onClick={() => void run('launch')} data-testid="button-managed-launch">
+          <button className={button} type="button" disabled={busy || documents.intakePending || !url.trim()} onClick={() => void run('launch')} data-testid="button-managed-launch">
             {busy ? <LoaderCircle className="animate-spin" size={16} /> : <ArrowUpRight size={16} />}
             {browserOpen ? 'Open another job' : 'Launch application'}
           </button>
@@ -397,7 +402,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         </div>
       </div>
 
-      <ApplicationPuzzle opportunity={applications.find(item => item.id === selectedOpportunityId)} url={url} documents={documents} disabled={busy} refresh={formObservation} onBypass={() => { if (browserOpen) setAutoPrepareRequested(true); }} />
+      <ApplicationPuzzle opportunity={applications.find(item => item.id === selectedOpportunityId)} url={url} documents={documents} disabled={busy || autoPrepareRequested} refresh={formObservation} currentPage={currentPage} onBypass={() => { if (browserOpen) setAutoPrepareRequested(true); }} />
       <div className="mt-5 rounded-xl bg-secondary/55 p-4">
         <div className="flex items-center gap-2 text-sm font-bold"><CheckCircle2 className="text-primary" size={16} />
           {titles[status] || status.replaceAll('_', ' ')}
@@ -435,7 +440,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           <p className="mt-2 text-xs text-muted-foreground">A click or page change alone never marks an application Applied. Tracking waits for explicit application-received confirmation. External tracker sync is separate.</p>
         </section>
         <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" className={secondary} disabled={busy || !browserOpen} onClick={() => void run('fill')} data-testid="button-managed-fill">
+          <button type="button" className={secondary} disabled={busy || documents.intakePending || !browserOpen} onClick={() => void run('fill')} data-testid="button-managed-fill">
             Fill approved profile and answers
           </button>
           <button type="button" className={secondary} disabled={busy || documents.loading || !browserOpen || !documents.canUpload}

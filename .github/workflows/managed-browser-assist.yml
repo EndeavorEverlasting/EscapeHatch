@@ -54,7 +54,7 @@ jobs:
         with:
           node-version: "22"
       - run: npm install --no-audit --no-fund
-      - run: npx playwright install --with-deps chrome
+      - run: npx playwright install --with-deps chromium chrome
       - name: Canonical scene and parent validators
         working-directory: .
         run: |
@@ -64,6 +64,8 @@ jobs:
       - run: npm run test:managed-assist
       - run: npm run typecheck
       - run: npm run build
+      - name: Browser journey continuation regressions
+        run: npx playwright test tests/managed-browser-assist.spec.ts
       - name: Patch hygiene
         working-directory: .
         run: git diff --check HEAD^ HEAD

@@ -8,6 +8,7 @@ import type { Application, Profile } from '@/lib/storage';
 import { ApplicationPreferences } from './application-preferences';
 import { connectionFromSnapshot, isSubmittedLocked, mergeTrackerIntoApplications, parseTrackerSnapshot, selectNextActionableOpportunity, trackerOpportunityId } from '@/lib/tracker-bridge';
 import { consumeManagedLaunchIntent } from '@/lib/managed-launch-intent';
+import { projectApplicationJourney } from '@/lib/application-journey-projection';
 
 const API = '/__escapehatch/managed-assist';
 
@@ -106,6 +107,16 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const [preparation, setPreparation] = useState<PreparationResult | null>(null);
   const [listenerStatus, setListenerStatus] = useState<ServerResponse['listeners']>();
   const seenAnswers = useRef(0);
+  const journey = projectApplicationJourney({
+    jobUrl: url,
+    emailApproved: Boolean(profile.email?.trim()),
+    documentsApproved: documents.canUpload,
+    browserOpen,
+    authPhase: authCheckpoint?.phase,
+    formCanResume: Boolean(authCheckpoint?.canResume),
+    needsOpportunityConfirmation,
+    preparationState: preparation?.state,
+  });
 
   useEffect(() => {
     let active = true;
@@ -460,6 +471,16 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       <section aria-label="Application guidance" data-testid="application-journey-coach"
         className="mt-4 rounded-xl border border-primary/25 bg-primary/5 p-4" aria-live="polite">
         <p className="text-xs font-bold uppercase tracking-wide text-primary">Your next step</p>
+        <dl className="mt-2 grid gap-2 rounded-lg border border-border bg-card p-3 text-xs sm:grid-cols-2" data-testid="journey-scene-status">
+          <div><dt className="font-semibold text-muted-foreground">Current</dt>
+            <dd className="mt-1 font-semibold" data-testid="journey-current">{journey.current.coach_prompt}</dd></div>
+          <div><dt className="font-semibold text-muted-foreground">Next</dt>
+            <dd className="mt-1 font-semibold" data-testid="journey-next">{journey.next.coach_prompt}</dd></div>
+        </dl>
+        {journey.blockers.length > 0 && <div className="mt-2 space-y-1" data-testid="journey-blockers">
+          <p className="text-xs font-semibold">What's missing now</p>
+          {journey.blockers.map((item, index) => <p key={index} className="text-xs text-muted-foreground">{item}</p>)}
+        </div>}
         {!profile.email?.trim() ? (
           <form className="mt-2 space-y-2" onSubmit={event => {
             event.preventDefault();

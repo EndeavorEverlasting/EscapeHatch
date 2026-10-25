@@ -75,6 +75,8 @@ def select(root: Path, task: str, lane: str = "auto", budget: int = 32768, requi
     original_bytes = 0
     for key in policy["baseline_unconditional"]:
         path = root / policy["sources"][key]["path"]
+        if not path.resolve().is_relative_to(root.resolve()):
+            raise ValueError(f"CONTEXT_BASELINE_SOURCE_ESCAPES_REPOSITORY:{key}")
         if not path.is_file():
             raise ValueError(f"CONTEXT_BASELINE_SOURCE_MISSING:{key}")
         original_bytes += len(path.read_bytes())

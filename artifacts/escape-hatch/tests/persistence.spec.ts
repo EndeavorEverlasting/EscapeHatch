@@ -53,24 +53,32 @@ async function pressRecoveryAtExactDeadline(
   key: 'Enter' | 'Space',
   deadline: number,
 ) {
-  // Position well before the edge; exact timing is asserted by the temporary
-  // Date.now override during activation, not by real CI scheduling speed.
+  // Freeze the boundary only at the real native click, after all focus work.
+  // Otherwise locator refocusing can expire/detach the button before the key.
   await page.clock.setSystemTime(new Date(deadline - 1_000));
   await recoveryButton.focus();
-  await page.evaluate((exactDeadline) => {
-    const pageWindow = window as Window & { __escapeHatchOriginalDateNow?: typeof Date.now };
-    pageWindow.__escapeHatchOriginalDateNow = Date.now;
-    Date.now = () => exactDeadline;
+  const expectedTarget = await recoveryButton.getAttribute('data-testid');
+  await recoveryButton.evaluate((button, exactDeadline) => {
+    const pageWindow = window as Window & { __escapeHatchOriginalDateNow?: typeof Date.now; __escapeHatchActivation?: { time: number; target: string | null } };
+    delete pageWindow.__escapeHatchActivation;
+    button.addEventListener('click', () => {
+      pageWindow.__escapeHatchOriginalDateNow = Date.now;
+      Date.now = () => exactDeadline;
+      pageWindow.__escapeHatchActivation = { time: Date.now(), target: button.getAttribute('data-testid') };
+    }, { capture: true, once: true });
   }, deadline);
   try {
-    await recoveryButton.press(key);
+    await page.keyboard.press(key);
+    expect(await page.evaluate(() => (window as Window & { __escapeHatchActivation?: unknown }).__escapeHatchActivation))
+      .toEqual({ time: deadline, target: expectedTarget });
   } finally {
     await page.evaluate(() => {
-      const pageWindow = window as Window & { __escapeHatchOriginalDateNow?: typeof Date.now };
+      const pageWindow = window as Window & { __escapeHatchOriginalDateNow?: typeof Date.now; __escapeHatchActivation?: unknown };
       if (pageWindow.__escapeHatchOriginalDateNow) {
         Date.now = pageWindow.__escapeHatchOriginalDateNow;
         delete pageWindow.__escapeHatchOriginalDateNow;
       }
+      delete pageWindow.__escapeHatchActivation;
     });
   }
 }

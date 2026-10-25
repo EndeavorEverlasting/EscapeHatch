@@ -7,12 +7,17 @@ for (const kind of ['answer', 'application'] as const) {
     const save = answer ? 'button-save-answer' : 'button-save-application';
     await page.goto(answer ? '/answers' : '/applications');
     await page.getByTestId(answer ? 'button-add-answer' : 'button-add-application').click();
+    await expect(page.getByRole('dialog')).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(page.getByTestId('button-close-dialog')).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(page.getByTestId(save)).toBeFocused();
     await page.getByTestId(first).fill('Synthetic focus record');
     await page.getByTestId(second).fill('Synthetic detail');
     await page.getByTestId(save).click();
     const row = page.getByRole('article').filter({ hasText: 'Synthetic focus record' });
     await (answer ? row.getByRole('button', { name: 'Edit Synthetic focus record' }) : row.locator('[data-testid^="button-edit-application-"]')).click();
-    await expect(page.getByTestId('button-close-dialog')).toBeFocused();
+    await expect(page.getByRole('dialog')).toBeFocused();
     await page.getByTestId(first).fill('');
     await page.evaluate(() => {
       const host = window as Window & { savedRAF?: typeof requestAnimationFrame; heldFrames?: FrameRequestCallback[] };

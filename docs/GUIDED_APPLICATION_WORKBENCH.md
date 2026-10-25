@@ -48,6 +48,8 @@ Pass 1: integrated source-first review, shared drop input, guide, scoped inspect
 
 Pass 4 (bounded stability repair): the broad browser run produced 88 pass, 1 skip, 1 failure in answer edit validation, reproduced on the candidate. Three ordinary unchanged-mainline repeats passed, so they did not establish causality. A held-validation-frame experiment then reproduced focus theft on unchanged `9cc7171` for both answer and opportunity forms: after an invalid submit, the delayed focus callback moved focus away from the user's next edit. Reused exact existing opening-focus repair `0293c991b567bb993efa8b2c168a15a2ed860c9a` from PR #95 with `git cherry-pick -x` (local dependency commit `8de5e86`), preserving attribution and leaving that PR's recovery/install/tracker work untouched. Removed the separate delayed validation-focus callbacks because their inputs already exist at submit time. Retained deterministic opening and validation regressions plus original edit-clear, Escape and return-focus controls. Baseline comparison used an isolated detached checkout, shared dependency junction and untracked test-only port config; no baseline product source was modified.
 
+Pass 5 (regression correction): a subsequent broad run found repeated recovery activation could hit Close after synchronous opening focus. Default dialogs now focus a neutral dialog target before paint, with forward/reverse Tab trapping; explicit initial-focus callers retain their target. Existing repeated Enter/Space recovery assertions remain unchanged. Exact-deadline helper timeouts were isolated to installing a global deadline before a locator refocus could detach the expired button. The helper now freezes Date.now in the native click capture, presses the already-focused keyboard target, and asserts the actual target/time before retaining all deadline-denial assertions. Production expiry policy/listeners remain unchanged. These opening/validation/repeated-key/deadline/return-focus controls passed 28 executions (two repetitions) without retries; typecheck and build passed.
+
 Parallel graph width: 2 (primary implementation + independent read-only evidence/diff review). Adapter: native `collaboration.spawn_agent`, then `followup_task`; no worker mutations or merges. Review returned the query/radio/hidden-upload/race/test-key findings repaired above. Primary owns rejoin validation. `Outputs/prompt-parallel-dispatch/manifest.json` records the lanes. The canonical schema and `scripts/prompt_parallel_dispatch.py` are absent; the attempted validation failed with file-not-found. Standardized manifest/receipt verification is **UNPROVEN**, not a clean parallel-contract pass. The existing blocked dispatch artifact records the same harness-owner dependency; this feature does not create a competing runner.
 
 ## Reproduce validation
@@ -77,7 +79,7 @@ Browser fixtures use synthetic identities only. Tests cover real DOM inspection 
 
 `tests/application-requirements-control.spec.ts` additionally exercises the actual managed plugin over real loopback HTTP with an isolated browser page and synthetic runtime identity: cross-origin POST 403, wrong opportunity 422, matching inventory 200, unchanged DOM. The seeded session avoids real browser accounts and does not certify the Windows launcher.
 
-Remaining gates: exact-head CI and repository promotion, Windows bootstrap/recovery integration through PR #95's independent owner, real employer widgets/multipage coverage and exact-requisition opportunity-watch freshness. The supplied Opportunity Watch patch was inspected but not applied: polling/notifications are a distinct lane and cannot stand in for live vacancy evidence here.
+At the source checkpoint, remaining gates were exact-head CI and repository promotion (current outcomes belong to PR #96 and its final report). Windows bootstrap/recovery integration through PR #95's independent owner, real employer widgets/multipage coverage and exact-requisition opportunity-watch freshness remain outside this local proof. The supplied Opportunity Watch patch was inspected but not applied: polling/notifications are a distinct lane and cannot stand in for live vacancy evidence here.
 
 ## Changed-file report
 
@@ -112,5 +114,5 @@ Feature and bounded stability ownership, relative to this repository root:
 - `artifacts/escape-hatch/src/lib/source-bridge.test.ts`
 - `artifacts/escape-hatch/tests/application-requirements-control.spec.ts`
 - `artifacts/escape-hatch/tests/application-workbench.spec.ts`
-- `artifacts/escape-hatch/tests/persistence.spec.ts` (attributed dependency's two opening-focus regressions)
+- `artifacts/escape-hatch/tests/persistence.spec.ts` (attributed opening-focus regressions and atomic native deadline-activation proof)
 - `artifacts/escape-hatch/tests/validation-focus.spec.ts`

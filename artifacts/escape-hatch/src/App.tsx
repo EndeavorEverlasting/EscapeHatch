@@ -328,7 +328,6 @@ function Modal({
   fallbackFocusRef?: React.RefObject<HTMLElement | null>;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const onCloseRef = useRef(onClose);
   const previousActiveElementRef = useRef<HTMLElement | null>(null);
 
@@ -336,7 +335,9 @@ function Modal({
   // focus after the user selects a field, sending their clear/edit key elsewhere.
   useLayoutEffect(() => {
     previousActiveElementRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    (initialFocusRef?.current || closeButtonRef.current)?.focus();
+    // A neutral target cannot turn the key that opened a recovered draft into
+    // an unintended Close or Save action when activation repeats.
+    (initialFocusRef?.current || dialogRef.current)?.focus();
   }, []);
 
   useEffect(() => {
@@ -370,10 +371,10 @@ function Modal({
       const activeElement = document.activeElement;
       const firstElement = focusableElements[0];
       const lastElement = focusableElements[focusableElements.length - 1];
-      if (event.shiftKey && (activeElement === firstElement || !dialog.contains(activeElement))) {
+      if (event.shiftKey && (activeElement === dialog || activeElement === firstElement || !dialog.contains(activeElement))) {
         event.preventDefault();
         lastElement.focus();
-      } else if (!event.shiftKey && (activeElement === lastElement || !dialog.contains(activeElement))) {
+      } else if (!event.shiftKey && (activeElement === dialog || activeElement === lastElement || !dialog.contains(activeElement))) {
         event.preventDefault();
         firstElement.focus();
       }
@@ -390,14 +391,14 @@ function Modal({
   }, []);
 
   return (
-    <div ref={dialogRef} className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/35 p-0 backdrop-blur-[2px] sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+    <div ref={dialogRef} tabIndex={-1} className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/35 p-0 backdrop-blur-[2px] sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
       <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl border border-border bg-card shadow-2xl sm:max-w-xl sm:rounded-2xl">
         <div className="flex items-start justify-between border-b border-border px-5 py-4 sm:px-7">
           <div>
             {eyebrow && <p className="font-mono-app text-[10px] font-medium uppercase tracking-[.18em] text-primary">{eyebrow}</p>}
             <h2 id="dialog-title" className="mt-1 font-display text-3xl">{title}</h2>
           </div>
-          <button ref={closeButtonRef} type="button" onClick={onClose} aria-label="Close dialog" data-testid="button-close-dialog" className="rounded-lg p-2 text-muted-foreground transition hover:bg-secondary hover:text-foreground"><X size={19} /></button>
+          <button type="button" onClick={onClose} aria-label="Close dialog" data-testid="button-close-dialog" className="rounded-lg p-2 text-muted-foreground transition hover:bg-secondary hover:text-foreground"><X size={19} /></button>
         </div>
         <div className="p-5 sm:p-7">{children}</div>
       </div>

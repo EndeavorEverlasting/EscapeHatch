@@ -104,6 +104,9 @@ def select(root: Path, task: str, lane: str = "auto", budget: int = 32768, requi
     if used_bytes > budget:
         raise ValueError(f"CONTEXT_BUDGET_EXCEEDED:{used_bytes}>{budget}:USE_TARGETED_RETRIEVAL")
     return {"schema": "escapehatch-context-selection/v1", "lane": picked,
+            "tool_route": {"recommended": policy["tool_routing"][picked],
+                           "deferred": sorted(set(sum(policy["tool_routing"].values(), [])) - set(policy["tool_routing"][picked])),
+                           "enforced_by_host": False},
             "explicit_required": sorted(set(require_full)),
             "policy_sha256": hashlib.sha256((root / POLICY_PATH).read_bytes()).hexdigest(),
             "baseline_unconditional_bytes": original_bytes, "candidate_payload_bytes": used_bytes,

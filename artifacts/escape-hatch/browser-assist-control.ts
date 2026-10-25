@@ -516,6 +516,10 @@ export function createManagedBrowserAssistPlugin(): Plugin {
           }
           if (url.pathname === PREFIX + '/fill' || url.pathname === PREFIX + '/resume') {
             if (url.pathname === PREFIX + '/resume') {
+              // Recheck immediately: an earlier poll cannot authorize writing to a page that changed.
+              try {
+                authCheckpoint = advanceAuthCheckpoint(authCheckpoint, await inspectAuthObservation(page, applicationOrigin));
+              } catch { authCheckpoint = INITIAL_CHECKPOINT; }
               const live = new URL(page.url()), selected = new URL(applicationUrl);
               if (!resumeAllowed(authCheckpoint, live.origin, applicationOrigin) ||
                   (live.pathname !== selected.pathname && !live.pathname.startsWith(selected.pathname.replace(/\/$/, '') + '/'))) {

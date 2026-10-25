@@ -104,6 +104,7 @@ def select(root: Path, task: str, lane: str = "auto", budget: int = 32768, requi
     if used_bytes > budget:
         raise ValueError(f"CONTEXT_BUDGET_EXCEEDED:{used_bytes}>{budget}:USE_TARGETED_RETRIEVAL")
     return {"schema": "escapehatch-context-selection/v1", "lane": picked,
+            "explicit_required": sorted(set(require_full)),
             "policy_sha256": hashlib.sha256((root / POLICY_PATH).read_bytes()).hexdigest(),
             "baseline_unconditional_bytes": original_bytes, "candidate_payload_bytes": used_bytes,
             "savings_bytes": original_bytes - used_bytes, "selected": entries,
@@ -113,19 +114,41 @@ def select(root: Path, task: str, lane: str = "auto", budget: int = 32768, requi
 
 
 def verify_receipt(root: Path, receipt: dict) -> None:
-    """Stale policy or source identity invalidates a previous model context."""
+    """Invalidate missing, altered or stale authority; this is not a signed receipt."""
     policy = load_policy(root)
     if receipt.get("policy_sha256") != hashlib.sha256((root / POLICY_PATH).read_bytes()).hexdigest():
         raise ValueError("CONTEXT_POLICY_STALE")
+    lane = receipt.get("lane")
+    if lane not in policy["lanes"]:
+        raise ValueError("CONTEXT_RECEIPT_LANE_INVALID")
+    explicit = receipt.get("explicit_required", [])
+    if not isinstance(explicit, list) or any(x not in policy["sources"] for x in explicit):
+        raise ValueError("CONTEXT_RECEIPT_REQUIRED_INVALID")
+    found = set()
     for entry in receipt.get("selected", []):
         key = entry.get("id")
         if key not in policy["sources"] or entry.get("path") != policy["sources"][key]["path"]:
             raise ValueError("CONTEXT_RECEIPT_SOURCE_MISMATCH")
+        if key in found:
+            raise ValueError("CONTEXT_RECEIPT_DUPLICATE_SOURCE")
+        found.add(key)
+        expected = policy["sources"][key]
         path = root / entry["path"]
+        if not path.resolve().is_relative_to(root.resolve()):
+            raise ValueError("CONTEXT_RECEIPT_SOURCE_ESCAPES_REPOSITORY")
         if not path.is_file() or entry.get("sha256") != hashlib.sha256(path.read_bytes()).hexdigest():
             raise ValueError(f"CONTEXT_SOURCE_STALE:{key}")
-    if not any(entry.get("id") == "governance" for entry in receipt.get("selected", [])):
-        raise ValueError("CONTEXT_GOVERNANCE_NOT_PRESENT")
+        mode = "full" if key in explicit else expected["mode"]
+        if entry.get("mode") != mode:
+            raise ValueError(f"CONTEXT_RECEIPT_MODE_MISMATCH:{key}")
+        raw = path.read_bytes().decode("utf-8")
+        if entry.get("payload") != (raw if mode == "full" else outline(raw, path.suffix)):
+            raise ValueError(f"CONTEXT_RECEIPT_PAYLOAD_MISMATCH:{key}")
+    required = {key for key, source in policy["sources"].items()
+                if source.get("always") or (source.get("required") and lane in source["triggers"])}
+    required.update(explicit)
+    if not required.issubset(found):
+        raise ValueError("CONTEXT_RECEIPT_REQUIRED_SOURCE_OMITTED:" + ",".join(sorted(required - found)))
 
 
 def compact_trace(source: str, maximum_lines: int = 48) -> list[str]:

@@ -30,6 +30,7 @@ type ServerResponse = {
   currentPage?: CurrentApplicationPage | null;
   error?: string;
   filled?: string[];
+  evidenceSummary?: string;
   recorded?: string[];
   skipped?: string[];
   attachments?: Record<string, string>;
@@ -62,8 +63,12 @@ const titles: Record<string, string> = {
   application_open_review_required: 'Application opened — sign in if requested',
   application_form_open_review_required: 'Application form opened — ready to fill',
   browser_open_navigation_unverified: 'Chrome opened — verify the URL manually',
-  fields_filled_review_required: 'Known fields filled — review the page',
+  fields_filled_review_required: 'Verified fields read back — review the page',
+  fields_partially_filled_review_required: 'Some fields verified — other fields need review',
+  fields_unverified_review_required: 'No fields verified — review the employer form',
   attachments_staged_review_required: 'File controls populated — verify attachments',
+  attachments_partially_staged_review_required: 'Some file controls populated — review needed',
+  attachments_unverified_review_required: 'No file controls verified — review needed',
   browser_closed: 'Managed browser closed',
   REVIEW_READY: 'REVIEW_READY — final Submit is operator-only',
   REVIEW_REQUIRED: 'REVIEW_REQUIRED — resolve gates before continuing',
@@ -322,11 +327,11 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       if (action === 'fill') setMessage(
         (result.filled?.length ? 'Filled: ' + result.filled.join(', ') + '. ' : 'No fields filled. ') +
         (result.skipped?.length ? 'Skipped: ' + result.skipped.join(', ') + '. ' : '') +
-        'Review before continuing on the employer website.'
+        (result.evidenceSummary || 'Review before continuing on the employer website.')
       );
       if (action === 'attach') setMessage(
         Object.entries(result.attachments || {}).map(([kind, state]) => kind + ': ' + state.replaceAll('_', ' ')).join(' · ') +
-        '. Confirm the employer form accepted each document.'
+        '. ' + (result.evidenceSummary || 'Confirm the employer form accepted each document.')
       );
       if (action === 'launch') setMessage(autoFillMessage || 'A separate managed Chrome window is opening. Authentication stays under your control.');
       if (action === 'prepare' && result.preparation) {

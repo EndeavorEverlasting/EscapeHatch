@@ -399,3 +399,67 @@ test('one Launch reuses previously reviewed exact PDFs and stops at review when 
   expect(actions).not.toContain('submit');
   expect(actions).not.toContain('next');
 });
+
+
+test('email-first login resumes only the previously authorized fill in the same managed session', async ({ page }) => {
+  const actions: string[] = [];
+  let launched = false;
+  let polls = 0;
+  await page.route('**/__escapehatch/managed-assist/**', async route => {
+    const action = new URL(route.request().url()).pathname.split('/').at(-1) || '';
+    actions.push(action);
+    if (action === 'launch') launched = true;
+    if (action === 'status' && launched) polls += 1;
+    const phase = !launched || polls < 2 ? 'AUTH_HANDOFF' : 'APPLICATION_FORM_READY';
+    const data = action === 'launch'
+      ? { ok: true, state: 'application_open_review_required', browserOpen: true,
+          authCheckpoint: { phase: 'AUTH_HANDOFF', canResume: false, stableReads: 0, reason: 'Sign in using Chrome.' } }
+      : action === 'status'
+        ? { ok: true, state: launched ? 'application_open_review_required' : 'idle', browserOpen: launched,
+            needsOpportunityConfirmation: false,
+            authCheckpoint: { phase, canResume: phase === 'APPLICATION_FORM_READY', stableReads: polls,
+              reason: 'Employer form observed.' } }
+        : action === 'resume'
+          ? { ok: true, state: 'fields_filled_review_required', filled: ['identity.email'], skipped: [] }
+          : { ok: true, state: 'idle', filled: [], skipped: [] };
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(data) });
+  });
+  await mockDocuments(page);
+  await page.goto('/assist');
+  await page.getByTestId('managed-job-url').fill('https://jobs.example.com/apply/synthetic');
+  await page.getByTestId('button-managed-launch').click();
+  await expect.poll(() => actions.filter(a => a === 'resume').length, { timeout: 15000 }).toBe(1);
+  expect(actions).not.toContain('submit');
+  expect(actions).not.toContain('next');
+  expect(actions.filter(a => a === 'launch')).toHaveLength(1);
+});
+
+test('changed post-login path requires a visible same-opportunity confirmation', async ({ page }) => {
+  const actions: string[] = [];
+  await page.route('**/__escapehatch/managed-assist/**', async route => {
+    const action = new URL(route.request().url()).pathname.split('/').at(-1) || '';
+    actions.push(action);
+    const payload = action === 'status'
+      ? { ok: true, browserOpen: true, state: 'application_open_review_required',
+          needsOpportunityConfirmation: true,
+          currentPage: { opportunityId: 'synthetic-confirm', applicationUrl: 'https://jobs.example.com/job/123',
+            pageUrl: 'https://jobs.example.com/application/123' },
+          authCheckpoint: { phase: 'APPLICATION_FORM_READY', canResume: true, stableReads: 2, reason: 'Form ready' } }
+      : { ok: true, state: action === 'resume' ? 'fields_filled_review_required' : 'application_open_review_required',
+          filled: ['identity.email'], skipped: [] };
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(payload) });
+  });
+  await mockDocuments(page);
+  await page.goto('/assist');
+  await page.evaluate(() => localStorage.setItem('escape-hatch-applications', JSON.stringify([{
+    id: 'synthetic-confirm', company: 'Synthetic', role: 'Synthetic role',
+    url: 'https://jobs.example.com/job/123', status: 'saved', priority: 'normal',
+    notes: '', nextAction: '', updatedAt: new Date().toISOString(),
+  }])));
+  await page.reload();
+  await page.getByTestId('button-auth-resume').click();
+  await expect.poll(() => actions.filter(a => a === 'bind').length).toBe(1);
+  await expect.poll(() => actions.filter(a => a === 'resume').length).toBe(1);
+  expect(actions).not.toContain('submit');
+  expect(actions).not.toContain('next');
+});

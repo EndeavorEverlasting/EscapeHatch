@@ -700,4 +700,3 @@ Next unproven lanes: EH-R3 (Windows lifecycle regression/fault injection + CI wi
 - `scripts/windows/EscapeHatch-Install.ps1`
 - `skills/harness-operations/SKILL.md`
 - `tests/windows/Test-EscapeHatch-Install.ps1`
-

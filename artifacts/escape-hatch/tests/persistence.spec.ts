@@ -2184,3 +2184,56 @@ test('closes answer and opportunity forms with Escape without saving edits', asy
   await expect(page.getByRole('article')).not.toContainText('Changed Company');
   await expect(page.getByRole('article')).not.toContainText('Changed Role');
 });
+for (const kind of ['answer', 'application'] as const) {
+  test(`keeps user input focus when a delayed opening frame runs during ${kind} editing`, async ({ page }) => {
+    const isAnswer = kind === 'answer';
+    const route = isAnswer ? '/answers' : '/applications';
+    const firstId = isAnswer ? 'input-answer-title' : 'input-company';
+    const secondId = isAnswer ? 'textarea-answer-content' : 'input-role';
+    const saveId = isAnswer ? 'button-save-answer' : 'button-save-application';
+    const original = isAnswer ? 'Synthetic focus answer' : 'Synthetic Focus Employer';
+    await page.goto(route);
+    await page.getByTestId(isAnswer ? 'button-add-answer' : 'button-add-application').click();
+    await page.getByTestId(firstId).fill(original);
+    await page.getByTestId(secondId).fill('Synthetic supporting detail');
+    await page.getByTestId(saveId).click();
+    const saved = page.getByRole('article').filter({ hasText: original });
+    await expect(saved).toBeVisible();
+
+    // Hold an opening frame until after a real keyboard user selects the field.
+    // No timeout or scheduler luck is needed to exercise the focus boundary.
+    await page.evaluate(() => {
+      const host = window as Window & { __modalOriginalRAF?: typeof requestAnimationFrame; __modalFrames?: FrameRequestCallback[] };
+      host.__modalOriginalRAF = window.requestAnimationFrame;
+      host.__modalFrames = [];
+      window.requestAnimationFrame = callback => { host.__modalFrames!.push(callback); return host.__modalFrames!.length; };
+    });
+    try {
+      const edit = isAnswer ? saved.getByRole('button', { name: `Edit ${original}` }) : saved.locator('[data-testid^="button-edit-application-"]');
+      // Dispatch only the opening click while frames are held; subsequent focus,
+      // selection, clearing and Save use the browser's real input path.
+      await edit.dispatchEvent('click');
+      const field = page.getByTestId(firstId);
+      await field.focus();
+      await page.keyboard.press('ControlOrMeta+A');
+      await page.evaluate(() => {
+        const host = window as Window & { __modalOriginalRAF?: typeof requestAnimationFrame; __modalFrames?: FrameRequestCallback[] };
+        window.requestAnimationFrame = host.__modalOriginalRAF!;
+        for (const callback of host.__modalFrames || []) callback(performance.now());
+      });
+      await expect(field).toBeFocused();
+      await page.keyboard.press('Backspace');
+      await expect(field).toHaveValue('');
+      await page.getByTestId(saveId).click();
+      await expect(page.getByRole('dialog')).toBeVisible();
+      await expect(page.getByTestId(isAnswer ? 'answer-title-error' : 'company-error')).toBeVisible();
+      await expect(saved).toContainText(original);
+    } finally {
+      await page.evaluate(() => {
+        const host = window as Window & { __modalOriginalRAF?: typeof requestAnimationFrame; __modalFrames?: FrameRequestCallback[] };
+        if (host.__modalOriginalRAF) window.requestAnimationFrame = host.__modalOriginalRAF;
+        delete host.__modalOriginalRAF; delete host.__modalFrames;
+      });
+    }
+  });
+}

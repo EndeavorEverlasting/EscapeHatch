@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - "scripts/context_router.py"
-      - "tests/test_context_router.py"
+      - "tests/test_context_router*.py"
       - "harness/context/**"
       - "harness/WORKFLOWS.md"
       - ".github/workflows/context-routing.yml"
@@ -28,9 +28,9 @@ jobs:
         with:
           python-version: "3.13"
       - name: Compile context router
-        run: python -m py_compile scripts/context_router.py tests/test_context_router.py
+        run: python -m py_compile scripts/context_router.py tests/test_context_router.py tests/test_context_router_escalation.py
       - name: Verify negative and positive routing
-        run: python -m unittest discover -s tests -p test_context_router.py -v
+        run: python -m unittest discover -s tests -p 'test_context_router*.py' -v
       - name: Measure lane-specific repository payloads
         shell: bash
         run: |

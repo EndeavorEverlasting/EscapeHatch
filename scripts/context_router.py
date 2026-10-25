@@ -60,7 +60,7 @@ def outline(text: str, suffix: str) -> str:
     if suffix in (".md", ".markdown"):
         headings = [line.strip() for line in text.splitlines() if re.match(r"^#{1,4} ", line)]
         return "\n".join(headings[:80]) + ("\n[HEADINGS_TRUNCATED]\n" if len(headings) > 80 else "\n")
-    symbols = re.findall(r"(?m)^(?:export )?(?:async )?(?:function|class|def)\s+([A-Za-z_][\w]*)", text)
+    symbols = re.findall(r"(?m)^(?:export )?(?:async )?(?:function|class|def)\s+([A-Za-z_][\w-]*)", text)
     return "Symbols: " + ", ".join(symbols[:80]) + (" [TRUNCATED]" if len(symbols) > 80 else "") + "\n"
 
 

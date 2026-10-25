@@ -73,6 +73,13 @@ class EscalationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "CONTEXT_RECEIPT_DUPLICATE_SOURCE"):
             router.verify_receipt(self.root, receipt)
 
+    def test_trace_keeps_middle_blocker_among_noisy_passes(self):
+        text = "\n".join(["PASS ok"] * 300 + ["BLOCKED unavailable"] + ["PASS ok"] * 300)
+        short = router.compact_trace(text, 5)
+        self.assertLessEqual(len(short), 5)
+        self.assertTrue(any("BLOCKED" in line for line in short))
+        self.assertFalse(any("unavailable" in line for line in short))
+
     def test_baseline_path_symlink_is_rejected_before_read(self):
         external = Path(self.temp.name).parent / (Path(self.temp.name).name + "-baseline-fixture")
         external.write_text("outside fixture")

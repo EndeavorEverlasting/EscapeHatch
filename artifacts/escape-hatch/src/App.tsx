@@ -953,10 +953,9 @@ function AnswerForm({ answer, initialDraft, returnFocusRef, fallbackFocusRef, on
     };
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
-      window.requestAnimationFrame(() => {
-        if (!submittedTitle.trim()) titleRef.current?.focus();
-        else contentRef.current?.focus();
-      });
+      // These fields already exist. A later frame could steal the user's next edit.
+      if (!submittedTitle.trim()) titleRef.current?.focus();
+      else contentRef.current?.focus();
       return;
     }
     onSave({ title: submittedTitle.trim(), category, content: submittedContent.trim() });
@@ -1144,10 +1143,8 @@ function ApplicationForm({ application, initialDraft, returnFocusRef, fallbackFo
     };
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
-      window.requestAnimationFrame(() => {
-        if (!submittedCompany.trim()) companyRef.current?.focus();
-        else roleRef.current?.focus();
-      });
+      if (!submittedCompany.trim()) companyRef.current?.focus();
+      else roleRef.current?.focus();
       return;
     }
     onSave({ ...form, company: submittedCompany.trim(), role: submittedRole.trim() });

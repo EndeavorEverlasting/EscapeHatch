@@ -30,6 +30,7 @@ This file is the canonical registry for durable EscapeHatch artifacts. A plausib
 | Read-only application requirements | `artifacts/escape-hatch/application-requirements.ts` | tracked managed-page inspector | read scoped visible control metadata only | workbench unit/browser tests |
 | Guided workbench browser proof | `artifacts/escape-hatch/tests/application-workbench.spec.ts` | tracked synthetic journeys | prove drag/review/scope/layout/refresh | canonical Playwright configuration |
 | Application requirements middleware proof | `artifacts/escape-hatch/tests/application-requirements-control.spec.ts` | tracked real loopback middleware/browser proof | reject cross-origin/wrong-job reads and preserve DOM | canonical Playwright configuration |
+| Validation-focus race proof | `artifacts/escape-hatch/tests/validation-focus.spec.ts` | tracked deterministic real-input regression | hold old validation frame while selecting next input | canonical Playwright configuration |
 | Guided workbench dispatch record | `Outputs/prompt-parallel-dispatch/manifest.json` | tracked execution record, canonical validation blocked | native read-only review plus primary writer | schema/runner unavailable; see workbench evidence |
 | Agent governance doctrine | `AGENTS.md` | tracked canonical contract | governance sprint only | `python scripts/validate_governance.py` |
 | Harness manifest | `harness/manifest.v1.json` | tracked machine-readable registry | harness sprint only | `python scripts/validate_harness.py` |

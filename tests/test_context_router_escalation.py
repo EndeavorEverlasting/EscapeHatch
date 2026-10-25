@@ -60,6 +60,13 @@ class EscalationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "CONTEXT_RECEIPT_PAYLOAD_MISMATCH"):
             router.verify_receipt(self.root, receipt)
 
+    def test_irrelevant_tool_families_deferred_not_claimed_disabled(self):
+        result = router.select(self.root, "Windows startup", "runtime")
+        self.assertEqual(result["tool_route"]["recommended"],
+                         ["repository.read", "local.runtime.observe"])
+        self.assertIn("local.ats.observe", result["tool_route"]["deferred"])
+        self.assertFalse(result["tool_route"]["enforced_by_host"])
+
     def test_duplicate_source_entry_is_rejected(self):
         receipt = router.select(self.root, "general", "general")
         receipt["selected"].append(dict(receipt["selected"][0]))

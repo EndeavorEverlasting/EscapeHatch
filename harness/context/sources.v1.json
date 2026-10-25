@@ -1,0 +1,188 @@
+{
+  "schema": "escapehatch-model-context/v1",
+  "owner": "harness/context/sources.v1.json",
+  "entry_point": "repository_agent",
+  "baseline_unconditional": [
+    "governance",
+    "harness_skill",
+    "current_state",
+    "codebase_map",
+    "workflows",
+    "manifest",
+    "artifact_registry"
+  ],
+  "sources": {
+    "governance": {
+      "path": "AGENTS.md",
+      "mode": "full",
+      "authority": 2,
+      "triggers": [
+        "*"
+      ],
+      "owner": "AGENTS.md",
+      "always": true,
+      "required": true
+    },
+    "harness_skill": {
+      "path": "skills/harness-operations/SKILL.md",
+      "mode": "full",
+      "authority": 3,
+      "triggers": [
+        "*"
+      ],
+      "owner": "skills/harness-operations/SKILL.md",
+      "always": true,
+      "required": true
+    },
+    "manifest": {
+      "path": "harness/manifest.v1.json",
+      "mode": "outline",
+      "authority": 3,
+      "triggers": [
+        "harness",
+        "context"
+      ],
+      "owner": "harness/manifest.v1.json"
+    },
+    "codebase_map": {
+      "path": "harness/CODEBASE_MAP.md",
+      "mode": "outline",
+      "authority": 3,
+      "triggers": [
+        "harness",
+        "context"
+      ],
+      "owner": "harness/CODEBASE_MAP.md"
+    },
+    "workflows": {
+      "path": "harness/WORKFLOWS.md",
+      "mode": "outline",
+      "authority": 3,
+      "triggers": [
+        "harness",
+        "context"
+      ],
+      "owner": "harness/WORKFLOWS.md"
+    },
+    "artifact_registry": {
+      "path": "ARTIFACT_REGISTRY.md",
+      "mode": "outline",
+      "authority": 3,
+      "triggers": [
+        "harness",
+        "context"
+      ],
+      "owner": "ARTIFACT_REGISTRY.md"
+    },
+    "current_state": {
+      "path": "harness/reports/CURRENT_STATE.md",
+      "mode": "outline",
+      "authority": 3,
+      "triggers": [
+        "harness",
+        "context"
+      ],
+      "owner": "harness/reports/CURRENT_STATE.md"
+    },
+    "application_parent": {
+      "path": "harness/contracts/application-autofill-parent.v1.json",
+      "mode": "full",
+      "authority": 3,
+      "triggers": [
+        "application"
+      ],
+      "owner": "harness/contracts/application-autofill-parent.v1.json",
+      "required": true
+    },
+    "application_plan": {
+      "path": "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md",
+      "mode": "outline",
+      "authority": 3,
+      "triggers": [
+        "application"
+      ],
+      "owner": "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md"
+    },
+    "application_handoff": {
+      "path": "docs/agent/P04_ZERO_FRICTION_APPLICATION_EXECUTION_2026-10-20.md",
+      "mode": "outline",
+      "authority": 3,
+      "triggers": [
+        "application"
+      ],
+      "owner": "docs/agent/P04_ZERO_FRICTION_APPLICATION_EXECUTION_2026-10-20.md"
+    },
+    "runtime_lifecycle": {
+      "path": "docs/WINDOWS_RUNTIME_LIFECYCLE.md",
+      "mode": "full",
+      "authority": 3,
+      "triggers": [
+        "runtime"
+      ],
+      "owner": "docs/WINDOWS_RUNTIME_LIFECYCLE.md"
+    },
+    "runtime_manager": {
+      "path": "scripts/windows/EscapeHatch-Runtime.ps1",
+      "mode": "outline",
+      "authority": 4,
+      "triggers": [
+        "runtime"
+      ],
+      "owner": "scripts/windows/EscapeHatch-Runtime.ps1"
+    },
+    "application_mapping": {
+      "path": "skills/application-form-mapping/SKILL.md",
+      "mode": "full",
+      "authority": 3,
+      "triggers": [
+        "application"
+      ],
+      "owner": "skills/application-form-mapping/SKILL.md"
+    }
+  },
+  "lanes": [
+    "general",
+    "harness",
+    "context",
+    "runtime",
+    "application"
+  ],
+  "external_context": {
+    "platform_system": {
+      "owner": "host",
+      "precedence": 0,
+      "load": "host-controlled",
+      "measured": false
+    },
+    "task_prompt": {
+      "owner": "operator",
+      "precedence": 1,
+      "load": "host-controlled",
+      "measured": false
+    },
+    "tool_schemas": {
+      "owner": "agent_host",
+      "precedence": 1,
+      "load": "triggered",
+      "measured": false
+    },
+    "memory_and_history": {
+      "owner": "agent_host",
+      "precedence": 3,
+      "load": "bounded-and-provenance-required",
+      "measured": false
+    },
+    "retrieved_chunks": {
+      "owner": "authorized_provider",
+      "precedence": 4,
+      "load": "demand-only",
+      "measured": false
+    },
+    "private_runtime_state": {
+      "owner": "local_operator",
+      "precedence": 4,
+      "load": "explicit-private-read-only",
+      "measured": false
+    }
+  }
+}

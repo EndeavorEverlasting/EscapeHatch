@@ -83,8 +83,10 @@ def select(root: Path, task: str, lane: str = "auto", budget: int = 32768, requi
         if not (spec.get("always") or picked in spec["triggers"] or key in require_full):
             continue
         path = root / spec["path"]
+        if path.resolve().is_relative_to(root.resolve()) is False:
+            raise ValueError(f"CONTEXT_SOURCE_ESCAPES_REPOSITORY:{key}")
         if not path.is_file():
-            if spec.get("required"):
+            if spec.get("required") or key in require_full:
                 raise ValueError(f"CONTEXT_REQUIRED_SOURCE_MISSING:{key}")
             entries.append({"id": key, "path": spec["path"], "state": "MISSING_REFERENCE",
                             "authority": spec["authority"]})

@@ -257,11 +257,11 @@ export function createManagedBrowserAssistPlugin(): Plugin {
   // and listener handles rather than orphaning the operator's application.
   type SessionCache = { context: BrowserContext | null; page: Page | null; state: string;
     applicationOrigin: string; applicationUrl: string; opportunityId: string;
-    preparation: PreparationResult | null; authCheckpoint: AuthCheckpoint; listeners: ManagedListeners; busy: boolean };
+    preparation: PreparationResult | null; authCheckpoint: AuthCheckpoint; trustedReturnPath: string | null; listeners: ManagedListeners; busy: boolean };
   const cacheHost = globalThis as typeof globalThis & { [key: symbol]: SessionCache };
   const cacheKey = Symbol.for('escapehatch.managed-browser.' + (managed?.identity.instanceId || 'unmanaged'));
   const cache = cacheHost[cacheKey] ||= { context: null, page: null, state: 'idle', applicationOrigin: '', applicationUrl: '',
-    opportunityId: '', preparation: null, authCheckpoint: INITIAL_CHECKPOINT, busy: false, listeners: new ManagedListeners() };
+    opportunityId: '', preparation: null, authCheckpoint: INITIAL_CHECKPOINT, trustedReturnPath: null, busy: false, listeners: new ManagedListeners() };
   let context = cache.context;
   let page = cache.page;
   let state = cache.state;
@@ -271,6 +271,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
   let opportunityId = cache.opportunityId;
   let preparation = cache.preparation;
   let authCheckpoint = cache.authCheckpoint || INITIAL_CHECKPOINT;
+  let trustedReturnPath = cache.trustedReturnPath || null;
   const listeners = cache.listeners;
   return {
     name: 'escapehatch-managed-browser-assist',
@@ -303,6 +304,11 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             state,
             browserOpen: Boolean(page),
             authCheckpoint,
+            needsOpportunityConfirmation: Boolean(page && applicationUrl && authCheckpoint.canResume &&
+              new URL(page.url()).origin === applicationOrigin &&
+              new URL(page.url()).pathname !== new URL(applicationUrl).pathname &&
+              !new URL(page.url()).pathname.startsWith(new URL(applicationUrl).pathname.replace(/\/$/, '') + '/') &&
+              new URL(page.url()).pathname !== trustedReturnPath),
             currentPage: page ? { opportunityId, applicationUrl, pageUrl: page.url() } : null,
             requiresOperatorSubmission: true,
             preparationState: preparation?.state || null,
@@ -375,6 +381,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               : '';
             preparation = null;
             authCheckpoint = INITIAL_CHECKPOINT;
+            trustedReturnPath = null;
             if (!context) {
               const folder = path.join(process.env.LOCALAPPDATA || path.join(homedir(), 'AppData', 'Local'), 'EscapeHatch', 'managed-career-browser');
               await fs.mkdir(folder, { recursive: true });
@@ -382,8 +389,8 @@ export function createManagedBrowserAssistPlugin(): Plugin {
                 channel: 'chrome', headless: false, acceptDownloads: false, viewport: null,
               });
               context.on('close', () => {
-                context = null; page = null; state = 'browser_closed'; preparation = null; authCheckpoint = INITIAL_CHECKPOINT;
-                Object.assign(cache, { context, page, state, preparation, authCheckpoint });
+                context = null; page = null; state = 'browser_closed'; preparation = null; authCheckpoint = INITIAL_CHECKPOINT; trustedReturnPath = null;
+                Object.assign(cache, { context, page, state, preparation, authCheckpoint, trustedReturnPath });
                 void listeners.dispose();
               });
             }
@@ -410,6 +417,18 @@ export function createManagedBrowserAssistPlugin(): Plugin {
           if (!page || page.isClosed()) return respond(res, 409, { ok: false, error: 'launch_browser_first' });
           if (new URL(page.url()).origin !== applicationOrigin) return respond(res, 409, { ok: false, error: 'application_origin_changed_review_required' });
           await page.bringToFront();
+          if (url.pathname === PREFIX + '/resume/bind') {
+            // Only the operator may affirm that a same-origin redirect still shows the selected job.
+            // This grants no terminal action, account login, or new opportunity identity.
+            const live = page.url();
+            if (!opportunityId || payload.opportunityId !== opportunityId ||
+                payload.confirmedSameOpportunity !== true || payload.livePageUrl !== live ||
+                !resumeAllowed(authCheckpoint, new URL(live).origin, applicationOrigin)) {
+              return respond(res, 409, { ok: false, error: 'explicit_same_opportunity_confirmation_required' });
+            }
+            trustedReturnPath = new URL(live).pathname;
+            return respond(res, 200, { ok: true, state: 'application_path_bound_review_required', authCheckpoint });
+          }
           if (url.pathname === PREFIX + '/listeners') {
             if (payload.opportunityId !== opportunityId || payload.url !== applicationUrl) throw new Error('Select the application bound to this browser.');
             if (typeof payload.recordAnswers === 'boolean') await listeners.setRecording(payload.recordAnswers);
@@ -422,7 +441,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             const scope = documentScope(payload.opportunityId, payload.url);
             const live = new URL(page.url()), launched = new URL(applicationUrl);
             if (!opportunityId || scope.opportunityId !== opportunityId || scope.url !== launched.href ||
-              (live.pathname !== launched.pathname && !live.pathname.startsWith(launched.pathname.replace(/\/$/, '') + '/'))) throw new Error('Document opportunity binding changed; relaunch the selected opportunity.');
+              (live.pathname !== launched.pathname && !live.pathname.startsWith(launched.pathname.replace(/\/$/, '') + '/') && live.pathname !== trustedReturnPath)) throw new Error('Document opportunity binding changed; reconfirm the selected opportunity before preparing.');
           }
           if (url.pathname === PREFIX + '/prepare') {
             // Operator-triggered deterministic progression only. Never agentic browsing.
@@ -522,7 +541,9 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               } catch { authCheckpoint = INITIAL_CHECKPOINT; }
               const live = new URL(page.url()), selected = new URL(applicationUrl);
               if (!resumeAllowed(authCheckpoint, live.origin, applicationOrigin) ||
-                  (live.pathname !== selected.pathname && !live.pathname.startsWith(selected.pathname.replace(/\/$/, '') + '/'))) {
+                  (live.pathname !== selected.pathname &&
+                   !live.pathname.startsWith(selected.pathname.replace(/\/$/, '') + '/') &&
+                   live.pathname !== trustedReturnPath)) {
                 return respond(res, 409, { ok: false, error: 'application_form_or_opportunity_not_verified_check_again' });
               }
             }
@@ -554,7 +575,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
           // Never log URLs, profile values, job forms, tokens or private document contents.
           return respond(res, 422, { ok: false, error: message.slice(0, 160) });
         } finally {
-          Object.assign(cache, { context, page, state, applicationOrigin, applicationUrl, opportunityId, preparation, authCheckpoint });
+          Object.assign(cache, { context, page, state, applicationOrigin, applicationUrl, opportunityId, preparation, authCheckpoint, trustedReturnPath });
           cache.busy = false;
         }
       });

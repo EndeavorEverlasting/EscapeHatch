@@ -1,4 +1,4 @@
-import { forwardRef, type ChangeEvent, type FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { forwardRef, type ChangeEvent, type FormEvent, type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
@@ -330,20 +330,21 @@ function Modal({
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const onCloseRef = useRef(onClose);
+  const previousActiveElementRef = useRef<HTMLElement | null>(null);
+
+  // Establish focus before paint. A delayed opening frame can otherwise steal
+  // focus after the user selects a field, sending their clear/edit key elsewhere.
+  useLayoutEffect(() => {
+    previousActiveElementRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    (initialFocusRef?.current || closeButtonRef.current)?.focus();
+  }, []);
 
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
 
   useEffect(() => {
-    let cancelled = false;
-    const previousActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const focusTarget = initialFocusRef?.current || closeButtonRef.current;
-    const focusOnOpen = () => {
-      if (!cancelled) focusTarget?.focus();
-    };
-    window.requestAnimationFrame(focusOnOpen);
-
+    const previousActiveElement = previousActiveElementRef.current;
     const getFocusableElements = () => Array.from(
       dialogRef.current?.querySelectorAll<HTMLElement>(
         'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
@@ -380,7 +381,6 @@ function Modal({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => {
-      cancelled = true;
       document.removeEventListener('keydown', handleKeyDown);
       const returnTarget = (returnFocusRef?.current?.isConnected ? returnFocusRef.current : null)
         || (fallbackFocusRef?.current?.isConnected ? fallbackFocusRef.current : null)

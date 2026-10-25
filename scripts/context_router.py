@@ -64,11 +64,14 @@ def outline(text: str, suffix: str) -> str:
     return "Symbols: " + ", ".join(symbols[:80]) + (" [TRUNCATED]" if len(symbols) > 80 else "") + "\n"
 
 
-def select(root: Path, task: str, lane: str = "auto", budget: int = 32768) -> dict:
+def select(root: Path, task: str, lane: str = "auto", budget: int = 32768, require_full: tuple[str, ...] = ()) -> dict:
     policy = load_policy(root)
     picked = resolve_lane(task, lane, policy)
     if budget < 1:
         raise ValueError("CONTEXT_BUDGET_INVALID")
+    unknown = sorted(set(require_full) - set(policy["sources"]))
+    if unknown:
+        raise ValueError("CONTEXT_UNREGISTERED_REQUIRED:" + ",".join(unknown))
     original_bytes = 0
     for key in policy["baseline_unconditional"]:
         path = root / policy["sources"][key]["path"]
@@ -77,7 +80,7 @@ def select(root: Path, task: str, lane: str = "auto", budget: int = 32768) -> di
         original_bytes += len(path.read_bytes())
     entries = []
     for key, spec in policy["sources"].items():
-        if not (spec.get("always") or picked in spec["triggers"]):
+        if not (spec.get("always") or picked in spec["triggers"] or key in require_full):
             continue
         path = root / spec["path"]
         if not path.is_file():
@@ -87,11 +90,12 @@ def select(root: Path, task: str, lane: str = "auto", budget: int = 32768) -> di
                             "authority": spec["authority"]})
             continue
         raw = path.read_bytes()
-        payload = raw.decode("utf-8") if spec["mode"] == "full" else outline(raw.decode("utf-8"), path.suffix)
+        selected_mode = "full" if key in require_full else spec["mode"]
+        payload = raw.decode("utf-8") if selected_mode == "full" else outline(raw.decode("utf-8"), path.suffix)
         entries.append({"id": key, "path": spec["path"], "owner": spec["owner"],
                         "sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw),
                         "authority": spec["authority"], "always": spec.get("always", False),
-                        "required": spec.get("required", False), "mode": spec["mode"],
+                        "required": spec.get("required", False) or key in require_full, "mode": selected_mode,
                         "payload": payload, "state": "SELECTED"})
     entries.sort(key=lambda e: (not e.get("always", False), e["authority"], e["id"]))
     used_bytes = sum(len(e.get("payload", "").encode("utf-8")) for e in entries)
@@ -142,6 +146,7 @@ def main() -> int:
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--task", default="repository maintenance")
     parser.add_argument("--lane", default="auto")
+    parser.add_argument("--require", action="append", default=[], metavar="SOURCE_ID", help="Admit exact registered source with full content or block on budget")
     parser.add_argument("--budget-bytes", type=int, default=32768)
     parser.add_argument("--trace", type=Path)
     parser.add_argument("--max-trace-lines", type=int, default=48)
@@ -152,7 +157,7 @@ def main() -> int:
     try:
         if args.verify_receipt:
             verify_receipt(args.root.resolve(), json.loads(args.verify_receipt.read_text(encoding="utf-8")))
-        result = select(args.root.resolve(), args.task, args.lane, args.budget_bytes)
+        result = select(args.root.resolve(), args.task, args.lane, args.budget_bytes, tuple(args.require))
         if args.trace:
             result["trace_signatures"] = compact_trace(args.trace.read_text(encoding="utf-8"),
                                                        args.max_trace_lines)

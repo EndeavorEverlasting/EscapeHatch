@@ -1,4 +1,5 @@
-import { OpportunityDocuments, useOpportunityDocuments } from './opportunity-documents';
+import { useOpportunityDocuments } from './opportunity-documents';
+import { ApplicationPuzzle } from './application-puzzle';
 import { reconcileSubmissionReceipts } from '@/lib/submission-reconciliation';
 import type { AssistProfile } from '@/lib/assist-contract';
 import { CareerRecords } from './career-records';
@@ -87,6 +88,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const [recordingMessage, setRecordingMessage] = useState('');
   const [browserOpen, setBrowserOpen] = useState(false);
   const [preparation, setPreparation] = useState<PreparationResult | null>(null);
+  const [formObservation, setFormObservation] = useState<{ opportunityId: string; url: string; revision: number } | null>(null);
   const [listenerStatus, setListenerStatus] = useState<ServerResponse['listeners']>();
   const seenAnswers = useRef(0);
 
@@ -293,6 +295,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         }
       }
       setStatus(result.state || 'idle');
+      setFormObservation({ opportunityId: selectedOpportunityId, url, revision: Date.now() });
       if (result.preparation) setPreparation(result.preparation);
       if (action === 'launch') {
         setBrowserOpen(true);
@@ -346,15 +349,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const secondary = 'inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-bold hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50';
 
   return (
-    <><ApplicationPreferences currentRole={applications.find(item => item.id === selectedOpportunityId)?.role} currentPosting={applications.find(item => item.id === selectedOpportunityId)?.jobDescription || ''} reviewedExperience={assistProfile.experience.filter(item => item.id === assistProfile.selectedExperienceId).map(item => item.title + ' ' + item.bullets.join(' ')).join(' ')} refresh={preferencesRefresh} onEdit={() => setRecordMilitary(false)} onLoad={data => setProfile(current => {
-      const next = { ...current };
-      for (const key of Object.keys(current) as (keyof Profile)[]) {
-        const id = 'identity.' + (key === 'linkedin_url' ? 'linkedin' : key === 'name_prefix' ? 'title' : key);
-        const value = data.preferences[id]?.value;
-        if (!next[key] && value) next[key] = value;
-      }
-      return next;
-    })} /><CareerRecords profile={assistProfile} setProfile={setAssistProfile} opportunity={applications.find(item => item.id === selectedOpportunityId)} setApplications={setApplications} /><section className="mb-6 rounded-2xl border border-primary/25 bg-card p-5 shadow-sm sm:p-7" data-testid="managed-browser-assist">
+    <><section className="mb-6 rounded-2xl border border-primary/25 bg-card p-5 shadow-sm sm:p-7" data-testid="managed-browser-assist">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div>
           <p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-primary">Native application launch</p>
@@ -402,7 +397,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         </div>
       </div>
 
-      <OpportunityDocuments documents={documents} disabled={busy || !selectedOpportunityId} onBypass={() => { if (browserOpen) setAutoPrepareRequested(true); }} />
+      <ApplicationPuzzle opportunity={applications.find(item => item.id === selectedOpportunityId)} url={url} documents={documents} disabled={busy} refresh={formObservation} onBypass={() => { if (browserOpen) setAutoPrepareRequested(true); }} />
       <div className="mt-5 rounded-xl bg-secondary/55 p-4">
         <div className="flex items-center gap-2 text-sm font-bold"><CheckCircle2 className="text-primary" size={16} />
           {titles[status] || status.replaceAll('_', ' ')}
@@ -459,6 +454,15 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         Selected PDFs are saved privately for this opportunity. Employer upload is a separate action gated by your review setting; private documents are never committed.
         A file input being populated does not prove the employer accepted an upload.
       </p>
-    </section></>
+    </section>
+    <section aria-label="Reusable application knowledge"><ApplicationPreferences currentRole={applications.find(item => item.id === selectedOpportunityId)?.role} currentPosting={applications.find(item => item.id === selectedOpportunityId)?.jobDescription || ''} reviewedExperience={assistProfile.experience.filter(item => item.id === assistProfile.selectedExperienceId).map(item => item.title + ' ' + item.bullets.join(' ')).join(' ')} refresh={preferencesRefresh} onEdit={() => setRecordMilitary(false)} onLoad={data => setProfile(current => {
+      const next = { ...current };
+      for (const key of Object.keys(current) as (keyof Profile)[]) {
+        const id = 'identity.' + (key === 'linkedin_url' ? 'linkedin' : key === 'name_prefix' ? 'title' : key);
+        const value = data.preferences[id]?.value;
+        if (!next[key] && value) next[key] = value;
+      }
+      return next;
+    })} /><CareerRecords profile={assistProfile} setProfile={setAssistProfile} opportunity={applications.find(item => item.id === selectedOpportunityId)} setApplications={setApplications} /></section></>
   );
 }

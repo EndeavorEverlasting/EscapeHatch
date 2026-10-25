@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { ArtifactDropzone } from './artifact-dropzone';
 import { Link } from 'wouter';
 import type { AssistProfile, ReviewedProposal } from '../lib/assist-contract';
 import type { Application, Profile } from '../lib/storage';
@@ -84,7 +85,7 @@ export function SourcesPage(props: SourceStateProps & {
       const value = await approveSource(preview, proposals, opportunityId, snapshot.applications, snapshot.profile, snapshot.assistProfile, snapshot.sourceBindings);
       if (request !== generation.current) return;
       if (snapshot.profile !== current.current.profile || snapshot.assistProfile !== current.current.assistProfile || snapshot.applications !== current.current.applications || snapshot.sourceBindings !== current.current.sourceBindings) throw new Error('PROFILE_CHANGED_REVIEW_AGAIN');
-      props.onApprove(value); setPreview(null); setProposals([]); setFeedback('Selected claims approved in your existing profile and bound to this opportunity.');
+      props.onApprove(value); setPreview(null); setProposals([]); setFeedback(opportunityId ? 'Selected claims approved in your existing profile and bound to this opportunity.' : 'Selected claims saved in your career profile. Choose an opportunity next.');
     } catch (error) { if (request === generation.current) setFeedback(error instanceof Error ? error.message : 'Source approval failed.'); }
     finally { if (request === generation.current) setBusy(false); }
   };
@@ -98,18 +99,16 @@ export function SourcesPage(props: SourceStateProps & {
   };
   return <div>
     <h1 className="font-display text-4xl">Sources &amp; identity</h1>
-    <p className="my-3">Choose a résumé, review its claims, and bind them to an existing opportunity. Your profile stays in this browser.</p>
+    <p className="my-3">Start with a résumé. Drop it below, review its claims, then save the facts you want to reuse. You can choose an opportunity later. Your profile stays in this browser.</p>
     <p className="my-3">Google connection is unavailable in this build. Existing Google credentials are never copied into this page. Locally synced files can be selected below.</p>
-    <label className="block my-4">Résumé source (.txt or .pdf)
-      <input className="block mt-2" type="file" accept=".txt,.pdf" disabled={busy} onChange={(event) => { void choose(event.target.files?.[0]); event.target.value = ''; }} />
-    </label>
+    <ArtifactDropzone label="Résumé source (.txt or .pdf)" hint="Drop one career source here, or choose a file. Text or text-based PDF, up to 20 MB. Review comes next; dropping never approves claims." accept=".txt,.pdf" disabled={busy} onFile={choose} />
     <label className="block my-4">Opportunity
       <select aria-label="Opportunity" className="block mt-2 border rounded p-2 bg-card" value={opportunityId} onChange={(event) => setOpportunityId(event.target.value)}>
-        <option value="">Choose an existing opportunity</option>
+        <option value="">Career profile only — choose a job later</option>
         {props.applications.filter((item) => item.status !== 'closed').map((item) => <option key={item.id} value={item.id}>{item.company} — {item.role}</option>)}
       </select>
     </label>
-    {!props.applications.length && <Link href="/applications" className="underline">Add an opportunity</Link>}
+    <p className="my-3 text-sm">After reviewing your source, <Link href="/applications" className="font-bold text-primary underline">add an opportunity</Link>, then <Link href="/assist" className="font-bold text-primary underline">assemble its application</Link>.</p>
     <p role="status" className="my-4">{feedback}</p>
     {preview && <section aria-label="Source review">
       <h2 className="font-display text-2xl">Review {preview.imported.fileName}</h2>
@@ -120,7 +119,7 @@ export function SourcesPage(props: SourceStateProps & {
         <span className="block whitespace-pre-wrap">Proposed: {proposal.value}</span>
         <span className="block whitespace-pre-wrap text-muted-foreground">Current: {existingValue(proposal) || '(empty)'}</span>
       </label>)}
-      <button className="rounded bg-primary text-primary-foreground px-4 py-2" disabled={busy || !opportunityId || !proposals.some((item) => item.review === 'accepted')} onClick={() => void approve()}>Approve selected claims</button>
+      <button className="min-h-11 rounded bg-primary text-primary-foreground px-4 py-2" disabled={busy || !proposals.some((item) => item.review === 'accepted')} onClick={() => void approve()}>Approve selected claims</button>
     </section>}
     <SourcePackageSummary {...props} />
     {props.sourceBindings.length > 0 && <button className="underline" onClick={props.onForget}>Forget source bindings (keep approved profile)</button>}

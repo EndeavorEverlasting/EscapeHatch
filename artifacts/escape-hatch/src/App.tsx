@@ -1,4 +1,4 @@
-import { forwardRef, type ChangeEvent, type FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { forwardRef, type ChangeEvent, type FormEvent, type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
@@ -79,6 +79,7 @@ import {
 import { applyAcceptedResumeImport, extractResumeText, getAcceptedResumeContactPatch, parseResumeText, type ResumeImport } from '@/lib/resume-import';
 import { initialSession, parseAssistSessionStatus, type AssistSession } from '@/lib/assist-session';
 import { ManagedBrowserAssist } from '@/components/managed-browser-assist';
+import { GuidedStart } from '@/components/guided-start';
 import { stageManagedLaunchIntent } from '@/lib/managed-launch-intent';
 import { SourcesPage, SourcePackageSummary } from '@/components/sources-page';
 import {
@@ -327,22 +328,24 @@ function Modal({
   fallbackFocusRef?: React.RefObject<HTMLElement | null>;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const onCloseRef = useRef(onClose);
+  const previousActiveElementRef = useRef<HTMLElement | null>(null);
+
+  // Establish focus before paint. A delayed opening frame can otherwise steal
+  // focus after the user selects a field, sending their clear/edit key elsewhere.
+  useLayoutEffect(() => {
+    previousActiveElementRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    // A neutral target cannot turn the key that opened a recovered draft into
+    // an unintended Close or Save action when activation repeats.
+    (initialFocusRef?.current || dialogRef.current)?.focus();
+  }, []);
 
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
 
   useEffect(() => {
-    let cancelled = false;
-    const previousActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const focusTarget = initialFocusRef?.current || closeButtonRef.current;
-    const focusOnOpen = () => {
-      if (!cancelled) focusTarget?.focus();
-    };
-    window.requestAnimationFrame(focusOnOpen);
-
+    const previousActiveElement = previousActiveElementRef.current;
     const getFocusableElements = () => Array.from(
       dialogRef.current?.querySelectorAll<HTMLElement>(
         'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
@@ -368,10 +371,10 @@ function Modal({
       const activeElement = document.activeElement;
       const firstElement = focusableElements[0];
       const lastElement = focusableElements[focusableElements.length - 1];
-      if (event.shiftKey && (activeElement === firstElement || !dialog.contains(activeElement))) {
+      if (event.shiftKey && (activeElement === dialog || activeElement === firstElement || !dialog.contains(activeElement))) {
         event.preventDefault();
         lastElement.focus();
-      } else if (!event.shiftKey && (activeElement === lastElement || !dialog.contains(activeElement))) {
+      } else if (!event.shiftKey && (activeElement === dialog || activeElement === lastElement || !dialog.contains(activeElement))) {
         event.preventDefault();
         firstElement.focus();
       }
@@ -379,7 +382,6 @@ function Modal({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => {
-      cancelled = true;
       document.removeEventListener('keydown', handleKeyDown);
       const returnTarget = (returnFocusRef?.current?.isConnected ? returnFocusRef.current : null)
         || (fallbackFocusRef?.current?.isConnected ? fallbackFocusRef.current : null)
@@ -389,14 +391,14 @@ function Modal({
   }, []);
 
   return (
-    <div ref={dialogRef} className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/35 p-0 backdrop-blur-[2px] sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+    <div ref={dialogRef} tabIndex={-1} className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/35 p-0 backdrop-blur-[2px] sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
       <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl border border-border bg-card shadow-2xl sm:max-w-xl sm:rounded-2xl">
         <div className="flex items-start justify-between border-b border-border px-5 py-4 sm:px-7">
           <div>
             {eyebrow && <p className="font-mono-app text-[10px] font-medium uppercase tracking-[.18em] text-primary">{eyebrow}</p>}
             <h2 id="dialog-title" className="mt-1 font-display text-3xl">{title}</h2>
           </div>
-          <button ref={closeButtonRef} type="button" onClick={onClose} aria-label="Close dialog" data-testid="button-close-dialog" className="rounded-lg p-2 text-muted-foreground transition hover:bg-secondary hover:text-foreground"><X size={19} /></button>
+          <button type="button" onClick={onClose} aria-label="Close dialog" data-testid="button-close-dialog" className="rounded-lg p-2 text-muted-foreground transition hover:bg-secondary hover:text-foreground"><X size={19} /></button>
         </div>
         <div className="p-5 sm:p-7">{children}</div>
       </div>
@@ -632,7 +634,8 @@ function HomePage({ profile, answers, applications, setApplications }: { profile
         { label: 'Reusable answers', value: String(answers.length), caption: 'answers ready to borrow', href: '/answers', testId: 'link-stat-2' },
       ];
   return <div>
-    <PageIntro eyebrow="Wednesday · your cockpit" title={profile.first_name ? `Keep going, ${displayName(profile)}.` : 'Make room for momentum.'} description="A small, private place to move one good opportunity forward at a time." />
+    <GuidedStart profile={profile} applications={applications} />
+    <PageIntro eyebrow="Your cockpit" title={profile.first_name ? `Keep going, ${displayName(profile)}.` : 'Make room for momentum.'} description="A small, private place to move one good opportunity forward at a time." />
     <section className="mb-6 rounded-2xl border border-border bg-card p-5 shadow-sm" data-testid="tracker-connection-panel" data-tracker-status={tracker.status}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
@@ -951,10 +954,9 @@ function AnswerForm({ answer, initialDraft, returnFocusRef, fallbackFocusRef, on
     };
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
-      window.requestAnimationFrame(() => {
-        if (!submittedTitle.trim()) titleRef.current?.focus();
-        else contentRef.current?.focus();
-      });
+      // These fields already exist. A later frame could steal the user's next edit.
+      if (!submittedTitle.trim()) titleRef.current?.focus();
+      else contentRef.current?.focus();
       return;
     }
     onSave({ title: submittedTitle.trim(), category, content: submittedContent.trim() });
@@ -1142,10 +1144,8 @@ function ApplicationForm({ application, initialDraft, returnFocusRef, fallbackFo
     };
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
-      window.requestAnimationFrame(() => {
-        if (!submittedCompany.trim()) companyRef.current?.focus();
-        else roleRef.current?.focus();
-      });
+      if (!submittedCompany.trim()) companyRef.current?.focus();
+      else roleRef.current?.focus();
       return;
     }
     onSave({ ...form, company: submittedCompany.trim(), role: submittedRole.trim() });
@@ -1366,7 +1366,7 @@ function AssistPage({
     </section>}
     {pendingSync && <section className="mt-5 rounded-2xl border border-accent/45 bg-accent/10 p-5" data-testid="assist-sync-conflict"><p className="font-bold">Incoming sync needs a choice</p><p className="mt-1 text-sm leading-6 text-muted-foreground">The incoming profile or answers differ from current work. Choose a side or merge unique entries; nothing is overwritten silently.</p><div className="mt-4 flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={() => applySync('keep-current')}>Keep current</Button><Button type="button" onClick={() => applySync('merge')}>Merge unique items</Button><Button type="button" onClick={() => applySync('use-incoming')}>Use incoming</Button></div></section>}
     <div className="mt-5"><AssistProgress session={session} /></div>
-    <section className="mt-5 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-7"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-muted-foreground">Explicit milestone</p><h2 className="mt-2 font-display text-2xl">Record what you decided</h2><p className="mt-1 text-sm leading-6 text-muted-foreground">Observed pages are not applications. Choose an opportunity only when you personally want to record an applied milestone.</p></div><div className="flex gap-2"><select value={milestone} onChange={(event) => setMilestone(event.target.value)} data-testid="select-assist-milestone" className="max-w-[220px] rounded-lg border border-input bg-background px-3 py-2.5 text-sm"><option value="">Choose opportunity</option>{applications.filter((item) => item.status !== 'closed').map((item) => <option key={item.id} value={item.id}>{item.company} · {item.role}</option>)}</select><Button type="button" onClick={recordMilestone} disabled={!milestone} data-testid="button-record-assist-milestone">Record applied</Button></div></div>{session.pages.length > 0 && <div className="mt-6 space-y-2">{session.pages.map((page) => <div key={page.key} className="flex flex-col gap-1 rounded-lg bg-secondary/55 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"><span className="font-bold">{page.title || 'Application page'}</span><span className="text-xs text-muted-foreground">{page.status} · {page.filled} filled · {formatUpdated(page.scannedAt)}</span></div>)}</div>}</section>
+    <section className="mt-5 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-7"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-muted-foreground">Explicit milestone</p><h2 className="mt-2 font-display text-2xl">Record what you decided</h2><p className="mt-1 text-sm leading-6 text-muted-foreground">Observed pages are not applications. Choose an opportunity only when you personally want to record an applied milestone.</p></div><div className="flex flex-wrap gap-2"><select value={milestone} onChange={(event) => setMilestone(event.target.value)} data-testid="select-assist-milestone" className="max-w-[220px] rounded-lg border border-input bg-background px-3 py-2.5 text-sm"><option value="">Choose opportunity</option>{applications.filter((item) => item.status !== 'closed').map((item) => <option key={item.id} value={item.id}>{item.company} · {item.role}</option>)}</select><Button type="button" onClick={recordMilestone} disabled={!milestone} data-testid="button-record-assist-milestone">Record applied</Button></div></div>{session.pages.length > 0 && <div className="mt-6 space-y-2">{session.pages.map((page) => <div key={page.key} className="flex flex-col gap-1 rounded-lg bg-secondary/55 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"><span className="font-bold">{page.title || 'Application page'}</span><span className="text-xs text-muted-foreground">{page.status} · {page.filled} filled · {formatUpdated(page.scannedAt)}</span></div>)}</div>}</section>
   </div>;
 }
 

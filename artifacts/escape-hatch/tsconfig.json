@@ -1,6 +1,7 @@
 {
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "application-requirements.ts"
   ],
   "exclude": [
     "node_modules",

@@ -92,14 +92,14 @@ class EscalationTests(unittest.TestCase):
         self.assertIn("Start-ColdRuntime", view)
 
     def test_symlink_escape_blocks(self):
-        external = Path(self.temp.name).parent / (Path(self.temp.name).name + "-fixture")
+        external = Path(self.temp.name).parent / (Path(self.temp.name).name + "-selected-fixture")
         external.write_text("outside")
-        path = self.root / "harness/CODEBASE_MAP.md"
+        path = self.root / "scripts/windows/EscapeHatch-Runtime.ps1"
         path.unlink()
         try:
             path.symlink_to(external)
             with self.assertRaisesRegex(ValueError, "CONTEXT_SOURCE_ESCAPES_REPOSITORY"):
-                router.select(self.root, "context", "context")
+                router.select(self.root, "runtime", "runtime")
         finally:
             external.unlink(missing_ok=True)
 

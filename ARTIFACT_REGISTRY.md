@@ -19,6 +19,29 @@ This file is the canonical registry for durable EscapeHatch artifacts. A plausib
 
 ## Registered artifacts
 
+| Artifact | Path | Policy | Update trigger | Validation |
+| --- | --- | --- | --- | --- |
+| Installation lifecycle owner | `scripts/windows/EscapeHatch-Install.ps1` | tracked; preserves user-owned resources | install/bootstrap/remove behavior | `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/windows/Test-EscapeHatch-Install.ps1` |
+| Install adapter | `Install-EscapeHatch.cmd` | tracked thin entrypoint | installation owner changes | installer safety suite |
+| Uninstall adapter | `Uninstall-EscapeHatch.cmd` | tracked preservation-first entrypoint | installation owner changes | installer safety suite |
+| Installer safety regression | `tests/windows/Test-EscapeHatch-Install.ps1` | tracked synthetic Windows proof | ownership/idempotency changes | Windows PowerShell 5.1 |
+| User-data root resolver | `artifacts/escape-hatch/user-data.ts` | tracked; no checkout identity in user state | private root policy changes | `npm --prefix artifacts/escape-hatch run test:bootstrap` |
+| Workspace schema and reconciliation | `artifacts/escape-hatch/src/lib/workspace-bootstrap.ts` | tracked projection; existing parsers own fields | recovered area changes | bootstrap regression |
+| Private workspace file owner | `artifacts/escape-hatch/workspace-file.ts` | tracked CAS/atomic/lock mechanics | persistence changes | bootstrap regression |
+| Managed workspace endpoint | `artifacts/escape-hatch/workspace-control.ts` | tracked same-origin loopback boundary | startup/readiness changes | bootstrap regression |
+| Pre-mount workspace barrier | `artifacts/escape-hatch/src/components/workspace-startup.tsx` | tracked recovery UI | hydration/conflict changes | bootstrap browser proof |
+| Remembered career source UI | `artifacts/escape-hatch/src/components/career-source-status.tsx` | tracked private-source consumer | source connection changes | typecheck/browser proof |
+| Context artifact importer | `artifacts/escape-hatch/import-context.ts` | tracked explicit local ingress; no credentials | workspace/provider-export changes | bootstrap regression |
+| Bounded tracker refresh | `artifacts/escape-hatch/tracker-refresh.ts` | tracked read-only authenticated provider adapter | freshness/binding changes | bootstrap regression |
+| Workspace bootstrap regression | `artifacts/escape-hatch/workspace-bootstrap.test.ts` | tracked negative/positive controls | bootstrap changes | `npm --prefix artifacts/escape-hatch run test:bootstrap` |
+| Tracker refresh regression | `artifacts/escape-hatch/tracker-refresh.test.ts` | tracked no-network fault injection | provider adapter changes | bootstrap regression |
+| Bootstrap browser configuration | `artifacts/escape-hatch/playwright.bootstrap.config.ts` | tracked isolated synthetic proof | proof runtime changes | `npm --prefix artifacts/escape-hatch run test:bootstrap:browser` |
+| Startup browser regression | `artifacts/escape-hatch/tests/workspace-startup.spec.ts` | tracked synthetic recovery/preservation controls | startup changes | bootstrap browser proof |
+
+Managed bootstrap private outputs: `%LOCALAPPDATA%/EscapeHatch/workspace.v1.json`, its prior/recovery copies,
+stable application preferences, remembered source manifest, cached résumé and tracker snapshot remain
+user-owned and untracked. Installation receipt/shortcut removal never deletes these outputs.
+
 | Artifact | Owner path | Type | How to produce/update | Validation |
 | --- | --- | --- | --- | --- |
 | Agent governance doctrine | `AGENTS.md` | tracked canonical contract | governance sprint only | `python scripts/validate_governance.py` |

@@ -1,14 +1,36 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import { userDataRoot } from './user-data.ts';
 import { emptyPreferences, parsePreferences, type Preferences } from './src/lib/application-preferences.ts';
 
 export function preferenceFile() {
-  return process.env.ESCAPEHATCH_PREFERENCES_FILE || path.resolve(import.meta.dirname, '../../private/application-question-preferences.json');
+  return process.env.ESCAPEHATCH_PREFERENCES_FILE || path.join(userDataRoot(), 'application-question-preferences.json');
+}
+
+/** Resolve the original repository through Git, not a remembered checkout path. */
+export function legacyPreferenceFile() {
+  try {
+    const common = execFileSync('git', ['rev-parse', '--path-format=absolute', '--git-common-dir'], { cwd: import.meta.dirname, encoding: 'utf8', timeout: 5000, windowsHide: true }).trim();
+    return path.join(path.dirname(common), 'private', 'application-question-preferences.json');
+  } catch { return null; }
+}
+
+export async function migrateLegacyPreferences(destination = preferenceFile(), legacy = legacyPreferenceFile()) {
+  if (!legacy || path.resolve(destination) === path.resolve(legacy)) return;
+  try { await fs.access(destination); return; } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+  let bytes;
+  try { bytes = await fs.readFile(legacy); } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return; throw error; }
+  if (bytes.length > 65536 || !parsePreferences(JSON.parse(bytes.toString('utf8').replace(/^\uFEFF/, '')))) throw new Error('Legacy preferences need review. Original data was preserved.');
+  await fs.mkdir(path.dirname(destination), { recursive: true });
+  try { await fs.writeFile(destination, bytes, { flag: 'wx', mode: 0o600 }); }
+  catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error; }
 }
 
 export async function readPreferences(file = preferenceFile()): Promise<Preferences> {
   try {
+    if (file === preferenceFile() && !process.env.ESCAPEHATCH_PREFERENCES_FILE) await migrateLegacyPreferences(file);
     const bytes = await fs.readFile(file);
     if (bytes.length > 65536) throw new Error('Invalid saved preferences; restore a valid preference export.');
     const data = parsePreferences(JSON.parse(bytes.toString('utf8').replace(/^\uFEFF/, '')));

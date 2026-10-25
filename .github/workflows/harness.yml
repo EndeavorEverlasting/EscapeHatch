@@ -100,6 +100,10 @@ jobs:
           Write-Host "WINDOWS_REPO_ROOT=PASS"
           Write-Host "DEV_ROOT=$actual"
 
+      - name: Validate installation ownership and preservation
+        shell: powershell
+        run: ./tests/windows/Test-EscapeHatch-Install.ps1
+
   windows-lifecycle:
     runs-on: windows-latest
     timeout-minutes: 20

@@ -153,6 +153,10 @@ function validAssistAnswer(value: unknown): value is AssistAnswer {
     && (!value.canonicalId || typeof value.canonicalId === 'string'));
 }
 
+export function parseAssistAnswers(value: unknown): AssistAnswer[] | null {
+  return Array.isArray(value) && value.every(validAssistAnswer) ? value : null;
+}
+
 function validProfile(value: unknown): value is AssistProfile {
   if (!isRecord(value) || value.schema !== ASSIST_SCHEMA || value.version !== ASSIST_VERSION) return false;
   const contact = value.contact;

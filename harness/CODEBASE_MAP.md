@@ -86,6 +86,16 @@ The resolver verifies origin and requested remote head, preserves dirty/differen
 
 ## Product entry points
 
+Managed Windows startup: `Launch-EscapeHatch.cmd` → `Launch-EscapeHatch.ps1` →
+`scripts/windows/EscapeHatch-Install.ps1 -Action Bootstrap` → existing runtime manager.
+Install/remove use `Install-EscapeHatch.cmd` and `Uninstall-EscapeHatch.cmd`.
+`artifacts/escape-hatch/workspace-control.ts`, `workspace-file.ts`, `user-data.ts` and
+`src/lib/workspace-bootstrap.ts` own stable private startup recovery. `src/components/workspace-startup.tsx`
+holds the dashboard until context is validated/reconciled. `tracker-refresh.ts` owns real bounded
+provider reads; `import-context.ts` accepts validated existing local/connected-provider artifacts.
+Operational acceptance and data-preserving removal are documented in `docs/WINDOWS_RUNTIME_LIFECYCLE.md`;
+the full bootstrap phase map remains in `docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md`.
+
 Canonical product persistence remains `contracts/career-state.v1.schema.json`; `scripts/validate_career_state.py` validates it. `contracts/application-companion.v1.json` defines the delivery/privacy/synchronization boundary for clients that read and write that user-owned career state. `contracts/resume-presentation.v1.json` defines the visual/structural quality boundary for resume outputs while leaving private resume content user-owned. `scripts/export_study_guidance.py` exports typed guidance to StudySyndicate.
 
 The companion contract is surface-agnostic at the state boundary. Browser extensions, Microsoft Store apps, Play Store apps, and local web runtimes may use different storage/runtime adapters without creating separate career-state formats. Public hosting and a public profile are optional, not prerequisites.

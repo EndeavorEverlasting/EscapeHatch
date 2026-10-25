@@ -5,6 +5,7 @@ import type { Application, Profile } from '../lib/storage';
 import { approveSource, previewLocalSource, sourcePackageStatus, type SourceBinding, type SourcePreview } from '../lib/source-bridge';
 import { connectionFromSnapshot, isSubmittedLocked, parseTrackerSnapshot, selectNextActionableOpportunity, trackerOpportunityId } from '../lib/tracker-bridge';
 import { stageManagedLaunchIntent } from '../lib/managed-launch-intent';
+import { CareerSourceStatus } from './career-source-status';
 
 export type SourceStateProps = {
   profile: Profile;
@@ -96,10 +97,20 @@ export function SourcesPage(props: SourceStateProps & {
     }
     return 'Existing entries are retained; selected entries are added.';
   };
+  const readSavedResume = async () => {
+    try {
+      const response = await fetch('/__escapehatch/workspace/resume');
+      if (!response.ok) throw new Error('No saved résumé is available yet. Choose a local file below.');
+      const result = await response.json() as { label: string; text: string };
+      if (typeof result.text !== 'string' || !result.text.trim()) throw new Error('Saved résumé could not be read. Original files are preserved.');
+      await choose(new File([result.text], result.label + '.txt', { type: 'text/plain' }));
+    } catch (error) { setFeedback((error as Error).message); }
+  };
   return <div>
     <h1 className="font-display text-4xl">Sources &amp; identity</h1>
-    <p className="my-3">Choose a résumé, review its claims, and bind them to an existing opportunity. Your profile stays in this browser.</p>
-    <p className="my-3">Google connection is unavailable in this build. Existing Google credentials are never copied into this page. Locally synced files can be selected below.</p>
+    <p className="my-3">Recover your saved résumé or choose a local file, review its claims, and bind them to an existing opportunity. Managed startup saves approved details on this computer.</p>
+    <CareerSourceStatus />
+    <button className="rounded-lg bg-primary px-4 py-2 text-primary-foreground" disabled={busy} onClick={() => void readSavedResume()}>Review saved résumé</button>
     <label className="block my-4">Résumé source (.txt or .pdf)
       <input className="block mt-2" type="file" accept=".txt,.pdf" disabled={busy} onChange={(event) => { void choose(event.target.files?.[0]); event.target.value = ''; }} />
     </label>

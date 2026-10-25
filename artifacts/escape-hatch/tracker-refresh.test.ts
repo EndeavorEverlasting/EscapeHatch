@@ -32,6 +32,23 @@ test('valid bounded response projects every row and derives metrics', () => {
   assert.match(snapshot.contentDigest, /^[a-f0-9]{64}$/);
 });
 
+test('custom sheet checkbox glyphs remain explicit progress, never submission proof', () => {
+  for (const [glyph, expected] of [['☑', true], ['☒', true], ['☐', false]] as const) {
+    const rows = [heading, [glyph, 'High', 'Ready to Apply', 'Synthetic Employer', 'Synthetic Role', 'https://example.test/apply']];
+    const snapshot = createTrackerSnapshotFromValues(rows, target, 'synthetic', date);
+    assert.equal(snapshot.applications[0].appliedCheckbox, expected);
+    assert.equal(snapshot.metrics.submittedStatus, 0);
+  }
+});
+
+test('historical correspondence rows survive as plain text without browser launch authority', () => {
+  const rows = [heading, [true, 'High', 'Submitted', 'Synthetic Employer', 'Synthetic Role', 'mailto:synthetic@example.test']];
+  const snapshot = createTrackerSnapshotFromValues(rows, target, 'synthetic', date);
+  assert.equal(snapshot.applications.length, 1);
+  assert.equal(snapshot.applications[0].applyUrl, '');
+  assert.match(snapshot.applications[0].notes!, /Manual correspondence link/);
+});
+
 test('missing, duplicate, aliased duplicate, invalid and truncated rows fail closed', () => {
   const cases: unknown[] = [[], [heading.slice(1)], [[...heading, 'Company']], [[...heading, 'Follow-Up']],
     [heading, [false, 'High', 'Ready', '', 'Role', 'https://example.test']],

@@ -51,8 +51,8 @@ export function createTrackerSnapshotFromValues(values: unknown, target: Tracker
       if (!key) return;
       const cell = cells[index] ?? '';
       if (key === 'appliedCheckbox') {
-        if (cell === true || String(cell).trim().toUpperCase() === 'TRUE') row.appliedCheckbox = true;
-        else if (cell === false || cell === '' || String(cell).trim().toUpperCase() === 'FALSE') row.appliedCheckbox = false;
+        if (cell === true || ['TRUE', '☑', '☒'].includes(String(cell).trim().toUpperCase())) row.appliedCheckbox = true;
+        else if (cell === false || ['', 'FALSE', '☐'].includes(String(cell).trim().toUpperCase())) row.appliedCheckbox = false;
         else fail('INVALID_ROWS');
       } else {
         const text = String(cell).trim();
@@ -62,7 +62,13 @@ export function createTrackerSnapshotFromValues(values: unknown, target: Tracker
     });
     if (!row.company || !row.role || !row.status || !row.priority) fail('INVALID_ROWS');
     if (row.applyUrl) {
-      try { if (!['http:', 'https:'].includes(new URL(row.applyUrl).protocol)) fail('INVALID_ROWS'); }
+      try {
+        const protocol = new URL(row.applyUrl).protocol;
+        if (protocol === 'mailto:') {
+          row.notes = [row.notes, 'Manual correspondence link (not a browser application): ' + row.applyUrl].filter(Boolean).join('\n');
+          row.applyUrl = '';
+        } else if (!['http:', 'https:'].includes(protocol)) fail('INVALID_ROWS');
+      }
       catch { fail('INVALID_ROWS'); }
     }
     applications.push(row);

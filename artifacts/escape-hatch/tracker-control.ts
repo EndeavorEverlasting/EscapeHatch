@@ -11,6 +11,7 @@ import type { Plugin } from 'vite';
 import { isLoopbackAddress, readManagedRuntime } from './runtime-control.ts';
 import { parseTrackerSnapshot } from './src/lib/tracker-bridge.ts';
 import { readRememberedSources, readTrackerRefreshAvailability, refreshTrackerSnapshot } from './tracker-refresh.ts';
+import { userDataRoot } from './user-data.ts';
 
 const PREFIX = '/__escapehatch/tracker';
 
@@ -25,9 +26,9 @@ function respond(res: ServerResponse, code: number, value: object) {
 export function trackerPaths(env: NodeJS.ProcessEnv = process.env) {
   const local = env.LOCALAPPDATA || path.join(homedir(), 'AppData', 'Local');
   return {
-    snapshot: env.ESCAPEHATCH_TRACKER_SNAPSHOT || path.join(local, 'EscapeHatch', 'tracker-snapshot.v1.json'),
+    snapshot: env.ESCAPEHATCH_TRACKER_SNAPSHOT || path.join(userDataRoot(env), 'tracker-snapshot.v1.json'),
     googleAuth: path.join(local, 'TokenCorridor', 'connectors', 'google.json'),
-    sources: path.join(local, 'EscapeHatch', 'career-sources.v1.json'),
+    sources: path.join(userDataRoot(env), 'career-sources.v1.json'),
   };
 }
 

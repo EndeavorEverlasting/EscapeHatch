@@ -4,6 +4,57 @@ Status: TRACKED PLAN — EH-R0 through EH-R2 integrated on the candidate; EH-R3/
 
 Canonical planning owner for this work: `docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md`.
 
+## 2026-10-24 bootstrap recovery programme
+
+This section supersedes process-only readiness claims. A healthy process is not a recovered user workspace.
+The operator twice observed a blank profile/queue after launch; the fresh-browser P08 baseline reproduced
+0% profile readiness and a stale tracker despite existing approved local preferences and a private tracker.
+Source floor: refreshed `origin/main@9cc71711fb8152ea869ba2530a06f88b7ef4949a`.
+TokenCorridor prompt floor: `origin/main@84e5abd`; P141 scout, then separately invoked P08/P82/P07.
+Private career source identities and content belong only in the user's local store, never this plan.
+
+### P141 decision and P82 admission
+
+| Thesis | Falsification | Disposition |
+| --- | --- | --- |
+| Stable per-user workspace/bootstrap shared by every checkout | Existing code might already hydrate it. Inspection disproved that: App initializes browser-only state; preferences are checkout-relative. A fresh browser reproduced the failure. | SURVIVES; selected |
+| Installer/shortcut alone | Test whether process readiness implies profile readiness. Healthy process plus empty profile disproves it. | WEAKENED; necessary lifecycle component, insufficient alone |
+| Cloud-only hydration | Existing cloud context exists, but standalone app has no usable connector merely because this conversation does. Offline continuity remains required. | REJECTED as sole state owner |
+| More agent handoff prose | Repeated launch instructions already exist but runtime never loads the profile. | REJECTED as primary repair; strengthen executable readiness instead |
+
+Selected thesis: distribution/process identity must be separate from stable user state. Confidence HIGH for
+the ownership failure, UNKNOWN for full cloud automation until authorized provider access is exercised.
+P141 ends with this decision; implementation is admitted by the operator's separate trifecta invocation.
+
+P82 hypothesis: a validated per-user artifact plus a hydration barrier can recover a fresh browser without
+overwriting browser edits. Comparator: current launcher -> healthy server -> empty profile/stale snapshot.
+Prototype boundary: profile/answers/applications/assist/source bindings, same existing parsers, private file,
+loopback endpoint, pre-mount hydration, compare-and-set persistence. Measurements: visible populated profile,
+restart/clean-browser recovery, conflict/invalid/storage-failure rejection, no terminal application action.
+PROMOTE if recovery and preservation controls pass; WEAKEN if recovery needs extra manual shuttling;
+REJECT if identities or edits cannot be preserved; INCONCLUSIVE when the required runtime is unavailable.
+
+### Whole-outcome phase map
+
+| Phase / owner | Owned implementation and artifact | Dependencies / forbidden scope | Proof gate |
+| --- | --- | --- | --- |
+| B0 / coordinator | Stable user-data root, validated workspace file/API, hydration barrier, CAS persistence, preference migration | Preserve original checkout, private artifacts, browser edits; no invented legal/EEO facts | Negative + positive store tests, typecheck, build, fresh-browser and restart proof |
+| B1 / installer lane | Inspect/Install/Bootstrap/Uninstall, canonical launcher delegation, owned shortcut receipt | B0 shares stable user root; never remove user data, credentials, adopted resources, source checkouts or foreign processes | Isolated Windows install twice/remove twice/reinstall and ownership negatives |
+| B2 / coordinator | Local workspace import and source recovery; register existing Career provider routes privately | Reuse current source identity; existing authorized connector only; do not create folders or new OAuth credentials | Local artifact round trip, malformed/oversized rejection, freshness preserved; observed provider refresh separately |
+| B3 / coordinator | Launch/readiness procedure, contract/registry and retained regression floor | Depends on B0/B1; process HTTP 200 alone never PASS | Owning validators, browser recovery/protected existing-state control, exact-head checks/review |
+| B4 / coordinator | Converge lanes and integrate candidate | Fresh default, combined proof, reviews/checks; preserve sibling worktrees | Provider merge + refreshed containment/content proof |
+
+Uninstall preserves the entire user store and all Drive artifacts by default. Data erasure is a separate
+explicit destructive request, not an installer feature. Session/process receipts remain checkout-scoped;
+profile/answers/source identities do not. Browser storage remains a working copy, with conflicts surfaced
+instead of last-writer-wins. Bootstrap errors must precede the normal dashboard and offer local import/retry.
+Standalone development mode may remain browser-local, but must not be represented as managed recovery.
+
+Validation: artifact `test:bootstrap`, `test:unit`, `test:tracker`, `test:managed-assist`, `test:runtime-control`,
+`typecheck`, `build`; focused Playwright bootstrap/persistence proof on an isolated port; isolated Windows
+installer tests; governance/harness/local-runtime validators; working/staged/exact-candidate diff checks.
+No synthetic result certifies employer acceptance, cloud OAuth, store packaging, or an unexercised OS.
+
 ## Evidence floor
 
 - Provider repository: `EndeavorEverlasting/EscapeHatch`.

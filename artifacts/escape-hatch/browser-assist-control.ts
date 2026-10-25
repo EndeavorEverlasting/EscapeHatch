@@ -303,6 +303,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             state,
             browserOpen: Boolean(page),
             authCheckpoint,
+            currentPage: page ? { opportunityId, applicationUrl, pageUrl: page.url() } : null,
             requiresOperatorSubmission: true,
             preparationState: preparation?.state || null,
             preparationCode: preparation?.code || null,
@@ -514,9 +515,12 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             return respond(res, 200, { ok: true, recorded });
           }
           if (url.pathname === PREFIX + '/fill' || url.pathname === PREFIX + '/resume') {
-            if (url.pathname === PREFIX + '/resume' &&
-                !resumeAllowed(authCheckpoint, new URL(page.url()).origin, applicationOrigin)) {
-              return respond(res, 409, { ok: false, error: 'application_form_not_verified_check_again' });
+            if (url.pathname === PREFIX + '/resume') {
+              const live = new URL(page.url()), selected = new URL(applicationUrl);
+              if (!resumeAllowed(authCheckpoint, live.origin, applicationOrigin) ||
+                  (live.pathname !== selected.pathname && !live.pathname.startsWith(selected.pathname.replace(/\/$/, '') + '/'))) {
+                return respond(res, 409, { ok: false, error: 'application_form_or_opportunity_not_verified_check_again' });
+              }
             }
             const preferences = await readPreferences();
             const contact = reviewedContactFields(payload.profile);

@@ -193,7 +193,13 @@ try {
         Save-Receipt $receipt
     }
     Write-Host 'ESCAPEHATCH_INSTALLATION=INSTALLED'
-    if ($Action -eq 'Bootstrap') { Invoke-Runtime $selected 'Start' | Out-Host }
+    if ($Action -eq 'Bootstrap') {
+        # Stream Start directly. Capturing a long-lived descendant's inherited
+        # handles through @(& powershell ...) can hold the launcher open on PS5.1.
+        $manager = Join-Path $selected 'scripts\windows\EscapeHatch-Runtime.ps1'
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $manager -Action Start
+        if ($LASTEXITCODE -ne 0) { throw 'INSTALL_RUNTIME_START_FAILED: inspect the canonical runtime status before retrying.' }
+    }
 } catch {
     Write-Host ('ERROR: ' + $_.Exception.Message) -ForegroundColor Red
     $exitCode = 1

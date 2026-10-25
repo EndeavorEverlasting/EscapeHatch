@@ -14,6 +14,7 @@ export function WorkspaceStartup({ children }: { children: ReactNode }) {
   const [conflicts, setConflicts] = useState(false);
   const [browserInvalid, setBrowserInvalid] = useState(false);
   const [candidate, setCandidate] = useState<SavedWorkspace | null>(null);
+  const [savedCandidate, setSavedCandidate] = useState<SavedWorkspace | null>(null);
   const revision = useRef<string | null>(null);
   const blocked = useRef(false);
   const recoveryImport = useRef(false);
@@ -49,8 +50,9 @@ export function WorkspaceStartup({ children }: { children: ReactNode }) {
       }
       const merged = reconcileWorkspace(local, saved);
       if (merged.conflicts.length) {
-        setCandidate(local); setConflicts(true);
-        setMessage('This browser and your saved workspace contain different details. Both copies are preserved. Export this browser before choosing which copy to continue.');
+        setCandidate(local); setSavedCandidate(saved); setConflicts(true);
+        const labels: Record<string, string> = { 'escape-hatch-profile': 'profile', 'escape-hatch-applications': 'application queue', 'escape-hatch-answers': 'answer library', 'escape-hatch-assist-profile': 'reviewed career details', 'escape-hatch-assist-answers': 'assist answers', 'escape-hatch-source-bindings-v1': 'source bindings' };
+        setMessage('This browser and your saved workspace differ in: ' + merged.conflicts.map(key => labels[key] || 'saved context').join(', ') + '. Both copies are preserved. Choose which copy to continue; the other copy will be backed up.');
         return;
       }
       if (!hasContext(merged.workspace.values)) {
@@ -90,9 +92,9 @@ export function WorkspaceStartup({ children }: { children: ReactNode }) {
 
   const useWorkspace = async (workspace: SavedWorkspace) => {
     try {
-      await save(workspace, recoveryImport.current, browserInvalid ? rawBrowserWorkspace(localStorage) : undefined);
+      await save(workspace, recoveryImport.current, browserInvalid || conflicts ? rawBrowserWorkspace(localStorage) : undefined);
       recoveryImport.current = false;
-      applyBrowserWorkspace(localStorage, workspace, browserInvalid);
+      applyBrowserWorkspace(localStorage, workspace, browserInvalid || conflicts);
       setReady(true); setMessage('Workspace saved on this computer.');
     } catch (error) { setMessage((error as Error).message); }
   };
@@ -132,6 +134,7 @@ export function WorkspaceStartup({ children }: { children: ReactNode }) {
       {(conflicts || browserInvalid) && <button className="rounded-lg border px-4 py-3" onClick={exportBrowser}>Export this browser</button>}
       {browserInvalid && candidate && hasContext(candidate.values) && <button className="rounded-lg border px-4 py-3" onClick={() => void useWorkspace(candidate)}>Restore saved workspace</button>}
       {conflicts && <>
+        <button className="rounded-lg border px-4 py-3" onClick={() => savedCandidate && void useWorkspace(savedCandidate)}>Use saved workspace</button>
         <button className="rounded-lg border px-4 py-3" onClick={() => candidate && void useWorkspace(candidate)}>Keep this browser’s details</button></>}
       {needsContext && <button className="rounded-lg border px-4 py-3" onClick={() => void useWorkspace({ schema: WORKSPACE_SCHEMA, values: { ...candidate?.values, [PROFILE_KEY]: candidate?.values[PROFILE_KEY] || { ...emptyProfile } } })}>Create a new workspace</button>}
     </div>

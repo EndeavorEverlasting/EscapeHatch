@@ -72,10 +72,24 @@ export function reconcileWorkspace(local: SavedWorkspace, saved: SavedWorkspace)
   const values = { ...local.values };
   const conflicts: string[] = [];
   const empty = (key: string, value: unknown) => value === undefined ||
-    (key === PROFILE_KEY ? !Object.values(value as Profile).some(item => item.trim()) : Array.isArray(value) && !value.length);
+    (key === PROFILE_KEY ? !Object.values(value as Profile).some(item => item.trim()) :
+      key === ASSIST_KEY ? !hasContext({ [ASSIST_KEY]: value }) : Array.isArray(value) && !value.length);
+  const same = (key: string, left: unknown, right: unknown) => {
+    if (key === ASSIST_KEY) {
+      const { updatedAt: _left, ...a } = left as Record<string, unknown>;
+      const { updatedAt: _right, ...b } = right as Record<string, unknown>;
+      return JSON.stringify(a) === JSON.stringify(b);
+    }
+    if ([APPLICATIONS_KEY, ANSWERS_KEY].includes(key)) {
+      const content = (items: unknown) => (items as Record<string, unknown>[])
+        .map(({ updatedAt: _time, ...item }) => item).sort((a, b) => String(a.id).localeCompare(String(b.id)));
+      return JSON.stringify(content(left)) === JSON.stringify(content(right));
+    }
+    return JSON.stringify(left) === JSON.stringify(right);
+  };
   for (const [key, value] of Object.entries(saved.values)) {
     if (empty(key, values[key])) values[key] = value;
-    else if (!empty(key, value) && JSON.stringify(values[key]) !== JSON.stringify(value)) conflicts.push(key);
+    else if (!empty(key, value) && !same(key, values[key], value)) conflicts.push(key);
   }
   const profile = parseProfileStorage(values[PROFILE_KEY]);
   const assist = parseAssistProfile(values[ASSIST_KEY]);

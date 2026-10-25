@@ -32,6 +32,8 @@ This file is the canonical registry for durable EscapeHatch artifacts. A plausib
 | Pre-mount workspace barrier | `artifacts/escape-hatch/src/components/workspace-startup.tsx` | tracked recovery UI | hydration/conflict changes | bootstrap browser proof |
 | Remembered career source UI | `artifacts/escape-hatch/src/components/career-source-status.tsx` | tracked private-source consumer | source connection changes | typecheck/browser proof |
 | Context artifact importer | `artifacts/escape-hatch/import-context.ts` | tracked explicit local ingress; no credentials | workspace/provider-export changes | bootstrap regression |
+| Stable opportunity document owner | `artifacts/escape-hatch/opportunity-documents.ts` | tracked existing package owner; hash-verified migration preserves review | private package persistence changes | `npm --prefix artifacts/escape-hatch run test:managed-assist` |
+| Document migration regression | `artifacts/escape-hatch/opportunity-documents.test.ts` | tracked exact-scope/review and conflict controls | document owner changes | managed-assist regression |
 | Bounded tracker refresh | `artifacts/escape-hatch/tracker-refresh.ts` | tracked read-only authenticated provider adapter | freshness/binding changes | bootstrap regression |
 | Workspace bootstrap regression | `artifacts/escape-hatch/workspace-bootstrap.test.ts` | tracked negative/positive controls | bootstrap changes | `npm --prefix artifacts/escape-hatch run test:bootstrap` |
 | Tracker refresh regression | `artifacts/escape-hatch/tracker-refresh.test.ts` | tracked no-network fault injection | provider adapter changes | bootstrap regression |

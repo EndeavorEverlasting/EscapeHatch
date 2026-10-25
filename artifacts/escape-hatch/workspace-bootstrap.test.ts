@@ -101,6 +101,11 @@ test('assist-only context is recovered and blank legacy assist contact receives 
   const merged = reconcileWorkspace(local, workspace());
   assert.equal((merged.workspace.values[ASSIST_KEY] as typeof assist).contact.first_name, 'Synthetic');
   assert.equal((merged.workspace.values[ASSIST_KEY] as typeof assist).summary, assist.summary);
+  const oldEmpty = emptyAssistProfile(emptyProfile);
+  const populated = { ...emptyAssistProfile(workspace().values[PROFILE_KEY]), summary: 'Saved summary' };
+  assert.deepEqual(reconcileWorkspace({ schema: WORKSPACE_SCHEMA, values: { [ASSIST_KEY]: oldEmpty } }, { schema: WORKSPACE_SCHEMA, values: { [ASSIST_KEY]: populated } }).conflicts, []);
+  const laterMetadata = { ...populated, updatedAt: new Date(Date.now() + 1000).toISOString() };
+  assert.deepEqual(reconcileWorkspace({ schema: WORKSPACE_SCHEMA, values: { [ASSIST_KEY]: populated } }, { schema: WORKSPACE_SCHEMA, values: { [ASSIST_KEY]: laterMetadata } }).conflicts, []);
 });
 test('legacy preference migration is validated, idempotent, and never overwrites newer stable answers', async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-preferences-')); const legacy = path.join(directory, 'old.json'); const target = path.join(directory, 'new.json');
@@ -134,4 +139,13 @@ test('explicit local artifact import is idempotent and refuses conflicting works
     await assert.rejects(importContext('workspace', workspace('Unreviewed replacement'), directory), /EXISTS/);
     assert.deepEqual((await readWorkspace(path.join(directory, 'workspace.v1.json')))?.workspace, workspace());
   } finally { await fs.rm(directory, { recursive: true, force: true }); }
+});
+
+test('timestamp-only imported progress does not become a false conflict; edited facts still do', () => {
+  const application = { id: 'synthetic', company: 'Synthetic', role: 'Role', url: '', status: 'saved', priority: 'normal', notes: '', nextAction: '', updatedAt: '2026-10-18T00:00:00Z' };
+  const local = { schema: WORKSPACE_SCHEMA, values: { [APPLICATIONS_KEY]: [application] } };
+  const saved = { schema: WORKSPACE_SCHEMA, values: { [APPLICATIONS_KEY]: [{ ...application, updatedAt: '2026-10-24T00:00:00Z' }] } };
+  assert.deepEqual(reconcileWorkspace(local, saved).conflicts, []);
+  saved.values[APPLICATIONS_KEY][0].notes = 'A real user edit';
+  assert.deepEqual(reconcileWorkspace(local, saved).conflicts, [APPLICATIONS_KEY]);
 });

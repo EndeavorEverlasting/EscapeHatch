@@ -55,6 +55,45 @@ Validation: artifact `test:bootstrap`, `test:unit`, `test:tracker`, `test:manage
 installer tests; governance/harness/local-runtime validators; working/staged/exact-candidate diff checks.
 No synthetic result certifies employer acceptance, cloud OAuth, store packaging, or an unexercised OS.
 
+### Recovery checkpoints and current disposition
+
+- B0 IMPLEMENTED / VALIDATED: stable workspace, approved-contact migration, pre-mount hydration,
+  raw-browser recovery archive, compare-and-set writes, and crash-released SQLite OS locking.
+  Independent review exposed inherited-key acceptance, assist-only data omission, malformed-browser
+  recovery dead ends, a sticky lock marker and timestamp-only false conflicts. Retained regressions
+  cover those incidents and real edits remain conflict-bearing. Root server modules now participate
+  in the canonical typecheck, closing the prior `src`-only coverage gap.
+- B1 IMPLEMENTED / WINDOWS INSTALL OBSERVED: ten isolated installation/removal ownership cases pass.
+  Actual standard-user install/dependency path and owned Start Menu creation completed. The first
+  real dependency probe exposed PS5.1 native-argument quoting; a quote-free Node >=22.16 probe is
+  exercised by Inspect in the safety suite. Live cold start exposed a captured-pipeline handle hang;
+  direct Start delegation repaired it, and canonical stop/start returned successfully. Only the
+  positively identified stuck launcher was terminated; server ownership was rechecked separately.
+- B2 LOCAL RECOVERY OBSERVED / AUTONOMOUS CLOUD REFRESH BLOCKED: the existing connected provider
+  yielded the canonical career source index/current resume and refreshed tracker. Private caches
+  were written/read back outside Git; the original artifacts/provider identities were preserved.
+  A failed Windows command-length write did not execute; direct filesystem-runtime recovery then
+  wrote and verified the caches. Two historical correspondence links required a retained manual-link
+  regression; they are plain text, not browser navigation. Saved resume review opened through the
+  product UI without manual path transfer or accepting proposed claims.
+- B3 IMPLEMENTED / OBSERVED: real managed startup rendered a populated profile (displayed readiness
+  100%) and 32 tracker rows, 12 provider-recorded Submitted statuses and 3 Ready rows. These are
+  tracker state, not new employer-site observations. The private dashboard screenshot remains in
+  `%LOCALAPPDATA%/EscapeHatch/proof/`, never public Git. Reload/source navigation recovered state.
+  The normal source/review/submission/document controls were exercised in synthetic browser proof.
+- B4 IN_PROGRESS: independent installer and provider-refresh branches converged into the owned
+  bootstrap candidate before combined checks. Native child-agent lanes and review actually ran;
+  EscapeHatch lacks the P07 typed dispatch manifest/receipt runner, so formal parallel-manifest
+  certification is UNPROVEN rather than inferred from prose. Mainline integration still requires
+  exact-head provider checks and the repository's review/approval gate.
+
+The standalone app has no usable Google lease on the observed workstation; the conversation connector
+does not transfer that permission. The real read-only adapter is fault-injection tested, but autonomous
+subsequent provider refresh is BLOCKED until an existing authorized local connection is available.
+Preserve usable local state during that gate; never create a new OAuth project by default or relabel
+an old cache as freshly read. Clean-machine Node provisioning, signed packaging, cross-OS installation,
+and actual user-data erasure are not proven by this Windows source-checkout installer.
+
 ## Evidence floor
 
 - Provider repository: `EndeavorEverlasting/EscapeHatch`.

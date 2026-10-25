@@ -55,7 +55,10 @@ async function pressRecoveryAtExactDeadline(
 ) {
   // Position well before the edge; exact timing is asserted by the temporary
   // Date.now override during activation, not by real CI scheduling speed.
-  await page.clock.setSystemTime(new Date(deadline - 1_000));
+  await page.clock.setSystemTime(new Date(deadline - 10_000));
+  // Keep countdown timers from removing the focused target between the clock
+  // override and Playwright's genuine keyboard activation on a slower runner.
+  await page.clock.pauseAt(new Date(deadline - 1_000));
   await recoveryButton.focus();
   await page.evaluate((exactDeadline) => {
     const pageWindow = window as Window & { __escapeHatchOriginalDateNow?: typeof Date.now };
@@ -72,6 +75,7 @@ async function pressRecoveryAtExactDeadline(
         delete pageWindow.__escapeHatchOriginalDateNow;
       }
     });
+    await page.clock.resume();
   }
 }
 

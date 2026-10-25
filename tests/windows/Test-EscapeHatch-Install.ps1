@@ -43,7 +43,15 @@ $state = Join-Path $root 'runtime-state.txt'
 $current = if (Test-Path -LiteralPath $state) { (Get-Content -LiteralPath $state -Raw).Trim() } else { 'STOPPED' }
 switch ($Action) {
  'Start' { 'OWNED_HEALTHY' | Set-Content -LiteralPath $state; Write-Host 'ESCAPEHATCH_STATE=OWNED_HEALTHY' }
- 'Stop' { if ($current -eq 'FOREIGN_CONFLICT') { Write-Host 'ESCAPEHATCH_STATE=FOREIGN_CONFLICT'; exit 2 }; 'STOPPED' | Set-Content -LiteralPath $state; Write-Host 'ESCAPEHATCH_STATE=STOPPED' }
+ 'Stop' {
+    if ($current -eq 'FOREIGN_CONFLICT') { Write-Host 'ESCAPEHATCH_STATE=FOREIGN_CONFLICT'; exit 2 }
+    $mutation = Join-Path $root 'modify-shortcut-during-stop.txt'
+    if (Test-Path -LiteralPath $mutation -PathType Leaf) {
+        [IO.File]::AppendAllText((Get-Content -LiteralPath $mutation -Raw).Trim(), 'synthetic-changed-during-stop')
+    }
+    'STOPPED' | Set-Content -LiteralPath $state
+    Write-Host 'ESCAPEHATCH_STATE=STOPPED'
+ }
  'Status' { Write-Host "ESCAPEHATCH_STATE=$current"; if ($current -eq 'FOREIGN_CONFLICT') { exit 2 } }
  default { exit 1 }
 }
@@ -155,6 +163,34 @@ try {
     Assert-True ((Get-Content -LiteralPath (Join-Path $sourceA 'runtime-state.txt') -Raw).Trim() -eq 'STOPPED') 'Close did not stop selected source'
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $sourceB 'runtime-state.txt'))) 'adapter operated on its own checkout'
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $sourceA 'artifacts\escape-hatch\node_modules'))) 'adapter installed dependencies'
+    Run 'Bootstrap' $sourceB | Out-Host
+
+    Case 'Uninstall revalidates shortcut ownership after blocking Stop'
+    $beforeStopBytes = [IO.File]::ReadAllBytes($shortcut)
+    $beforeStopReceipt = Get-Content -LiteralPath $receipt -Raw
+    $mutation = Join-Path $sourceA 'modify-shortcut-during-stop.txt'
+    $shortcut | Set-Content -LiteralPath $mutation
+    $output = Run 'Uninstall' $sourceA 1
+    Assert-True ($output -match 'INSTALL_SHORTCUT_CHANGED') 'post-Stop change did not block removal'
+    Assert-True (Test-Path -LiteralPath $shortcut -PathType Leaf) 'post-Stop modified shortcut was deleted'
+    Assert-True ([Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($shortcut)).Contains('synthetic-changed-during-stop')) 'post-Stop modified bytes not preserved'
+    Assert-True ((Get-Content -LiteralPath $receipt -Raw) -ceq $beforeStopReceipt) 'failed removal changed receipt'
+    Remove-Item -LiteralPath $mutation -Force
+    [IO.File]::WriteAllBytes($shortcut, $beforeStopBytes)
+    Run 'Bootstrap' $sourceB | Out-Host
+
+    Case 'Explicit source replacement revalidates all shortcuts after blocking Stop'
+    $beforeStopBytes = [IO.File]::ReadAllBytes($shortcut)
+    $beforeStopReceipt = Get-Content -LiteralPath $receipt -Raw
+    $shortcut | Set-Content -LiteralPath $mutation
+    $output = Run 'Install' $sourceB 1
+    Assert-True ($output -match 'INSTALL_SHORTCUT_CHANGED') 'source replacement ignored post-Stop modification'
+    Assert-True (Test-Path -LiteralPath $shortcut -PathType Leaf) 'source replacement deleted modified shortcut'
+    Assert-True ([Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($shortcut)).Contains('synthetic-changed-during-stop')) 'source replacement changed external modified bytes'
+    Assert-True ((Get-Content -LiteralPath $receipt -Raw) -ceq $beforeStopReceipt) 'source replacement changed receipt after failed revalidation'
+    Assert-True ((Get-Content -LiteralPath $receipt -Raw | ConvertFrom-Json).sourceRoot -eq $sourceA) 'source replacement repointed despite modified shortcut'
+    Remove-Item -LiteralPath $mutation -Force
+    [IO.File]::WriteAllBytes($shortcut, $beforeStopBytes)
     Run 'Bootstrap' $sourceB | Out-Host
 
     Case 'Uninstall refuses changed shortcut before stopping runtime'

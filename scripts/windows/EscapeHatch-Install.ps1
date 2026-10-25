@@ -123,6 +123,18 @@ function Make-Shortcut([string]$Root) {
     }
 }
 
+function Assert-OwnedShortcutsUnchanged($Item) {
+    # Validate the entire candidate set before any deletion. Repeat this after
+    # blocking work: provisioning and runtime Stop do not preserve file identity.
+    foreach ($entry in @($Item.shortcuts)) {
+        if ($entry.ownership -eq 'CREATED' -and (Test-Path -LiteralPath $entry.path)) {
+            if (-not (Test-Path -LiteralPath $entry.path -PathType Leaf) -or (File-Hash $entry.path) -cne $entry.sha256) {
+                throw 'INSTALL_SHORTCUT_CHANGED: shortcut changed since install; no shortcut or receipt was removed.'
+            }
+        }
+    }
+}
+
 function Repair-OwnedShortcuts($Item, [string]$Root) {
     $changed = $false
     foreach ($entry in @($Item.shortcuts)) {
@@ -186,15 +198,9 @@ try {
     }
     if ($Action -eq 'Uninstall') {
         if ($null -eq $receipt) { Write-Host 'ESCAPEHATCH_INSTALLATION=NOT_INSTALLED'; exit 0 }
-        # Validate every deletion candidate before touching either runtime or shortcut.
-        foreach ($entry in @($receipt.shortcuts)) {
-            if ($entry.ownership -eq 'CREATED' -and (Test-Path -LiteralPath $entry.path)) {
-                if (-not (Test-Path -LiteralPath $entry.path -PathType Leaf) -or (File-Hash $entry.path) -cne $entry.sha256) {
-                    throw 'INSTALL_SHORTCUT_CHANGED: shortcut changed since install; no shortcut or receipt was removed.'
-                }
-            }
-        }
+        Assert-OwnedShortcutsUnchanged $receipt
         Stop-SelectedRuntime ([string]$receipt.sourceRoot)
+        Assert-OwnedShortcutsUnchanged $receipt
         foreach ($entry in @($receipt.shortcuts)) {
             if ($entry.ownership -eq 'CREATED' -and (Test-Path -LiteralPath $entry.path -PathType Leaf)) { Remove-Item -LiteralPath $entry.path -Force }
         }
@@ -217,14 +223,11 @@ try {
     if ($null -ne $receipt -and -not (Same-Path ([string]$receipt.sourceRoot) $selected)) {
         # Only an explicit Install can change the selected source. Verify/stop the
         # previous source via its canonical ownership-aware lifecycle manager.
-        foreach ($entry in @($receipt.shortcuts)) {
-            if ($entry.ownership -eq 'CREATED' -and (Test-Path -LiteralPath $entry.path)) {
-                if (-not (Test-Path -LiteralPath $entry.path -PathType Leaf) -or (File-Hash $entry.path) -cne $entry.sha256) { throw 'INSTALL_SHORTCUT_CHANGED: explicit source replacement preserved modified shortcut.' }
-            }
-        }
+        Assert-OwnedShortcutsUnchanged $receipt
         # Provision the candidate before stopping or changing the prior selection.
         Ensure-Dependencies $selected
         Stop-SelectedRuntime ([string]$receipt.sourceRoot)
+        Assert-OwnedShortcutsUnchanged $receipt
         foreach ($entry in @($receipt.shortcuts)) {
             if ($entry.ownership -eq 'CREATED' -and (Test-Path -LiteralPath $entry.path -PathType Leaf)) { Remove-Item -LiteralPath $entry.path -Force }
         }

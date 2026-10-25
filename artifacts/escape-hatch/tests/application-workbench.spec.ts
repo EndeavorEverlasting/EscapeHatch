@@ -31,7 +31,7 @@ test('first launch guides source-first drag, explicit review, and persistence wi
   await page.getByRole('button', { name: 'Choose file', exact: true }).focus();
   await expect(page.getByRole('button', { name: 'Choose file', exact: true })).toBeFocused();
   const chooser = page.waitForEvent('filechooser');
-  await page.keyboard.press('Enter');
+  await page.getByRole('button', { name: 'Choose file', exact: true }).press('Enter');
   await (await chooser).setFiles({ name: 'empty.txt', mimeType: 'text/plain', buffer: Buffer.from(' ') });
   await expect(page.getByRole('status').filter({ hasText: 'could not be read' })).toBeVisible();
 });

@@ -21,10 +21,18 @@ type PreparationResult = {
   pendingManual: string[];
 };
 
+type AuthCheckpoint = {
+  phase: 'AUTH_HANDOFF' | 'AUTH_RECHECK' | 'APPLICATION_FORM_READY' | 'ENTRY_REVIEW_REQUIRED' | 'SESSION_ORIGIN_CHANGED';
+  stableReads: number;
+  canResume: boolean;
+  reason: string;
+};
+
 type ServerResponse = {
   ok: boolean;
   state?: string;
   browserOpen?: boolean;
+  authCheckpoint?: AuthCheckpoint;
   error?: string;
   filled?: string[];
   recorded?: string[];
@@ -58,6 +66,7 @@ const titles: Record<string, string> = {
   browser_open: 'Chrome opened — verify the application',
   application_open_review_required: 'Application opened — sign in if requested',
   application_form_open_review_required: 'Application form opened — ready to fill',
+  fields_unverified_review_required: 'No fields verified — review this page',
   browser_open_navigation_unverified: 'Chrome opened — verify the URL manually',
   fields_filled_review_required: 'Known fields filled — review the page',
   attachments_staged_review_required: 'File controls populated — verify attachments',
@@ -80,6 +89,10 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const documents = useOpportunityDocuments(selectedOpportunityId, url);
   const [autoPrepareRequested, setAutoPrepareRequested] = useState(false);
   const [status, setStatus] = useState('idle');
+  const [authCheckpoint, setAuthCheckpoint] = useState<AuthCheckpoint | null>(null);
+  const [pendingAfterLogin, setPendingAfterLogin] = useState(false);
+  const [emailDraft, setEmailDraft] = useState('');
+  const [emailInputError, setEmailInputError] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [recordMilitary, setRecordMilitary] = useState(false);
@@ -133,6 +146,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     request('/status').then((result) => {
       if (active) {
         setStatus(result.state || 'idle');
+        setAuthCheckpoint(result.authCheckpoint || null);
         setBrowserOpen(Boolean(result.browserOpen));
         setListenerStatus(result.listeners);
         if (result.listeners?.receipts?.length) setApplications(current => reconcileSubmissionReceipts(current, result.listeners!.receipts));
@@ -162,6 +176,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         const result = await request('/status');
         if (cancelled) return;
         setListenerStatus(result.listeners);
+        setAuthCheckpoint(result.authCheckpoint || null);
         if (result.listeners) {
           setApplications(current => reconcileSubmissionReceipts(current, result.listeners!.receipts));
           if (result.listeners.savedAnswers !== seenAnswers.current) {
@@ -237,7 +252,24 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     void run('prepare');
   }, [autoPrepareRequested, busy, documents.loading, documents.canUpload, browserOpen]);
 
-  async function run(action: 'launch' | 'fill' | 'attach' | 'prepare') {
+  useEffect(() => {
+    if (!pendingAfterLogin || !authCheckpoint?.canResume || busy || !browserOpen) return;
+    // A prior explicit Launch authorizes only the guarded Fill, not navigation or Submit.
+    setPendingAfterLogin(false);
+    void run('resume');
+  }, [pendingAfterLogin, authCheckpoint?.canResume, busy, browserOpen]);
+
+  async function checkSignIn() {
+    try {
+      const result = await request('/status');
+      setAuthCheckpoint(result.authCheckpoint || null);
+      setMessage(result.authCheckpoint?.reason || 'The employer form could not be inspected. Continue in Chrome and check again.');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Unable to inspect the managed session.');
+    }
+  }
+
+  async function run(action: 'launch' | 'fill' | 'attach' | 'prepare' | 'resume') {
     setBusy(true);
     setMessage('');
     try {
@@ -249,7 +281,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           throw new Error('This opportunity is already applied or closed. Do not reapply.');
         }
         body = { url, opportunityId: opportunity?.id || '', employerName: opportunity?.company || '' };
-      } else if (action === 'fill') body = { profile, careerProfile: assistProfile, targetRole: applications.find(item => item.id === selectedOpportunityId)?.role || '', employerName: applications.find(item => item.id === selectedOpportunityId)?.company || '' };
+      } else if (action === 'fill' || action === 'resume') body = { profile, careerProfile: assistProfile, targetRole: applications.find(item => item.id === selectedOpportunityId)?.role || '', employerName: applications.find(item => item.id === selectedOpportunityId)?.company || '' };
       else if (action === 'attach') {
         if (!documents.canUpload) throw new Error('Save opportunity documents and complete required review before uploading.');
         body = { opportunityId: selectedOpportunityId, url };
@@ -293,9 +325,12 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         }
       }
       setStatus(result.state || 'idle');
+      if (result.authCheckpoint) setAuthCheckpoint(result.authCheckpoint);
       if (result.preparation) setPreparation(result.preparation);
       if (action === 'launch') {
         setBrowserOpen(true);
+        setPendingAfterLogin(result.authCheckpoint?.phase === 'AUTH_HANDOFF' ||
+          result.authCheckpoint?.phase === 'SESSION_ORIGIN_CHANGED');
         // A previously reviewed exact PDF is already authorized for staging:
         // don't make the operator press Fill and Attach again after launch.
         if (launchedApplicationForm && documents.canUpload) setAutoPrepareRequested(true);
@@ -308,10 +343,10 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           return items; // A custom URL never creates an unverified employer ledger record.
         });
       }
-      if (action === 'fill' || action === 'launch') {
+      if (action === 'fill' || action === 'resume' || action === 'launch') {
         await request('/questions', {}).then(() => setPreferencesRefresh(value => value + 1)).catch(() => {});
       }
-      if (action === 'fill') setMessage(
+      if (action === 'fill' || action === 'resume') setMessage(
         (result.filled?.length ? 'Filled: ' + result.filled.join(', ') + '. ' : 'No fields filled. ') +
         (result.skipped?.length ? 'Skipped: ' + result.skipped.join(', ') + '. ' : '') +
         'Review before continuing on the employer website.'
@@ -340,6 +375,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const handleUrl = (event: ChangeEvent<HTMLInputElement>) => {
     operatorSelected.current = true;
     setSelectedOpportunityId('');
+    setPendingAfterLogin(false);
     setUrl(event.target.value);
   };
   const button = 'inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50';
@@ -380,6 +416,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
                   const opportunity = applications.find((item) => item.id === event.target.value);
                   operatorSelected.current = true;
                   setSelectedOpportunityId(opportunity?.id || '');
+                  setPendingAfterLogin(false);
                   setUrl(opportunity?.url || '');
                 }}>
                 <option value="">Current / custom URL</option>
@@ -402,6 +439,55 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         </div>
       </div>
 
+      <section aria-label="Application guidance" data-testid="application-journey-coach"
+        className="mt-4 rounded-xl border border-primary/25 bg-primary/5 p-4" aria-live="polite">
+        <p className="text-xs font-bold uppercase tracking-wide text-primary">Your next step</p>
+        {!profile.email?.trim() ? (
+          <form className="mt-2 space-y-2" onSubmit={event => {
+            event.preventDefault();
+            const email = emailDraft.trim();
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+              setEmailInputError('Enter a valid email address for your applications.'); return;
+            }
+            setProfile(current => ({ ...current, email }));
+            setEmailDraft('');
+            setEmailInputError('');
+            setMessage('Application email saved in your private EscapeHatch profile. Employer acceptance is not yet proven.');
+          }}>
+            <label className="block text-sm font-semibold" htmlFor="eh-coach-email">Which email should employers use to contact you?</label>
+            <p className="text-xs text-muted-foreground">This fills your approved identity prerequisite, not the employer's login password.</p>
+            <input id="eh-coach-email" type="email" autoComplete="email" required
+              value={emailDraft} onChange={e => setEmailDraft(e.target.value)}
+              className="w-full rounded-lg border border-input bg-background p-3 text-sm"
+              data-testid="coach-approved-email" />
+            {emailInputError && <p role="alert" className="text-xs">{emailInputError}</p>}
+            <button className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" type="submit">Save email to profile</button>
+          </form>
+        ) : authCheckpoint?.phase === 'AUTH_HANDOFF' || authCheckpoint?.phase === 'SESSION_ORIGIN_CHANGED' ? (
+          <div className="mt-2 space-y-2">
+            <p className="text-sm font-semibold">Finish signing in to the employer website in Chrome.</p>
+            <p className="text-xs text-muted-foreground">{authCheckpoint.reason} EscapeHatch never asks for passwords, MFA codes, or CAPTCHA answers here.</p>
+            <button className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold" type="button"
+              data-testid="button-auth-check-again" onClick={() => void checkSignIn()}>I've signed in — check again</button>
+          </div>
+        ) : authCheckpoint?.canResume ? (
+          <div className="mt-2 space-y-2">
+            <p className="text-sm font-semibold">Application form recognized. Continue where you left off.</p>
+            <p className="text-xs text-muted-foreground">The form was observed twice in the same browser session. No final Submit is automated.</p>
+            <button className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" type="button"
+              data-testid="button-auth-resume" disabled={busy} onClick={() => void run('resume')}>Resume filling this application</button>
+          </div>
+        ) : (
+          <div className="mt-2 space-y-2">
+            <p className="text-sm">Paste or select an employer job link, then open it in managed Chrome.</p>
+            {browserOpen && <p className="text-xs text-muted-foreground">{authCheckpoint?.reason || 'Inspecting the employer page...'}</p>}
+            {browserOpen && <button type="button" className="rounded-lg border border-border bg-card px-3 py-2 text-sm font-semibold"
+              data-testid="button-auth-check-again" onClick={() => void checkSignIn()}>Check this page again</button>}
+          </div>
+        )}
+        {!!url.trim() && !selectedOpportunityId && <p className="mt-3 text-xs text-muted-foreground">This pasted URL is not yet bound to a saved opportunity. Save it to retain role-specific documents and answers across sessions.</p>}
+        {!!selectedOpportunityId && !documents.canUpload && <p className="mt-3 text-xs text-muted-foreground">Next prerequisite: stage and review this opportunity's résumé and cover-letter files below. Upload is not confirmed.</p>}
+      </section>
       <OpportunityDocuments documents={documents} disabled={busy || !selectedOpportunityId} onBypass={() => { if (browserOpen) setAutoPrepareRequested(true); }} />
       <div className="mt-5 rounded-xl bg-secondary/55 p-4">
         <div className="flex items-center gap-2 text-sm font-bold"><CheckCircle2 className="text-primary" size={16} />

@@ -154,6 +154,39 @@ def verify_receipt(root: Path, receipt: dict) -> None:
         raise ValueError("CONTEXT_RECEIPT_REQUIRED_SOURCE_OMITTED:" + ",".join(sorted(required - found)))
 
 
+
+def compact_mission(value: dict) -> dict:
+    """Bounded, source-attributed mission facts; never drop required decisions."""
+    if not isinstance(value, dict) or value.get("schema") != "escapehatch-mission-brief/v1":
+        raise ValueError("CONTEXT_MISSION_SCHEMA_INVALID")
+    permitted = {"schema", "objective", "decisions", "constraints", "unresolved", "evidence"}
+    if set(value) - permitted:
+        raise ValueError("CONTEXT_MISSION_UNBOUNDED_FIELDS")
+    objective = value.get("objective")
+    if not isinstance(objective, str) or not objective.strip() or len(objective) > 1600:
+        raise ValueError("CONTEXT_MISSION_OBJECTIVE_INVALID")
+    result = {"schema": "escapehatch-mission-brief/v1", "objective": objective.strip()}
+    for field in ("decisions", "constraints", "unresolved", "evidence"):
+        items = value.get(field, [])
+        if not isinstance(items, list) or len(items) > 32:
+            raise ValueError(f"CONTEXT_MISSION_ITEMS_INVALID:{field}")
+        output = []
+        ids = set()
+        for item in items:
+            if not isinstance(item, dict) or set(item) != {"id", "text", "source_ref", "source_revision"}:
+                raise ValueError(f"CONTEXT_MISSION_PROVENANCE_REQUIRED:{field}")
+            if any(not isinstance(item[k], str) or not item[k].strip() or len(item[k]) > (1000 if k == "text" else 256)
+                   for k in ("id", "text", "source_ref", "source_revision")):
+                raise ValueError(f"CONTEXT_MISSION_FIELD_INVALID:{field}")
+            if item["id"] in ids:
+                raise ValueError(f"CONTEXT_MISSION_DUPLICATE_ID:{field}")
+            ids.add(item["id"])
+            output.append({k: item[k].strip() for k in ("id", "text", "source_ref", "source_revision")})
+        result[field] = output
+    if len(json.dumps(result, ensure_ascii=False).encode("utf-8")) > 16384:
+        raise ValueError("CONTEXT_MISSION_BUDGET_EXCEEDED")
+    return result
+
 def compact_trace(source: str, maximum_lines: int = 48) -> list[str]:
     """Only emit line number, signal category and digest; never raw log secrets."""
     if maximum_lines < 1:
@@ -181,11 +214,20 @@ def main() -> int:
     parser.add_argument("--output", type=Path)
     parser.add_argument("--metrics-only", action="store_true", help="Print measured repository payload without contents")
     parser.add_argument("--verify-receipt", type=Path)
+    parser.add_argument("--mission-file", type=Path, help="Operator-owned structured brief outside the repository")
     args = parser.parse_args()
     try:
         if args.verify_receipt:
             verify_receipt(args.root.resolve(), json.loads(args.verify_receipt.read_text(encoding="utf-8")))
         result = select(args.root.resolve(), args.task, args.lane, args.budget_bytes, tuple(args.require))
+        if args.mission_file:
+            if (not args.output or args.mission_file.resolve().is_relative_to(args.root.resolve())
+                    or args.output.resolve().is_relative_to(args.root.resolve())):
+                raise ValueError("CONTEXT_PRIVATE_BRIEF_REQUIRES_EXTERNAL_INPUT_OUTPUT")
+            result["mission_brief"] = compact_mission(json.loads(args.mission_file.read_text(encoding="utf-8")))
+            total = len(json.dumps(result["mission_brief"], ensure_ascii=False).encode("utf-8"))
+            if total + result["candidate_payload_bytes"] > args.budget_bytes:
+                raise ValueError("CONTEXT_MISSION_PLUS_SOURCE_BUDGET_EXCEEDED")
         if args.trace:
             result["trace_signatures"] = compact_trace(args.trace.read_text(encoding="utf-8"),
                                                        args.max_trace_lines)
@@ -193,7 +235,9 @@ def main() -> int:
         if args.output:
             args.output.parent.mkdir(parents=True, exist_ok=True)
             args.output.write_text(rendered + "\n", encoding="utf-8")
-        if args.metrics_only:
+        if args.mission_file:
+            print("CONTEXT_PRIVATE_RECEIPT_WRITTEN: local operator-owned output")
+        elif args.metrics_only:
             summary = {key: result[key] for key in ("lane", "baseline_unconditional_bytes", "candidate_payload_bytes", "savings_bytes")}
             summary["selected_ids"] = [entry["id"] for entry in result["selected"]]
             summary["external_context"] = "UNMEASURED"

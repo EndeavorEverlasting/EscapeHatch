@@ -5,6 +5,14 @@ Product identity is owned by `VERSION`. Exact freshness is the Git commit (and a
 
 Schema/protocol versions (`escapehatch-*/vN`, contract `version` integers) are independent and are not product releases.
 
+## [1.1.1]
+
+### Fixed
+
+- Keep resume and cover-letter intake independent while serializing private staging.
+- Wait for selected document reads and saves before automatic preparation; preserve failed replacement gates.
+- Refresh form inspection after launch preparation rather than racing the runtime action gate.
+
 ## [1.1.0]
 
 ### Added

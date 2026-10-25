@@ -1,18 +1,28 @@
 {
   "lanes": [
     {
-      "mission": "Read-only review of evidence sources and safety tests",
+      "mission": "Read-only review of independent document generations, queue and preparation sequencing",
       "mutation_surfaces": [],
-      "return_contract": "file:line findings and bounded acceptance tests",
+      "return_contract": "Concrete source/test findings; no writes or merges",
       "lane_id": "review",
       "adapter": "collaboration.spawn_agent"
     },
     {
-      "mission": "Implement and validate guided artifact assembly",
+      "mission": "Preserve independent artifact intake, preparation sequencing and live current-page scope",
       "mutation_surfaces": [
-        "artifacts/escape-hatch/src",
-        "artifacts/escape-hatch/tests",
-        "docs/GUIDED_APPLICATION_WORKBENCH.md"
+        "artifacts/escape-hatch/src/components/opportunity-documents.tsx",
+        "artifacts/escape-hatch/src/components/managed-browser-assist.tsx",
+        "artifacts/escape-hatch/src/components/application-puzzle.tsx",
+        "artifacts/escape-hatch/tests/application-workbench.spec.ts",
+        "docs/GUIDED_APPLICATION_WORKBENCH.md",
+        "VERSION",
+        "browser/application-assist/manifest.json",
+        "CHANGELOG.md",
+        "artifacts/escape-hatch/application-requirements.ts",
+        "artifacts/escape-hatch/browser-assist-control.ts",
+        "artifacts/escape-hatch/src/lib/application-puzzle.ts",
+        "artifacts/escape-hatch/src/lib/application-puzzle.test.ts",
+        "artifacts/escape-hatch/tests/application-requirements-control.spec.ts"
       ],
       "lane_id": "implementation",
       "adapter": "primary agent"
@@ -29,9 +39,18 @@
   "status": "BLOCKED_CANONICAL_VALIDATION_NATIVE_EXECUTION_AVAILABLE",
   "schema_version": "prompt-parallel-dispatch/v1",
   "base_ref": {
-    "provider_default_head": "9cc71711fb8152ea869ba2530a06f88b7ef4949a"
+    "provider_default_head": "92daa2107646ca8ccdd4c96e1d3607cbfe0099dd"
   },
-  "run_id": "guided-application-workbench-20261025",
+  "run_id": "independent-document-intake-20261025",
   "convergence_owner": "primary agent",
-  "repository": "EndeavorEverlasting/EscapeHatch"
+  "repository": "EndeavorEverlasting/EscapeHatch",
+  "execution": {
+    "review_adapter": "collaboration.followup_task",
+    "review_target": "/root/review_workbench",
+    "returned_findings": [
+      "per-kind cancellation correction sound",
+      "defer review-off bypass until all current selected reads/staging drain"
+    ],
+    "canonical_receipt_validation": "UNPROVEN_SCHEMA_AND_RUNNER_ABSENT"
+  }
 }

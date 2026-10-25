@@ -1,9 +1,9 @@
 import type { Page } from '@playwright/test';
-import type { FormInspection } from './src/lib/application-puzzle';
+import { sameApplicationUrl, type FormInspection } from './src/lib/application-puzzle.ts';
 
 export function assertInspectionScope(selectedId: unknown, selectedUrl: unknown, opportunityId: string, applicationUrl: string, liveUrl: string) {
   const live = new URL(liveUrl), launched = new URL(applicationUrl);
-  if (!opportunityId || selectedId !== opportunityId || selectedUrl !== applicationUrl || live.origin !== launched.origin || live.search !== launched.search ||
+  if (!opportunityId || selectedId !== opportunityId || !sameApplicationUrl(selectedUrl, applicationUrl) || live.origin !== launched.origin || live.search !== launched.search ||
     (live.pathname !== launched.pathname && !live.pathname.startsWith(launched.pathname.replace(/\/$/, '') + '/'))) {
     throw new Error('Application changed. Relaunch the selected opportunity before inspecting its form.');
   }

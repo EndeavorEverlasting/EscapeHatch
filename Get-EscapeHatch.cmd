@@ -48,6 +48,24 @@ if errorlevel 1 (
   echo Node installed. Restart this setup so your environment can discover it.
   exit /b 3
 )
+node -e "const v=process.versions.node.split('.').map(Number);process.exit(v[0]>22||(v[0]===22&&v[1]>=16)?0:1)"
+if errorlevel 1 (
+  echo Node.js was found but does not meet the canonical 22.16 minimum.
+  where winget.exe >nul 2>nul
+  if errorlevel 1 (
+    echo Install a supported Node.js LTS release, then rerun this setup.
+    exit /b 3
+  )
+  choice /C YN /N /M "Upgrade Node.js LTS with winget? [Y/N] "
+  if errorlevel 2 exit /b 3
+  winget upgrade --id OpenJS.NodeJS.LTS --exact --source winget --accept-source-agreements --accept-package-agreements
+  if errorlevel 1 (
+    echo Supported Node.js installation could not be verified.
+    exit /b 3
+  )
+  echo Restart setup after the Node.js upgrade.
+  exit /b 3
+)
 if exist "%SOURCE%" (
   if not exist "%SOURCE%\.git" (
     echo ERROR: The destination exists and is not an EscapeHatch Git checkout.

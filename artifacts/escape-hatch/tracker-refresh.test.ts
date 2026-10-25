@@ -173,3 +173,100 @@ test('availability distinguishes an attempt from verified authentication and kee
   await fs.writeFile(file, '{}');
   assert.equal((await readTrackerRefreshAvailability(file, env)).refreshState, 'NOT_CONFIGURED');
 }));
+
+test('unused provider response streams are cancelled for non-success and rejected size headers', async () => fixture(async (file, env, original) => {
+  for (const [status, length, expected] of [[401, undefined, 'AUTH_REQUIRED'], [403, undefined, 'AUTH_REQUIRED'],
+    [500, undefined, 'PROVIDER_UNAVAILABLE'], [200, '2097153', 'RESPONSE_TOO_LARGE'], [200, 'not-a-size', 'RESPONSE_TOO_LARGE']] as const) {
+    let cancellations = 0;
+    const body = new ReadableStream<Uint8Array>({ cancel() { cancellations++; } });
+    const response = new Response(body, { status, headers: length ? { 'content-length': length } : {} });
+    const result = await refreshTrackerSnapshot(file, { env, fetch: (async () => response) as typeof fetch });
+    assert.deepEqual(result, { ok: false, refreshed: false, error: expected });
+    assert.equal(cancellations, 1, `response status ${status} must release its unused body`);
+    assert.equal(response.body?.locked, false);
+    assert.equal(await fs.readFile(file, 'utf8'), original);
+  }
+}));
+
+test('oversized body reading cancels the stream once and releases its reader', async () => fixture(async (file, env, original) => {
+  let cancellations = 0;
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) { controller.enqueue(new Uint8Array(2 * 1024 * 1024 + 1)); },
+    cancel() { cancellations++; },
+  });
+  const response = new Response(body);
+  const result = await refreshTrackerSnapshot(file, { env, fetch: (async () => response) as typeof fetch });
+  assert.deepEqual(result, { ok: false, refreshed: false, error: 'RESPONSE_TOO_LARGE' });
+  assert.equal(cancellations, 1);
+  assert.equal(response.body?.locked, false);
+  assert.equal(await fs.readFile(file, 'utf8'), original);
+}));
+
+test('body cleanup rejection stays sanitized and cannot replace the provider result', async () => fixture(async (file, env, original) => {
+  let cancellations = 0;
+  const response = new Response(new ReadableStream<Uint8Array>({
+    cancel() { cancellations++; throw new Error('private provider details synthetic-secret'); },
+  }), { status: 403 });
+  const result = await refreshTrackerSnapshot(file, { env, fetch: (async () => response) as typeof fetch });
+  assert.deepEqual(result, { ok: false, refreshed: false, error: 'AUTH_REQUIRED' });
+  assert.equal(cancellations, 1);
+  assert.equal(await fs.readFile(file, 'utf8'), original);
+}));
+
+test('complete success and malformed JSON drain the stream and release their reader', async () => fixture(async (file, env, original) => {
+  for (const valid of [false, true]) {
+    let cancellations = 0;
+    let pulls = 0;
+    const response = new Response(new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (pulls++ === 0) controller.enqueue(new TextEncoder().encode(valid ? JSON.stringify(payload()) : '{malformed'));
+        else controller.close();
+      },
+      cancel() { cancellations++; },
+    }));
+    const result = await refreshTrackerSnapshot(file, { env, fetch: (async () => response) as typeof fetch });
+    assert.equal(result.ok, valid);
+    assert.ok(pulls >= 2);
+    assert.equal(cancellations, 0, 'fully consumed bodies do not need cancellation');
+    assert.equal(response.body?.locked, false);
+    if (!valid) assert.equal(await fs.readFile(file, 'utf8'), original);
+  }
+}));
+
+test('response cleanup cannot hang the refresh when source cancellation never settles', async () => fixture(async (file, env, original) => {
+  let cancellations = 0;
+  const response = new Response(new ReadableStream<Uint8Array>({
+    cancel() { cancellations++; return new Promise<void>(() => {}); },
+  }), { status: 401 });
+  const started = Date.now();
+  const result = await refreshTrackerSnapshot(file, { env, fetch: (async () => response) as typeof fetch });
+  assert.deepEqual(result, { ok: false, refreshed: false, error: 'AUTH_REQUIRED' });
+  assert.equal(cancellations, 1);
+  assert.ok(Date.now() - started < 1000);
+  assert.equal(await fs.readFile(file, 'utf8'), original);
+}));
+
+test('failed body reading releases the reader, aborts fetch and never publishes transport detail', async () => fixture(async (file, env, original) => {
+  let signal: AbortSignal | undefined;
+  const response = new Response(new ReadableStream<Uint8Array>({
+    pull() { throw new Error('private body detail synthetic-secret'); },
+  }));
+  const fetcher = (async (_input, init) => { signal = init?.signal as AbortSignal; return response; }) as typeof fetch;
+  const result = await refreshTrackerSnapshot(file, { env, fetch: fetcher });
+  assert.deepEqual(result, { ok: false, refreshed: false, error: 'REFRESH_FAILED' });
+  assert.equal(response.body?.locked, false);
+  assert.equal(signal?.aborted, true);
+  assert.equal(await fs.readFile(file, 'utf8'), original);
+}));
+
+test('timeout during body reading cancels the stream and releases the reader within the existing deadline', async () => fixture(async (file, env, original) => {
+  let cancellations = 0;
+  const response = new Response(new ReadableStream<Uint8Array>({ cancel() { cancellations++; } }));
+  const started = Date.now();
+  const result = await refreshTrackerSnapshot(file, { env, fetch: (async () => response) as typeof fetch });
+  assert.deepEqual(result, { ok: false, refreshed: false, error: 'TIMEOUT' });
+  assert.equal(cancellations, 1);
+  assert.equal(response.body?.locked, false);
+  assert.ok(Date.now() - started >= 9_900 && Date.now() - started < 12_000);
+  assert.equal(await fs.readFile(file, 'utf8'), original);
+}));

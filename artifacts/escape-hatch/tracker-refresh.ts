@@ -114,22 +114,32 @@ export async function readTrackerRefreshAvailability(snapshotFile: string, env: 
     message: 'An existing local Google credential can be used to attempt refresh. Authentication is verified by the provider response.' };
 }
 
-async function boundedJson(response: Response) {
+async function boundedJson(response: Response, signal: AbortSignal) {
   const size = response.headers.get('content-length');
   if (size && (!/^\d+$/.test(size) || Number(size) > MAX_BYTES)) fail('RESPONSE_TOO_LARGE');
   if (!response.body) fail('INCOMPLETE_RESPONSE');
+  if (signal.aborted) fail('TIMEOUT');
   const reader = response.body.getReader();
+  // Cancellation is initiated without waiting on a potentially uncooperative source.
+  // The request controller is also aborted in the outer finally to release fetch resources.
+  const cancelReader = () => { void reader.cancel().catch(() => {}); };
+  signal.addEventListener('abort', cancelReader, { once: true });
+  let complete = false;
   const chunks: Uint8Array[] = [];
   let count = 0;
   try {
     while (true) {
       const next = await reader.read();
-      if (next.done) break;
+      if (next.done) { complete = true; break; }
       count += next.value.byteLength;
-      if (count > MAX_BYTES) { await reader.cancel(); fail('RESPONSE_TOO_LARGE'); }
+      if (count > MAX_BYTES) fail('RESPONSE_TOO_LARGE');
       chunks.push(next.value);
     }
-  } finally { reader.releaseLock(); }
+  } finally {
+    signal.removeEventListener('abort', cancelReader);
+    if (!complete) cancelReader();
+    reader.releaseLock();
+  }
   try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { fail('INVALID_RESPONSE'); }
 }
 const safeErrors = new Set(['INVALID_TARGET', 'INCOMPLETE_RESPONSE', 'INVALID_ROWS', 'INVALID_HEADERS', 'DUPLICATE_HEADERS', 'MISSING_HEADERS', 'RESPONSE_TOO_LARGE', 'INVALID_RESPONSE']);
@@ -159,14 +169,15 @@ async function refreshTrackerSnapshotNow(snapshotFile: string, options: RefreshO
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   let temporary: string | undefined;
+  let response: Response | undefined;
   try {
     if (auth.token.length > 16384 || /[\r\n]/.test(auth.token)) fail('AUTH_REQUIRED');
     const range = `'${current.sheetName.replace(/'/g, "''")}'!A1:Z${ROW_LIMIT}`;
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(current.spreadsheetId)}/values/${encodeURIComponent(range)}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE`;
-    const response = await (options.fetch || fetch)(url, { headers: { authorization: `Bearer ${auth.token}` }, signal: controller.signal, redirect: 'error' });
+    response = await (options.fetch || fetch)(url, { headers: { authorization: `Bearer ${auth.token}` }, signal: controller.signal, redirect: 'error' });
     if (response.status === 401 || response.status === 403) return { ok: false, refreshed: false, error: 'AUTH_REQUIRED' };
     if (!response.ok) return { ok: false, refreshed: false, error: 'PROVIDER_UNAVAILABLE' };
-    const raw = await boundedJson(response);
+    const raw = await boundedJson(response, controller.signal);
     if (!raw || typeof raw !== 'object' || raw.majorDimension !== 'ROWS' || !Array.isArray(raw.values) || typeof raw.range !== 'string') fail('INCOMPLETE_RESPONSE');
     const sheet = current.sheetName;
     const prefixes = [`'${sheet.replace(/'/g, "''")}'!`, `${sheet}!`];
@@ -185,6 +196,10 @@ async function refreshTrackerSnapshotNow(snapshotFile: string, options: RefreshO
     return { ok: false, refreshed: false, error: controller.signal.aborted ? 'TIMEOUT' : message === 'AUTH_REQUIRED' ? 'AUTH_REQUIRED' : safeErrors.has(message) ? message : 'REFRESH_FAILED' };
   } finally {
     clearTimeout(timer);
+    controller.abort();
+    // Covers non-2xx responses and header rejection before a reader was acquired.
+    // Never consume, stringify, or publish provider error bodies.
+    if (response?.body && !response.body.locked) void response.body.cancel().catch(() => {});
     if (temporary) await fs.rm(temporary, { force: true }).catch(() => {});
   }
 }

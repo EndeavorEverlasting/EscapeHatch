@@ -12,6 +12,11 @@ import { PROFILE_KEY, emptyProfile, APPLICATIONS_KEY } from './src/lib/storage.t
 import { authorizedWorkspaceRequest } from './workspace-control.ts';
 import type { IncomingMessage } from 'node:http';
 import { importContext } from './import-context.ts';
+import { DatabaseSync } from 'node:sqlite';
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
+import { hasContext } from './src/lib/workspace-bootstrap.ts';
+import { ASSIST_KEY, emptyAssistProfile } from './src/lib/assist-contract.ts';
 
 const workspace = (first_name = 'Synthetic') => ({ schema: WORKSPACE_SCHEMA, values: { [PROFILE_KEY]: { ...emptyProfile, first_name } } });
 test('stable user-data identity does not include checkout path', () => {
@@ -23,6 +28,7 @@ test('validated recovery rejects malformed shapes and unknown/private arbitrary 
   assert.equal(parseSavedWorkspace({ ...workspace(), values: { credentials: 'never' } }), null);
   assert.equal(parseSavedWorkspace({ ...workspace(), values: { [PROFILE_KEY]: { first_name: 'missing fields' } } }), null);
   assert.equal(parseSavedWorkspace({ ...workspace(), values: [] }), null);
+  for (const key of ['constructor', 'toString', '__proto__']) assert.equal(parseSavedWorkspace(JSON.parse(JSON.stringify({ schema: WORKSPACE_SCHEMA, values: { [key]: {} } }))), null);
 });
 test('hydrate empty browser, preserve edits, and report nonempty conflicts', () => {
   assert.deepEqual(reconcileWorkspace({ schema: WORKSPACE_SCHEMA, values: {} }, workspace()).workspace, workspace());
@@ -67,13 +73,34 @@ test('malformed and oversized files are preserved instead of silently reset', as
     await assert.rejects(readWorkspace(file), /preserved/);
   } finally { await fs.rm(directory, { recursive: true, force: true }); }
 });
-test('cross-process lock contention blocks and never erases another writer lock', async () => {
+test('active OS lock blocks another writer without deleting its resource', async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-lock-')); const file = path.join(directory, 'workspace.json');
+  const lock = new DatabaseSync(file + '.lock.sqlite'); lock.exec('BEGIN IMMEDIATE');
   try {
-    await fs.writeFile(file + '.lock', 'another writer');
     await assert.rejects(saveWorkspace(workspace(), null, file), /busy/);
-    assert.equal(await fs.readFile(file + '.lock', 'utf8'), 'another writer');
-  } finally { await fs.rm(directory, { recursive: true, force: true }); }
+    assert.ok(await fs.stat(file + '.lock.sqlite'));
+  } finally { lock.close(); await fs.rm(directory, { recursive: true, force: true }); }
+});
+
+test('writer process termination releases the OS lock and restart saves normally', async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-crash-')); const file = path.join(directory, 'workspace.json');
+  const child = spawn(process.execPath, ['--input-type=module', '-e', 'import {DatabaseSync} from "node:sqlite"; const lock=new DatabaseSync(process.argv[1]);lock.exec("BEGIN IMMEDIATE");console.log("LOCKED");setInterval(()=>{},1000);', file + '.lock.sqlite'], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  try {
+    await Promise.race([once(child.stdout!, 'data'), new Promise((_, reject) => setTimeout(() => reject(new Error('synthetic child timeout')), 5000).unref())]);
+    await assert.rejects(saveWorkspace(workspace(), null, file), /busy/);
+    const closed = once(child, 'close'); child.kill(); await closed;
+    await saveWorkspace(workspace(), null, file);
+    assert.deepEqual((await readWorkspace(file))?.workspace, workspace());
+  } finally { if (child.exitCode === null && child.signalCode === null) { const closed = once(child, 'close'); child.kill(); await closed; } await fs.rm(directory, { recursive: true, force: true }); }
+});
+
+test('assist-only context is recovered and blank legacy assist contact receives approved profile fields only', () => {
+  const assist = { ...emptyAssistProfile(emptyProfile), summary: 'Previously reviewed career summary' };
+  assert.equal(hasContext({ [ASSIST_KEY]: assist }), true);
+  const local = { schema: WORKSPACE_SCHEMA, values: { [ASSIST_KEY]: assist } };
+  const merged = reconcileWorkspace(local, workspace());
+  assert.equal((merged.workspace.values[ASSIST_KEY] as typeof assist).contact.first_name, 'Synthetic');
+  assert.equal((merged.workspace.values[ASSIST_KEY] as typeof assist).summary, assist.summary);
 });
 test('legacy preference migration is validated, idempotent, and never overwrites newer stable answers', async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-preferences-')); const legacy = path.join(directory, 'old.json'); const target = path.join(directory, 'new.json');

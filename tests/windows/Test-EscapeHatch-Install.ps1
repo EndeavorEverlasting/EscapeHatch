@@ -42,7 +42,14 @@ try {
     Fixture-Source $sourceA
     Fixture-Source $sourceB
     Case 'Inspect performs no user-root writes'
-    Run 'Inspect' | Out-Host
+    $inspect = Run 'Inspect'
+    $inspect | Out-Host
+    if (Get-Command node.exe -ErrorAction SilentlyContinue) {
+        $nodeVersion = & node.exe --version
+        $version = [Version]($nodeVersion.TrimStart('v'))
+        $expectedNode = $version -ge [Version]'22.16.0'
+        Assert-True ($inspect.Contains('NODE_VERSION_READY=' + $expectedNode)) 'real PS5.1 Node version probe disagrees with installed version'
+    }
     Assert-True (-not (Test-Path -LiteralPath $appData)) 'Inspect created app data'
     Assert-True (-not (Test-Path -LiteralPath $shortcuts)) 'Inspect created shortcut folder'
 

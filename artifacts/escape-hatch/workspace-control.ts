@@ -7,7 +7,7 @@ import { isLoopbackAddress, readManagedRuntime } from './runtime-control.ts';
 import { readWorkspace, saveWorkspace, MAX_WORKSPACE_BYTES } from './workspace-file.ts';
 import { readPreferences } from './preference-file.ts';
 import { PROFILE_KEY } from './src/lib/storage.ts';
-import { hasContext, profileFromPreferences, WORKSPACE_SCHEMA, type BootstrapResponse, type SavedWorkspace } from './src/lib/workspace-bootstrap.ts';
+import { hasContext, profileFromPreferences, WORKSPACE_SCHEMA, workspaceParsers, type BootstrapResponse, type SavedWorkspace } from './src/lib/workspace-bootstrap.ts';
 
 function respond(res: ServerResponse, status: number, data: object) {
   res.statusCode = status;
@@ -71,6 +71,12 @@ export function createWorkspaceControlPlugin(): Plugin {
         const payload = JSON.parse(Buffer.concat(chunks).toString('utf8'));
         if (payload.expectedRevision !== null && !/^[a-f0-9]{64}$/.test(payload.expectedRevision)) throw new Error('invalid');
         if (payload.recoverInvalid !== undefined && typeof payload.recoverInvalid !== 'boolean') throw new Error('invalid');
+        if (payload.browserArchive !== undefined) {
+          const archive = payload.browserArchive;
+          if (!archive || typeof archive !== 'object' || Array.isArray(archive) || Object.entries(archive).some(([key, value]) => !Object.hasOwn(workspaceParsers, key) || value !== null && typeof value !== 'string')) throw new Error('invalid archive');
+          await fs.mkdir(userDataRoot(), { recursive: true });
+          await fs.writeFile(path.join(userDataRoot(), 'browser-recovery-' + crypto.randomUUID() + '.json'), JSON.stringify(archive), { flag: 'wx', mode: 0o600 });
+        }
         const saved = await saveWorkspace(payload.workspace, payload.expectedRevision, undefined, payload.recoverInvalid === true);
         return respond(res, 200, { revision: saved.revision });
       } catch (error) {

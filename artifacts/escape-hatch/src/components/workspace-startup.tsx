@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { PROFILE_KEY, ANSWERS_KEY, APPLICATIONS_KEY, emptyProfile, parseWorkspaceExportText } from '../lib/storage.ts';
-import { applyBrowserWorkspace, hasContext, parseSavedWorkspace, readBrowserWorkspace, reconcileWorkspace, WORKSPACE_SCHEMA, type BootstrapResponse, type SavedWorkspace } from '../lib/workspace-bootstrap.ts';
+import { applyBrowserWorkspace, hasContext, parseSavedWorkspace, rawBrowserWorkspace, readBrowserWorkspace, reconcileWorkspace, WORKSPACE_SCHEMA, type BootstrapResponse, type SavedWorkspace } from '../lib/workspace-bootstrap.ts';
 
 const ENDPOINT = '/__escapehatch/workspace';
 const REQUEST_HEADERS = { 'content-type': 'application/json', 'x-escapehatch-workspace': '1' };
@@ -12,13 +12,14 @@ export function WorkspaceStartup({ children }: { children: ReactNode }) {
   const [message, setMessage] = useState('Recovering your saved workspace…');
   const [needsContext, setNeedsContext] = useState(false);
   const [conflicts, setConflicts] = useState(false);
+  const [browserInvalid, setBrowserInvalid] = useState(false);
   const [candidate, setCandidate] = useState<SavedWorkspace | null>(null);
   const revision = useRef<string | null>(null);
   const blocked = useRef(false);
   const recoveryImport = useRef(false);
-  const save = async (workspace: SavedWorkspace, recoverInvalid = false) => {
+  const save = async (workspace: SavedWorkspace, recoverInvalid = false, browserArchive?: Record<string, string | null>) => {
     const response = await fetch(ENDPOINT, { method: 'PUT', credentials: 'same-origin', headers: REQUEST_HEADERS,
-      body: JSON.stringify({ workspace, expectedRevision: revision.current, recoverInvalid }) });
+      body: JSON.stringify({ workspace, expectedRevision: revision.current, recoverInvalid, browserArchive }) });
     if (!response.ok) throw new Error(response.status === 409
       ? 'Your workspace changed in another window. Your browser edits are preserved. Reload to review both copies.'
       : 'Your workspace could not be saved to this computer. Your browser edits are preserved. Retry before closing.');
@@ -26,7 +27,7 @@ export function WorkspaceStartup({ children }: { children: ReactNode }) {
     revision.current = result.revision;
   };
   const recover = async () => {
-    setMessage('Recovering your saved workspace…'); setNeedsContext(false); setConflicts(false); blocked.current = false;
+    setMessage('Recovering your saved workspace…'); setNeedsContext(false); setConflicts(false); setBrowserInvalid(false); blocked.current = false;
     try {
       const response = await fetch(ENDPOINT, { credentials: 'same-origin', cache: 'no-store', signal: AbortSignal.timeout(10000) });
       // Static/standalone developer mode has no private filesystem bridge.
@@ -37,9 +38,15 @@ export function WorkspaceStartup({ children }: { children: ReactNode }) {
       setManaged(true); revision.current = result.revision;
       recoveryImport.current = result.state === 'RECOVERY_REQUIRED';
       if (result.state === 'RECOVERY_REQUIRED') throw new Error(result.message + ' Importing a valid local backup will archive the unreadable copy first.');
-      const local = readBrowserWorkspace(localStorage);
       const saved: SavedWorkspace | null = result.workspace === null ? { schema: WORKSPACE_SCHEMA, values: {} } : parseSavedWorkspace(result.workspace);
       if (!saved) throw new Error('Saved workspace is invalid. Existing data has been preserved.');
+      let local;
+      try { local = readBrowserWorkspace(localStorage); }
+      catch {
+        setBrowserInvalid(true); setCandidate(saved);
+        setMessage('This browser’s saved copy needs recovery. Restore the validated saved workspace or import a backup. The original browser text will be archived first.');
+        return;
+      }
       const merged = reconcileWorkspace(local, saved);
       if (merged.conflicts.length) {
         setCandidate(local); setConflicts(true);
@@ -47,6 +54,7 @@ export function WorkspaceStartup({ children }: { children: ReactNode }) {
         return;
       }
       if (!hasContext(merged.workspace.values)) {
+        setCandidate(merged.workspace);
         setNeedsContext(true); setMessage(result.message); return;
       }
       await save(merged.workspace);
@@ -82,9 +90,9 @@ export function WorkspaceStartup({ children }: { children: ReactNode }) {
 
   const useWorkspace = async (workspace: SavedWorkspace) => {
     try {
-      await save(workspace, recoveryImport.current);
+      await save(workspace, recoveryImport.current, browserInvalid ? rawBrowserWorkspace(localStorage) : undefined);
       recoveryImport.current = false;
-      applyBrowserWorkspace(localStorage, workspace);
+      applyBrowserWorkspace(localStorage, workspace, browserInvalid);
       setReady(true); setMessage('Workspace saved on this computer.');
     } catch (error) { setMessage((error as Error).message); }
   };
@@ -99,7 +107,7 @@ export function WorkspaceStartup({ children }: { children: ReactNode }) {
         if (!legacy.ok) throw new Error(legacy.error);
         workspace = { schema: WORKSPACE_SCHEMA, values: { [PROFILE_KEY]: legacy.workspace.profile, [ANSWERS_KEY]: legacy.workspace.answers, [APPLICATIONS_KEY]: legacy.workspace.applications } };
       }
-      const local = readBrowserWorkspace(localStorage);
+      const local = browserInvalid ? { schema: WORKSPACE_SCHEMA, values: {} } as SavedWorkspace : readBrowserWorkspace(localStorage);
       const merged = reconcileWorkspace(local, workspace);
       if (merged.conflicts.length) throw new Error('The selected backup conflicts with browser edits. Export and reconcile those copies first. Nothing was replaced.');
       if (!hasContext(merged.workspace.values)) throw new Error('This backup has no profile, answers, or applications. Choose a populated backup.');
@@ -107,7 +115,7 @@ export function WorkspaceStartup({ children }: { children: ReactNode }) {
     } catch (error) { setMessage((error as Error).message); }
   };
   const exportBrowser = () => {
-    const blob = new Blob([JSON.stringify(readBrowserWorkspace(localStorage), null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(rawBrowserWorkspace(localStorage), null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob); const link = document.createElement('a');
     link.href = url; link.download = 'escapehatch-browser-recovery.json'; link.click(); URL.revokeObjectURL(url);
   };
@@ -121,9 +129,11 @@ export function WorkspaceStartup({ children }: { children: ReactNode }) {
       <label className="rounded-lg bg-primary px-4 py-3 text-primary-foreground">Import local workspace
         <input className="block mt-2 max-w-full" aria-label="Import local workspace" type="file" accept=".json,application/json" onChange={event => void importFile(event.target.files?.[0])} />
       </label>
-      {conflicts && <><button className="rounded-lg border px-4 py-3" onClick={exportBrowser}>Export this browser</button>
+      {(conflicts || browserInvalid) && <button className="rounded-lg border px-4 py-3" onClick={exportBrowser}>Export this browser</button>}
+      {browserInvalid && candidate && hasContext(candidate.values) && <button className="rounded-lg border px-4 py-3" onClick={() => void useWorkspace(candidate)}>Restore saved workspace</button>}
+      {conflicts && <>
         <button className="rounded-lg border px-4 py-3" onClick={() => candidate && void useWorkspace(candidate)}>Keep this browser’s details</button></>}
-      {needsContext && <button className="rounded-lg border px-4 py-3" onClick={() => void useWorkspace({ schema: WORKSPACE_SCHEMA, values: { [PROFILE_KEY]: { ...emptyProfile } } })}>Create a new workspace</button>}
+      {needsContext && <button className="rounded-lg border px-4 py-3" onClick={() => void useWorkspace({ schema: WORKSPACE_SCHEMA, values: { ...candidate?.values, [PROFILE_KEY]: candidate?.values[PROFILE_KEY] || { ...emptyProfile } } })}>Create a new workspace</button>}
     </div>
     <p className="mt-8 text-sm text-muted-foreground">Your local files and Google Drive sources stay in place. Existing accounts and source permissions are reused when available; this app never submits applications for you.</p>
   </main>;

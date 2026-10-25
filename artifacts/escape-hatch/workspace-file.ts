@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
+import { DatabaseSync } from 'node:sqlite';
 import { userDataRoot } from './user-data.ts';
 import { parseSavedWorkspace, WORKSPACE_SCHEMA, type SavedWorkspace } from './src/lib/workspace-bootstrap.ts';
 
@@ -24,11 +25,11 @@ export async function saveWorkspace(input: unknown, expectedRevision: string | n
   const workspace = parseSavedWorkspace(input);
   if (!workspace || Buffer.byteLength(JSON.stringify(workspace)) > MAX_WORKSPACE_BYTES) throw new Error('Invalid workspace. Existing data was preserved.');
   await fs.mkdir(path.dirname(file), { recursive: true });
-  // Exclusive cross-process lock: separate worktrees must not race the same user store.
-  const lock = file + '.lock';
-  let handle;
-  try { handle = await fs.open(lock, 'wx', 0o600); }
-  catch { throw new Error('Workspace is busy. Retry after the other save finishes.'); }
+  // SQLite is used only for an OS-backed cross-process lock, never as a second
+  // workspace database. Process exit/crash releases it; no stale marker deletion.
+  const lock = new DatabaseSync(file + '.lock.sqlite');
+  try { lock.exec('PRAGMA busy_timeout=0; BEGIN IMMEDIATE'); }
+  catch { lock.close(); throw new Error('Workspace is busy. Retry after the other save finishes.'); }
   const temporary = file + '.' + randomUUID() + '.tmp';
   try {
     let prior;
@@ -45,8 +46,7 @@ export async function saveWorkspace(input: unknown, expectedRevision: string | n
     await fs.rename(temporary, file);
     return { workspace, revision: workspaceRevision(workspace) };
   } finally {
-    await fs.rm(temporary, { force: true });
-    await handle.close();
-    await fs.rm(lock, { force: true });
+    try { await fs.rm(temporary, { force: true }); }
+    finally { try { lock.exec('ROLLBACK'); } finally { lock.close(); } }
   }
 }

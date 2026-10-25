@@ -17,7 +17,7 @@
     "test:bootstrap": "tsx --test workspace-bootstrap.test.ts tracker-refresh.test.ts",
     "test:bootstrap:browser": "playwright test --config playwright.bootstrap.config.ts",
     "import:context": "tsx import-context.ts",
-    "typecheck:bootstrap": "tsc --noEmit --strict --target ES2022 --module ESNext --moduleResolution bundler --allowImportingTsExtensions --resolveJsonModule --skipLibCheck user-data.ts workspace-file.ts workspace-control.ts preference-file.ts import-context.ts tracker-control.ts tracker-refresh.ts"
+    "typecheck:bootstrap": "tsc --noEmit --strict --target ES2022 --module ESNext --moduleResolution bundler --allowImportingTsExtensions --resolveJsonModule --skipLibCheck user-data.ts workspace-file.ts workspace-control.ts preference-file.ts import-context.ts tracker-control.ts tracker-refresh.ts opportunity-documents.ts"
   },
   "devDependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -83,5 +83,8 @@
     "tsx": "4.21.0",
     "typescript": "~5.9.3"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "engines": {
+    "node": ">=22.16.0"
+  }
 }

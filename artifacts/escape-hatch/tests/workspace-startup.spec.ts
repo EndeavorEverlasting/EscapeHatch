@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { emptyProfile, PROFILE_KEY } from '../src/lib/storage.ts';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
 test('fresh browser recovers private context, edited state survives a fresh browser', async ({ page, browser }) => {
   await page.goto('/profile');
@@ -33,4 +35,17 @@ test('corrupt artifact blocks state-writing hooks and preserves the existing bro
   await page.goto('/');
   await expect(page.getByText('Saved context could not be read.')).toBeVisible();
   expect(await page.evaluate(key => localStorage.getItem(key), PROFILE_KEY)).toBeNull();
+});
+
+test('corrupt browser values recover through the offered UI and raw bytes are archived', async ({ page }) => {
+  await page.addInitScript(key => localStorage.setItem(key, 'invalid synthetic browser bytes'), PROFILE_KEY);
+  await page.goto('/profile');
+  await expect(page.getByText('This browser’s saved copy needs recovery.', { exact: false })).toBeVisible();
+  await page.getByRole('button', { name: 'Restore saved workspace', exact: true }).click();
+  await expect(page.getByTestId('input-first_name')).toHaveValue('Updated');
+  const directory = test.info().config.metadata.dataHome as string;
+  const archives = (await fs.readdir(directory)).filter(name => name.startsWith('browser-recovery-'));
+  expect(archives.length).toBeGreaterThan(0);
+  const raw = JSON.parse(await fs.readFile(path.join(directory, archives.at(-1)!), 'utf8'));
+  expect(raw[PROFILE_KEY]).toBe('invalid synthetic browser bytes');
 });

@@ -27,7 +27,7 @@ A foreign conflict is a safety result, not an invitation to kill every Node proc
 
 `Launch-EscapeHatch.ps1` delegates to `scripts/windows/EscapeHatch-Install.ps1 -Action Bootstrap`,
 which uses the installation receipt's selected source rather than whichever worktree an agent found.
-The existing runtime manager retains all process Start/Stop authority. Missing Node 22+/npm produces
+The existing runtime manager retains all process Start/Stop authority. Missing Node 22.16+/npm produces
 an explicit toolchain recovery message; this is not clean-machine OS provisioning or a signed package.
 
 The managed app recovers `%LOCALAPPDATA%\EscapeHatch\workspace.v1.json` before rendering the dashboard.
@@ -36,8 +36,9 @@ parsers. `ESCAPEHATCH_DATA_HOME` is an explicit alternate user-store root for is
 Browser edits remain a working copy. Nonempty divergent copies hold startup for review; nothing is
 silently overwritten. Saving uses a cross-process lock, revision compare-and-set and prior-copy backup.
 Unreadable artifacts hold startup. Explicit recovery import archives unreadable bytes before replacing
-the active copy. A crashed-writer `.lock` is never deleted automatically: verify no writer remains,
-preserve that lock as evidence, and retry after an operator-owned recovery.
+the active copy. The cross-process lock uses Node's SQLite OS-backed transaction lock only; workspace
+content remains JSON. Process termination releases the lock automatically. It is not a second data store.
+Corrupt browser values can be exported raw or archived privately before an explicit restore action.
 
 Previously explicit contact answers are recovered from the stable preference store. On first migration,
 the primary checkout is resolved through Git's common directory and its validated old private preference
@@ -53,7 +54,7 @@ npm --prefix artifacts/escape-hatch run import:context -- workspace '<private-wo
 
 The importer refuses to replace a conflicting populated private workspace; reconcile in the app instead.
 This workspace is the cockpit projection, not a replacement for the canonical career-state graph or
-provider records. Document bytes remain owned by the existing opportunity document store.
+provider records. Document bytes remain owned by the existing opportunity document store at the stable user-data root. Requested legacy packages are copied only after scope/hash verification; divergent packages require review, and originals are preserved.
 
 ## Existing cloud context and source freshness
 

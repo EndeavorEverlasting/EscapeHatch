@@ -1,8 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { execFileSync } from 'node:child_process';
-import { userDataRoot } from './user-data.ts';
+import { userDataRoot, legacyPrivateRoots } from './user-data.ts';
 import { emptyPreferences, parsePreferences, type Preferences } from './src/lib/application-preferences.ts';
 
 export function preferenceFile() {
@@ -11,15 +10,14 @@ export function preferenceFile() {
 
 /** Resolve the original repository through Git, not a remembered checkout path. */
 export function legacyPreferenceFile() {
-  try {
-    const common = execFileSync('git', ['rev-parse', '--path-format=absolute', '--git-common-dir'], { cwd: import.meta.dirname, encoding: 'utf8', timeout: 5000, windowsHide: true }).trim();
-    return path.join(path.dirname(common), 'private', 'application-question-preferences.json');
-  } catch { return null; }
+  const root = legacyPrivateRoots().at(-1);
+  return root ? path.join(root, 'application-question-preferences.json') : null;
 }
 
-export async function migrateLegacyPreferences(destination = preferenceFile(), legacy = legacyPreferenceFile()) {
-  if (!legacy || path.resolve(destination) === path.resolve(legacy)) return;
+export async function migrateLegacyPreferences(destination = preferenceFile(), legacy?: string | null) {
   try { await fs.access(destination); return; } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+  if (legacy === undefined) legacy = legacyPreferenceFile();
+  if (!legacy || path.resolve(destination) === path.resolve(legacy)) return;
   let bytes;
   try { bytes = await fs.readFile(legacy); } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return; throw error; }
   if (bytes.length > 65536 || !parsePreferences(JSON.parse(bytes.toString('utf8').replace(/^\uFEFF/, '')))) throw new Error('Legacy preferences need review. Original data was preserved.');

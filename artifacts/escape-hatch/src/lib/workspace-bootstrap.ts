@@ -21,6 +21,7 @@ export function parseSavedWorkspace(value: unknown): SavedWorkspace | null {
   if (item.schema !== WORKSPACE_SCHEMA || !item.values || typeof item.values !== 'object' || Array.isArray(item.values)) return null;
   const values: WorkspaceValues = {};
   for (const [key, raw] of Object.entries(item.values)) {
+    if (!Object.hasOwn(workspaceParsers, key)) return null;
     const parser = workspaceParsers[key as keyof typeof workspaceParsers];
     if (!parser || parser(raw) === null) return null;
     values[key] = raw;
@@ -30,8 +31,11 @@ export function parseSavedWorkspace(value: unknown): SavedWorkspace | null {
 
 export function hasContext(values: WorkspaceValues): boolean {
   const profile = parseProfileStorage(values[PROFILE_KEY]);
+  const assist = parseAssistProfile(values[ASSIST_KEY]);
   return Boolean(profile && Object.values(profile).some(value => value.trim()) ||
-    [ANSWERS_KEY, APPLICATIONS_KEY].some(key => Array.isArray(values[key]) && (values[key] as unknown[]).length));
+    assist && (assist.summary.trim() || Object.values(assist.contact).some(value => value.trim()) ||
+      assist.skills.length || assist.projects.length || assist.experience.length || assist.education.length || assist.proposals.length) ||
+    [ANSWERS_KEY, APPLICATIONS_KEY, ASSIST_ANSWERS_KEY, SOURCE_BINDINGS_KEY].some(key => Array.isArray(values[key]) && (values[key] as unknown[]).length));
 }
 
 /** Only previously explicit contact answers contribute. Legal/EEO never become profile facts. */
@@ -59,6 +63,10 @@ export function readBrowserWorkspace(storage: Pick<Storage, 'getItem'>): SavedWo
   return { schema: WORKSPACE_SCHEMA, values };
 }
 
+export function rawBrowserWorkspace(storage: Pick<Storage, 'getItem'>): Record<string, string | null> {
+  return Object.fromEntries(Object.keys(workspaceParsers).map(key => [key, storage.getItem(key)]));
+}
+
 /** Merge only empty areas. Divergent nonempty copies remain intact until reviewed. */
 export function reconcileWorkspace(local: SavedWorkspace, saved: SavedWorkspace): { workspace: SavedWorkspace; conflicts: string[] } {
   const values = { ...local.values };
@@ -81,12 +89,13 @@ export function reconcileWorkspace(local: SavedWorkspace, saved: SavedWorkspace)
   return { workspace: { schema: WORKSPACE_SCHEMA, values }, conflicts };
 }
 
-export function applyBrowserWorkspace(storage: Storage, workspace: SavedWorkspace) {
+export function applyBrowserWorkspace(storage: Storage, workspace: SavedWorkspace, replace = false) {
   const prior = new Map<string, string | null>();
   try {
-    for (const [key, value] of Object.entries(workspace.values)) {
+    for (const key of replace ? Object.keys(workspaceParsers) : Object.keys(workspace.values)) {
       prior.set(key, storage.getItem(key));
-      storage.setItem(key, JSON.stringify(value));
+      if (Object.hasOwn(workspace.values, key)) storage.setItem(key, JSON.stringify(workspace.values[key]));
+      else storage.removeItem(key);
     }
   } catch {
     for (const [key, raw] of prior) {

@@ -75,9 +75,8 @@ function Ensure-Dependencies([string]$Root) {
     if ($SkipDependencies) { return }
     $node = Get-Command node.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
     $npm = Get-Command npm.cmd -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
-    if (-not $node -or -not $npm) { throw 'INSTALL_TOOLCHAIN_REQUIRED: install Node.js 22 LTS (including npm), then run Install-EscapeHatch.cmd again.' }
-    & $node.Source -e 'if(Number(process.versions.node.split(".")[0]) < 22) process.exit(1)'
-    if ($LASTEXITCODE) { throw 'INSTALL_NODE_VERSION_REQUIRED: Node.js 22 or newer is required.' }
+    if (-not $node -or -not $npm) { throw 'INSTALL_TOOLCHAIN_REQUIRED: install Node.js 22.16 or newer (including npm), then run Install-EscapeHatch.cmd again.' }
+    if (-not (Test-NodeVersion $node.Source)) { throw 'INSTALL_NODE_VERSION_REQUIRED: Node.js 22.16 or newer is required.' }
     $artifact = Join-Path $Root 'artifacts\escape-hatch'
     $vite = Join-Path $artifact 'node_modules\vite\bin\vite.js'
     $dependencyStamp = Join-Path $artifact 'node_modules\.escapehatch-package.sha256'
@@ -89,6 +88,11 @@ function Ensure-Dependencies([string]$Root) {
         if (-not (Test-Path -LiteralPath $vite -PathType Leaf)) { throw 'INSTALL_DEPENDENCIES_INCOMPLETE: the Vite runtime is still missing.' }
         [IO.File]::WriteAllText($dependencyStamp, $manifestHash)
     }
+}
+function Test-NodeVersion([string]$Executable) {
+    # Quote-free JavaScript survives Windows PowerShell 5.1 native argv binding.
+    & $Executable -e 'const v=process.versions.node.match(/\d+/g);if(+v[0]<22||(+v[0]===22&&+v[1]<16))process.exit(1)'
+    return ($LASTEXITCODE -eq 0)
 }
 function Make-Shortcut([string]$Root) {
     $parent = Split-Path -Parent $shortcutPath
@@ -131,6 +135,8 @@ try {
         $receipt = Read-Receipt
         Write-Host ('ESCAPEHATCH_INSTALLATION=' + $(if ($null -eq $receipt) { 'NOT_INSTALLED' } else { 'INSTALLED' }))
         Write-Host ('SELECTED_SOURCE_AVAILABLE=' + [bool]($receipt -and (Test-Path -LiteralPath ([string]$receipt.sourceRoot) -PathType Container)))
+        $nodeProbe = Get-Command node.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+        Write-Host ('NODE_VERSION_READY=' + [bool]($nodeProbe -and (Test-NodeVersion $nodeProbe.Source)))
         exit 0
     }
     $digest = [Security.Cryptography.SHA256]::Create()

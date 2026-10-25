@@ -88,35 +88,35 @@ Source: **00 - Upstream Intelligence Library — Registry.xlsm**, read without e
 
 | Registry ID | Mechanism | Decision for EscapeHatch | Reason/evidence gate |
 |---|---|---|---|
-| `browser-view-transitions` / `UP-698D174BC` | native View Transitions | ADAPT | scene continuity only, graceful no-animation fallback |
-| `motion-animate-presence` / `UP-9391184B6` | React enter/exit sequencing | ADAPT ONLY IF PRESENT | no new dependency for primary flow; preserve focus and user input |
+| `browser-view-transitions` / public-source record | native View Transitions | ADAPT | scene continuity only, graceful no-animation fallback |
+| `motion-animate-presence` / public-source record | React enter/exit sequencing | ADAPT ONLY IF PRESENT | no new dependency for primary flow; preserve focus and user input |
 | `xyflow-reactflow` | diagram canvas | DEFER | useful for developer diagram, too heavy for applicant's simple progress scenes |
 | `mattpocock-wayfinder` | decision map | ADAPT | typed blockers and explicit gates; never a sole runtime rule |
-| `UP-1B0AFA8BE` / `UP-AFAEE2D9D` | component critique/design briefs | REFERENCE | extract usability tests; respect licenses before copying code |
-| `UP-60B0939CC` | Playwright visual snapshots | ADAPT | screenshot diff across logged-out/logged-in/error/ready states |
-| `UP-60FBA76B5` | WCAG animation | ADAPT | reduced motion and keyboard/assistive technology gate |
-| `UP-F8DA7EE77` | browser animation performance | REFERENCE | animation never blocks input, network or installer state |
-| `UP-F8D41DF99` / `gsap-flip` | FLIP animation | DEFER | unnecessary until core form journey passes |
-| `UP-BF391E265` / Three.js / Drei | graphics | REJECT for core journey | no graphics infrastructure on application critical path |
-| `UP-77F443024` | OpenCode | USE AS EXECUTION CONTEXT ONLY | not a runtime login state owner |
-| `UP-40FE662CF` | validation before push | ADAPT idea | enforce validator + CI rather than borrowing donor implementation |
+| public-source record | component critique/design briefs | REFERENCE | extract usability tests; respect licenses before copying code |
+| public-source record | Playwright visual snapshots | ADAPT | screenshot diff across logged-out/logged-in/error/ready states |
+| public-source record | WCAG animation | ADAPT | reduced motion and keyboard/assistive technology gate |
+| public-source record | browser animation performance | REFERENCE | animation never blocks input, network or installer state |
+| `gsap-flip` | FLIP animation | DEFER | unnecessary until core form journey passes |
+| Three.js / Drei | graphics | REJECT for core journey | no graphics infrastructure on application critical path |
+| public-source record | OpenCode | USE AS EXECUTION CONTEXT ONLY | not a runtime login state owner |
+| public-source record | validation before push | ADAPT idea | enforce validator + CI rather than borrowing donor implementation |
 
-### Directly relevant preserved Idea Trace records
+### Directly relevant preserved Idea Trace themes
 
-The source workbook records **150 preserved ideas**. The following rows matter more to this app than cinematic donor pages. Each is a captured idea reference, *not* evidence of implementation or authorization to copy code:
+The source workbook records **150 preserved ideas**. The following concepts matter more to this app than cinematic donor pages. This public summary intentionally omits private registry IDs and the user's internal workbook coordinates; it is not implementation or source-code authorization:
 
-| Idea | Original title and locator | Implemented response / gate |
+| Theme | Original title | Implemented response / gate |
 |---|---|---|
-| `PS-0020` | *Escape Hatch one-click application autofill bridge* — `Idea Inbox!A25:R25` | Install -> paste URL -> reviewed profile -> managed Chrome -> verified fill is an integrated user journey, not isolated agents |
-| `PS-0028` | *Escape Hatch application-proof alias protocol* — `Idea Inbox!A33:R33` | Typed scene + page effects and employer receipt must be distinct; never label an attempted fill or navigation as application success |
-| `PS-0030` | *Bridge browser/chat sprint context gaps* — `Idea Inbox!A35:R35` | Versioned scene contract, preserved opportunity binding, validator and durable handoff replace chat-only context |
-| `PS-0060` | *Capture personal browser-tab cycling algorithm* — `Idea Inbox!A58:R58` | Preserve the one managed Chrome context and focus; never open another browser merely to restart after login |
-| `PS-0073` | *Use interface chronology as context evidence* — `Idea Inbox!A78:R78` | Record typed timestamped auth -> form readback events; do not infer state from model narration |
-| `PS-0111` | *Graph repository scenes and transition coverage* — `Idea Inbox!A116:R116` | Canonical graph with 14 scene IDs, 33 allowed arcs, source-level validator and per-scene tests |
-| `PS-0116` | *Codify reusable use-case scenes and cinematic transition coverage* — `Idea Inbox!A121:R121` | Separate scene authority from motion; all scenarios have entry, recovery, effect evidence, reduced-motion fallback |
-| `PS-0145` | *Prototype tactile Bézier transitions and ambient scene states* — `Idea Inbox!A150:R150` | DEFER heavy motion; optional contained microtransition only after keyboard and browser proof |
+| preserved concept | *Escape Hatch one-click application autofill bridge* | Install -> paste URL -> reviewed profile -> managed Chrome -> verified fill is an integrated user journey, not isolated agents |
+| preserved concept | *Escape Hatch application-proof alias protocol* | Typed scene + page effects and employer receipt must be distinct; never label an attempted fill or navigation as application success |
+| preserved concept | *Bridge browser/chat sprint context gaps* | Versioned scene contract, preserved opportunity binding, validator and durable handoff replace chat-only context |
+| preserved concept | *Capture personal browser-tab cycling algorithm* | Preserve the one managed Chrome context and focus; never open another browser merely to restart after login |
+| preserved concept | *Use interface chronology as context evidence* | Record typed timestamped auth -> form readback events; do not infer state from model narration |
+| preserved concept | *Graph repository scenes and transition coverage* | Canonical graph with 14 scene IDs, 33 allowed arcs, source-level validator and per-scene tests |
+| preserved concept | *Codify reusable use-case scenes and cinematic transition coverage* | Separate scene authority from motion; all scenarios have entry, recovery, effect evidence, reduced-motion fallback |
+| preserved concept | *Prototype tactile Bézier transitions and ambient scene states* | DEFER heavy motion; optional contained microtransition only after keyboard and browser proof |
 
-The original Idea Trace is a **title and locator index**, not the full underlying Idea Inbox bodies. Only those titles, locators and evidence statuses have been verified from this attachment; detailed ideas have not been silently reconstructed. Source snapshot is dated October 20, 2026.
+The original Idea Trace is a **title and locator index**, not the full underlying Idea Inbox bodies. Only the themes and evidence statuses have been verified from the private attachment; full private source IDs and locators are deliberately not published, and underlying idea bodies have not been reconstructed. Source snapshot is dated October 20, 2026.
 
 Workbooks' own pending gates remain: some upstream licenses unverified, examples not screenshot-tested, source coverage incomplete, Usage Matrix cached formula portability issue. We neither transfer private source IDs into public artifacts nor claim upstream code installed. The source file is not modified.
 

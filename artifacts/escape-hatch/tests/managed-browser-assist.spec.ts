@@ -457,6 +457,11 @@ test('changed post-login path requires a visible same-opportunity confirmation',
     notes: '', nextAction: '', updatedAt: new Date().toISOString(),
   }])));
   await page.reload();
+  const emailInput = page.getByTestId('coach-approved-email');
+  if (await emailInput.isVisible()) {
+    await emailInput.fill('candidate@example.test');
+    await page.getByRole('button', { name: 'Save email to profile' }).click();
+  }
   await page.getByLabel('Saved opportunity').selectOption('synthetic-confirm');
   await page.getByTestId('button-auth-resume').click();
   await expect.poll(() => actions.filter(a => a === 'bind').length).toBe(1);

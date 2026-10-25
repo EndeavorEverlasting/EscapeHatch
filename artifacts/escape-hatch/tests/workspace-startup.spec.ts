@@ -20,7 +20,7 @@ test('divergent browser state is preserved and normal dashboard is held', async 
   await page.addInitScript(({ key, profile }) => localStorage.setItem(key, JSON.stringify(profile)), { key: PROFILE_KEY, profile: { ...emptyProfile, first_name: 'Existing browser edit' } });
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Review your saved copies.' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Make room for momentum.' })).not.toBeVisible();
+  await expect(page.getByRole('heading', { name: /Make room for momentum|Keep going,/ })).not.toBeVisible();
   expect(await page.evaluate(key => JSON.parse(localStorage.getItem(key)!).first_name, PROFILE_KEY)).toBe('Existing browser edit');
 });
 test('missing context opens recovery with actionable import, not a zero dashboard', async ({ page }) => {
@@ -28,7 +28,7 @@ test('missing context opens recovery with actionable import, not a zero dashboar
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Bring your work with you.' })).toBeVisible();
   await expect(page.getByLabel('Import local workspace')).toBeVisible();
-  await expect(page.getByText('PROFILE READINESS', { exact: true })).not.toBeVisible();
+  await expect(page.getByRole('heading', { name: /Make room for momentum|Keep going,/ })).not.toBeVisible();
 });
 test('corrupt artifact blocks state-writing hooks and preserves the existing browser copy', async ({ page }) => {
   await page.route('**/__escapehatch/workspace', route => route.fulfill({ json: { managed: true, revision: null, workspace: null, state: 'RECOVERY_REQUIRED', message: 'Saved context could not be read.' } }));

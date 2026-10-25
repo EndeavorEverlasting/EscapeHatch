@@ -63,7 +63,7 @@ No synthetic result certifies employer acceptance, cloud OAuth, store packaging,
   recovery dead ends, a sticky lock marker and timestamp-only false conflicts. Retained regressions
   cover those incidents and real edits remain conflict-bearing. Root server modules now participate
   in the canonical typecheck, closing the prior `src`-only coverage gap.
-- B1 IMPLEMENTED / WINDOWS INSTALL OBSERVED: ten isolated installation/removal ownership cases pass.
+- B1 IMPLEMENTED / WINDOWS INSTALL OBSERVED: sixteen isolated installation/removal ownership cases pass.
   Actual standard-user install/dependency path and owned Start Menu creation completed. The first
   real dependency probe exposed PS5.1 native-argument quoting; a quote-free Node >=22.16 probe is
   exercised by Inspect in the safety suite. Live cold start exposed a captured-pipeline handle hang;
@@ -102,10 +102,14 @@ Review controls: eight managed bootstrap browser cases pass; two built-preview c
 typecheck and build pass. The broader 89-case browser run passed 86, skipped one existing case, and
 exposed two exact-deadline test races. The test changed Date.now while countdown timers remained active,
 allowing a correctly expired button to disappear before locator keyboard activation. This is retained
-as a measured failure until the timer-control repair and full rerun pass, not waived as flakiness.
+as a measured failure rather than waived as flakiness. The timer-control repair preserved genuine
+keyboard activation and passed 39 repeated boundary controls (13 cases, three repetitions); the
+combined full browser rerun and hosted Windows lifecycle gate are still required on the final head.
 
 Installer review fixes retain modified/adopted shortcuts, repair only missing owned shortcuts, and route
-Status/Stop to the installed source without dependency provisioning. Provider cleanup controls include
+Status/Stop to the installed source without dependency provisioning. Bootstrap rejects unproven/foreign
+runtime ownership before provisioning, verified with an actual isolated foreign loopback listener.
+Hashing uses platform SHA-256 without optional PowerShell module discovery. Provider cleanup controls include
 actual ten-second bounds during both fetch and streaming. Snapshot source comparison remains
 observation-based rather than an OS-level cross-process transaction; no stronger exclusion is claimed.
 
@@ -648,3 +652,52 @@ Do not rename it to `manifest.json` or claim dispatch proof until the canonical 
 DONE through Wave 1 on the provider candidate: launcher convergence + EH-R0 + EH-R1 + EH-R2 are integrated through `da6d2e40f348d7e7f59fb9ba998b54a9fa663656`, and the push Harness run on that exact head succeeded.
 
 Next unproven lanes: EH-R3 (Windows lifecycle regression/fault injection + CI wiring) and EH-R4 (friendly Close/Status adapters + runbook) are dependency-ready and must execute in parallel on isolated writers. EH-R5 remains the convergence owner after both return.
+
+### Bootstrap candidate changed-file inventory
+
+- `.github/workflows/harness.yml`
+- `.github/workflows/web-cockpit.yml`
+- `AGENTS.md`
+- `ARTIFACT_REGISTRY.md`
+- `Close-EscapeHatch.ps1`
+- `Install-EscapeHatch.cmd`
+- `Launch-EscapeHatch.ps1`
+- `Status-EscapeHatch.ps1`
+- `Uninstall-EscapeHatch.cmd`
+- `artifacts/escape-hatch/import-context.ts`
+- `artifacts/escape-hatch/opportunity-documents.test.ts`
+- `artifacts/escape-hatch/opportunity-documents.ts`
+- `artifacts/escape-hatch/package.json`
+- `artifacts/escape-hatch/playwright.bootstrap.config.ts`
+- `artifacts/escape-hatch/playwright.config.ts`
+- `artifacts/escape-hatch/playwright.preview.config.ts`
+- `artifacts/escape-hatch/preference-file.ts`
+- `artifacts/escape-hatch/src/App.tsx`
+- `artifacts/escape-hatch/src/components/career-source-status.tsx`
+- `artifacts/escape-hatch/src/components/sources-page.tsx`
+- `artifacts/escape-hatch/src/components/workspace-startup.tsx`
+- `artifacts/escape-hatch/src/lib/assist-contract.ts`
+- `artifacts/escape-hatch/src/lib/storage.ts`
+- `artifacts/escape-hatch/src/lib/tracker-bridge.ts`
+- `artifacts/escape-hatch/src/lib/workspace-bootstrap.ts`
+- `artifacts/escape-hatch/src/main.tsx`
+- `artifacts/escape-hatch/tests/persistence.spec.ts`
+- `artifacts/escape-hatch/tests/sources.spec.ts`
+- `artifacts/escape-hatch/tests/standalone-startup.spec.ts`
+- `artifacts/escape-hatch/tests/workspace-startup.spec.ts`
+- `artifacts/escape-hatch/tracker-control.ts`
+- `artifacts/escape-hatch/tracker-refresh.test.ts`
+- `artifacts/escape-hatch/tracker-refresh.ts`
+- `artifacts/escape-hatch/user-data.ts`
+- `artifacts/escape-hatch/vite.config.ts`
+- `artifacts/escape-hatch/workspace-bootstrap.test.ts`
+- `artifacts/escape-hatch/workspace-control.ts`
+- `artifacts/escape-hatch/workspace-file.ts`
+- `contracts/application-companion.v1.json`
+- `docs/WINDOWS_RUNTIME_LIFECYCLE.md`
+- `docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md`
+- `harness/CODEBASE_MAP.md`
+- `scripts/windows/EscapeHatch-Install.ps1`
+- `skills/harness-operations/SKILL.md`
+- `tests/windows/Test-EscapeHatch-Install.ps1`
+

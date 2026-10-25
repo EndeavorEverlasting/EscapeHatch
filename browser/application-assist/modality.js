@@ -9,6 +9,9 @@
   const ACTIONS = [
     { id: "start_assist", label: "Start Assist", shortcuts: ["s"], phoneHome: true, destructive: false },
     { id: "fill_allowed", label: "Fill Allowed Fields", shortcuts: ["f"], phoneHome: true, destructive: false },
+    { id: "listen_current_page", label: "Listen on This Page", shortcuts: [], phoneHome: true, destructive: false },
+    { id: "export_event_journal", label: "Export Event JSONL", shortcuts: [], phoneHome: true, destructive: false },
+    { id: "clear_event_journal", label: "Clear Event Journal", shortcuts: [], phoneHome: false, destructive: true },
     { id: "pause_session", label: "Pause", shortcuts: ["p"], phoneHome: true, destructive: false },
     { id: "resume_session", label: "Resume", shortcuts: ["r"], phoneHome: true, destructive: false },
     { id: "undo_last_fill", label: "Undo Last Fill", shortcuts: ["u"], phoneHome: true, destructive: false },

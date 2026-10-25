@@ -254,6 +254,53 @@ async function runPageCommand(command, profile, session, preferenceStore) {
   return result;
 }
 
+const journalApi = globalThis.EscapeHatchEventJournal;
+
+async function listenCurrentPage() {
+  const tab = await activeTab();
+  const origin = tabOrigin(tab);
+  if (!origin.startsWith("https://") && !origin.startsWith("http://")) {
+    throw new Error("Open a regular application page before enabling observation.");
+  }
+  let session = await loadStoredSession();
+  if (!session) {
+    session = api.createSession({ origin, application_id: origin });
+    await saveSession(session);
+  }
+  if (session.status !== "active" || session.origin !== origin) {
+    throw new Error("Start or resume an active session on this origin before listening.");
+  }
+  await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    files: ["assist-core.js", "event-journal.js"]
+  });
+  const result = await chrome.scripting.executeScript({
+    target: { tabId: tab.id }, files: ["event-observer.js"]
+  });
+  const state = result && result[0] && result[0].result;
+  if (!state || state.ok !== true) {
+    throw new Error("Observation unavailable: " + ((state && state.reason) || "unknown"));
+  }
+  setStatus("Listening on this page only. Only field-presence and progress metadata is saved locally; re-enable after navigation.");
+}
+
+async function exportEventJournal() {
+  const stored = await chrome.storage.local.get(journalApi.STORAGE_KEY);
+  const data = stored[journalApi.STORAGE_KEY] || journalApi.emptyJournal();
+  const text = journalApi.exportJsonl(data);
+  if (!text) { setStatus("No captured events yet."); return; }
+  downloadJsonText(text, "escapehatch-application-events.jsonl");
+  setStatus("Exported local JSONL event evidence. No employer answers or file contents were included.");
+}
+
+async function clearEventJournal() {
+  if (!window.confirm("Clear saved application event journal on this device? Export first if needed.")) return;
+  const session = await loadStoredSession();
+  if (session && session.status === "active") await saveSession(api.pauseSession(session, "journal_cleared"));
+  await chrome.storage.local.remove(journalApi.STORAGE_KEY);
+  setStatus("Local event journal cleared and active observation paused. Resume explicitly if needed.");
+}
+
 async function startAssist() {
   const tab = await activeTab();
   const origin = tabOrigin(tab);
@@ -340,6 +387,7 @@ async function undoLastFill() {
 }
 
 async function recordConfirmationEvidence() {
+  if (!window.confirm("I personally verified that the employer accepted the final application submission. This is not merely a form submit attempt. Record confirmation evidence?")) return;
   let session = await loadStoredSession();
   if (!session) {
     setStatus("Start Assist before recording confirmation evidence.");
@@ -469,6 +517,9 @@ async function invokeAction(actionId, source) {
 function bindSemanticHandlers() {
   modality.registerHandler("start_assist", () => startAssist());
   modality.registerHandler("fill_allowed", () => fillAllowedFields());
+  modality.registerHandler("listen_current_page", () => listenCurrentPage());
+  modality.registerHandler("export_event_journal", () => exportEventJournal());
+  modality.registerHandler("clear_event_journal", () => clearEventJournal());
   modality.registerHandler("pause_session", () => pauseAssist());
   modality.registerHandler("resume_session", () => resumeAssist());
   modality.registerHandler("undo_last_fill", () => undoLastFill());
@@ -505,6 +556,9 @@ function bindDirectControls() {
   const pairs = [
     ["startAssist", "start_assist"],
     ["fillAllowed", "fill_allowed"],
+    ["listenCurrentPage", "listen_current_page"],
+    ["exportEventJournal", "export_event_journal"],
+    ["clearEventJournal", "clear_event_journal"],
     ["pause", "pause_session"],
     ["resume", "resume_session"],
     ["undoLast", "undo_last_fill"],

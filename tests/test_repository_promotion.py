@@ -35,6 +35,14 @@ class RepositoryPromotionTests(unittest.TestCase):
         cls.guard = load_guard()
         cls.contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
 
+    def test_required_career_check_runs_for_every_main_pr(self):
+        jobs = self.contract["required_checks_manifest"]["destinations"]["main"]["checks"]
+        self.assertTrue(any(item["workflow"] == "Career State Validation" for item in jobs))
+        workflow = (ROOT / ".github/workflows/career-state.yml").read_text(encoding="utf-8")
+        pr_part = workflow.split("  pull_request:", 1)[1].split("\npermissions:", 1)[0]
+        self.assertIn("branches: [main]", pr_part)
+        self.assertNotIn("paths:", pr_part)
+
     def test_browser_ci_is_required_before_promotion(self):
         jobs = self.contract["required_checks_manifest"]["destinations"]["main"]["checks"]
         matching = [item for item in jobs if item["workflow"] == "Web Cockpit Validation"]

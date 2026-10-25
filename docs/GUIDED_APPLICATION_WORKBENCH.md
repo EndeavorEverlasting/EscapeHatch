@@ -50,6 +50,10 @@ Pass 4 (bounded stability repair): the broad browser run produced 88 pass, 1 ski
 
 Pass 5 (regression correction): a subsequent broad run found repeated recovery activation could hit Close after synchronous opening focus. Default dialogs now focus a neutral dialog target before paint, with forward/reverse Tab trapping; explicit initial-focus callers retain their target. Existing repeated Enter/Space recovery assertions remain unchanged. Exact-deadline helper timeouts were isolated to installing a global deadline before a locator refocus could detach the expired button. The helper now freezes Date.now in the native click capture, presses the already-focused keyboard target, and asserts the actual target/time before retaining all deadline-denial assertions. Production expiry policy/listeners remain unchanged. These opening/validation/repeated-key/deadline/return-focus controls passed 28 executions (two repetitions) without retries; typecheck and build passed.
 
+Final UI candidate `8e4f4140be3440b6f38ab5f8fc01a3218aea6d47`: full local Playwright run (`--workers=3`) passed 94, skipped 1 (existing obsolete MV3 popup harness), failed 0. The actual loopback middleware, source-first drop/review persistence, exact-job/PDF reset, automatic form-action refresh, mobile dark/reduced-motion checks, focus and recovery paths passed. Hosted browser CI on that head also passed. Earlier exact-runtime unit evidence: 41 unit, 19 workbench and 52 managed-assist tests passed. Build emits a chunk-size advisory; it is not a runtime performance measurement.
+
+Integration repair: the required-check manifest names Career State Validation for every main candidate, but its PR path filter omitted this UI change. Extend only that existing trigger to all PRs targeting main and retain push filters; `tests/test_repository_promotion.py` prevents omission from recurring. Validation: `python tests/test_repository_promotion.py`, career-state/claim-fidelity/artifact-propagation validators, harness, and observed exact-head provider checks. Local `promotion_guard.py check` defaults to demonstration outcomes without a token; its local READY is **not provider readiness proof**. Read actual workflow conclusions, PR head/base, review threads and merge state directly before accepting integration. The missing canonical dispatch runner remains separately blocked.
+
 Parallel graph width: 2 (primary implementation + independent read-only evidence/diff review). Adapter: native `collaboration.spawn_agent`, then `followup_task`; no worker mutations or merges. Review returned the query/radio/hidden-upload/race/test-key findings repaired above. Primary owns rejoin validation. `Outputs/prompt-parallel-dispatch/manifest.json` records the lanes. The canonical schema and `scripts/prompt_parallel_dispatch.py` are absent; the attempted validation failed with file-not-found. Standardized manifest/receipt verification is **UNPROVEN**, not a clean parallel-contract pass. The existing blocked dispatch artifact records the same harness-owner dependency; this feature does not create a competing runner.
 
 ## Reproduce validation
@@ -86,6 +90,7 @@ At the source checkpoint, remaining gates were exact-head CI and repository prom
 Feature and bounded stability ownership, relative to this repository root:
 
 - `.gitignore`
+- `.github/workflows/career-state.yml`
 - `ARTIFACT_REGISTRY.md`
 - `CHANGELOG.md`
 - `VERSION`
@@ -93,6 +98,7 @@ Feature and bounded stability ownership, relative to this repository root:
 - `Outputs/prompt-parallel-dispatch/manifest.json`
 - `harness/CODEBASE_MAP.md`
 - `tests/test_product_version.py`
+- `tests/test_repository_promotion.py`
 - `docs/GUIDED_APPLICATION_WORKBENCH.md`
 - `artifacts/escape-hatch/application-requirements.ts`
 - `artifacts/escape-hatch/browser-assist-control.ts`

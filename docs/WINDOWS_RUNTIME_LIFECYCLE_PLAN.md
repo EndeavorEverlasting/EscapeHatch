@@ -1,6 +1,6 @@
 # EscapeHatch Windows Runtime Lifecycle Plan
 
-Status: TRACKED PLAN — EH-R0 through EH-R2 integrated on the candidate; EH-R3/R4 are the active successor wave; EH-R5 remains pending.
+Status: BOOTSTRAP CANDIDATE — B0–B3 implemented with local Windows evidence; B4 exact-head checks, review and integration remain pending. Historical EH-R sections below retain their original evidence floor.
 
 Canonical planning owner for this work: `docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md`.
 
@@ -86,6 +86,28 @@ No synthetic result certifies employer acceptance, cloud OAuth, store packaging,
   EscapeHatch lacks the P07 typed dispatch manifest/receipt runner, so formal parallel-manifest
   certification is UNPROVEN rather than inferred from prose. Mainline integration still requires
   exact-head provider checks and the repository's review/approval gate.
+
+### 2026-10-25 review refinement
+
+PR #95 remains draft while exact-candidate checks and review are incomplete. Review found standalone
+localhost/static-preview startup failures, a dual-corruption recovery dead end, links-only assist context
+omission, sibling-checkout lifecycle routing, drive-root normalization, missing owned shortcut repair,
+and provider response-stream disposal gaps. These were repaired in their existing owners. Managed
+startup now receives an explicit HTML mode marker; missing/HTML workspace responses still block it.
+Standalone development and built preview mount browser-local state without requesting private context.
+Dual-corruption import archives both original copies; links alone count as retained context.
+
+Review controls: eight managed bootstrap browser cases pass; two built-preview controls pass through
+127.0.0.1 and localhost; focused bootstrap/provider unit suite passes 37 tests; strict root/module
+typecheck and build pass. The broader 89-case browser run passed 86, skipped one existing case, and
+exposed two exact-deadline test races. The test changed Date.now while countdown timers remained active,
+allowing a correctly expired button to disappear before locator keyboard activation. This is retained
+as a measured failure until the timer-control repair and full rerun pass, not waived as flakiness.
+
+Installer review fixes retain modified/adopted shortcuts, repair only missing owned shortcuts, and route
+Status/Stop to the installed source without dependency provisioning. Provider cleanup controls include
+actual ten-second bounds during both fetch and streaming. Snapshot source comparison remains
+observation-based rather than an OS-level cross-process transaction; no stronger exclusion is claimed.
 
 The standalone app has no usable Google lease on the observed workstation; the conversation connector
 does not transfer that permission. The real read-only adapter is fault-injection tested, but autonomous

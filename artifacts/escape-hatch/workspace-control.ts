@@ -35,13 +35,17 @@ export async function bootstrapWorkspace(): Promise<BootstrapResponse> {
 }
 export function createWorkspaceControlPlugin(): Plugin {
   const managed = readManagedRuntime();
-  return { name: 'escapehatch-workspace-control', configureServer(server) {
+  return { name: 'escapehatch-workspace-control',
+    transformIndexHtml(_html, context) {
+      return [{ tag: 'meta', attrs: { name: 'escapehatch-runtime', content: context.server && managed ? 'managed' : 'standalone' }, injectTo: 'head' }];
+    },
+    configureServer(server) {
     server.middlewares.use(async (req, res, next) => {
       const route = (req.url || '').split('?')[0];
       if (!['/__escapehatch/workspace', '/__escapehatch/workspace/status', '/__escapehatch/workspace/resume'].includes(route)) return next();
       const port = Number(process.env.PORT || server.config.server.port || 5173);
-      if (!authorizedWorkspaceRequest(req, port)) return respond(res, 403, { error: 'same_origin_loopback_required' });
       if (!managed) return respond(res, 200, { managed: false });
+      if (!authorizedWorkspaceRequest(req, port)) return respond(res, 403, { error: 'same_origin_loopback_required' });
       if (route === '/__escapehatch/workspace/status' && req.method === 'GET') {
         const result = await bootstrapWorkspace();
         return respond(res, 200, { managed: true, state: result.state, message: result.message,

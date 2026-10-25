@@ -9,7 +9,7 @@ import { migrateLegacyPreferences } from './preference-file.ts';
 import { emptyPreferences } from './src/lib/application-preferences.ts';
 import { WORKSPACE_SCHEMA, parseSavedWorkspace, reconcileWorkspace, profileFromPreferences, applyBrowserWorkspace } from './src/lib/workspace-bootstrap.ts';
 import { PROFILE_KEY, emptyProfile, APPLICATIONS_KEY } from './src/lib/storage.ts';
-import { authorizedWorkspaceRequest } from './workspace-control.ts';
+import { authorizedWorkspaceRequest, createWorkspaceControlPlugin } from './workspace-control.ts';
 import type { IncomingMessage } from 'node:http';
 import { importContext } from './import-context.ts';
 import { DatabaseSync } from 'node:sqlite';
@@ -19,6 +19,17 @@ import { hasContext } from './src/lib/workspace-bootstrap.ts';
 import { ASSIST_KEY, emptyAssistProfile } from './src/lib/assist-contract.ts';
 
 const workspace = (first_name = 'Synthetic') => ({ schema: WORKSPACE_SCHEMA, values: { [PROFILE_KEY]: { ...emptyProfile, first_name } } });
+test('unmanaged dev metadata works with localhost without opening private storage', async () => {
+  let handler: Function | undefined;
+  const plugin = createWorkspaceControlPlugin();
+  (plugin.configureServer as Function)({ middlewares: { use: (callback: Function) => { handler = callback; } }, config: { server: { port: 5173 } } });
+  const result: { statusCode?: number; body?: string } = {};
+  await handler!({ url: '/__escapehatch/workspace', headers: { host: 'localhost:5173' }, socket: { remoteAddress: '::1' } }, {
+    set statusCode(value: number) { result.statusCode = value; }, setHeader() {}, end(body: string) { result.body = body; },
+  }, () => assert.fail('workspace route was not handled'));
+  assert.equal(result.statusCode, 200);
+  assert.deepEqual(JSON.parse(result.body!), { managed: false });
+});
 test('stable user-data identity does not include checkout path', () => {
   assert.equal(userDataRoot({ LOCALAPPDATA: 'C:/Synthetic/Local' }), path.join('C:/Synthetic/Local', 'EscapeHatch'));
   assert.equal(userDataRoot({ ESCAPEHATCH_DATA_HOME: 'isolated' }), 'isolated');
@@ -95,6 +106,10 @@ test('writer process termination releases the OS lock and restart saves normally
 });
 
 test('assist-only context is recovered and blank legacy assist contact receives approved profile fields only', () => {
+  const linksOnly = { ...emptyAssistProfile(emptyProfile), links: [{ label: 'Portfolio', url: 'https://portfolio.example.test', provenance: { source: 'user' as const, label: 'Reviewed link', capturedAt: new Date().toISOString() } }] };
+  assert.equal(hasContext({ [ASSIST_KEY]: emptyAssistProfile(emptyProfile) }), false);
+  assert.equal(hasContext({ [ASSIST_KEY]: linksOnly }), true);
+  assert.deepEqual(reconcileWorkspace({ schema: WORKSPACE_SCHEMA, values: { [ASSIST_KEY]: linksOnly } }, { schema: WORKSPACE_SCHEMA, values: {} }).workspace.values[ASSIST_KEY], linksOnly);
   const assist = { ...emptyAssistProfile(emptyProfile), summary: 'Previously reviewed career summary' };
   assert.equal(hasContext({ [ASSIST_KEY]: assist }), true);
   const local = { schema: WORKSPACE_SCHEMA, values: { [ASSIST_KEY]: assist } };

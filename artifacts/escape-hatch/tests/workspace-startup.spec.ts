@@ -49,3 +49,28 @@ test('corrupt browser values recover through the offered UI and raw bytes are ar
   const raw = JSON.parse(await fs.readFile(path.join(directory, archives.at(-1)!), 'utf8'));
   expect(raw[PROFILE_KEY]).toBe('invalid synthetic browser bytes');
 });
+
+test('corrupt saved file and browser copy can both be archived before importing a backup', async ({ page }) => {
+  const directory = test.info().config.metadata.dataHome as string;
+  const file = path.join(directory, 'workspace.v1.json');
+  await fs.writeFile(file, 'unreadable synthetic saved bytes');
+  await page.addInitScript(key => localStorage.setItem(key, 'unreadable synthetic browser bytes'), PROFILE_KEY);
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: 'Export this browser' })).toBeVisible();
+  const backup = { schema: 'escapehatch-local-workspace/v1', values: { [PROFILE_KEY]: { ...emptyProfile, first_name: 'Restored' } } };
+  await page.getByLabel('Import local workspace').setInputFiles({ name: 'backup.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)) });
+  await expect(page.getByRole('heading', { name: 'Keep going, Restored.' })).toBeVisible();
+  const names = await fs.readdir(directory);
+  const savedArchive = names.find(name => name.startsWith('workspace.v1.json.recovery-'))!;
+  expect(await fs.readFile(path.join(directory, savedArchive), 'utf8')).toBe('unreadable synthetic saved bytes');
+  const archives = await Promise.all(names.filter(name => name.startsWith('browser-recovery-')).map(async name => JSON.parse(await fs.readFile(path.join(directory, name), 'utf8'))));
+  expect(archives.some(raw => raw[PROFILE_KEY] === 'unreadable synthetic browser bytes')).toBe(true);
+  expect(JSON.parse(await fs.readFile(file, 'utf8')).values[PROFILE_KEY].first_name).toBe('Restored');
+});
+
+for (const failure of ['html', 'missing']) test(`managed runtime rejects ${failure} workspace responses instead of showing an empty dashboard`, async ({ page }) => {
+  await page.route('**/__escapehatch/workspace', route => route.fulfill({ status: failure === 'missing' ? 404 : 200, contentType: 'text/html', body: '<html>Unavailable</html>' }));
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Recover your workspace.' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Review Sources' })).not.toBeVisible();
+});

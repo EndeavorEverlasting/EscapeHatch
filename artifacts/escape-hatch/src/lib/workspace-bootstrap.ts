@@ -34,7 +34,7 @@ export function hasContext(values: WorkspaceValues): boolean {
   const assist = parseAssistProfile(values[ASSIST_KEY]);
   return Boolean(profile && Object.values(profile).some(value => value.trim()) ||
     assist && (assist.summary.trim() || Object.values(assist.contact).some(value => value.trim()) ||
-      assist.skills.length || assist.projects.length || assist.experience.length || assist.education.length || assist.proposals.length) ||
+      assist.links.length || assist.skills.length || assist.projects.length || assist.experience.length || assist.education.length || assist.proposals.length) ||
     [ANSWERS_KEY, APPLICATIONS_KEY, ASSIST_ANSWERS_KEY, SOURCE_BINDINGS_KEY].some(key => Array.isArray(values[key]) && (values[key] as unknown[]).length));
 }
 

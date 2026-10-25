@@ -7,7 +7,8 @@ const REQUEST_HEADERS = { 'content-type': 'application/json', 'x-escapehatch-wor
 
 /** Mount state-writing hooks only after the validated private workspace has been reconciled. */
 export function WorkspaceStartup({ children }: { children: ReactNode }) {
-  const [ready, setReady] = useState(false);
+  const standalone = document.querySelector('meta[name="escapehatch-runtime"]')?.getAttribute('content') === 'standalone';
+  const [ready, setReady] = useState(standalone);
   const [managed, setManaged] = useState(false);
   const [message, setMessage] = useState('Recovering your saved workspace…');
   const [needsContext, setNeedsContext] = useState(false);
@@ -31,23 +32,24 @@ export function WorkspaceStartup({ children }: { children: ReactNode }) {
     setMessage('Recovering your saved workspace…'); setNeedsContext(false); setConflicts(false); setBrowserInvalid(false); blocked.current = false;
     try {
       const response = await fetch(ENDPOINT, { credentials: 'same-origin', cache: 'no-store', signal: AbortSignal.timeout(10000) });
-      // Static/standalone developer mode has no private filesystem bridge.
-      if (response.status === 404) { setReady(true); return; }
       if (!response.ok) throw new Error('The local workspace service is unavailable. Retry startup.');
       const result = await response.json() as BootstrapResponse;
       if (result.managed === false) { setReady(true); return; }
       setManaged(true); revision.current = result.revision;
       recoveryImport.current = result.state === 'RECOVERY_REQUIRED';
+      // Inspect both copies before offering recovery. Either one may be unreadable.
+      let invalidLocal = false;
+      try { readBrowserWorkspace(localStorage); }
+      catch { setBrowserInvalid(true); invalidLocal = true; }
       if (result.state === 'RECOVERY_REQUIRED') throw new Error(result.message + ' Importing a valid local backup will archive the unreadable copy first.');
       const saved: SavedWorkspace | null = result.workspace === null ? { schema: WORKSPACE_SCHEMA, values: {} } : parseSavedWorkspace(result.workspace);
       if (!saved) throw new Error('Saved workspace is invalid. Existing data has been preserved.');
-      let local;
-      try { local = readBrowserWorkspace(localStorage); }
-      catch {
+      if (invalidLocal) {
         setBrowserInvalid(true); setCandidate(saved);
         setMessage('This browser’s saved copy needs recovery. Restore the validated saved workspace or import a backup. The original browser text will be archived first.');
         return;
       }
+      const local = readBrowserWorkspace(localStorage);
       const merged = reconcileWorkspace(local, saved);
       if (merged.conflicts.length) {
         setCandidate(local); setSavedCandidate(saved); setConflicts(true);
@@ -64,7 +66,7 @@ export function WorkspaceStartup({ children }: { children: ReactNode }) {
       setMessage('Workspace recovered and saved on this computer.'); setReady(true);
     } catch (error) { setMessage((error as Error).message); }
   };
-  useEffect(() => { void recover(); }, []);
+  useEffect(() => { if (!standalone) void recover(); }, []);
 
   useEffect(() => {
     if (!ready || !managed) return;

@@ -40,6 +40,8 @@ This file is the canonical registry for durable EscapeHatch artifacts. A plausib
 | Bootstrap browser configuration | `artifacts/escape-hatch/playwright.bootstrap.config.ts` | tracked isolated synthetic proof | proof runtime changes | `npm --prefix artifacts/escape-hatch run test:bootstrap:browser` |
 | Startup browser regression | `artifacts/escape-hatch/tests/workspace-startup.spec.ts` | tracked synthetic recovery/preservation controls | startup changes | bootstrap browser proof |
 
+Standalone preview configuration and controls: `artifacts/escape-hatch/playwright.preview.config.ts` and `artifacts/escape-hatch/tests/standalone-startup.spec.ts`; validate using `npm --prefix artifacts/escape-hatch run test:preview:browser`.
+
 Managed bootstrap private outputs: `%LOCALAPPDATA%/EscapeHatch/workspace.v1.json`, its prior/recovery copies,
 stable application preferences, remembered source manifest, cached résumé and tracker snapshot remain
 user-owned and untracked. Installation receipt/shortcut removal never deletes these outputs.

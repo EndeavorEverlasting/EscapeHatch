@@ -33,6 +33,8 @@ type ServerResponse = {
   state?: string;
   browserOpen?: boolean;
   authCheckpoint?: AuthCheckpoint;
+  needsOpportunityConfirmation?: boolean;
+  currentPage?: { opportunityId: string; applicationUrl: string; pageUrl: string } | null;
   error?: string;
   filled?: string[];
   recorded?: string[];
@@ -91,6 +93,8 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const [status, setStatus] = useState('idle');
   const [authCheckpoint, setAuthCheckpoint] = useState<AuthCheckpoint | null>(null);
   const [pendingAfterLogin, setPendingAfterLogin] = useState(false);
+  const [needsOpportunityConfirmation, setNeedsOpportunityConfirmation] = useState(false);
+  const [observedPageUrl, setObservedPageUrl] = useState('');
   const [emailDraft, setEmailDraft] = useState('');
   const [emailInputError, setEmailInputError] = useState('');
   const [message, setMessage] = useState('');
@@ -147,6 +151,8 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       if (active) {
         setStatus(result.state || 'idle');
         setAuthCheckpoint(result.authCheckpoint || null);
+        setNeedsOpportunityConfirmation(Boolean(result.needsOpportunityConfirmation));
+        setObservedPageUrl(result.currentPage?.pageUrl || '');
         setBrowserOpen(Boolean(result.browserOpen));
         setListenerStatus(result.listeners);
         if (result.listeners?.receipts?.length) setApplications(current => reconcileSubmissionReceipts(current, result.listeners!.receipts));
@@ -177,6 +183,8 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         if (cancelled) return;
         setListenerStatus(result.listeners);
         setAuthCheckpoint(result.authCheckpoint || null);
+        setNeedsOpportunityConfirmation(Boolean(result.needsOpportunityConfirmation));
+        setObservedPageUrl(result.currentPage?.pageUrl || '');
         if (result.listeners) {
           setApplications(current => reconcileSubmissionReceipts(current, result.listeners!.receipts));
           if (result.listeners.savedAnswers !== seenAnswers.current) {
@@ -253,16 +261,18 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   }, [autoPrepareRequested, busy, documents.loading, documents.canUpload, browserOpen]);
 
   useEffect(() => {
-    if (!pendingAfterLogin || !authCheckpoint?.canResume || busy || !browserOpen) return;
+    if (!pendingAfterLogin || !authCheckpoint?.canResume || needsOpportunityConfirmation || busy || !browserOpen) return;
     // A prior explicit Launch authorizes only the guarded Fill, not navigation or Submit.
     setPendingAfterLogin(false);
     void run('resume');
-  }, [pendingAfterLogin, authCheckpoint?.canResume, busy, browserOpen]);
+  }, [pendingAfterLogin, authCheckpoint?.canResume, needsOpportunityConfirmation, busy, browserOpen]);
 
   async function checkSignIn() {
     try {
       const result = await request('/status');
       setAuthCheckpoint(result.authCheckpoint || null);
+      setNeedsOpportunityConfirmation(Boolean(result.needsOpportunityConfirmation));
+      setObservedPageUrl(result.currentPage?.pageUrl || '');
       setMessage(result.authCheckpoint?.reason || 'The employer form could not be inspected. Continue in Chrome and check again.');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Unable to inspect the managed session.');
@@ -305,6 +315,14 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           },
           adapterRegistry: registryRaw ? JSON.parse(registryRaw) as object : null,
         };
+      }
+      if (action === 'resume' && needsOpportunityConfirmation) {
+        if (!selectedOpportunityId || !observedPageUrl)
+          throw new Error('Save and select the opportunity before confirming a changed employer path.');
+        await request('/resume/bind', {
+          opportunityId: selectedOpportunityId, livePageUrl: observedPageUrl, confirmedSameOpportunity: true,
+        });
+        setNeedsOpportunityConfirmation(false);
       }
       let result = await request('/' + action, body);
       const launchedApplicationForm = action === 'launch' && result.state === 'application_form_open_review_required';
@@ -472,10 +490,15 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           </div>
         ) : authCheckpoint?.canResume ? (
           <div className="mt-2 space-y-2">
-            <p className="text-sm font-semibold">Application form recognized. Continue where you left off.</p>
+            <p className="text-sm font-semibold">{needsOpportunityConfirmation
+              ? 'Is this the same job you selected before signing in?'
+              : 'Application form recognized. Continue where you left off.'}</p>
             <p className="text-xs text-muted-foreground">The form was observed twice in the same browser session. No final Submit is automated.</p>
+            {needsOpportunityConfirmation && <p className="text-xs text-muted-foreground">The employer returned to a different page path. Confirm this is the same selected opportunity before any automated field changes. Do not confirm another job.</p>}
             <button className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" type="button"
-              data-testid="button-auth-resume" disabled={busy} onClick={() => void run('resume')}>Resume filling this application</button>
+              data-testid="button-auth-resume" disabled={busy || (needsOpportunityConfirmation && !selectedOpportunityId)} onClick={() => void run('resume')}>
+              {needsOpportunityConfirmation ? 'Yes, same job — resume filling' : 'Resume filling this application'}
+            </button>
           </div>
         ) : (
           <div className="mt-2 space-y-2">

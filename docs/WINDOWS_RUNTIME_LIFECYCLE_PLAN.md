@@ -63,7 +63,7 @@ No synthetic result certifies employer acceptance, cloud OAuth, store packaging,
   recovery dead ends, a sticky lock marker and timestamp-only false conflicts. Retained regressions
   cover those incidents and real edits remain conflict-bearing. Root server modules now participate
   in the canonical typecheck, closing the prior `src`-only coverage gap.
-- B1 IMPLEMENTED / WINDOWS INSTALL OBSERVED: sixteen isolated installation/removal ownership cases pass.
+- B1 IMPLEMENTED / WINDOWS INSTALL OBSERVED: eighteen isolated installation/removal ownership cases pass.
   Actual standard-user install/dependency path and owned Start Menu creation completed. The first
   real dependency probe exposed PS5.1 native-argument quoting; a quote-free Node >=22.16 probe is
   exercised by Inspect in the safety suite. Live cold start exposed a captured-pipeline handle hang;
@@ -118,8 +118,13 @@ kept the displaced saved copy only in a rolling backup, and shortcut deletion di
 after blocking shutdown/provisioning. The workspace owner now retains a unique conflict archive inside
 the existing revision/OS-lock transaction. A browser choice followed by another edit proves that both
 original conflicting copies survive; stale CAS choices cannot create an archive. Nine managed browser
-controls and 38 focused bootstrap/provider tests pass. Hosted Windows lifecycle passed on `4e470fe`;
-hosted normal browser proof still exposed one intermittent answer-dialog closure, under investigation.
+controls and 38 focused bootstrap/provider tests pass. Installer revalidation now covers the entire
+deletion set after blocking work; 18 Windows cases include stop-time shortcut changes in both removal
+and source replacement. Hosted Windows lifecycle passed on `4e470fe`. Hosted normal browser proof
+exposed an intermittent answer-dialog closure; a deterministic synthetic browser probe traced it to
+opening requestAnimationFrame autofocus stealing the input focus before keyboard clearing. The same
+family reproduced in application editing during stress. The modal focus owner and retained controls
+must close this observed defect before browser proof can be promoted.
 
 The standalone app has no usable Google lease on the observed workstation; the conversation connector
 does not transfer that permission. The real read-only adapter is fault-injection tested, but autonomous

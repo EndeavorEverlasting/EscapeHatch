@@ -66,6 +66,17 @@ try {
     Assert-True ((Full-Path $uncRoot) -ceq [IO.Path]::GetPathRoot($uncRoot)) 'UNC root was changed'
     Assert-True ((Full-Path (Join-Path $fixture 'child\')) -ceq (Join-Path $fixture 'child')) 'non-root trailing separator not normalized'
 
+    Case 'Installer hashing works without Get-FileHash module discovery'
+    $hashFunction = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'File-Hash' }, $true)
+    Assert-True ($null -ne $hashFunction) 'hash owner missing'
+    $hashProbe = Join-Path $fixture 'hash-probe.txt'
+    [IO.File]::WriteAllText($hashProbe, 'abc', (New-Object Text.UTF8Encoding -ArgumentList $false))
+    & {
+        function Get-FileHash { throw 'SYNTHETIC_COMMAND_UNAVAILABLE' }
+        Invoke-Expression $hashFunction.Extent.Text
+        Assert-True ((File-Hash $hashProbe) -ceq 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad') 'platform hash differs without module command'
+    }
+
     Case 'Inspect performs no user-root writes'
     $inspect = Run 'Inspect'
     $inspect | Out-Host
@@ -77,6 +88,37 @@ try {
     }
     Assert-True (-not (Test-Path -LiteralPath $appData)) 'Inspect created app data'
     Assert-True (-not (Test-Path -LiteralPath $shortcuts)) 'Inspect created shortcut folder'
+
+    Case 'Actual foreign listener refuses Bootstrap before dependency or installation mutation'
+    $foreignSource = Join-Path $fixture 'foreign-source'
+    Fixture-Source $foreignSource
+    Copy-Item -LiteralPath (Join-Path $repo 'scripts\windows\EscapeHatch-Runtime.ps1') -Destination (Join-Path $foreignSource 'scripts\windows\EscapeHatch-Runtime.ps1') -Force
+    $foreignData = Join-Path $fixture 'foreign-data'
+    $foreignShortcuts = Join-Path $fixture 'foreign-shortcuts'
+    $previousPort = $env:PORT
+    $previousLocal = $env:LOCALAPPDATA
+    $listener = New-Object Net.Sockets.TcpListener -ArgumentList ([Net.IPAddress]::Loopback), 0
+    try {
+        $listener.Start()
+        $isolatedPort = ([Net.IPEndPoint]$listener.LocalEndpoint).Port
+        Assert-True ($isolatedPort -ne 21031) 'fixture must never use the user application port'
+        $env:PORT = [string]$isolatedPort
+        $env:LOCALAPPDATA = Join-Path $fixture 'foreign-local-appdata'
+        # No SkipDependencies: a successful refusal proves provisioning was not reached.
+        $output = @(& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installer -Action Bootstrap -SourceRoot $foreignSource -AppDataRoot $foreignData -ShortcutRoot $foreignShortcuts -TestMode 2>&1) -join "`n"
+        Assert-True ($LASTEXITCODE -eq 1) "foreign Bootstrap must refuse: $output"
+        Assert-True ($output -match 'unproven|FOREIGN') "foreign Bootstrap must retain its actual safety reason: $output"
+        Assert-True (-not (Test-Path -LiteralPath (Join-Path $foreignSource 'artifacts\escape-hatch\node_modules'))) 'foreign startup provisioned dependencies'
+        Assert-True (-not (Test-Path -LiteralPath $foreignData)) 'foreign startup changed installation data'
+        Assert-True (-not (Test-Path -LiteralPath $foreignShortcuts)) 'foreign startup created shortcut resources'
+        $probe = New-Object Net.Sockets.TcpClient
+        try { $probe.Connect([Net.IPAddress]::Loopback, $isolatedPort); Assert-True $probe.Connected 'foreign listener did not survive refusal' }
+        finally { $probe.Dispose() }
+    } finally {
+        $listener.Stop()
+        $env:PORT = $previousPort
+        $env:LOCALAPPDATA = $previousLocal
+    }
 
     Case 'Install is idempotent and records CREATED shortcut'
     Run 'Install' | Out-Host

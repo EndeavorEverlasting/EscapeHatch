@@ -23,7 +23,12 @@ function Same-Path([string]$Left, [string]$Right) {
     return [string]::Equals((Full-Path $Left), (Full-Path $Right), [StringComparison]::OrdinalIgnoreCase)
 }
 function File-Hash([string]$File) {
-    return (Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash.ToLowerInvariant()
+    # PS5.1 child processes can lack the module-based Get-FileHash command surface.
+    # Hash through the platform API so bootstrap has no module-autoload dependency.
+    $stream = [IO.File]::OpenRead($File)
+    $hash = [Security.Cryptography.SHA256]::Create()
+    try { return ([BitConverter]::ToString($hash.ComputeHash($stream))).Replace('-', '').ToLowerInvariant() }
+    finally { $hash.Dispose(); $stream.Dispose() }
 }
 function Require-Source([string]$Root) {
     $manager = Join-Path $Root 'scripts\windows\EscapeHatch-Runtime.ps1'
@@ -200,6 +205,15 @@ try {
     }
     $selected = if ($null -ne $receipt -and $Action -eq 'Bootstrap') { [string]$receipt.sourceRoot } else { $SourceRoot }
     Require-Source $selected
+    if ($Action -eq 'Bootstrap') {
+        # Prove that startup is admissible before provisioning dependencies or
+        # changing shortcuts. A foreign listener must remain a visible refusal,
+        # not be masked by a package-manager failure during first Bootstrap.
+        $startupStatus = (Invoke-Runtime $selected 'Status') -join "`n"
+        if ($startupStatus -notmatch '(?m)^ESCAPEHATCH_STATE=(STOPPED|OWNED_HEALTHY|OWNED_ADOPTABLE|OWNED_UNHEALTHY|STALE_RECEIPT)\s*$') {
+            throw 'INSTALL_RUNTIME_STATUS_UNPROVEN: canonical status did not prove a safe startup state; no dependencies or shortcuts were changed.'
+        }
+    }
     if ($null -ne $receipt -and -not (Same-Path ([string]$receipt.sourceRoot) $selected)) {
         # Only an explicit Install can change the selected source. Verify/stop the
         # previous source via its canonical ownership-aware lifecycle manager.

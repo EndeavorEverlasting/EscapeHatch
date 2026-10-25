@@ -64,6 +64,8 @@ def validate(contract: dict, root: Path = ROOT) -> None:
         "artifacts/escape-hatch/managed-auth-checkpoint.test.ts",
         "artifacts/escape-hatch/browser-assist-control.ts",
         "artifacts/escape-hatch/src/components/managed-browser-assist.tsx",
+        "artifacts/escape-hatch/src/lib/application-journey-projection.ts",
+        "artifacts/escape-hatch/src/lib/application-journey-projection.test.ts",
         "docs/agent/APPLICATION_JOURNEY_SCENE_SYSTEM_2026-10-25.md",
     )
     for path in required_files:
@@ -84,6 +86,14 @@ def validate(contract: dict, root: Path = ROOT) -> None:
         if marker not in runtime:
             raise SceneContractError("managed auth continuation missing "+marker)
     ux = (root/"artifacts/escape-hatch/src/components/managed-browser-assist.tsx").read_text(encoding="utf-8")
+    if "projectApplicationJourney" not in ux or "journey-current" not in ux or "journey-next" not in ux:
+        raise SceneContractError("coach must project current and next canonical scenes")
+    projection = (root/"artifacts/escape-hatch/src/lib/application-journey-projection.ts").read_text(encoding="utf-8")
+    if "application-journey-scenes.v1.json" not in projection:
+        raise SceneContractError("scene projection must consume canonical JSON directly")
+    package = json.loads((root/"artifacts/escape-hatch/package.json").read_text(encoding="utf-8"))
+    if "application-journey-projection.test.ts" not in package["scripts"]["test:unit"]:
+        raise SceneContractError("unit suite missing runtime scene projection regression")
     for marker in ("button-auth-resume", "button-auth-check-again", "coach-approved-email"):
         if marker not in ux:
             raise SceneContractError("missing visible coached auth/prerequisite control "+marker)

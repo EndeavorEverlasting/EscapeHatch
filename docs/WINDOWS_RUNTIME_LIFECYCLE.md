@@ -35,6 +35,8 @@ Profile, answer library, applications, reviewed assist records/answers, and sour
 parsers. `ESCAPEHATCH_DATA_HOME` is an explicit alternate user-store root for isolated environments.
 Browser edits remain a working copy. Nonempty divergent copies hold startup for review; nothing is
 silently overwritten. Saving uses a cross-process lock, revision compare-and-set and prior-copy backup.
+Choosing between conflicting copies also retains the displaced saved workspace in a uniquely named
+`workspace.v1.json.conflict-*` archive under the same lock. Later autosaves do not replace that archive.
 Unreadable artifacts hold startup. Explicit recovery import archives unreadable bytes before replacing
 the active copy. The cross-process lock uses Node's SQLite OS-backed transaction lock only; workspace
 content remains JSON. Process termination releases the lock automatically. It is not a second data store.

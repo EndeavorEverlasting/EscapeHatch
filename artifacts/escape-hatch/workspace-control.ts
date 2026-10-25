@@ -81,7 +81,7 @@ export function createWorkspaceControlPlugin(): Plugin {
           await fs.mkdir(userDataRoot(), { recursive: true });
           await fs.writeFile(path.join(userDataRoot(), 'browser-recovery-' + crypto.randomUUID() + '.json'), JSON.stringify(archive), { flag: 'wx', mode: 0o600 });
         }
-        const saved = await saveWorkspace(payload.workspace, payload.expectedRevision, undefined, payload.recoverInvalid === true);
+        const saved = await saveWorkspace(payload.workspace, payload.expectedRevision, undefined, payload.recoverInvalid === true, payload.browserArchive !== undefined);
         return respond(res, 200, { revision: saved.revision });
       } catch (error) {
         const conflict = (error as Error).message === 'WORKSPACE_CONFLICT';

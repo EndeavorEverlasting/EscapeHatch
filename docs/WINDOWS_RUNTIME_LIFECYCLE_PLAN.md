@@ -113,6 +113,14 @@ Hashing uses platform SHA-256 without optional PowerShell module discovery. Prov
 actual ten-second bounds during both fetch and streaming. Snapshot source comparison remains
 observation-based rather than an OS-level cross-process transaction; no stronger exclusion is claimed.
 
+Independent final review of candidate `4e470fe` exposed two further preservation gaps: a conflict choice
+kept the displaced saved copy only in a rolling backup, and shortcut deletion did not revalidate ownership
+after blocking shutdown/provisioning. The workspace owner now retains a unique conflict archive inside
+the existing revision/OS-lock transaction. A browser choice followed by another edit proves that both
+original conflicting copies survive; stale CAS choices cannot create an archive. Nine managed browser
+controls and 38 focused bootstrap/provider tests pass. Hosted Windows lifecycle passed on `4e470fe`;
+hosted normal browser proof still exposed one intermittent answer-dialog closure, under investigation.
+
 The standalone app has no usable Google lease on the observed workstation; the conversation connector
 does not transfer that permission. The real read-only adapter is fault-injection tested, but autonomous
 subsequent provider refresh is BLOCKED until an existing authorized local connection is available.

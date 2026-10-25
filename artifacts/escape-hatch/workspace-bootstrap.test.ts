@@ -84,6 +84,22 @@ test('malformed and oversized files are preserved instead of silently reset', as
     await assert.rejects(readWorkspace(file), /preserved/);
   } finally { await fs.rm(directory, { recursive: true, force: true }); }
 });
+
+test('displaced conflict copy remains immutable through later autosaves and stale choices cannot archive', async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-conflict-')); const file = path.join(directory, 'workspace.json');
+  try {
+    const original = await saveWorkspace(workspace('Original saved copy'), null, file);
+    const selected = await saveWorkspace(workspace('Chosen browser copy'), original.revision, file, false, true);
+    const archive = (await fs.readdir(directory)).find(name => name.startsWith('workspace.json.conflict-'))!;
+    const bytes = await fs.readFile(path.join(directory, archive), 'utf8');
+    const later = await saveWorkspace(workspace('Later edit'), selected.revision, file);
+    await saveWorkspace(workspace('Another edit'), later.revision, file);
+    assert.equal(await fs.readFile(path.join(directory, archive), 'utf8'), bytes);
+    assert.deepEqual(JSON.parse(bytes), workspace('Original saved copy'));
+    await assert.rejects(saveWorkspace(workspace('Stale choice'), original.revision, file, false, true), /CONFLICT/);
+    assert.equal((await fs.readdir(directory)).filter(name => name.includes('.conflict-')).length, 1);
+  } finally { await fs.rm(directory, { recursive: true, force: true }); }
+});
 test('active OS lock blocks another writer without deleting its resource', async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-lock-')); const file = path.join(directory, 'workspace.json');
   const lock = new DatabaseSync(file + '.lock.sqlite'); lock.exec('BEGIN IMMEDIATE');

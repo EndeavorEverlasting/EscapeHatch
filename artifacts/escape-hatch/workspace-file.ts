@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import { constants } from 'node:fs';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
@@ -21,7 +22,7 @@ export async function readWorkspace(file = workspaceFile()): Promise<{ workspace
     throw new Error('Private workspace needs recovery. The existing file was preserved.');
   }
 }
-export async function saveWorkspace(input: unknown, expectedRevision: string | null, file = workspaceFile(), recoverInvalid = false) {
+export async function saveWorkspace(input: unknown, expectedRevision: string | null, file = workspaceFile(), recoverInvalid = false, archivePrior = false) {
   const workspace = parseSavedWorkspace(input);
   if (!workspace || Buffer.byteLength(JSON.stringify(workspace)) > MAX_WORKSPACE_BYTES) throw new Error('Invalid workspace. Existing data was preserved.');
   await fs.mkdir(path.dirname(file), { recursive: true });
@@ -41,6 +42,9 @@ export async function saveWorkspace(input: unknown, expectedRevision: string | n
       prior = null;
     }
     if ((prior?.revision ?? null) !== expectedRevision) throw new Error('WORKSPACE_CONFLICT');
+    // A deliberate conflict choice must retain the displaced copy independently
+    // of rolling autosave backups, under the same revision check and OS lock.
+    if (prior && archivePrior) await fs.copyFile(file, file + '.conflict-' + randomUUID(), constants.COPYFILE_EXCL);
     if (prior) await fs.copyFile(file, file + '.previous');
     await fs.writeFile(temporary, JSON.stringify({ schema: WORKSPACE_SCHEMA, values: workspace.values }), { flag: 'wx', mode: 0o600 });
     await fs.rename(temporary, file);

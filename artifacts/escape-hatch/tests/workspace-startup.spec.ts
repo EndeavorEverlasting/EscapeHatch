@@ -74,3 +74,22 @@ for (const failure of ['html', 'missing']) test(`managed runtime rejects ${failu
   await expect(page.getByRole('heading', { name: 'Recover your workspace.' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Review Sources' })).not.toBeVisible();
 });
+
+test('keeping browser details retains both conflict copies after another edit', async ({ page }) => {
+  const directory = test.info().config.metadata.dataHome as string;
+  const file = path.join(directory, 'workspace.v1.json');
+  const displaced = await fs.readFile(file, 'utf8');
+  await page.addInitScript(({ key, profile }) => localStorage.setItem(key, JSON.stringify(profile)), { key: PROFILE_KEY, profile: { ...emptyProfile, first_name: 'Browser choice' } });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Keep this browser’s details' }).click();
+  await expect(page.getByRole('heading', { name: 'Keep going, Browser choice.' })).toBeVisible();
+  await page.getByRole('link', { name: 'Profile', exact: true }).click();
+  await page.getByTestId('input-first_name').fill('Later edit');
+  await page.getByRole('button', { name: 'Save profile', exact: true }).click();
+  await expect.poll(async () => JSON.parse(await fs.readFile(file, 'utf8')).values[PROFILE_KEY].first_name).toBe('Later edit');
+  const names = await fs.readdir(directory);
+  const savedCopies = await Promise.all(names.filter(name => name.startsWith('workspace.v1.json.conflict-')).map(name => fs.readFile(path.join(directory, name), 'utf8')));
+  expect(savedCopies).toContain(displaced);
+  const browserCopies = await Promise.all(names.filter(name => name.startsWith('browser-recovery-')).map(async name => JSON.parse(await fs.readFile(path.join(directory, name), 'utf8'))));
+  expect(browserCopies.some(raw => raw[PROFILE_KEY] === JSON.stringify({ ...emptyProfile, first_name: 'Browser choice' }))).toBe(true);
+});

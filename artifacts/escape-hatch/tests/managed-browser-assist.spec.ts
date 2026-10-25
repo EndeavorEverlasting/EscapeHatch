@@ -457,6 +457,7 @@ test('changed post-login path requires a visible same-opportunity confirmation',
     notes: '', nextAction: '', updatedAt: new Date().toISOString(),
   }])));
   await page.reload();
+  await page.getByLabel('Saved opportunity').selectOption('synthetic-confirm');
   await page.getByTestId('button-auth-resume').click();
   await expect.poll(() => actions.filter(a => a === 'bind').length).toBe(1);
   await expect.poll(() => actions.filter(a => a === 'resume').length).toBe(1);

@@ -16,6 +16,27 @@ test('fresh browser recovers private context, edited state survives a fresh brow
   await fresh.reload(); await expect(fresh.getByTestId('input-first_name')).toHaveValue('Updated');
   await second.close();
 });
+test('a fresh browser on another port recovers the same saved revision with edits visible to the original port', async ({ browser, request }) => {
+  const first = await (await request.get('/__escapehatch/workspace')).json();
+  const second = await browser.newContext();
+  try {
+    const page = await second.newPage();
+    await page.goto('http://127.0.0.1:21040/profile');
+    await expect(page.getByTestId('input-first_name')).toHaveValue('Updated');
+    const recovered = await (await page.request.get('http://127.0.0.1:21040/__escapehatch/workspace')).json();
+    expect(recovered.revision).toBe(first.revision);
+    expect(recovered.workspace).toEqual(first.workspace);
+    await page.getByTestId('input-last_name').fill('CrossPort');
+    await page.getByRole('button', { name: 'Save profile', exact: true }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Workspace saved on this computer.' })).toBeVisible();
+    const saved = await (await request.get('/__escapehatch/workspace')).json();
+    expect(saved.revision).not.toBe(first.revision);
+    expect(saved.workspace.values[PROFILE_KEY].last_name).toBe('CrossPort');
+    await page.reload();
+    await expect(page.getByTestId('input-last_name')).toHaveValue('CrossPort');
+  } finally { await second.close(); }
+});
+
 test('divergent browser state is preserved and normal dashboard is held', async ({ page }) => {
   await page.addInitScript(({ key, profile }) => localStorage.setItem(key, JSON.stringify(profile)), { key: PROFILE_KEY, profile: { ...emptyProfile, first_name: 'Existing browser edit' } });
   await page.goto('/');

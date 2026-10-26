@@ -15,18 +15,9 @@ on:
       - "tests/test_study_guidance_export.py"
       - ".github/workflows/career-state.yml"
   pull_request:
-    paths:
-      - "contracts/**"
-      - "fixtures/**"
-      - "scripts/validate_career_state.py"
-      - "scripts/validate_career_claim_fidelity.py"
-      - "scripts/validate_career_artifact_propagation.py"
-      - "harness/contracts/career-artifact-propagation.v1.json"
-      - "docs/CAREER_ARTIFACT_PROPAGATION_HARNESS.md"
-      - "scripts/validate_application_companion.py"
-      - "scripts/export_study_guidance.py"
-      - "tests/test_study_guidance_export.py"
-      - ".github/workflows/career-state.yml"
+    # Required by the promotion contract for every candidate to main.
+    # A path filter can omit the exact-head check even when local validators pass.
+    branches: [main]
 
 permissions:
   contents: read

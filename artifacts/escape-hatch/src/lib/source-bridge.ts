@@ -53,7 +53,7 @@ export async function approveSource(
   preview: SourcePreview, proposals: ReviewedProposal[], opportunityId: string,
   applications: Application[], profile: Profile, assist: AssistProfile, bindings: SourceBinding[],
 ): Promise<{ profile: Profile; assist: AssistProfile; bindings: SourceBinding[] }> {
-  if (!applications.some((item) => item.id === opportunityId && item.status !== 'closed')) throw new Error('OPPORTUNITY_REQUIRED');
+  if (opportunityId !== '' && !applications.some((item) => item.id === opportunityId && item.status !== 'closed')) throw new Error('OPPORTUNITY_REQUIRED');
   const accepted = proposals.filter((item) => item.review === 'accepted' || item.review === 'edited');
   if (!accepted.length) throw new Error('APPROVAL_REQUIRED');
   // Bind reviewed proposals to this preview. Arbitrary caller-supplied claims are rejected.
@@ -63,7 +63,7 @@ export async function approveSource(
   ))) throw new Error('PROPOSAL_MISMATCH');
   const currentRevision = await candidateRevision(profile, assist);
   const approvalDigest = await fingerprint(JSON.stringify(accepted.map((item) => [item.id, item.value]).sort((a, b) => a[0].localeCompare(b[0]))));
-  const prior = bindings.find((item) => item.sourceId === preview.sourceId && item.revision === preview.revision && item.approvalDigest === approvalDigest);
+  const prior = opportunityId ? bindings.find((item) => item.sourceId === preview.sourceId && item.revision === preview.revision && item.approvalDigest === approvalDigest) : undefined;
   if (prior) {
     if (prior.profileRevision !== currentRevision && currentRevision !== preview.baseRevision) throw new Error('SOURCE_APPROVAL_STALE');
     // Repeated approval is a no-op, avoiding duplicate work/education/project rows.
@@ -86,6 +86,8 @@ export async function approveSource(
   nextAssist.experience = unique(nextAssist.experience, (item) => JSON.stringify([item.id, item.provenance.sourceId, item.provenance.revision]));
   nextAssist.education = unique(nextAssist.education, (item) => JSON.stringify([item.id, item.provenance.sourceId, item.provenance.revision]));
   const nextProfile = { ...profile, ...getAcceptedResumeContactPatch(grounded) };
+  // Career facts can be reviewed before a job exists. Do not invent an opportunity binding.
+  if (opportunityId === '') return { profile: nextProfile, assist: nextAssist, bindings };
   const binding: SourceBinding = {
     schema: 'escapehatch/approved-source/v1', sourceId: preview.sourceId, revision: preview.revision,
     label: preview.imported.fileName, opportunityId, profileRevision: await candidateRevision(nextProfile, nextAssist),

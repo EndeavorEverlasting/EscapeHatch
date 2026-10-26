@@ -1,4 +1,5 @@
 import { prepareWithoutTrustedNavigation } from './managed-prepare-fallback.ts';
+import { assertInspectionScope, inspectApplicationRequirements } from './application-requirements.ts';
 import { OpportunityDocumentStore, documentScope, type DocumentKind } from './opportunity-documents.ts';
 import { ManagedListeners } from './managed-listeners.ts';
 import { withCareerPreferences } from './career-preferences.ts';
@@ -292,6 +293,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             ok: true,
             state,
             browserOpen: Boolean(page),
+            currentPage: page ? { opportunityId, applicationUrl, pageUrl: page.url() } : null,
             requiresOperatorSubmission: true,
             preparationState: preparation?.state || null,
             preparationCode: preparation?.code || null,
@@ -393,6 +395,10 @@ export function createManagedBrowserAssistPlugin(): Plugin {
           }
           if (!page || page.isClosed()) return respond(res, 409, { ok: false, error: 'launch_browser_first' });
           if (new URL(page.url()).origin !== applicationOrigin) return respond(res, 409, { ok: false, error: 'application_origin_changed_review_required' });
+          if (url.pathname === PREFIX + '/requirements') {
+            assertInspectionScope(payload.opportunityId, payload.url, opportunityId, applicationUrl, page.url());
+            return respond(res, 200, { ok: true, inspection: await inspectApplicationRequirements(page, opportunityId, applicationUrl) });
+          }
           await page.bringToFront();
           if (url.pathname === PREFIX + '/listeners') {
             if (payload.opportunityId !== opportunityId || payload.url !== applicationUrl) throw new Error('Select the application bound to this browser.');

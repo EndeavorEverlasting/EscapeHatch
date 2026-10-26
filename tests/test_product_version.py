@@ -78,12 +78,15 @@ class ProductVersionTests(unittest.TestCase):
                 self.mod.VERSION_PATH = root / "VERSION"
                 self.mod.CONTRACT_PATH = root / "contracts" / "product-release.v1.json"
                 self.mod.CHANGELOG_PATH = root / "CHANGELOG.md"
-                errors = self.mod.check_mirrors()
+                # read_version's default path is bound when the module loads;
+                # isolate this fixture from the real repository's release.
+                fixture_version = self.mod.read_version(root / "VERSION")
+                errors = self.mod.check_mirrors(fixture_version)
                 self.assertTrue(errors)
                 self.assertIn("0.0.1", errors[0])
-                updated = self.mod.sync_mirrors(self.mod.parse_semver("1.0.0"))
+                updated = self.mod.sync_mirrors(fixture_version)
                 self.assertEqual(updated, ["browser/application-assist/manifest.json"])
-                self.assertEqual(self.mod.check_mirrors(), [])
+                self.assertEqual(self.mod.check_mirrors(fixture_version), [])
                 data = json.loads(manifest_path.read_text(encoding="utf-8"))
                 self.assertEqual(data["version"], "1.0.0")
             finally:

@@ -18,7 +18,7 @@ export function useRecoveredAnswers(profile: Profile, answers: AnswerSnippet[], 
         if (!parsed) throw new Error('invalid');
         setAssistAnswers(parsed);
         setUnavailable(items => items.filter(item => item !== 'Assist answers'));
-      } catch { setUnavailable(items => [...new Set([...items, 'Assist answers'])]); }
+      } catch { setAssistAnswers([]); setUnavailable(items => [...new Set([...items, 'Assist answers'])]); }
     };
     readAssist();
     const onStorage = (event: StorageEvent) => { if (event.key === ASSIST_ANSWERS_KEY || event.key === null) readAssist(); };
@@ -45,7 +45,7 @@ export function useRecoveredAnswers(profile: Profile, answers: AnswerSnippet[], 
   return { items: projectAnswerRecovery({ profile, answers, assistAnswers, assistProfile, preferences }), unavailable, loading };
 }
 
-export function RecoveredAnswers({ items, onEdit }: { items: RecoveredKnowledge[]; onEdit: (id: string) => void }) {
+export function RecoveredAnswers({ items, onEdit, onDelete }: { items: RecoveredKnowledge[]; onEdit: (id: string) => void; onDelete: (id: string) => void }) {
   const [copyStatus, setCopyStatus] = useState('');
   const copy = async (content: string) => {
     try { await navigator.clipboard.writeText(content); setCopyStatus('Saved answer copied.'); }
@@ -60,7 +60,7 @@ export function RecoveredAnswers({ items, onEdit }: { items: RecoveredKnowledge[
         <p className="whitespace-pre-wrap break-words text-sm">{variant.content || 'No approved answer saved for this question.'}</p>
         <p className="mt-2 text-xs text-muted-foreground">Source: {variant.sources.map(source => `${source.label} (${source.owner})${source.provenance ? ` — ${source.provenance.label}` : ''}`).join('; ')}</p>
         {variant.content && <button type="button" className="mt-2 mr-3 underline" onClick={() => void copy(variant.content)}>Copy saved answer</button>}
-        {variant.sources.filter(source => source.owner === 'answer-library').map(source => <button key={source.recordId} type="button" className="mt-2 underline" onClick={() => onEdit(source.recordId)}>Edit saved library answer</button>)}
+        {variant.sources.filter(source => source.owner === 'answer-library').map(source => <span key={source.recordId}><button type="button" className="mt-2 mr-3 underline" onClick={() => onEdit(source.recordId)}>Edit saved library answer</button><button type="button" className="mt-2 underline" onClick={() => onDelete(source.recordId)}>Delete saved library answer</button></span>)}
       </div>)}
       {item.status === 'needs-review' && <p className="mt-3 text-sm">Review these saved versions at their source. No version has been selected automatically.</p>}
       <Link href="/assist" className="mt-3 inline-block text-sm underline">Review in Application Assist</Link>

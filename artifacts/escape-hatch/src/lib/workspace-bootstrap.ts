@@ -1,5 +1,6 @@
 import { PROFILE_KEY, ANSWERS_KEY, APPLICATIONS_KEY, emptyProfile, parseProfileStorage, parseAnswersStorage, parseApplicationsStorage, type Profile } from './storage.ts';
 import { ASSIST_KEY, ASSIST_ANSWERS_KEY, parseAssistProfile, parseAssistAnswers } from './assist-contract.ts';
+import { JOURNEY_RESUME_KEY, parseJourneyResume, type JourneyResume } from './application-journey-projection.ts';
 import { SOURCE_BINDINGS_KEY, parseSourceBindings } from './source-bridge.ts';
 
 export const WORKSPACE_SCHEMA = 'escapehatch-local-workspace/v1';
@@ -10,6 +11,7 @@ export const workspaceParsers = {
   [ASSIST_KEY]: parseAssistProfile,
   [ASSIST_ANSWERS_KEY]: parseAssistAnswers,
   [SOURCE_BINDINGS_KEY]: parseSourceBindings,
+  [JOURNEY_RESUME_KEY]: parseJourneyResume,
 };
 export type WorkspaceValues = Record<string, unknown>;
 export type SavedWorkspace = { schema: typeof WORKSPACE_SCHEMA; values: WorkspaceValues };
@@ -72,9 +74,14 @@ export function reconcileWorkspace(local: SavedWorkspace, saved: SavedWorkspace)
   const values = { ...local.values };
   const conflicts: string[] = [];
   const empty = (key: string, value: unknown) => value === undefined ||
-    (key === PROFILE_KEY ? !Object.values(value as Profile).some(item => item.trim()) :
+    (key === JOURNEY_RESUME_KEY ? !(value as JourneyResume).opportunityId && !(value as JourneyResume).applicationUrl :
+      key === PROFILE_KEY ? !Object.values(value as Profile).some(item => item.trim()) :
       key === ASSIST_KEY ? !hasContext({ [ASSIST_KEY]: value }) : Array.isArray(value) && !value.length);
   const same = (key: string, left: unknown, right: unknown) => {
+    if (key === JOURNEY_RESUME_KEY) {
+      const a = parseJourneyResume(left), b = parseJourneyResume(right);
+      return Boolean(a && b && a.opportunityId === b.opportunityId && a.applicationUrl === b.applicationUrl);
+    }
     if (key === ASSIST_KEY) {
       const { updatedAt: _left, ...a } = left as Record<string, unknown>;
       const { updatedAt: _right, ...b } = right as Record<string, unknown>;

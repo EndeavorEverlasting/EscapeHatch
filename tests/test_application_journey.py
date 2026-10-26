@@ -15,6 +15,17 @@ class SceneContractTests(unittest.TestCase):
         cls.original = json.loads((ROOT/"contracts/application-journey-scenes.v1.json").read_text(encoding="utf-8"))
     def test_exact_source_passes(self):
         validate(copy.deepcopy(self.original))
+    def test_missing_resume_persistence_fails(self):
+        data=copy.deepcopy(self.original);data.pop("resume_persistence")
+        with self.assertRaises(SceneContractError):validate(data)
+    def test_resume_selection_cannot_store_credentials_or_actions(self):
+        for key in ("password", "autoFill", "loggedIn"):
+            data=copy.deepcopy(self.original);data["resume_persistence"]["allowed_fields"].append(key)
+            with self.assertRaises(SceneContractError):validate(data)
+    def test_resume_selection_cannot_grant_context_or_action_authority(self):
+        for key,value in (("context_readiness",True),("authority","resume_fill"),("conflict_policy","latest_wins")):
+            data=copy.deepcopy(self.original);data["resume_persistence"][key]=value
+            with self.assertRaises(SceneContractError):validate(data)
     def test_reordered_or_missing_scene_fails(self):
         data=copy.deepcopy(self.original);data["scenes"].pop(8)
         with self.assertRaises(SceneContractError):validate(data)

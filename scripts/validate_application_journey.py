@@ -22,6 +22,26 @@ def validate(contract: dict, root: Path = ROOT) -> None:
         raise SceneContractError("schema missing or changed")
     if contract.get("parent_issue") != PARENT:
         raise SceneContractError("parent not linked")
+    resume = contract.get("resume_persistence", {})
+    expected_resume = {
+        "storage_key": "escape-hatch-journey-resume",
+        "storage_owner": "escapehatch-local-workspace/v1",
+        "allowed_fields": ["opportunityId", "applicationUrl"],
+        "empty_value": {"opportunityId": "", "applicationUrl": ""},
+        "empty_semantics": "absence_default_not_forget_authority",
+        "opportunity_id_max_length": 128,
+        "application_url_max_length": 2048,
+        "url_policy": "public_https_no_credentials_or_nondefault_port",
+        "binding": "exact_saved_nonterminal_opportunity_required",
+        "authority": "selection_only_no_login_launch_fill_or_submit_authority",
+        "context_readiness": False,
+        "conflict_policy": "preserve_divergent_nonempty_pointers",
+    }
+    if resume != expected_resume:
+        raise SceneContractError("resume selection persistence or authority boundary drift")
+    workspace = (root / "artifacts/escape-hatch/src/lib/workspace-bootstrap.ts").read_text(encoding="utf-8")
+    if "[JOURNEY_RESUME_KEY]: parseJourneyResume" not in workspace:
+        raise SceneContractError("resume selection must use existing private workspace owner")
     scenes = contract.get("scenes", [])
     ids = [x.get("id") for x in scenes if isinstance(x, dict)]
     if ids != list(REQUIRED):

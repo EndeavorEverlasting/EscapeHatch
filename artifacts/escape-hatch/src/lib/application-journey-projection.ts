@@ -1,5 +1,29 @@
 import registry from '../../../../contracts/application-journey-scenes.v1.json';
 
+/** Private selection metadata only. It never restores login or action authority. */
+export type JourneyResume = { opportunityId: string; applicationUrl: string };
+export const JOURNEY_RESUME_KEY = registry.resume_persistence.storage_key;
+/** Absence/default only, not a user-forget tombstone or action authorization. */
+export const EMPTY_JOURNEY_RESUME: JourneyResume = { ...registry.resume_persistence.empty_value };
+
+export function parseJourneyResume(value: unknown): JourneyResume | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const item = value as Record<string, unknown>;
+  const fields = registry.resume_persistence.allowed_fields;
+  if (Object.keys(item).length !== fields.length || Object.keys(item).some(key => !fields.includes(key)) ||
+      typeof item.opportunityId !== 'string' || typeof item.applicationUrl !== 'string') return null;
+  const { opportunityId, applicationUrl } = item;
+  if (!opportunityId && !applicationUrl) return { ...EMPTY_JOURNEY_RESUME };
+  if (!opportunityId || opportunityId.length > registry.resume_persistence.opportunity_id_max_length ||
+      opportunityId.trim() !== opportunityId || /[\u0000-\u001f\u007f]/.test(opportunityId) ||
+      !applicationUrl || applicationUrl.length > registry.resume_persistence.application_url_max_length ||
+      /\s/.test(applicationUrl) || !publicHttps(applicationUrl)) return null;
+  const hostname = new URL(applicationUrl).hostname.toLowerCase().replace(/\.$/, '');
+  if (!hostname.includes('.') || ['.local', '.localhost', '.internal', '.test'].some(suffix => hostname.endsWith(suffix)) ||
+      /^\d+(\.\d+){3}$/.test(hostname) || hostname.startsWith('[')) return null;
+  return { opportunityId, applicationUrl };
+}
+
 type Scene = (typeof registry.scenes)[number];
 export type JourneyInput = {
   jobUrl: string;

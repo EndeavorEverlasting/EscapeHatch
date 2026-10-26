@@ -190,6 +190,24 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   }, []);
 
   useEffect(() => {
+    if (!browserOpen || !currentPage || operatorSelected.current) return;
+    // Readback restores a known binding; it never issues new launch/fill authority.
+    autoLaunchAttempted.current = true;
+    const bound = applications.find(item => item.id === currentPage.opportunityId &&
+      item.url === currentPage.applicationUrl && item.status !== 'applied' && item.status !== 'closed');
+    if (bound) {
+      operatorSelected.current = true;
+      setSelectedOpportunityId(bound.id);
+      setUrl(bound.url);
+      setMessage('Recovered the opportunity already open in managed Chrome. Continue in the same session.');
+    } else {
+      setSelectedOpportunityId('');
+      setUrl('');
+      setMessage('Managed Chrome is open, but its saved opportunity binding needs review. Select the original matching opportunity before resuming.');
+    }
+  }, [browserOpen, currentPage?.opportunityId, currentPage?.applicationUrl, applications]);
+
+  useEffect(() => {
     if (!browserOpen) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
@@ -308,7 +326,13 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           throw new Error('This opportunity is already applied or closed. Do not reapply.');
         }
         body = { url, opportunityId: opportunity?.id || '', employerName: opportunity?.company || '' };
-      } else if (action === 'fill' || action === 'resume') body = { profile, careerProfile: assistProfile, targetRole: applications.find(item => item.id === selectedOpportunityId)?.role || '', employerName: applications.find(item => item.id === selectedOpportunityId)?.company || '' };
+      } else if (action === 'fill' || action === 'resume') {
+        if (action === 'resume' && currentPage && (url !== currentPage.applicationUrl ||
+            currentPage.opportunityId && currentPage.opportunityId !== selectedOpportunityId)) {
+          throw new Error('Select the original opportunity bound to this managed browser before resuming.');
+        }
+        body = { profile, careerProfile: assistProfile, targetRole: applications.find(item => item.id === selectedOpportunityId)?.role || '', employerName: applications.find(item => item.id === selectedOpportunityId)?.company || '' };
+      }
       else if (action === 'attach') {
         if (!documents.canUpload) throw new Error('Save opportunity documents and complete required review before uploading.');
         body = { opportunityId: selectedOpportunityId, url };

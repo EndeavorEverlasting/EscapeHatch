@@ -469,3 +469,38 @@ test('changed post-login path requires a visible same-opportunity confirmation',
   expect(actions).not.toContain('submit');
   expect(actions).not.toContain('next');
 });
+
+
+test('reloading EscapeHatch restores the existing bound opportunity without relaunch or automatic fill', async ({ page }) => {
+  const actions: string[] = [];
+  const original = { id: 'existing-session', company: 'Synthetic', role: 'Original role', url: 'https://jobs.example.com/job/original', status: 'saved', priority: 'normal', notes: '', nextAction: '', updatedAt: new Date().toISOString() };
+  await page.addInitScript(({ original }) => {
+    localStorage.setItem('escape-hatch-applications', JSON.stringify([original, { ...original, id: 'other-job', url: 'https://jobs.example.com/job/other' }]));
+  }, { original });
+  await page.route('**/__escapehatch/managed-assist/**', async route => {
+    const action = new URL(route.request().url()).pathname.split('/').at(-1) || '';
+    actions.push(action);
+    const result = action === 'status' ? { ok: true, browserOpen: true, state: 'application_open_review_required',
+      currentPage: { opportunityId: original.id, applicationUrl: original.url, pageUrl: original.url },
+      authCheckpoint: { phase: 'APPLICATION_FORM_READY', canResume: true, stableReads: 2, reason: 'Form read back' } }
+      : { ok: true, state: 'fields_filled_review_required', filled: ['identity.email'], skipped: [] };
+    await route.fulfill({ json: result });
+  });
+  await mockDocuments(page);
+  await page.goto('/assist');
+  await expect(page.getByLabel('Saved opportunity')).toHaveValue(original.id);
+  await expect(page.getByTestId('managed-job-url')).toHaveValue(original.url);
+  await page.reload();
+  await expect(page.getByLabel('Saved opportunity')).toHaveValue(original.id);
+  await expect(page.getByTestId('managed-job-url')).toHaveValue(original.url);
+  expect(actions.filter(action => ['launch', 'fill', 'resume'].includes(action))).toEqual([]);
+  const emailInput = page.getByTestId('coach-approved-email');
+  if (await emailInput.isVisible()) {
+    await emailInput.fill('candidate@example.test');
+    await page.getByRole('button', { name: 'Save email to profile' }).click();
+  }
+  await page.getByLabel('Saved opportunity').selectOption('other-job');
+  await page.getByTestId('button-auth-resume').click();
+  await expect(page.getByTestId('managed-browser-feedback')).toContainText('Select the original opportunity bound');
+  expect(actions.filter(action => ['launch', 'fill', 'resume'].includes(action))).toEqual([]);
+});

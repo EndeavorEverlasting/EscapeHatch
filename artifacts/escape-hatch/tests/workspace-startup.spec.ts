@@ -77,6 +77,27 @@ test('unavailable answer source is explicit and never masquerades as empty memor
   await expect(page.getByTestId('recovered-answer').filter({ hasText: 'Professional summary' })).toHaveCount(1);
 });
 
+test('selected pending application survives a fresh browser and port without authorizing launch', async ({ page, browser, request }) => {
+  await page.goto('/assist');
+  await page.getByLabel('Saved opportunity').selectOption('pending-job');
+  await expect.poll(async () => (await (await request.get('/__escapehatch/workspace')).json()).workspace.values['escape-hatch-journey-resume'])
+    .toEqual({ opportunityId: 'pending-job', applicationUrl: 'https://jobs.example.com/job/pending' });
+  const fresh = await browser.newContext();
+  const actions: string[] = [];
+  fresh.on('request', req => {
+    if (req.method() === 'POST' && /managed-assist\/(launch|fill|resume|prepare)$/.test(req.url())) actions.push(req.url());
+  });
+  try {
+    const restored = await fresh.newPage();
+    await restored.goto('http://127.0.0.1:21040/assist');
+    await expect(restored.getByLabel('Saved opportunity')).toHaveValue('pending-job');
+    await expect(restored.getByTestId('managed-job-url')).toHaveValue('https://jobs.example.com/job/pending');
+    await restored.reload();
+    await expect(restored.getByLabel('Saved opportunity')).toHaveValue('pending-job');
+    expect(actions).toEqual([]);
+  } finally { await fresh.close(); }
+});
+
 test('divergent browser state is preserved and normal dashboard is held', async ({ page }) => {
   await page.addInitScript(({ key, profile }) => localStorage.setItem(key, JSON.stringify(profile)), { key: PROFILE_KEY, profile: { ...emptyProfile, first_name: 'Existing browser edit' } });
   await page.goto('/');

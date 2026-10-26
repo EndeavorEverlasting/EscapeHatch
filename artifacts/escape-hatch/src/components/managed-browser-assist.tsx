@@ -6,11 +6,11 @@ import type { AssistProfile } from '@/lib/assist-contract';
 import { CareerRecords } from './career-records';
 import { useEffect, useRef, useState, type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
 import { ArrowUpRight, CheckCircle2, FileUp, LoaderCircle, ShieldCheck } from 'lucide-react';
-import type { Application, Profile } from '@/lib/storage';
+import { getLocalStorage, readStoredValue, writeStoredValue, type Application, type Profile } from '@/lib/storage';
 import { ApplicationPreferences } from './application-preferences';
 import { connectionFromSnapshot, isSubmittedLocked, mergeTrackerIntoApplications, parseTrackerSnapshot, selectNextActionableOpportunity, trackerOpportunityId } from '@/lib/tracker-bridge';
 import { consumeManagedLaunchIntent } from '@/lib/managed-launch-intent';
-import { projectApplicationJourney } from '@/lib/application-journey-projection';
+import { projectApplicationJourney, JOURNEY_RESUME_KEY, EMPTY_JOURNEY_RESUME, parseJourneyResume } from '@/lib/application-journey-projection';
 
 const API = '/__escapehatch/managed-assist';
 
@@ -91,6 +91,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const [url, setUrl] = useState('');
   const [selectedOpportunityId, setSelectedOpportunityId] = useState('');
   const operatorSelected = useRef(false);
+  const [savedJourney, setSavedJourney] = useState(() => readStoredValue(getLocalStorage(), JOURNEY_RESUME_KEY, EMPTY_JOURNEY_RESUME, parseJourneyResume));
   const autoLaunchAttempted = useRef(false);
   const [explicitLaunchId] = useState(() => consumeManagedLaunchIntent(window.sessionStorage));
   const [verifiedNextReadyId, setVerifiedNextReadyId] = useState<string | null>(null);
@@ -106,6 +107,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const [emailDraft, setEmailDraft] = useState('');
   const [emailInputError, setEmailInputError] = useState('');
   const [message, setMessage] = useState('');
+  const [continuityError, setContinuityError] = useState('');
   const [busy, setBusy] = useState(false);
   const [recordMilitary, setRecordMilitary] = useState(false);
   const [preferencesRefresh, setPreferencesRefresh] = useState(0);
@@ -116,6 +118,19 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const [formObservation, setFormObservation] = useState<{ opportunityId: string; url: string; revision: number } | null>(null);
   const [listenerStatus, setListenerStatus] = useState<ServerResponse['listeners']>();
   const seenAnswers = useRef(0);
+  const rememberOpportunity = (opportunity?: Application) => {
+    // An unsaved URL or blank view selection cannot erase the last saved journey.
+    if (!opportunity) return;
+    const candidate = { opportunityId: opportunity.id, applicationUrl: opportunity.url };
+    const pointer = parseJourneyResume(candidate);
+    if (!pointer || opportunity && ['applied', 'closed'].includes(opportunity.status)) { setContinuityError('This opportunity cannot be saved as a resumable application. Its existing records are preserved.'); return; }
+    if (pointer.opportunityId === savedJourney.opportunityId && pointer.applicationUrl === savedJourney.applicationUrl) return;
+    if (!writeStoredValue(getLocalStorage(), JOURNEY_RESUME_KEY, pointer)) {
+      setContinuityError('Could not save the pending application on this browser. Existing saved progress is preserved.'); return;
+    }
+    setContinuityError('');
+    setSavedJourney(pointer);
+  };
   const journey = projectApplicationJourney({
     jobUrl: url,
     emailApproved: Boolean(profile.email?.trim()),
@@ -158,12 +173,19 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     const ready = applications.find((item) => permitted(item) &&
       item.id.startsWith('tracker-') && /provider status:\s*ready to apply/i.test(item.notes) &&
       /Applied\? unchecked/i.test(item.notes));
-    const next = requested || ready;
+    const remembered = applications.find(item => item.id === savedJourney.opportunityId &&
+      item.url === savedJourney.applicationUrl && permitted(item));
+    if (savedJourney.opportunityId && !remembered && !requested) {
+      setSelectedOpportunityId(''); setUrl('');
+      setContinuityError('Your saved pending application changed or is no longer active. Review its original opportunity before continuing.');
+      return;
+    }
+    const next = requested || remembered || ready;
     if (next) {
       setSelectedOpportunityId(next.id);
       setUrl(next.url);
     }
-  }, [applications, browserOpen]);
+  }, [applications, browserOpen, savedJourney]);
 
   useEffect(() => {
     let active = true;
@@ -207,11 +229,12 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       operatorSelected.current = true;
       setSelectedOpportunityId(bound.id);
       setUrl(bound.url);
+      rememberOpportunity(bound);
       setMessage('Recovered the opportunity already open in managed Chrome. Continue in the same session.');
     } else {
       setSelectedOpportunityId('');
       setUrl('');
-      setMessage('Managed Chrome is open, but its saved opportunity binding needs review. Select the original matching opportunity before resuming.');
+      setContinuityError('Managed Chrome is open, but its saved opportunity binding needs review. Select the original matching opportunity before resuming.');
     }
   }, [browserOpen, currentPage?.opportunityId, currentPage?.applicationUrl, applications]);
 
@@ -335,9 +358,11 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         }
         body = { url, opportunityId: opportunity?.id || '', employerName: opportunity?.company || '' };
       } else if (action === 'fill' || action === 'resume') {
-        if (action === 'resume' && currentPage && (url !== currentPage.applicationUrl ||
-            currentPage.opportunityId && currentPage.opportunityId !== selectedOpportunityId)) {
-          throw new Error('Select the original opportunity bound to this managed browser before resuming.');
+        if (currentPage && (url !== currentPage.applicationUrl || currentPage.opportunityId &&
+            (currentPage.opportunityId !== selectedOpportunityId || !applications.some(item =>
+              item.id === currentPage.opportunityId && item.url === currentPage.applicationUrl &&
+              item.status !== 'applied' && item.status !== 'closed')))) {
+          throw new Error('Select the original opportunity bound to this managed browser before filling or resuming.');
         }
         body = { profile, careerProfile: assistProfile, targetRole: applications.find(item => item.id === selectedOpportunityId)?.role || '', employerName: applications.find(item => item.id === selectedOpportunityId)?.company || '' };
       }
@@ -397,6 +422,8 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       if (result.preparation) setPreparation(result.preparation);
       if (action === 'launch') {
         setBrowserOpen(true);
+        const launchedOpportunity = applications.find(item => item.id === selectedOpportunityId && item.url === url);
+        if (launchedOpportunity) rememberOpportunity(launchedOpportunity);
         setPendingAfterLogin(result.authCheckpoint?.phase === 'AUTH_HANDOFF' ||
           result.authCheckpoint?.phase === 'SESSION_ORIGIN_CHANGED');
         // A previously reviewed exact PDF is already authorized for staging:
@@ -469,6 +496,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         </div>
       </div>
 
+      {continuityError && <p role="alert" className="mt-4 text-sm">{continuityError}</p>}
       <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_auto]">
         <div className="space-y-3">
           {applications.some((application) => application.url) && (
@@ -482,6 +510,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
                   setSelectedOpportunityId(opportunity?.id || '');
                   setPendingAfterLogin(false);
                   setUrl(opportunity?.url || '');
+                  rememberOpportunity(opportunity);
                 }}>
                 <option value="">Current / custom URL</option>
                 {applications.filter((item) => item.url && item.status !== 'applied' && item.status !== 'closed').map((item) => <option key={item.id} value={item.id}>{item.company} — {item.role}</option>)}

@@ -503,5 +503,24 @@ test('reloading EscapeHatch restores the existing bound opportunity without rela
   await page.getByLabel('Saved opportunity').selectOption('other-job');
   await page.getByTestId('button-auth-resume').click();
   await expect(page.getByTestId('managed-browser-feedback')).toContainText('Select the original opportunity bound');
+  await page.getByTestId('button-managed-fill').click();
+  await expect(page.getByTestId('managed-browser-feedback')).toContainText('Select the original opportunity bound');
   expect(actions.filter(action => ['launch', 'fill', 'resume'].includes(action))).toEqual([]);
+});
+
+
+test('stale pending binding is preserved for review instead of selecting another ready job', async ({ page }) => {
+  await page.addInitScript(() => {
+    const base = { company: 'Synthetic', role: 'Role', priority: 'normal', nextAction: '', updatedAt: '2026-10-26T12:00:00Z' };
+    localStorage.setItem('escape-hatch-journey-resume', JSON.stringify({ opportunityId: 'old-job', applicationUrl: 'https://jobs.example.com/job/old' }));
+    localStorage.setItem('escape-hatch-applications', JSON.stringify([
+      { ...base, id: 'old-job', url: 'https://jobs.example.com/job/old', status: 'closed', notes: '' },
+      { ...base, id: 'tracker-other', url: 'https://jobs.example.com/job/other', status: 'saved', notes: 'provider status: Ready to Apply; Applied? unchecked' },
+    ]));
+  });
+  await page.goto('/assist');
+  await expect(page.getByTestId('managed-job-url')).toHaveValue('');
+  await expect(page.getByLabel('Saved opportunity')).toHaveValue('');
+  await expect(page.getByRole('alert').filter({ hasText: 'saved pending application changed' })).toBeVisible();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('escape-hatch-journey-resume')!).opportunityId)).toBe('old-job');
 });

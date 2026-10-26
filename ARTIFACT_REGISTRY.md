@@ -153,6 +153,10 @@ user-owned and untracked. Installation receipt/shortcut removal never deletes th
 
 | Integrated Sources/P08 proof | `harness/reports/integrated-source-bridge-proof-20261018.md` | tracked sanitized evidence | append measured local/runtime continuation; retain historical proof levels, no private payloads or credentials | `python scripts/validate_application_autofill_parent.py` and targeted Chromium regression suites |
 
+| Answer recovery projection | `artifacts/escape-hatch/src/lib/answer-recovery.ts` | tracked source | read-only provenance and scope projection of existing owners; no new answer store | `npm --prefix artifacts/escape-hatch run test:unit` |
+| Answer recovery tests | `artifacts/escape-hatch/src/lib/answer-recovery.test.ts` | tracked synthetic tests | deduplication, conflicts, approval, exact-question and opportunity exclusions | `npm --prefix artifacts/escape-hatch run test:unit` |
+| Recovered Answer Library | `artifacts/escape-hatch/src/components/recovered-answers.tsx` | tracked source | read-only projection and unavailable-source feedback | `npm --prefix artifacts/escape-hatch run test:bootstrap:browser` |
+
 ## User-owned local artifacts
 
 The following are intentionally **not** tracked repository artifacts:

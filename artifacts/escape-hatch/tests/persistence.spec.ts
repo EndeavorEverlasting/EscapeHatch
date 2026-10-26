@@ -11,6 +11,42 @@ test.beforeEach(async ({ page }) => {
   await page.route('**/__escapehatch/managed-assist/preferences', route => route.fulfill({ json: { ok: true, preferences: emptyPreferences() } }));
 });
 
+test('recovered library copies retain category visibility and delete undo without deleting Assist knowledge', async ({ page }) => {
+  const summary = { id: 'base-summary', title: 'Professional summary', category: 'Career story', content: 'Synthetic summary.', updatedAt: '2026-10-26T12:00:00Z' };
+  await page.addInitScript(({ summary }) => {
+    localStorage.setItem('escape-hatch-answers', JSON.stringify([summary, { ...summary, id: 'second-category', category: 'Other' }]));
+    localStorage.setItem('escape-hatch-assist-answers', JSON.stringify([{ ...summary, id: 'assist-summary', scope: 'reusable', canonicalId: 'professional-summary' }]));
+  }, { summary });
+  await page.goto('/answers');
+  const recovered = page.getByTestId('recovered-answer').filter({ hasText: 'Professional summary' });
+  await expect(recovered).toHaveCount(1);
+  await page.getByTestId('button-filter-other').click();
+  await expect(recovered).toHaveCount(1);
+  await recovered.getByRole('button', { name: 'Edit saved library answer', exact: true }).first().click();
+  await expect(page.getByRole('dialog', { name: 'Edit answer' })).toBeVisible();
+  await page.getByTestId('button-cancel-answer').click();
+  page.once('dialog', dialog => dialog.accept());
+  await recovered.getByRole('button', { name: 'Delete saved library answer', exact: true }).first().click();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('escape-hatch-answers')!).length)).toBe(1);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('escape-hatch-assist-answers')!).length)).toBe(1);
+  await page.getByTestId('button-undo-answer').click();
+  await expect(recovered.getByRole('button', { name: 'Delete saved library answer', exact: true })).toHaveCount(2);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('escape-hatch-answers')!).length)).toBe(2);
+});
+
+test('corrupt-after-valid Assist source cannot leave stale recovered cards', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('escape-hatch-assist-answers', JSON.stringify([{ id: 'assist', title: 'Professional summary', category: 'Career story', content: 'Synthetic valid summary.', updatedAt: '2026-10-26T12:00:00Z', scope: 'reusable', canonicalId: 'professional-summary' }])));
+  await page.goto('/answers');
+  await expect(page.getByTestId('recovered-answer')).toContainText('Synthetic valid summary.');
+  await page.evaluate(() => {
+    localStorage.setItem('escape-hatch-assist-answers', 'corrupt synthetic bytes');
+    window.dispatchEvent(new StorageEvent('storage', { key: 'escape-hatch-assist-answers', newValue: 'corrupt synthetic bytes', storageArea: localStorage }));
+  });
+  await expect(page.getByRole('status').filter({ hasText: 'Could not read: Assist answers' })).toBeVisible();
+  await expect(page.getByTestId('recovered-answer')).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem('escape-hatch-assist-answers'))).toBe('corrupt synthetic bytes');
+});
+
 const profileValues = {
   name_prefix: 'Dr.',
   first_name: 'Ada',

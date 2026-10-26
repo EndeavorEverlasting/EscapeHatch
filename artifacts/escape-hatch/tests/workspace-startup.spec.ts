@@ -16,6 +16,67 @@ test('fresh browser recovers private context, edited state survives a fresh brow
   await fresh.reload(); await expect(fresh.getByTestId('input-first_name')).toHaveValue('Updated');
   await second.close();
 });
+test('a fresh browser on another port recovers the same saved revision with edits visible to the original port', async ({ browser, request }) => {
+  const first = await (await request.get('/__escapehatch/workspace')).json();
+  const second = await browser.newContext();
+  try {
+    const page = await second.newPage();
+    await page.goto('http://127.0.0.1:21040/profile');
+    await expect(page.getByTestId('input-first_name')).toHaveValue('Updated');
+    const recovered = await (await page.request.get('http://127.0.0.1:21040/__escapehatch/workspace')).json();
+    expect(recovered.revision).toBe(first.revision);
+    expect(recovered.workspace).toEqual(first.workspace);
+    await page.getByTestId('input-last_name').fill('CrossPort');
+    await page.getByRole('button', { name: 'Save profile', exact: true }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Workspace saved on this computer.' })).toBeVisible();
+    const saved = await (await request.get('/__escapehatch/workspace')).json();
+    expect(saved.revision).not.toBe(first.revision);
+    expect(saved.workspace.values[PROFILE_KEY].last_name).toBe('CrossPort');
+    await page.reload();
+    await expect(page.getByTestId('input-last_name')).toHaveValue('CrossPort');
+  } finally { await second.close(); }
+});
+
+test('fresh browser Answer Library recovers saved owners across ports without duplicating or rewriting answers', async ({ browser, request }) => {
+  const directory = test.info().config.metadata.dataHome as string;
+  const preferenceFile = path.join(directory, 'preferences.json');
+  const beforePreferences = await fs.readFile(preferenceFile, 'utf8');
+  const before = await (await request.get('/__escapehatch/workspace')).json();
+  for (const port of [21039, 21040]) {
+    const context = await browser.newContext({ permissions: ['clipboard-read', 'clipboard-write'] });
+    try {
+      const page = await context.newPage();
+      await page.goto(`http://127.0.0.1:${port}/answers`);
+      const summary = page.getByTestId('recovered-answer').filter({ hasText: 'Professional summary' });
+      await expect(summary).toHaveCount(1);
+      await expect(summary).toContainText('Recovered');
+      await expect(summary).toContainText('answer-library');
+      await expect(summary).toContainText('assist-answers');
+      await summary.getByRole('button', { name: 'Copy saved answer', exact: true }).click();
+      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('Synthetic reviewed summary.');
+      await expect(page.getByRole('status').filter({ hasText: 'Saved answer copied.' })).toHaveText('Saved answer copied.');
+      const memory = page.getByTestId('recovered-answer').filter({ hasText: 'What motivates your work?' });
+      await expect(memory).toContainText('Building useful things.');
+      const sensitive = page.getByTestId('recovered-answer').filter({ hasText: 'application-preferences' }).filter({ hasText: 'sponsorship' });
+      await expect(sensitive).toContainText('This exact question only');
+      await expect(page.getByText('Your good answers belong here.')).not.toBeVisible();
+      await page.reload();
+      await expect(memory).toContainText('Building useful things.');
+    } finally { await context.close(); }
+  }
+  expect(await fs.readFile(preferenceFile, 'utf8')).toBe(beforePreferences);
+  const after = await (await request.get('/__escapehatch/workspace')).json();
+  expect(after.workspace.values['escape-hatch-answers']).toEqual(before.workspace.values['escape-hatch-answers']);
+  expect(after.workspace.values['escape-hatch-assist-answers']).toEqual(before.workspace.values['escape-hatch-assist-answers']);
+});
+
+test('unavailable answer source is explicit and never masquerades as empty memory', async ({ page }) => {
+  await page.route('**/__escapehatch/managed-assist/preferences', route => route.fulfill({ status: 503, json: { error: 'unavailable' } }));
+  await page.goto('/answers');
+  await expect(page.getByRole('status').filter({ hasText: 'Could not read: Application preferences and question memory' })).toBeVisible();
+  await expect(page.getByTestId('recovered-answer').filter({ hasText: 'Professional summary' })).toHaveCount(1);
+});
+
 test('divergent browser state is preserved and normal dashboard is held', async ({ page }) => {
   await page.addInitScript(({ key, profile }) => localStorage.setItem(key, JSON.stringify(profile)), { key: PROFILE_KEY, profile: { ...emptyProfile, first_name: 'Existing browser edit' } });
   await page.goto('/');

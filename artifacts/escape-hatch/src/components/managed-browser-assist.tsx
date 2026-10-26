@@ -1,4 +1,6 @@
-import { OpportunityDocuments, useOpportunityDocuments } from './opportunity-documents';
+import { useOpportunityDocuments } from './opportunity-documents';
+import { ApplicationPuzzle } from './application-puzzle';
+import type { CurrentApplicationPage } from '@/lib/application-puzzle';
 import { reconcileSubmissionReceipts } from '@/lib/submission-reconciliation';
 import type { AssistProfile } from '@/lib/assist-contract';
 import { CareerRecords } from './career-records';
@@ -35,7 +37,7 @@ type ServerResponse = {
   browserOpen?: boolean;
   authCheckpoint?: AuthCheckpoint;
   needsOpportunityConfirmation?: boolean;
-  currentPage?: { opportunityId: string; applicationUrl: string; pageUrl: string } | null;
+  currentPage?: CurrentApplicationPage | null;
   error?: string;
   filled?: string[];
   recorded?: string[];
@@ -104,7 +106,9 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const [preferencesRefresh, setPreferencesRefresh] = useState(0);
   const [recordingMessage, setRecordingMessage] = useState('');
   const [browserOpen, setBrowserOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState<CurrentApplicationPage | null>(null);
   const [preparation, setPreparation] = useState<PreparationResult | null>(null);
+  const [formObservation, setFormObservation] = useState<{ opportunityId: string; url: string; revision: number } | null>(null);
   const [listenerStatus, setListenerStatus] = useState<ServerResponse['listeners']>();
   const seenAnswers = useRef(0);
   const journey = projectApplicationJourney({
@@ -165,6 +169,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         setNeedsOpportunityConfirmation(Boolean(result.needsOpportunityConfirmation));
         setObservedPageUrl(result.currentPage?.pageUrl || '');
         setBrowserOpen(Boolean(result.browserOpen));
+        setCurrentPage(result.currentPage || null);
         setListenerStatus(result.listeners);
         if (result.listeners?.receipts?.length) setApplications(current => reconcileSubmissionReceipts(current, result.listeners!.receipts));
         if (result.preparationState) {
@@ -192,6 +197,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       try {
         const result = await request('/status');
         if (cancelled) return;
+        setCurrentPage(result.currentPage || null);
         setListenerStatus(result.listeners);
         setAuthCheckpoint(result.authCheckpoint || null);
         setNeedsOpportunityConfirmation(Boolean(result.needsOpportunityConfirmation));
@@ -204,7 +210,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           }
         }
         if (!result.browserOpen) { setBrowserOpen(false); return; }
-      } catch { if (!cancelled) setRecordingMessage('Listener connection interrupted. No submission is assumed.'); }
+      } catch { if (!cancelled) { setCurrentPage(null); setRecordingMessage('Listener connection interrupted. No submission is assumed.'); } }
       if (!cancelled) timer = setTimeout(observe, 1500);
     }
     void observe();
@@ -355,6 +361,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       }
       setStatus(result.state || 'idle');
       if (result.authCheckpoint) setAuthCheckpoint(result.authCheckpoint);
+      setFormObservation({ opportunityId: selectedOpportunityId, url, revision: Date.now() });
       if (result.preparation) setPreparation(result.preparation);
       if (action === 'launch') {
         setBrowserOpen(true);
@@ -411,15 +418,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const secondary = 'inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-bold hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50';
 
   return (
-    <><ApplicationPreferences currentRole={applications.find(item => item.id === selectedOpportunityId)?.role} currentPosting={applications.find(item => item.id === selectedOpportunityId)?.jobDescription || ''} reviewedExperience={assistProfile.experience.filter(item => item.id === assistProfile.selectedExperienceId).map(item => item.title + ' ' + item.bullets.join(' ')).join(' ')} refresh={preferencesRefresh} onEdit={() => setRecordMilitary(false)} onLoad={data => setProfile(current => {
-      const next = { ...current };
-      for (const key of Object.keys(current) as (keyof Profile)[]) {
-        const id = 'identity.' + (key === 'linkedin_url' ? 'linkedin' : key === 'name_prefix' ? 'title' : key);
-        const value = data.preferences[id]?.value;
-        if (!next[key] && value) next[key] = value;
-      }
-      return next;
-    })} /><CareerRecords profile={assistProfile} setProfile={setAssistProfile} opportunity={applications.find(item => item.id === selectedOpportunityId)} setApplications={setApplications} /><section className="mb-6 rounded-2xl border border-primary/25 bg-card p-5 shadow-sm sm:p-7" data-testid="managed-browser-assist">
+    <><section className="mb-6 rounded-2xl border border-primary/25 bg-card p-5 shadow-sm sm:p-7" data-testid="managed-browser-assist">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div>
           <p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-primary">Native application launch</p>
@@ -460,7 +459,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           </label>
         </div>
         <div className="flex flex-col justify-end gap-2">
-          <button className={button} type="button" disabled={busy || !url.trim()} onClick={() => void run('launch')} data-testid="button-managed-launch">
+          <button className={button} type="button" disabled={busy || documents.intakePending || !url.trim()} onClick={() => void run('launch')} data-testid="button-managed-launch">
             {busy ? <LoaderCircle className="animate-spin" size={16} /> : <ArrowUpRight size={16} />}
             {browserOpen ? 'Open another job' : 'Launch application'}
           </button>
@@ -532,7 +531,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         {!!url.trim() && !selectedOpportunityId && <p className="mt-3 text-xs text-muted-foreground">This pasted URL is not yet bound to a saved opportunity. Save it to retain role-specific documents and answers across sessions.</p>}
         {!!selectedOpportunityId && !documents.canUpload && <p className="mt-3 text-xs text-muted-foreground">Next prerequisite: stage and review this opportunity's résumé and cover-letter files below. Upload is not confirmed.</p>}
       </section>
-      <OpportunityDocuments documents={documents} disabled={busy || !selectedOpportunityId} onBypass={() => { if (browserOpen) setAutoPrepareRequested(true); }} />
+      <ApplicationPuzzle opportunity={applications.find(item => item.id === selectedOpportunityId)} url={url} documents={documents} disabled={busy || autoPrepareRequested} refresh={formObservation} currentPage={currentPage} onBypass={() => { if (browserOpen) setAutoPrepareRequested(true); }} />
       <div className="mt-5 rounded-xl bg-secondary/55 p-4">
         <div className="flex items-center gap-2 text-sm font-bold"><CheckCircle2 className="text-primary" size={16} />
           {titles[status] || status.replaceAll('_', ' ')}
@@ -570,7 +569,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           <p className="mt-2 text-xs text-muted-foreground">A click or page change alone never marks an application Applied. Tracking waits for explicit application-received confirmation. External tracker sync is separate.</p>
         </section>
         <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" className={secondary} disabled={busy || !browserOpen} onClick={() => void run('fill')} data-testid="button-managed-fill">
+          <button type="button" className={secondary} disabled={busy || documents.intakePending || !browserOpen} onClick={() => void run('fill')} data-testid="button-managed-fill">
             Fill approved profile and answers
           </button>
           <button type="button" className={secondary} disabled={busy || documents.loading || !browserOpen || !documents.canUpload}
@@ -589,6 +588,15 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         Selected PDFs are saved privately for this opportunity. Employer upload is a separate action gated by your review setting; private documents are never committed.
         A file input being populated does not prove the employer accepted an upload.
       </p>
-    </section></>
+    </section>
+    <section aria-label="Reusable application knowledge"><ApplicationPreferences currentRole={applications.find(item => item.id === selectedOpportunityId)?.role} currentPosting={applications.find(item => item.id === selectedOpportunityId)?.jobDescription || ''} reviewedExperience={assistProfile.experience.filter(item => item.id === assistProfile.selectedExperienceId).map(item => item.title + ' ' + item.bullets.join(' ')).join(' ')} refresh={preferencesRefresh} onEdit={() => setRecordMilitary(false)} onLoad={data => setProfile(current => {
+      const next = { ...current };
+      for (const key of Object.keys(current) as (keyof Profile)[]) {
+        const id = 'identity.' + (key === 'linkedin_url' ? 'linkedin' : key === 'name_prefix' ? 'title' : key);
+        const value = data.preferences[id]?.value;
+        if (!next[key] && value) next[key] = value;
+      }
+      return next;
+    })} /><CareerRecords profile={assistProfile} setProfile={setAssistProfile} opportunity={applications.find(item => item.id === selectedOpportunityId)} setApplications={setApplications} /></section></>
   );
 }

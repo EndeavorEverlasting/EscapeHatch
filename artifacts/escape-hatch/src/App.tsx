@@ -79,6 +79,8 @@ import {
 import { applyAcceptedResumeImport, extractResumeText, getAcceptedResumeContactPatch, parseResumeText, type ResumeImport } from '@/lib/resume-import';
 import { initialSession, parseAssistSessionStatus, type AssistSession } from '@/lib/assist-session';
 import { ManagedBrowserAssist } from '@/components/managed-browser-assist';
+import { RecoveredAnswers, useRecoveredAnswers } from '@/components/recovered-answers';
+import { GuidedStart } from '@/components/guided-start';
 import { stageManagedLaunchIntent } from '@/lib/managed-launch-intent';
 import { SourcesPage, SourcePackageSummary } from '@/components/sources-page';
 import {
@@ -327,7 +329,6 @@ function Modal({
   fallbackFocusRef?: React.RefObject<HTMLElement | null>;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const onCloseRef = useRef(onClose);
   const previousActiveElementRef = useRef<HTMLElement | null>(null);
 
@@ -335,7 +336,9 @@ function Modal({
   // focus after the user selects a field, sending their clear/edit key elsewhere.
   useLayoutEffect(() => {
     previousActiveElementRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    (initialFocusRef?.current || closeButtonRef.current)?.focus();
+    // A neutral target cannot turn the key that opened a recovered draft into
+    // an unintended Close or Save action when activation repeats.
+    (initialFocusRef?.current || dialogRef.current)?.focus();
   }, []);
 
   useEffect(() => {
@@ -369,10 +372,10 @@ function Modal({
       const activeElement = document.activeElement;
       const firstElement = focusableElements[0];
       const lastElement = focusableElements[focusableElements.length - 1];
-      if (event.shiftKey && (activeElement === firstElement || !dialog.contains(activeElement))) {
+      if (event.shiftKey && (activeElement === dialog || activeElement === firstElement || !dialog.contains(activeElement))) {
         event.preventDefault();
         lastElement.focus();
-      } else if (!event.shiftKey && (activeElement === lastElement || !dialog.contains(activeElement))) {
+      } else if (!event.shiftKey && (activeElement === dialog || activeElement === lastElement || !dialog.contains(activeElement))) {
         event.preventDefault();
         firstElement.focus();
       }
@@ -389,14 +392,14 @@ function Modal({
   }, []);
 
   return (
-    <div ref={dialogRef} className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/35 p-0 backdrop-blur-[2px] sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+    <div ref={dialogRef} tabIndex={-1} className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/35 p-0 backdrop-blur-[2px] sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
       <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl border border-border bg-card shadow-2xl sm:max-w-xl sm:rounded-2xl">
         <div className="flex items-start justify-between border-b border-border px-5 py-4 sm:px-7">
           <div>
             {eyebrow && <p className="font-mono-app text-[10px] font-medium uppercase tracking-[.18em] text-primary">{eyebrow}</p>}
             <h2 id="dialog-title" className="mt-1 font-display text-3xl">{title}</h2>
           </div>
-          <button ref={closeButtonRef} type="button" onClick={onClose} aria-label="Close dialog" data-testid="button-close-dialog" className="rounded-lg p-2 text-muted-foreground transition hover:bg-secondary hover:text-foreground"><X size={19} /></button>
+          <button type="button" onClick={onClose} aria-label="Close dialog" data-testid="button-close-dialog" className="rounded-lg p-2 text-muted-foreground transition hover:bg-secondary hover:text-foreground"><X size={19} /></button>
         </div>
         <div className="p-5 sm:p-7">{children}</div>
       </div>
@@ -632,7 +635,8 @@ function HomePage({ profile, answers, applications, setApplications }: { profile
         { label: 'Reusable answers', value: String(answers.length), caption: 'answers ready to borrow', href: '/answers', testId: 'link-stat-2' },
       ];
   return <div>
-    <PageIntro eyebrow="Wednesday · your cockpit" title={profile.first_name ? `Keep going, ${displayName(profile)}.` : 'Make room for momentum.'} description="A small, private place to move one good opportunity forward at a time." />
+    <GuidedStart profile={profile} applications={applications} />
+    <PageIntro eyebrow="Your cockpit" title={profile.first_name ? `Keep going, ${displayName(profile)}.` : 'Make room for momentum.'} description="A small, private place to move one good opportunity forward at a time." />
     <section className="mb-6 rounded-2xl border border-border bg-card p-5 shadow-sm" data-testid="tracker-connection-panel" data-tracker-status={tracker.status}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
@@ -819,6 +823,8 @@ function AnswerCard({ answer, onEdit, onDelete }: { answer: AnswerSnippet; onEdi
 }
 
 function AnswersPage({
+  assistProfile,
+  profile,
   answers,
   setAnswers,
   dismissedDraft,
@@ -828,6 +834,8 @@ function AnswersPage({
   draftRecoverySeconds,
   draftRecoveryWindowSeconds,
 }: {
+  assistProfile: AssistProfile;
+  profile: Profile;
   answers: AnswerSnippet[];
   setAnswers: React.Dispatch<React.SetStateAction<AnswerSnippet[]>>;
   dismissedDraft: DismissedAnswerDraft | null;
@@ -854,7 +862,11 @@ function AnswersPage({
     setRecoveredDraft(draft);
     setShowForm(true);
   };
-  const filtered = useMemo(() => answers.filter((answer) => (category === 'All' || answer.category === category) && `${answer.title} ${answer.content}`.toLowerCase().includes(search.toLowerCase())), [answers, category, search]);
+  const recovery = useRecoveredAnswers(profile, answers, assistProfile);
+  const recovered = recovery.items.filter(item => item.variants.length > 1 || item.variants.some(variant => variant.sources.length > 1 || variant.sources.some(source => source.owner !== 'answer-library')));
+  const projectedIds = new Set(recovered.flatMap(item => item.variants.flatMap(variant => variant.sources.filter(source => source.owner === 'answer-library').map(source => source.recordId))));
+  const visibleRecovered = recovered.filter(item => (category === 'All' || item.category === category) && `${item.title} ${item.variants.map(variant => variant.content).join(' ')}`.toLowerCase().includes(search.toLowerCase()));
+  const filtered = answers.filter((answer) => !projectedIds.has(answer.id) && (category === 'All' || answer.category === category) && `${answer.title} ${answer.content}`.toLowerCase().includes(search.toLowerCase()));
   useEffect(() => {
     if (!deleted) return;
     const timeout = window.setTimeout(() => setDeleted(null), 8000);
@@ -918,7 +930,10 @@ function AnswersPage({
     {dismissedDraft && dismissedDraft.expiresAt > Date.now() && <div role="status" aria-live="polite" data-testid="answer-draft-notice" className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent/35 bg-accent/10 px-4 py-3 text-sm"><span className="flex flex-wrap items-center gap-x-3 gap-y-1"><span>You have an unsaved answer draft.</span><span data-testid="answer-draft-recovery-time">Recovery available for {formatRecoveryDuration(draftRecoverySeconds)}</span></span><span className="flex items-center gap-2"><Button type="button" onClick={recoverDraft} data-testid="button-recover-answer-draft">Recover draft</Button><Button type="button" variant="quiet" onClick={discardDraft} data-testid="button-discard-answer-draft">Discard</Button></span></div>}
     {deleted && <div role="status" aria-live="polite" data-testid="answer-undo-notice" className="mb-6 flex items-center justify-between gap-4 rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 text-sm"><span>Answer deleted.</span><Button type="button" variant="outline" onClick={undo} data-testid="button-undo-answer">Undo</Button></div>}
     <div className="mb-6 flex flex-col gap-3 sm:flex-row"><label className="relative block flex-1"><Search size={17} className="absolute left-3 top-3 text-muted-foreground" /><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search your answers" data-testid="input-search-answers" className="w-full rounded-lg border border-input bg-card py-2.5 pl-10 pr-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" /></label><div className="flex gap-1 overflow-x-auto rounded-lg border border-border bg-secondary p-1">{['All', ...categories].map((item) => <button type="button" key={item} onClick={() => setCategory(item)} data-testid={`button-filter-${item.toLowerCase().replaceAll(' ', '-')}`} className={`whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-bold transition ${category === item ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>{item}</button>)}</div></div>
-    {filtered.length === 0 ? <EmptyState icon={Clipboard} title={answers.length ? 'No matches here.' : 'Your good answers belong here.'} body={answers.length ? 'Try another search or category, or clear the filter.' : 'Save the thoughtful parts of applications once, then borrow them when time is tight.'} action={!answers.length ? <Button onClick={() => openForm(null)} data-testid="button-empty-add-answer"><Plus size={16} /> Add your first answer</Button> : undefined} /> : <div className="grid gap-4 lg:grid-cols-2">{filtered.map((answer) => <AnswerCard key={answer.id} answer={answer} onEdit={() => openForm(answer)} onDelete={() => remove(answer.id)} />)}</div>}
+    {recovery.loading && <p role="status" className="mb-4">Checking your saved answer sources…</p>}
+    {recovery.unavailable.length > 0 && <p role="status" className="mb-4">Could not read: {recovery.unavailable.join('; ')}. Existing records are preserved. Reopen Answer Library to retry.</p>}
+    <RecoveredAnswers items={visibleRecovered} onEdit={id => { const answer = answers.find(item => item.id === id); if (answer) openForm(answer); }} />
+    {filtered.length === 0 && visibleRecovered.length === 0 && !recovery.loading && recovery.unavailable.length === 0 ? <EmptyState icon={Clipboard} title={answers.length || recovered.length ? 'No matches here.' : 'Your good answers belong here.'} body={answers.length || recovered.length ? 'Try another search or category, or clear the filter.' : 'Save the thoughtful parts of applications once, then borrow them when time is tight.'} action={!answers.length && !recovered.length ? <Button onClick={() => openForm(null)} data-testid="button-empty-add-answer"><Plus size={16} /> Add your first answer</Button> : undefined} /> : <div className="grid gap-4 lg:grid-cols-2">{filtered.map((answer) => <AnswerCard key={answer.id} answer={answer} onEdit={() => openForm(answer)} onDelete={() => remove(answer.id)} />)}</div>}
     {showForm && <AnswerForm answer={editing} initialDraft={recoveredDraft} returnFocusRef={formReturnFocusRef} fallbackFocusRef={pageAddButtonRef} onClose={closeForm} onSave={saveAnswer} />}
   </div>;
 }
@@ -951,10 +966,9 @@ function AnswerForm({ answer, initialDraft, returnFocusRef, fallbackFocusRef, on
     };
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
-      window.requestAnimationFrame(() => {
-        if (!submittedTitle.trim()) titleRef.current?.focus();
-        else contentRef.current?.focus();
-      });
+      // These fields already exist. A later frame could steal the user's next edit.
+      if (!submittedTitle.trim()) titleRef.current?.focus();
+      else contentRef.current?.focus();
       return;
     }
     onSave({ title: submittedTitle.trim(), category, content: submittedContent.trim() });
@@ -1142,10 +1156,8 @@ function ApplicationForm({ application, initialDraft, returnFocusRef, fallbackFo
     };
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
-      window.requestAnimationFrame(() => {
-        if (!submittedCompany.trim()) companyRef.current?.focus();
-        else roleRef.current?.focus();
-      });
+      if (!submittedCompany.trim()) companyRef.current?.focus();
+      else roleRef.current?.focus();
       return;
     }
     onSave({ ...form, company: submittedCompany.trim(), role: submittedRole.trim() });
@@ -1366,7 +1378,7 @@ function AssistPage({
     </section>}
     {pendingSync && <section className="mt-5 rounded-2xl border border-accent/45 bg-accent/10 p-5" data-testid="assist-sync-conflict"><p className="font-bold">Incoming sync needs a choice</p><p className="mt-1 text-sm leading-6 text-muted-foreground">The incoming profile or answers differ from current work. Choose a side or merge unique entries; nothing is overwritten silently.</p><div className="mt-4 flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={() => applySync('keep-current')}>Keep current</Button><Button type="button" onClick={() => applySync('merge')}>Merge unique items</Button><Button type="button" onClick={() => applySync('use-incoming')}>Use incoming</Button></div></section>}
     <div className="mt-5"><AssistProgress session={session} /></div>
-    <section className="mt-5 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-7"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-muted-foreground">Explicit milestone</p><h2 className="mt-2 font-display text-2xl">Record what you decided</h2><p className="mt-1 text-sm leading-6 text-muted-foreground">Observed pages are not applications. Choose an opportunity only when you personally want to record an applied milestone.</p></div><div className="flex gap-2"><select value={milestone} onChange={(event) => setMilestone(event.target.value)} data-testid="select-assist-milestone" className="max-w-[220px] rounded-lg border border-input bg-background px-3 py-2.5 text-sm"><option value="">Choose opportunity</option>{applications.filter((item) => item.status !== 'closed').map((item) => <option key={item.id} value={item.id}>{item.company} · {item.role}</option>)}</select><Button type="button" onClick={recordMilestone} disabled={!milestone} data-testid="button-record-assist-milestone">Record applied</Button></div></div>{session.pages.length > 0 && <div className="mt-6 space-y-2">{session.pages.map((page) => <div key={page.key} className="flex flex-col gap-1 rounded-lg bg-secondary/55 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"><span className="font-bold">{page.title || 'Application page'}</span><span className="text-xs text-muted-foreground">{page.status} · {page.filled} filled · {formatUpdated(page.scannedAt)}</span></div>)}</div>}</section>
+    <section className="mt-5 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-7"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-muted-foreground">Explicit milestone</p><h2 className="mt-2 font-display text-2xl">Record what you decided</h2><p className="mt-1 text-sm leading-6 text-muted-foreground">Observed pages are not applications. Choose an opportunity only when you personally want to record an applied milestone.</p></div><div className="flex flex-wrap gap-2"><select value={milestone} onChange={(event) => setMilestone(event.target.value)} data-testid="select-assist-milestone" className="max-w-[220px] rounded-lg border border-input bg-background px-3 py-2.5 text-sm"><option value="">Choose opportunity</option>{applications.filter((item) => item.status !== 'closed').map((item) => <option key={item.id} value={item.id}>{item.company} · {item.role}</option>)}</select><Button type="button" onClick={recordMilestone} disabled={!milestone} data-testid="button-record-assist-milestone">Record applied</Button></div></div>{session.pages.length > 0 && <div className="mt-6 space-y-2">{session.pages.map((page) => <div key={page.key} className="flex flex-col gap-1 rounded-lg bg-secondary/55 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"><span className="font-bold">{page.title || 'Application page'}</span><span className="text-xs text-muted-foreground">{page.status} · {page.filled} filled · {formatUpdated(page.scannedAt)}</span></div>)}</div>}</section>
   </div>;
 }
 
@@ -1437,7 +1449,7 @@ function Router() {
     setApplications(workspace.applications);
     return persisted;
   };
-  return <AppShell profile={profile}><Switch><Route path="/"><HomePage profile={profile} answers={answers} applications={applications} setApplications={setApplications} /></Route><Route path="/profile"><ProfilePage profile={profile} answers={answers} applications={applications} setProfile={setProfile} setAnswers={setAnswers} setApplications={setApplications} onRestoreWorkspace={restoreWorkspace} draftRecoverySeconds={draftRecoverySeconds} setDraftRecoverySeconds={setDraftRecoverySeconds} /></Route><Route path="/answers"><AnswersPage answers={answers} setAnswers={setAnswers} dismissedDraft={dismissedAnswerDraft} setDismissedDraft={setDismissedAnswerDraft} draftExpiryAnnouncement={answerDraftExpiryAnnouncement} onDraftStarted={() => setAnswerDraftExpiryAnnouncement('')} draftRecoverySeconds={answerDraftRecoverySeconds} draftRecoveryWindowSeconds={draftRecoverySeconds} /></Route><Route path="/applications"><ApplicationsPage applications={applications} setApplications={setApplications} dismissedDraft={dismissedApplicationDraft} setDismissedDraft={setDismissedApplicationDraft} draftExpiryAnnouncement={applicationDraftExpiryAnnouncement} onDraftStarted={() => setApplicationDraftExpiryAnnouncement('')} draftRecoverySeconds={applicationDraftRecoverySeconds} draftRecoveryWindowSeconds={draftRecoverySeconds} /></Route><Route path="/sources"><SourcesPage profile={profile} assistProfile={assistProfile} applications={applications} sourceBindings={sourceBindings} onApprove={(value) => { persistSourceApproval(getLocalStorage(), value); setProfile(value.profile); setAssistProfile(value.assist); setSourceBindings(value.bindings); }} onForget={() => setSourceBindings([])} /></Route><Route path="/assist"><AssistPage assistProfile={assistProfile} setAssistProfile={setAssistProfile} sourceBindings={sourceBindings} profile={profile} answers={answers} applications={applications} setProfile={setProfile} setAnswers={setAnswers} setApplications={setApplications} /></Route><Route component={NotFoundPage} /></Switch></AppShell>;
+  return <AppShell profile={profile}><Switch><Route path="/"><HomePage profile={profile} answers={answers} applications={applications} setApplications={setApplications} /></Route><Route path="/profile"><ProfilePage profile={profile} answers={answers} applications={applications} setProfile={setProfile} setAnswers={setAnswers} setApplications={setApplications} onRestoreWorkspace={restoreWorkspace} draftRecoverySeconds={draftRecoverySeconds} setDraftRecoverySeconds={setDraftRecoverySeconds} /></Route><Route path="/answers"><AnswersPage assistProfile={assistProfile} profile={profile} answers={answers} setAnswers={setAnswers} dismissedDraft={dismissedAnswerDraft} setDismissedDraft={setDismissedAnswerDraft} draftExpiryAnnouncement={answerDraftExpiryAnnouncement} onDraftStarted={() => setAnswerDraftExpiryAnnouncement('')} draftRecoverySeconds={answerDraftRecoverySeconds} draftRecoveryWindowSeconds={draftRecoverySeconds} /></Route><Route path="/applications"><ApplicationsPage applications={applications} setApplications={setApplications} dismissedDraft={dismissedApplicationDraft} setDismissedDraft={setDismissedApplicationDraft} draftExpiryAnnouncement={applicationDraftExpiryAnnouncement} onDraftStarted={() => setApplicationDraftExpiryAnnouncement('')} draftRecoverySeconds={applicationDraftRecoverySeconds} draftRecoveryWindowSeconds={draftRecoverySeconds} /></Route><Route path="/sources"><SourcesPage profile={profile} assistProfile={assistProfile} applications={applications} sourceBindings={sourceBindings} onApprove={(value) => { persistSourceApproval(getLocalStorage(), value); setProfile(value.profile); setAssistProfile(value.assist); setSourceBindings(value.bindings); }} onForget={() => setSourceBindings([])} /></Route><Route path="/assist"><AssistPage assistProfile={assistProfile} setAssistProfile={setAssistProfile} sourceBindings={sourceBindings} profile={profile} answers={answers} applications={applications} setProfile={setProfile} setAnswers={setAnswers} setApplications={setApplications} /></Route><Route component={NotFoundPage} /></Switch></AppShell>;
 }
 
 function RoutedErrorBoundary({ children }: { children: ReactNode }) {

@@ -96,6 +96,14 @@ provider reads; `import-context.ts` accepts validated existing local/connected-p
 Operational acceptance and data-preserving removal are documented in `docs/WINDOWS_RUNTIME_LIFECYCLE.md`;
 the full bootstrap phase map remains in `docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md`.
 
+The first-action guide and per-opportunity artifact workbench are documented in
+`docs/GUIDED_APPLICATION_WORKBENCH.md`. `src/components/guided-start.tsx` (under
+`artifacts/escape-hatch/`) leads to existing Sources and Applications. The
+`application-requirements.ts` managed inspector supplies current-page-only metadata to
+`src/lib/application-puzzle.ts` and `src/components/application-puzzle.tsx` without
+creating persistence, approval or submission authority. Run `npm --prefix
+artifacts/escape-hatch run test:workbench` and the registered workbench browser tests.
+
 Canonical product persistence remains `contracts/career-state.v1.schema.json`; `scripts/validate_career_state.py` validates it. `contracts/application-companion.v1.json` defines the delivery/privacy/synchronization boundary for clients that read and write that user-owned career state. `contracts/resume-presentation.v1.json` defines the visual/structural quality boundary for resume outputs while leaving private resume content user-owned. `scripts/export_study_guidance.py` exports typed guidance to StudySyndicate.
 
 The companion contract is surface-agnostic at the state boundary. Browser extensions, Microsoft Store apps, Play Store apps, and local web runtimes may use different storage/runtime adapters without creating separate career-state formats. Public hosting and a public profile are optional, not prerequisites.
@@ -245,6 +253,14 @@ git diff --check
 - Product deployment: **not established**
 
 Do not claim browser/ATS, Google Drive, Microsoft Store, or Play Store runtime proof from repository validation. Resume presentation validation proves the contract; rendered resume proof requires the private output artifacts themselves. Application Assist repository tests prove the Fill Plan control loop; live ATS proof still requires the unpacked extension on a real application page. Product version validation proves authority/mirror/tag-plan policy; a published GitHub Release or store listing requires the downstream publication gate.
+
+Answer Library recovery is derived by `artifacts/escape-hatch/src/lib/answer-recovery.ts` and
+shown by `src/components/recovered-answers.tsx`. It reads the existing workspace profile,
+reviewed Assist proposals/reusable answers, and `/__escapehatch/managed-assist/preferences`.
+It never writes projected records back into an answer owner. Missing, unavailable, pending and
+conflicting sources remain distinct; question-scoped choices never become general fill authority.
+Run `npm --prefix artifacts/escape-hatch run test:unit` and `npm --prefix artifacts/escape-hatch run test:bootstrap:browser`
+for synthetic recovery on two ports and fresh browser contexts, including unchanged source bytes.
 
 ## Fresh-agent path
 

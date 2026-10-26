@@ -112,3 +112,22 @@
 .animate-rise-delay-1 { animation: rise-in .45s .08s ease-out both; }
 .animate-rise-delay-2 { animation: rise-in .45s .16s ease-out both; }
 .animate-rise-delay-3 { animation: rise-in .45s .24s ease-out both; }
+
+/* The guided workbench uses the shell's existing paper/teal tokens. */
+.guided-start { padding: clamp(1rem, 3vw, 2rem); border: 1px solid hsl(var(--primary) / .3); border-radius: 1rem; background: hsl(var(--card)); }
+.guide-step { padding: 1rem; border-left: 2px solid hsl(var(--border)); }
+.guide-step-current { border-color: hsl(var(--primary)); background: hsl(var(--primary) / .06); border-radius: 0 .6rem .6rem 0; }
+.artifact-dropzone { position: relative; padding: 1.1rem; border: 2px dashed hsl(var(--primary) / .4); border-radius: .7rem; background: hsl(var(--background)); transition: border-color 120ms, background-color 120ms; }
+.artifact-dropzone-active { border-color: hsl(var(--primary)); background: hsl(var(--primary) / .12); }
+.artifact-dropzone:focus-within { outline: 2px solid hsl(var(--ring)); outline-offset: 3px; }
+.application-puzzle { padding: clamp(1rem, 3vw, 1.5rem); border: 1px solid hsl(var(--primary) / .3); border-radius: .8rem; background: hsl(var(--background)); }
+.puzzle-pieces { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; }
+.puzzle-piece { min-width: 0; padding: 1rem; border: 1px solid hsl(var(--border)); border-left: 4px solid hsl(var(--accent)); border-radius: .4rem .9rem .9rem .4rem; background: hsl(var(--card)); }
+.puzzle-piece[data-populated="true"] { border-left-color: hsl(var(--primary)); }
+@media (max-width: 640px) {
+  .puzzle-pieces { grid-template-columns: minmax(0, 1fr); }
+  .application-puzzle { padding: .75rem; }
+  .application-puzzle [aria-label="Opportunity document review"] { padding: 0; border: 0; background: transparent; }
+  .application-puzzle .document-slot { padding: 0; border: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .artifact-dropzone { transition: none; } }

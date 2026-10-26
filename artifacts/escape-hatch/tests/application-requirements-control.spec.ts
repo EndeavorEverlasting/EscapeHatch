@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { expect, test } from '@playwright/test';
+import { INITIAL_CHECKPOINT, advanceAuthCheckpoint, inspectAuthObservation } from '../managed-auth-checkpoint';
 import { createManagedBrowserAssistPlugin } from '../browser-assist-control';
 
 test('real managed middleware returns scoped requirements and rejects cross-origin or wrong-job reads', async ({ page }) => {
@@ -58,4 +59,30 @@ test('real managed middleware returns scoped requirements and rejects cross-orig
     delete cache[cacheKey];
     for (const [name, value] of before) { if (value === undefined) delete process.env[name]; else process.env[name] = value; }
   }
+});
+
+
+test('auth readback fingerprints form identity without reading control values', async ({ page }) => {
+  await page.goto('/');
+  const origin = new URL(page.url()).origin;
+  await page.evaluate(() => Object.defineProperty(HTMLInputElement.prototype, 'value', {
+    get() { throw new Error('Synthetic credential/control value must not be read'); },
+    configurable: true,
+  }));
+  await page.setContent('<form><label>Email<input type="email"></label><label>Password<input type="password"></label></form>');
+  const login = await inspectAuthObservation(page, origin);
+  expect(login.credentialGate).toBe(true);
+  expect(advanceAuthCheckpoint(INITIAL_CHECKPOINT, login).canResume).toBe(false);
+  await page.setContent('<form><label>First name<input name="first_name"></label><label>Last name<input name="last_name"></label></form>');
+  const first = await inspectAuthObservation(page, origin);
+  const checkpoint = advanceAuthCheckpoint(INITIAL_CHECKPOINT, first);
+  expect(checkpoint.canResume).toBe(false);
+  await page.setContent('<form><label>Given name<input name="given_name"></label><label>Last name<input name="family_name"></label></form>');
+  const changed = await inspectAuthObservation(page, origin);
+  expect(changed.applicationFormRecognized).toBe(true);
+  expect(changed.formSignature).not.toBe(first.formSignature);
+  expect(changed.formSignature).toMatch(/^[a-f0-9]{64}$/);
+  const reset = advanceAuthCheckpoint(checkpoint, changed);
+  expect(reset.canResume).toBe(false);
+  expect(advanceAuthCheckpoint(reset, await inspectAuthObservation(page, origin)).canResume).toBe(true);
 });

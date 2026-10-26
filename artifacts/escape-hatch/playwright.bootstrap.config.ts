@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { ASSIST_ANSWERS_KEY } from './src/lib/assist-contract.ts';
 import { emptyPreferences, normalizeQuestion } from './src/lib/application-preferences.ts';
-import { emptyProfile, PROFILE_KEY, ANSWERS_KEY } from './src/lib/storage.ts';
+import { emptyProfile, PROFILE_KEY, ANSWERS_KEY, APPLICATIONS_KEY } from './src/lib/storage.ts';
 
 const dataHome = mkdtempSync(path.join(process.env.ESCAPEHATCH_BOOTSTRAP_TEST_HOME || tmpdir(), 'eh-bootstrap-browser-'));
 const summary = { id: 'library-summary', title: 'Professional summary', category: 'Career story', content: 'Synthetic reviewed summary.', updatedAt: '2026-10-26T12:00:00Z' };
@@ -14,6 +14,7 @@ const question = 'What motivates your work?';
 preferences.discovered_answers = { [normalizeQuestion(question)]: { question, value: 'Building useful things.', source: 'user', accepted: true, updated_at: summary.updatedAt } };
 writeFileSync(path.join(dataHome, 'preferences.json'), JSON.stringify(preferences));
 writeFileSync(path.join(dataHome, 'workspace.v1.json'), JSON.stringify({ schema: 'escapehatch-local-workspace/v1', values: {
+  [APPLICATIONS_KEY]: [{ id: 'pending-job', company: 'Synthetic', role: 'Pending role', url: 'https://jobs.example.com/job/pending', status: 'saved', priority: 'normal', notes: '', nextAction: '', updatedAt: summary.updatedAt }],
   [ANSWERS_KEY]: [summary],
   [ASSIST_ANSWERS_KEY]: [{ ...summary, id: 'assist-summary', scope: 'reusable', canonicalId: 'professional-summary' }],
   [PROFILE_KEY]: { ...emptyProfile, first_name: 'Synthetic', last_name: 'Recovery', email: 'synthetic@example.test' },

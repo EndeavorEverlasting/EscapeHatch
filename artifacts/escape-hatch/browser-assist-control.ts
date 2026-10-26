@@ -1,4 +1,5 @@
 import { prepareWithoutTrustedNavigation } from './managed-prepare-fallback.ts';
+import { INITIAL_CHECKPOINT, advanceAuthCheckpoint, inspectAuthObservation, resumeAllowed, type AuthCheckpoint } from './managed-auth-checkpoint.ts';
 import { fieldProgressState, attachmentProgressState, evidenceDescription } from './managed-progress-evidence.ts';
 import { assertInspectionScope, inspectApplicationRequirements } from './application-requirements.ts';
 import { OpportunityDocumentStore, documentScope, type DocumentKind } from './opportunity-documents.ts';
@@ -259,11 +260,11 @@ export function createManagedBrowserAssistPlugin(): Plugin {
   // and listener handles rather than orphaning the operator's application.
   type SessionCache = { context: BrowserContext | null; page: Page | null; state: string;
     applicationOrigin: string; applicationUrl: string; opportunityId: string;
-    preparation: PreparationResult | null; networkDiagnosis: NavigationDiagnosis | null; listeners: ManagedListeners; busy: boolean };
+    preparation: PreparationResult | null; networkDiagnosis: NavigationDiagnosis | null; authCheckpoint: AuthCheckpoint; trustedReturnPath: string | null; listeners: ManagedListeners; busy: boolean };
   const cacheHost = globalThis as typeof globalThis & { [key: symbol]: SessionCache };
   const cacheKey = Symbol.for('escapehatch.managed-browser.' + (managed?.identity.instanceId || 'unmanaged'));
   const cache = cacheHost[cacheKey] ||= { context: null, page: null, state: 'idle', applicationOrigin: '', applicationUrl: '',
-    opportunityId: '', preparation: null, networkDiagnosis: null, busy: false, listeners: new ManagedListeners() };
+    opportunityId: '', preparation: null, networkDiagnosis: null, authCheckpoint: INITIAL_CHECKPOINT, trustedReturnPath: null, busy: false, listeners: new ManagedListeners() };
   let context = cache.context;
   let page = cache.page;
   let state = cache.state;
@@ -272,6 +273,8 @@ export function createManagedBrowserAssistPlugin(): Plugin {
   const documentStore = new OpportunityDocumentStore();
   let opportunityId = cache.opportunityId;
   let preparation = cache.preparation;
+  let authCheckpoint = cache.authCheckpoint || INITIAL_CHECKPOINT;
+  let trustedReturnPath = cache.trustedReturnPath || null;
   let networkDiagnosis = cache.networkDiagnosis;
   const listeners = cache.listeners;
   return {
@@ -288,7 +291,15 @@ export function createManagedBrowserAssistPlugin(): Plugin {
           return respond(res, 403, { ok: false, error: 'managed_local_runtime_required' });
         }
         if (url.pathname === PREFIX + '/status' && req.method === 'GET') {
-          if (page?.isClosed()) { page = null; state = 'browser_closed'; }
+          if (page?.isClosed()) { page = null; state = 'browser_closed'; authCheckpoint = INITIAL_CHECKPOINT; }
+          if (page && applicationOrigin) {
+            try {
+              authCheckpoint = advanceAuthCheckpoint(authCheckpoint, await inspectAuthObservation(page, applicationOrigin));
+            } catch {
+              authCheckpoint = INITIAL_CHECKPOINT; // Never promote uncertainty to signed-in.
+            }
+            cache.authCheckpoint = authCheckpoint;
+          }
           let listenerState;
           try { listenerState = await listeners.status(); }
           catch { return respond(res, 422, { ok: false, error: 'Submission evidence unavailable; existing records preserved.' }); }
@@ -296,6 +307,12 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             ok: true,
             state,
             browserOpen: Boolean(page),
+            authCheckpoint,
+            needsOpportunityConfirmation: Boolean(page && applicationUrl && authCheckpoint.canResume &&
+              new URL(page.url()).origin === applicationOrigin &&
+              new URL(page.url()).pathname !== new URL(applicationUrl).pathname &&
+              !new URL(page.url()).pathname.startsWith(new URL(applicationUrl).pathname.replace(/\/$/, '') + '/') &&
+              new URL(page.url()).pathname !== trustedReturnPath),
             networkDiagnosis,
             currentPage: page ? { opportunityId, applicationUrl, pageUrl: page.url() } : null,
             requiresOperatorSubmission: true,
@@ -368,6 +385,8 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               ? payload.opportunityId
               : '';
             preparation = null;
+            authCheckpoint = INITIAL_CHECKPOINT;
+            trustedReturnPath = null;
             networkDiagnosis = null;
             if (!context) {
               const folder = path.join(process.env.LOCALAPPDATA || path.join(homedir(), 'AppData', 'Local'), 'EscapeHatch', 'managed-career-browser');
@@ -376,8 +395,8 @@ export function createManagedBrowserAssistPlugin(): Plugin {
                 channel: 'chrome', headless: false, acceptDownloads: false, viewport: null,
               });
               context.on('close', () => {
-                context = null; page = null; state = 'browser_closed'; preparation = null;
-                Object.assign(cache, { context, page, state, preparation });
+                context = null; page = null; state = 'browser_closed'; preparation = null; authCheckpoint = INITIAL_CHECKPOINT; trustedReturnPath = null;
+                Object.assign(cache, { context, page, state, preparation, authCheckpoint, trustedReturnPath });
                 void listeners.dispose();
               });
             }
@@ -401,7 +420,10 @@ export function createManagedBrowserAssistPlugin(): Plugin {
                 employerName: typeof payload.employerName === 'string' ? payload.employerName.slice(0, 160) : '' });
               await listeners.arm();
             }
-            return respond(res, 200, { ok: true, state, networkDiagnosis, requiresOperatorSubmission: true });
+            try {
+              authCheckpoint = advanceAuthCheckpoint(authCheckpoint, await inspectAuthObservation(page, applicationOrigin));
+            } catch { authCheckpoint = INITIAL_CHECKPOINT; }
+            return respond(res, 200, { ok: true, state, authCheckpoint, networkDiagnosis, requiresOperatorSubmission: true });
           }
           if (!page || page.isClosed()) return respond(res, 409, { ok: false, error: 'launch_browser_first' });
           if (new URL(page.url()).origin !== applicationOrigin) return respond(res, 409, { ok: false, error: 'application_origin_changed_review_required' });
@@ -410,6 +432,18 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             return respond(res, 200, { ok: true, inspection: await inspectApplicationRequirements(page, opportunityId, applicationUrl) });
           }
           await page.bringToFront();
+          if (url.pathname === PREFIX + '/resume/bind') {
+            // Only the operator may affirm that a same-origin redirect still shows the selected job.
+            // This grants no terminal action, account login, or new opportunity identity.
+            const live = page.url();
+            if (!opportunityId || payload.opportunityId !== opportunityId ||
+                payload.confirmedSameOpportunity !== true || payload.livePageUrl !== live ||
+                !resumeAllowed(authCheckpoint, new URL(live).origin, applicationOrigin)) {
+              return respond(res, 409, { ok: false, error: 'explicit_same_opportunity_confirmation_required' });
+            }
+            trustedReturnPath = new URL(live).pathname;
+            return respond(res, 200, { ok: true, state: 'application_path_bound_review_required', authCheckpoint });
+          }
           if (url.pathname === PREFIX + '/listeners') {
             if (payload.opportunityId !== opportunityId || payload.url !== applicationUrl) throw new Error('Select the application bound to this browser.');
             if (typeof payload.recordAnswers === 'boolean') await listeners.setRecording(payload.recordAnswers);
@@ -422,7 +456,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             const scope = documentScope(payload.opportunityId, payload.url);
             const live = new URL(page.url()), launched = new URL(applicationUrl);
             if (!opportunityId || scope.opportunityId !== opportunityId || scope.url !== launched.href ||
-              (live.pathname !== launched.pathname && !live.pathname.startsWith(launched.pathname.replace(/\/$/, '') + '/'))) throw new Error('Document opportunity binding changed; relaunch the selected opportunity.');
+              (live.pathname !== launched.pathname && !live.pathname.startsWith(launched.pathname.replace(/\/$/, '') + '/') && live.pathname !== trustedReturnPath)) throw new Error('Document opportunity binding changed; reconfirm the selected opportunity before preparing.');
           }
           if (url.pathname === PREFIX + '/prepare') {
             // Operator-triggered deterministic progression only. Never agentic browsing.
@@ -514,7 +548,20 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             if (recorded.length) await updatePreferences(current => mergePreferenceEdits(current, preferences));
             return respond(res, 200, { ok: true, recorded });
           }
-          if (url.pathname === PREFIX + '/fill') {
+          if (url.pathname === PREFIX + '/fill' || url.pathname === PREFIX + '/resume') {
+            if (url.pathname === PREFIX + '/resume') {
+              // Recheck immediately: an earlier poll cannot authorize writing to a page that changed.
+              try {
+                authCheckpoint = advanceAuthCheckpoint(authCheckpoint, await inspectAuthObservation(page, applicationOrigin));
+              } catch { authCheckpoint = INITIAL_CHECKPOINT; }
+              const live = new URL(page.url()), selected = new URL(applicationUrl);
+              if (!resumeAllowed(authCheckpoint, live.origin, applicationOrigin) ||
+                  (live.pathname !== selected.pathname &&
+                   !live.pathname.startsWith(selected.pathname.replace(/\/$/, '') + '/') &&
+                   live.pathname !== trustedReturnPath)) {
+                return respond(res, 409, { ok: false, error: 'application_form_or_opportunity_not_verified_check_again' });
+              }
+            }
             const preferences = await readPreferences();
             const contact = reviewedContactFields(payload.profile);
             const now = new Date().toISOString();
@@ -526,7 +573,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             }
             const outcome = await fillSavedPreferences(page, withCareerPreferences(merged, payload.careerProfile, payload.targetRole), typeof payload.employerName === 'string' ? payload.employerName.slice(0, 160) : '');
             state = fieldProgressState(outcome);
-            return respond(res, 200, { ok: true, state, ...outcome, evidenceSummary: evidenceDescription(state), requiresOperatorSubmission: true });
+            return respond(res, 200, { ok: true, state, ...outcome, authCheckpoint, evidenceSummary: evidenceDescription(state), requiresOperatorSubmission: true });
           }
           if (url.pathname === PREFIX + '/attach') {
             if (payload.resume || payload.cover) throw new Error('Save the selected documents to this opportunity before attaching.');
@@ -541,7 +588,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
           // Never log URLs, profile values, job forms, tokens or private document contents.
           return respond(res, 422, { ok: false, error: message.slice(0, 160) });
         } finally {
-          Object.assign(cache, { context, page, state, applicationOrigin, applicationUrl, opportunityId, preparation, networkDiagnosis });
+          Object.assign(cache, { context, page, state, applicationOrigin, applicationUrl, opportunityId, preparation, networkDiagnosis, authCheckpoint, trustedReturnPath });
           cache.busy = false;
         }
       });

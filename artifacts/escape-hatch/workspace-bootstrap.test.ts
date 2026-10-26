@@ -13,8 +13,9 @@ import { authorizedWorkspaceRequest, createWorkspaceControlPlugin } from './work
 import type { IncomingMessage } from 'node:http';
 import { importContext } from './import-context.ts';
 import { DatabaseSync } from 'node:sqlite';
-import { spawn } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
 import { once } from 'node:events';
+import { JOURNEY_RESUME_KEY, EMPTY_JOURNEY_RESUME } from './src/lib/application-journey-projection.ts';
 import { hasContext } from './src/lib/workspace-bootstrap.ts';
 import { ASSIST_KEY, emptyAssistProfile } from './src/lib/assist-contract.ts';
 
@@ -179,4 +180,47 @@ test('timestamp-only imported progress does not become a false conflict; edited 
   assert.deepEqual(reconcileWorkspace(local, saved).conflicts, []);
   saved.values[APPLICATIONS_KEY][0].notes = 'A real user edit';
   assert.deepEqual(reconcileWorkspace(local, saved).conflicts, [APPLICATIONS_KEY]);
+});
+
+
+test('resume pointer hydrates an empty browser but divergent nonempty selections preserve both owners', () => {
+  const first = { opportunityId: 'job-a', applicationUrl: 'https://jobs.example.com/apply/a' };
+  const second = { opportunityId: 'job-b', applicationUrl: 'https://jobs.example.com/apply/b' };
+  const saved = { schema: WORKSPACE_SCHEMA, values: { [JOURNEY_RESUME_KEY]: first } };
+  const empty = { schema: WORKSPACE_SCHEMA, values: { [JOURNEY_RESUME_KEY]: EMPTY_JOURNEY_RESUME } };
+  assert.ok(parseSavedWorkspace(saved));
+  assert.ok(parseSavedWorkspace(empty));
+  assert.deepEqual(reconcileWorkspace(empty, saved), { workspace: saved, conflicts: [] });
+  assert.deepEqual(reconcileWorkspace({ schema: WORKSPACE_SCHEMA, values: {} }, saved), { workspace: saved, conflicts: [] });
+  const local = { schema: WORKSPACE_SCHEMA, values: { [JOURNEY_RESUME_KEY]: second } };
+  const before = JSON.stringify({ local, saved });
+  assert.deepEqual(reconcileWorkspace(local, saved), { workspace: local, conflicts: [JOURNEY_RESUME_KEY] });
+  assert.equal(JSON.stringify({ local, saved }), before);
+  const reordered = { schema: WORKSPACE_SCHEMA, values: { [JOURNEY_RESUME_KEY]: { applicationUrl: first.applicationUrl, opportunityId: first.opportunityId } } };
+  assert.deepEqual(reconcileWorkspace(reordered, saved).conflicts, []);
+  assert.equal(hasContext(saved.values), false);
+  assert.equal(hasContext(empty.values), false);
+  assert.equal(parseSavedWorkspace({ schema: WORKSPACE_SCHEMA, values: { [JOURNEY_RESUME_KEY]: { ...first, applicationUrl: 'https://127.0.0.1/apply' } } }), null);
+});
+
+test('resume pointer survives revision-checked save and independent process restart readback', async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-journey-pointer-'));
+  const file = path.join(directory, 'workspace.json');
+  const pointer = { opportunityId: 'pending-job', applicationUrl: 'https://jobs.example.com/job/pending' };
+  const selected = { schema: WORKSPACE_SCHEMA, values: { ...workspace().values, [JOURNEY_RESUME_KEY]: pointer } };
+  try {
+    const first = await saveWorkspace(selected, null, file);
+    const childValue = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e',
+      'import fs from "node:fs"; console.log(fs.readFileSync(process.argv[1],"utf8"));', file],
+    { encoding: 'utf8', windowsHide: true, timeout: 5000 }));
+    assert.deepEqual(childValue.values[JOURNEY_RESUME_KEY], pointer);
+    assert.deepEqual((await readWorkspace(file))?.workspace, selected);
+    const nextPointer = { opportunityId: 'next-pending-job', applicationUrl: 'https://jobs.example.com/job/next' };
+    const reselected = { ...selected, values: { ...selected.values, [JOURNEY_RESUME_KEY]: nextPointer } };
+    const current = await saveWorkspace(reselected, first.revision, file);
+    await assert.rejects(saveWorkspace(selected, first.revision, file), /CONFLICT/);
+    assert.deepEqual((await readWorkspace(file))?.workspace.values[JOURNEY_RESUME_KEY], nextPointer);
+    assert.equal((await readWorkspace(file))?.revision, current.revision);
+    assert.deepEqual((await readWorkspace(file + '.previous'))?.workspace.values[JOURNEY_RESUME_KEY], pointer);
+  } finally { await fs.rm(directory, { recursive: true, force: true }); }
 });

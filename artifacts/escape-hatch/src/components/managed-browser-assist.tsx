@@ -6,10 +6,11 @@ import type { AssistProfile } from '@/lib/assist-contract';
 import { CareerRecords } from './career-records';
 import { useEffect, useRef, useState, type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
 import { ArrowUpRight, CheckCircle2, FileUp, LoaderCircle, ShieldCheck } from 'lucide-react';
-import type { Application, Profile } from '@/lib/storage';
+import { getLocalStorage, readStoredValue, writeStoredValue, type Application, type Profile } from '@/lib/storage';
 import { ApplicationPreferences } from './application-preferences';
 import { connectionFromSnapshot, isSubmittedLocked, mergeTrackerIntoApplications, parseTrackerSnapshot, selectNextActionableOpportunity, trackerOpportunityId } from '@/lib/tracker-bridge';
 import { consumeManagedLaunchIntent } from '@/lib/managed-launch-intent';
+import { projectApplicationJourney, JOURNEY_RESUME_KEY, EMPTY_JOURNEY_RESUME, parseJourneyResume } from '@/lib/application-journey-projection';
 
 const API = '/__escapehatch/managed-assist';
 
@@ -23,10 +24,19 @@ type PreparationResult = {
   pendingManual: string[];
 };
 
+type AuthCheckpoint = {
+  phase: 'AUTH_HANDOFF' | 'AUTH_RECHECK' | 'APPLICATION_FORM_READY' | 'ENTRY_REVIEW_REQUIRED' | 'SESSION_ORIGIN_CHANGED';
+  stableReads: number;
+  canResume: boolean;
+  reason: string;
+};
+
 type ServerResponse = {
   ok: boolean;
   state?: string;
   browserOpen?: boolean;
+  authCheckpoint?: AuthCheckpoint;
+  needsOpportunityConfirmation?: boolean;
   currentPage?: CurrentApplicationPage | null;
   error?: string;
   filled?: string[];
@@ -81,6 +91,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const [url, setUrl] = useState('');
   const [selectedOpportunityId, setSelectedOpportunityId] = useState('');
   const operatorSelected = useRef(false);
+  const [savedJourney, setSavedJourney] = useState(() => readStoredValue(getLocalStorage(), JOURNEY_RESUME_KEY, EMPTY_JOURNEY_RESUME, parseJourneyResume));
   const autoLaunchAttempted = useRef(false);
   const [explicitLaunchId] = useState(() => consumeManagedLaunchIntent(window.sessionStorage));
   const [verifiedNextReadyId, setVerifiedNextReadyId] = useState<string | null>(null);
@@ -89,7 +100,14 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const documents = useOpportunityDocuments(selectedOpportunityId, url);
   const [autoPrepareRequested, setAutoPrepareRequested] = useState(false);
   const [status, setStatus] = useState('idle');
+  const [authCheckpoint, setAuthCheckpoint] = useState<AuthCheckpoint | null>(null);
+  const [pendingAfterLogin, setPendingAfterLogin] = useState(false);
+  const [needsOpportunityConfirmation, setNeedsOpportunityConfirmation] = useState(false);
+  const [observedPageUrl, setObservedPageUrl] = useState('');
+  const [emailDraft, setEmailDraft] = useState('');
+  const [emailInputError, setEmailInputError] = useState('');
   const [message, setMessage] = useState('');
+  const [continuityError, setContinuityError] = useState('');
   const [busy, setBusy] = useState(false);
   const [recordMilitary, setRecordMilitary] = useState(false);
   const [preferencesRefresh, setPreferencesRefresh] = useState(0);
@@ -100,6 +118,29 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const [formObservation, setFormObservation] = useState<{ opportunityId: string; url: string; revision: number } | null>(null);
   const [listenerStatus, setListenerStatus] = useState<ServerResponse['listeners']>();
   const seenAnswers = useRef(0);
+  const rememberOpportunity = (opportunity?: Application) => {
+    // An unsaved URL or blank view selection cannot erase the last saved journey.
+    if (!opportunity) return;
+    const candidate = { opportunityId: opportunity.id, applicationUrl: opportunity.url };
+    const pointer = parseJourneyResume(candidate);
+    if (!pointer || opportunity && ['applied', 'closed'].includes(opportunity.status)) { setContinuityError('This opportunity cannot be saved as a resumable application. Its existing records are preserved.'); return; }
+    if (pointer.opportunityId === savedJourney.opportunityId && pointer.applicationUrl === savedJourney.applicationUrl) return;
+    if (!writeStoredValue(getLocalStorage(), JOURNEY_RESUME_KEY, pointer)) {
+      setContinuityError('Could not save the pending application on this browser. Existing saved progress is preserved.'); return;
+    }
+    setContinuityError('');
+    setSavedJourney(pointer);
+  };
+  const journey = projectApplicationJourney({
+    jobUrl: url,
+    emailApproved: Boolean(profile.email?.trim()),
+    documentsApproved: documents.canUpload,
+    browserOpen,
+    authPhase: authCheckpoint?.phase,
+    formCanResume: Boolean(authCheckpoint?.canResume),
+    needsOpportunityConfirmation,
+    preparationState: preparation?.state,
+  });
 
   useEffect(() => {
     let active = true;
@@ -132,18 +173,28 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     const ready = applications.find((item) => permitted(item) &&
       item.id.startsWith('tracker-') && /provider status:\s*ready to apply/i.test(item.notes) &&
       /Applied\? unchecked/i.test(item.notes));
-    const next = requested || ready;
+    const remembered = applications.find(item => item.id === savedJourney.opportunityId &&
+      item.url === savedJourney.applicationUrl && permitted(item));
+    if (savedJourney.opportunityId && !remembered && !requested) {
+      setSelectedOpportunityId(''); setUrl('');
+      setContinuityError('Your saved pending application changed or is no longer active. Review its original opportunity before continuing.');
+      return;
+    }
+    const next = requested || remembered || ready;
     if (next) {
       setSelectedOpportunityId(next.id);
       setUrl(next.url);
     }
-  }, [applications, browserOpen]);
+  }, [applications, browserOpen, savedJourney]);
 
   useEffect(() => {
     let active = true;
     request('/status').then((result) => {
       if (active) {
         setStatus(result.state || 'idle');
+        setAuthCheckpoint(result.authCheckpoint || null);
+        setNeedsOpportunityConfirmation(Boolean(result.needsOpportunityConfirmation));
+        setObservedPageUrl(result.currentPage?.pageUrl || '');
         if (result.state === 'browser_open_navigation_unverified' && result.networkDiagnosis?.code === 'VPN_INTERFERENCE_SUSPECTED') {
           setMessage('Navigation failed and a VPN tunnel error was detected. VPN interference is suspected, not proven. Your VPN has not been changed.');
         }
@@ -169,6 +220,25 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   }, []);
 
   useEffect(() => {
+    if (!browserOpen || !currentPage || operatorSelected.current) return;
+    // Readback restores a known binding; it never issues new launch/fill authority.
+    autoLaunchAttempted.current = true;
+    const bound = applications.find(item => item.id === currentPage.opportunityId &&
+      item.url === currentPage.applicationUrl && item.status !== 'applied' && item.status !== 'closed');
+    if (bound) {
+      operatorSelected.current = true;
+      setSelectedOpportunityId(bound.id);
+      setUrl(bound.url);
+      rememberOpportunity(bound);
+      setMessage('Recovered the opportunity already open in managed Chrome. Continue in the same session.');
+    } else {
+      setSelectedOpportunityId('');
+      setUrl('');
+      setContinuityError('Managed Chrome is open, but its saved opportunity binding needs review. Select the original matching opportunity before resuming.');
+    }
+  }, [browserOpen, currentPage?.opportunityId, currentPage?.applicationUrl, applications]);
+
+  useEffect(() => {
     if (!browserOpen) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
@@ -178,6 +248,9 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         if (cancelled) return;
         setCurrentPage(result.currentPage || null);
         setListenerStatus(result.listeners);
+        setAuthCheckpoint(result.authCheckpoint || null);
+        setNeedsOpportunityConfirmation(Boolean(result.needsOpportunityConfirmation));
+        setObservedPageUrl(result.currentPage?.pageUrl || '');
         if (result.listeners) {
           setApplications(current => reconcileSubmissionReceipts(current, result.listeners!.receipts));
           if (result.listeners.savedAnswers !== seenAnswers.current) {
@@ -253,7 +326,26 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     void run('prepare');
   }, [autoPrepareRequested, busy, documents.loading, documents.canUpload, browserOpen]);
 
-  async function run(action: 'launch' | 'fill' | 'attach' | 'prepare') {
+  useEffect(() => {
+    if (!pendingAfterLogin || !authCheckpoint?.canResume || needsOpportunityConfirmation || busy || !browserOpen) return;
+    // A prior explicit Launch authorizes only the guarded Fill, not navigation or Submit.
+    setPendingAfterLogin(false);
+    void run('resume');
+  }, [pendingAfterLogin, authCheckpoint?.canResume, needsOpportunityConfirmation, busy, browserOpen]);
+
+  async function checkSignIn() {
+    try {
+      const result = await request('/status');
+      setAuthCheckpoint(result.authCheckpoint || null);
+      setNeedsOpportunityConfirmation(Boolean(result.needsOpportunityConfirmation));
+      setObservedPageUrl(result.currentPage?.pageUrl || '');
+      setMessage(result.authCheckpoint?.reason || 'The employer form could not be inspected. Continue in Chrome and check again.');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Unable to inspect the managed session.');
+    }
+  }
+
+  async function run(action: 'launch' | 'fill' | 'attach' | 'prepare' | 'resume') {
     setBusy(true);
     setMessage('');
     try {
@@ -265,7 +357,15 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           throw new Error('This opportunity is already applied or closed. Do not reapply.');
         }
         body = { url, opportunityId: opportunity?.id || '', employerName: opportunity?.company || '' };
-      } else if (action === 'fill') body = { profile, careerProfile: assistProfile, targetRole: applications.find(item => item.id === selectedOpportunityId)?.role || '', employerName: applications.find(item => item.id === selectedOpportunityId)?.company || '' };
+      } else if (action === 'fill' || action === 'resume') {
+        if (currentPage && (url !== currentPage.applicationUrl || currentPage.opportunityId &&
+            (currentPage.opportunityId !== selectedOpportunityId || !applications.some(item =>
+              item.id === currentPage.opportunityId && item.url === currentPage.applicationUrl &&
+              item.status !== 'applied' && item.status !== 'closed')))) {
+          throw new Error('Select the original opportunity bound to this managed browser before filling or resuming.');
+        }
+        body = { profile, careerProfile: assistProfile, targetRole: applications.find(item => item.id === selectedOpportunityId)?.role || '', employerName: applications.find(item => item.id === selectedOpportunityId)?.company || '' };
+      }
       else if (action === 'attach') {
         if (!documents.canUpload) throw new Error('Save opportunity documents and complete required review before uploading.');
         body = { opportunityId: selectedOpportunityId, url };
@@ -290,6 +390,14 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           adapterRegistry: registryRaw ? JSON.parse(registryRaw) as object : null,
         };
       }
+      if (action === 'resume' && needsOpportunityConfirmation) {
+        if (!selectedOpportunityId || !observedPageUrl)
+          throw new Error('Save and select the opportunity before confirming a changed employer path.');
+        await request('/resume/bind', {
+          opportunityId: selectedOpportunityId, livePageUrl: observedPageUrl, confirmedSameOpportunity: true,
+        });
+        setNeedsOpportunityConfirmation(false);
+      }
       let result = await request('/' + action, body);
       const launchedApplicationForm = action === 'launch' && result.state === 'application_form_open_review_required';
       let autoFillMessage = '';
@@ -309,10 +417,15 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         }
       }
       setStatus(result.state || 'idle');
+      if (result.authCheckpoint) setAuthCheckpoint(result.authCheckpoint);
       setFormObservation({ opportunityId: selectedOpportunityId, url, revision: Date.now() });
       if (result.preparation) setPreparation(result.preparation);
       if (action === 'launch') {
         setBrowserOpen(true);
+        const launchedOpportunity = applications.find(item => item.id === selectedOpportunityId && item.url === url);
+        if (launchedOpportunity) rememberOpportunity(launchedOpportunity);
+        setPendingAfterLogin(result.authCheckpoint?.phase === 'AUTH_HANDOFF' ||
+          result.authCheckpoint?.phase === 'SESSION_ORIGIN_CHANGED');
         // A previously reviewed exact PDF is already authorized for staging:
         // don't make the operator press Fill and Attach again after launch.
         if (launchedApplicationForm && documents.canUpload) setAutoPrepareRequested(true);
@@ -325,10 +438,10 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           return items; // A custom URL never creates an unverified employer ledger record.
         });
       }
-      if (action === 'fill' || action === 'launch') {
+      if (action === 'fill' || action === 'resume' || action === 'launch') {
         await request('/questions', {}).then(() => setPreferencesRefresh(value => value + 1)).catch(() => {});
       }
-      if (action === 'fill') setMessage(
+      if (action === 'fill' || action === 'resume') setMessage(
         (result.filled?.length ? 'Filled: ' + result.filled.join(', ') + '. ' : 'No fields filled. ') +
         (result.skipped?.length ? 'Skipped: ' + result.skipped.join(', ') + '. ' : '') +
         (result.evidenceSummary || 'Review before continuing on the employer website.')
@@ -361,6 +474,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const handleUrl = (event: ChangeEvent<HTMLInputElement>) => {
     operatorSelected.current = true;
     setSelectedOpportunityId('');
+    setPendingAfterLogin(false);
     setUrl(event.target.value);
   };
   const button = 'inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50';
@@ -382,6 +496,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         </div>
       </div>
 
+      {continuityError && <p role="alert" className="mt-4 text-sm">{continuityError}</p>}
       <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_auto]">
         <div className="space-y-3">
           {applications.some((application) => application.url) && (
@@ -393,7 +508,9 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
                   const opportunity = applications.find((item) => item.id === event.target.value);
                   operatorSelected.current = true;
                   setSelectedOpportunityId(opportunity?.id || '');
+                  setPendingAfterLogin(false);
                   setUrl(opportunity?.url || '');
+                  rememberOpportunity(opportunity);
                 }}>
                 <option value="">Current / custom URL</option>
                 {applications.filter((item) => item.url && item.status !== 'applied' && item.status !== 'closed').map((item) => <option key={item.id} value={item.id}>{item.company} — {item.role}</option>)}
@@ -415,6 +532,70 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         </div>
       </div>
 
+      <section aria-label="Application guidance" data-testid="application-journey-coach"
+        className="mt-4 rounded-xl border border-primary/25 bg-primary/5 p-4" aria-live="polite">
+        <p className="text-xs font-bold uppercase tracking-wide text-primary">Your next step</p>
+        <dl className="mt-2 grid gap-2 rounded-lg border border-border bg-card p-3 text-xs sm:grid-cols-2" data-testid="journey-scene-status">
+          <div><dt className="font-semibold text-muted-foreground">Current</dt>
+            <dd className="mt-1 font-semibold" data-testid="journey-current">{journey.current.coach_prompt}</dd></div>
+          <div><dt className="font-semibold text-muted-foreground">Next</dt>
+            <dd className="mt-1 font-semibold" data-testid="journey-next">{journey.next.coach_prompt}</dd></div>
+        </dl>
+        {journey.blockers.length > 0 && <div className="mt-2 space-y-1" data-testid="journey-blockers">
+          <p className="text-xs font-semibold">What's missing now</p>
+          {journey.blockers.map((item, index) => <p key={index} className="text-xs text-muted-foreground">{item}</p>)}
+        </div>}
+        {!profile.email?.trim() ? (
+          <form className="mt-2 space-y-2" onSubmit={event => {
+            event.preventDefault();
+            const email = emailDraft.trim();
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+              setEmailInputError('Enter a valid email address for your applications.'); return;
+            }
+            setProfile(current => ({ ...current, email }));
+            setEmailDraft('');
+            setEmailInputError('');
+            setMessage('Application email saved in your private EscapeHatch profile. Employer acceptance is not yet proven.');
+          }}>
+            <label className="block text-sm font-semibold" htmlFor="eh-coach-email">Which email should employers use to contact you?</label>
+            <p className="text-xs text-muted-foreground">This fills your approved identity prerequisite, not the employer's login password.</p>
+            <input id="eh-coach-email" type="email" autoComplete="email" required
+              value={emailDraft} onChange={e => setEmailDraft(e.target.value)}
+              className="w-full rounded-lg border border-input bg-background p-3 text-sm"
+              data-testid="coach-approved-email" />
+            {emailInputError && <p role="alert" className="text-xs">{emailInputError}</p>}
+            <button className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" type="submit">Save email to profile</button>
+          </form>
+        ) : authCheckpoint?.phase === 'AUTH_HANDOFF' || authCheckpoint?.phase === 'SESSION_ORIGIN_CHANGED' ? (
+          <div className="mt-2 space-y-2">
+            <p className="text-sm font-semibold">Finish signing in to the employer website in Chrome.</p>
+            <p className="text-xs text-muted-foreground">{authCheckpoint.reason} EscapeHatch never asks for passwords, MFA codes, or CAPTCHA answers here.</p>
+            <button className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold" type="button"
+              data-testid="button-auth-check-again" onClick={() => void checkSignIn()}>I've signed in — check again</button>
+          </div>
+        ) : authCheckpoint?.canResume ? (
+          <div className="mt-2 space-y-2">
+            <p className="text-sm font-semibold">{needsOpportunityConfirmation
+              ? 'Is this the same job you selected before signing in?'
+              : 'Application form recognized. Continue where you left off.'}</p>
+            <p className="text-xs text-muted-foreground">The form was observed twice in the same browser session. No final Submit is automated.</p>
+            {needsOpportunityConfirmation && <p className="text-xs text-muted-foreground">The employer returned to a different page path. Confirm this is the same selected opportunity before any automated field changes. Do not confirm another job.</p>}
+            <button className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" type="button"
+              data-testid="button-auth-resume" disabled={busy || (needsOpportunityConfirmation && !selectedOpportunityId)} onClick={() => void run('resume')}>
+              {needsOpportunityConfirmation ? 'Yes, same job — resume filling' : 'Resume filling this application'}
+            </button>
+          </div>
+        ) : (
+          <div className="mt-2 space-y-2">
+            <p className="text-sm">Paste or select an employer job link, then open it in managed Chrome.</p>
+            {browserOpen && <p className="text-xs text-muted-foreground">{authCheckpoint?.reason || 'Inspecting the employer page...'}</p>}
+            {browserOpen && <button type="button" className="rounded-lg border border-border bg-card px-3 py-2 text-sm font-semibold"
+              data-testid="button-auth-check-again" onClick={() => void checkSignIn()}>Check this page again</button>}
+          </div>
+        )}
+        {!!url.trim() && !selectedOpportunityId && <p className="mt-3 text-xs text-muted-foreground">This pasted URL is not yet bound to a saved opportunity. Save it to retain role-specific documents and answers across sessions.</p>}
+        {!!selectedOpportunityId && !documents.canUpload && <p className="mt-3 text-xs text-muted-foreground">Next prerequisite: stage and review this opportunity's résumé and cover-letter files below. Upload is not confirmed.</p>}
+      </section>
       <ApplicationPuzzle opportunity={applications.find(item => item.id === selectedOpportunityId)} url={url} documents={documents} disabled={busy || autoPrepareRequested} refresh={formObservation} currentPage={currentPage} onBypass={() => { if (browserOpen) setAutoPrepareRequested(true); }} />
       <div className="mt-5 rounded-xl bg-secondary/55 p-4">
         <div className="flex items-center gap-2 text-sm font-bold"><CheckCircle2 className="text-primary" size={16} />

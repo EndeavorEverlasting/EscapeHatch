@@ -57,7 +57,7 @@ export async function inspectAuthObservation(page: Page, expectedOrigin: string)
     pageUrl, pageOrigin, expectedOrigin,
     credentialGate: false, emailFirstGate: false, applicationFormRecognized: false, formSignature: 'external-auth-origin',
   };
-  const observed = await page.evaluate(() => {
+  const observed = await page.evaluate(async () => {
     const visible = (element: Element) => {
       const style = getComputedStyle(element);
       return element.getClientRects().length > 0 && style.visibility !== 'hidden' && style.display !== 'none';
@@ -76,14 +76,17 @@ export async function inspectAuthObservation(page: Page, expectedOrigin: string)
     const identity = labels.filter(label => /(?:first.?name|last.?name|given.?name|phone|telephone|address|linkedin|portfolio)/i.test(label)).length;
     const uploads = inputs.filter(el => el instanceof HTMLInputElement && el.type === 'file').length;
     const employment = labels.filter(label => /(?:employment|experience|education|resume|r[ée]sum[ée]|cv|cover.?letter|work.?history)/i.test(label)).length;
-    const applicationFormRecognized = !credentialGate &&
+    const applicationFormRecognized = inputs.length <= 256 && !credentialGate &&
       (uploads > 0 || employment > 0 || identity >= 2);
     const emailFirstGate = !credentialGate && !applicationFormRecognized && emailCount > 0 &&
       inputs.filter(el => el instanceof HTMLInputElement && !['hidden','checkbox','radio'].includes(el.type)).length <= 2;
-    return {
-      credentialGate, emailFirstGate, applicationFormRecognized,
-      formSignature: [identity, employment, uploads, inputs.length].join(':'),
-    };
+    // Counts alone cannot distinguish different forms with equal field totals.
+    // Hash bounded semantic metadata; never read or return entered control values.
+    const descriptors = inputs.slice(0, 256).map((el, index) =>
+      [el.tagName, el.getAttribute('type') || '', el.getAttribute('role') || '', labels[index]].join(':'));
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(descriptors)));
+    const formSignature = Array.from(new Uint8Array(digest), value => value.toString(16).padStart(2, '0')).join('');
+    return { credentialGate, emailFirstGate, applicationFormRecognized, formSignature };
   });
   if (page.url() !== pageUrl) return {
     pageUrl: page.url(), pageOrigin: new URL(page.url()).origin, expectedOrigin,

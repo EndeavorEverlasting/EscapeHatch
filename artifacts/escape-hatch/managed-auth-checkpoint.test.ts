@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { INITIAL_CHECKPOINT, advanceAuthCheckpoint, resumeAllowed } from './managed-auth-checkpoint.ts';
+import { INITIAL_CHECKPOINT, advanceAuthCheckpoint, resumeAllowed, inspectAuthObservation } from './managed-auth-checkpoint.ts';
 
 const base = {
   expectedOrigin: 'https://jobs.example.test',
@@ -50,4 +50,12 @@ test('login reappearing revokes previous readiness', () => {
 test('absence of login is not evidence of application form', () => {
   const state = advanceAuthCheckpoint(INITIAL_CHECKPOINT, base);
   assert.equal(state.phase, 'ENTRY_REVIEW_REQUIRED');
+});
+
+
+test('external identity provider is observed by origin without inspecting DOM', async () => {
+  const page = { url: () => 'https://login.example.test/sso', evaluate: () => { throw new Error('External DOM must not be inspected'); } } as unknown as Parameters<typeof inspectAuthObservation>[0];
+  const observation = await inspectAuthObservation(page, base.expectedOrigin);
+  assert.equal(observation.applicationFormRecognized, false);
+  assert.equal(advanceAuthCheckpoint(INITIAL_CHECKPOINT, observation).phase, 'SESSION_ORIGIN_CHANGED');
 });

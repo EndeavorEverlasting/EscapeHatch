@@ -38,7 +38,7 @@ test('cockpit owns Launch, Fill and Attach without a Chrome extension', async ({
     const body = action === 'status'
       ? { ok: true, state: 'idle', browserOpen: launched }
       : { ok: true, state: action === 'launch' ? 'application_open_review_required' :
-          action === 'fill' ? 'fields_filled_review_required' : 'attachments_staged_review_required',
+          action === 'fill' ? 'fields_unverified_review_required' : 'attachments_staged_review_required',
           filled: [], skipped: [], attachments: { resume: 'attached_to_input_review_required' } };
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
   });
@@ -52,6 +52,7 @@ test('cockpit owns Launch, Fill and Attach without a Chrome extension', async ({
   await expect(page.getByText('Application opened — sign in if requested')).toBeVisible();
   await page.getByTestId('button-managed-fill').click();
   await expect(page.getByTestId('managed-browser-feedback')).toContainText('No fields filled');
+  await expect(page.getByText('No fields verified — review the employer form')).toBeVisible();
   await page.getByTestId('managed-browser-assist').locator('input[type="file"]').first().setInputFiles({
     name: 'synthetic-resume.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\\nfixture'),
   });
@@ -117,14 +118,14 @@ test('Launch automatically fills permitted fields when a verified application fo
     actions.push(action);
     const data = action === 'status' ? { ok: true, state: 'idle', browserOpen: false } :
       action === 'launch' ? { ok: true, state: 'application_form_open_review_required' } :
-      action === 'fill' ? { ok: true, state: 'fields_filled_review_required', filled: ['first_name'], skipped: ['unknown_question'] } :
+      action === 'fill' ? { ok: true, state: 'fields_partially_filled_review_required', filled: ['first_name'], skipped: ['unknown_question'] } :
       { ok: false, error: 'unexpected_action' };
     await route.fulfill({ status: data.ok ? 200 : 422, contentType: 'application/json', body: JSON.stringify(data) });
   });
   await page.goto('/assist');
   await page.getByTestId('managed-job-url').fill('https://jobs.ashbyhq.com/synthetic/autofill');
   await page.getByTestId('button-managed-launch').click();
-  await expect(page.getByText('Known fields filled — review the page')).toBeVisible();
+  await expect(page.getByText('Some fields verified — other fields need review')).toBeVisible();
   await expect(page.getByTestId('managed-browser-feedback')).toContainText('Filled: first_name');
   await expect(page.getByTestId('managed-browser-feedback')).toContainText('Skipped: unknown_question');
   expect(actions.filter((value) => ['launch', 'fill', 'attach', 'prepare'].includes(value))).toEqual(['launch', 'fill']);
@@ -177,7 +178,7 @@ test('one explicit Home click opens the verified Thyme Care job and fills approv
     if (action === 'launch') launches.push(route.request().postDataJSON());
     const result = action === 'status' ? { ok: true, state: 'idle', browserOpen: false } :
       action === 'launch' ? { ok: true, state: 'application_form_open_review_required' } :
-      action === 'fill' ? { ok: true, state: 'fields_filled_review_required', filled: ['first_name'], skipped: ['unknown_question'] } :
+      action === 'fill' ? { ok: true, state: 'fields_partially_filled_review_required', filled: ['first_name'], skipped: ['unknown_question'] } :
       { ok: false, error: 'unexpected_action' };
     await route.fulfill({ status: result.ok ? 200 : 422, contentType: 'application/json', body: JSON.stringify(result) });
   });

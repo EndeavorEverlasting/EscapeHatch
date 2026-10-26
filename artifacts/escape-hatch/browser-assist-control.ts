@@ -1,11 +1,13 @@
 import { prepareWithoutTrustedNavigation } from './managed-prepare-fallback.ts';
+import { fieldProgressState, attachmentProgressState, evidenceDescription } from './managed-progress-evidence.ts';
 import { assertInspectionScope, inspectApplicationRequirements } from './application-requirements.ts';
 import { OpportunityDocumentStore, documentScope, type DocumentKind } from './opportunity-documents.ts';
 import { ManagedListeners } from './managed-listeners.ts';
 import { withCareerPreferences } from './career-preferences.ts';
 import { captureMilitaryAnswers } from './managed-form.ts';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { homedir } from 'node:os';
+import { homedir, networkInterfaces } from 'node:os';
+import { diagnoseNavigationFailure, type NavigationDiagnosis } from './network-navigation-diagnosis.ts';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { chromium, type BrowserContext, type Page } from '@playwright/test';
@@ -257,11 +259,11 @@ export function createManagedBrowserAssistPlugin(): Plugin {
   // and listener handles rather than orphaning the operator's application.
   type SessionCache = { context: BrowserContext | null; page: Page | null; state: string;
     applicationOrigin: string; applicationUrl: string; opportunityId: string;
-    preparation: PreparationResult | null; listeners: ManagedListeners; busy: boolean };
+    preparation: PreparationResult | null; networkDiagnosis: NavigationDiagnosis | null; listeners: ManagedListeners; busy: boolean };
   const cacheHost = globalThis as typeof globalThis & { [key: symbol]: SessionCache };
   const cacheKey = Symbol.for('escapehatch.managed-browser.' + (managed?.identity.instanceId || 'unmanaged'));
   const cache = cacheHost[cacheKey] ||= { context: null, page: null, state: 'idle', applicationOrigin: '', applicationUrl: '',
-    opportunityId: '', preparation: null, busy: false, listeners: new ManagedListeners() };
+    opportunityId: '', preparation: null, networkDiagnosis: null, busy: false, listeners: new ManagedListeners() };
   let context = cache.context;
   let page = cache.page;
   let state = cache.state;
@@ -270,6 +272,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
   const documentStore = new OpportunityDocumentStore();
   let opportunityId = cache.opportunityId;
   let preparation = cache.preparation;
+  let networkDiagnosis = cache.networkDiagnosis;
   const listeners = cache.listeners;
   return {
     name: 'escapehatch-managed-browser-assist',
@@ -293,6 +296,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             ok: true,
             state,
             browserOpen: Boolean(page),
+            networkDiagnosis,
             currentPage: page ? { opportunityId, applicationUrl, pageUrl: page.url() } : null,
             requiresOperatorSubmission: true,
             preparationState: preparation?.state || null,
@@ -364,6 +368,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               ? payload.opportunityId
               : '';
             preparation = null;
+            networkDiagnosis = null;
             if (!context) {
               const folder = path.join(process.env.LOCALAPPDATA || path.join(homedir(), 'AppData', 'Local'), 'EscapeHatch', 'managed-career-browser');
               await fs.mkdir(folder, { recursive: true });
@@ -383,7 +388,12 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               await page.goto(jobUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
               state = 'application_open_review_required';
               if (await openApplicationForm(page)) state = 'application_form_open_review_required';
-            } catch {
+            } catch (error) {
+              // Network interface naming is only suggestive, never proof of VPN causality.
+              const activeNames = Object.entries(networkInterfaces())
+                .filter(([, addresses]) => addresses?.some(addr => addr.family === 'IPv4' && !addr.internal))
+                .map(([name]) => name);
+              networkDiagnosis = diagnoseNavigationFailure(error, activeNames);
               state = 'browser_open_navigation_unverified';
             }
             if (state === 'application_form_open_review_required' && opportunityId) {
@@ -391,7 +401,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
                 employerName: typeof payload.employerName === 'string' ? payload.employerName.slice(0, 160) : '' });
               await listeners.arm();
             }
-            return respond(res, 200, { ok: true, state, requiresOperatorSubmission: true });
+            return respond(res, 200, { ok: true, state, networkDiagnosis, requiresOperatorSubmission: true });
           }
           if (!page || page.isClosed()) return respond(res, 409, { ok: false, error: 'launch_browser_first' });
           if (new URL(page.url()).origin !== applicationOrigin) return respond(res, 409, { ok: false, error: 'application_origin_changed_review_required' });
@@ -515,15 +525,15 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               if (!merged.preferences[id]) merged.preferences[id] = { scope: 'profile_preference', source: 'user', value, updated_at: now };
             }
             const outcome = await fillSavedPreferences(page, withCareerPreferences(merged, payload.careerProfile, payload.targetRole), typeof payload.employerName === 'string' ? payload.employerName.slice(0, 160) : '');
-            state = 'fields_filled_review_required';
-            return respond(res, 200, { ok: true, state, ...outcome, requiresOperatorSubmission: true });
+            state = fieldProgressState(outcome);
+            return respond(res, 200, { ok: true, state, ...outcome, evidenceSummary: evidenceDescription(state), requiresOperatorSubmission: true });
           }
           if (url.pathname === PREFIX + '/attach') {
             if (payload.resume || payload.cover) throw new Error('Save the selected documents to this opportunity before attaching.');
             const packageFiles = await documentStore.forUpload(opportunityId, applicationUrl, (await readPreferences()).require_document_review !== false);
             const outcome = await attachPdfs(page, packageFiles.resume, packageFiles.cover);
-            state = 'attachments_staged_review_required';
-            return respond(res, 200, { ok: true, state, attachments: outcome, reviewPolicy: packageFiles.reviewPolicy, requiresOperatorSubmission: true });
+            state = attachmentProgressState(outcome);
+            return respond(res, 200, { ok: true, state, evidenceSummary: evidenceDescription(state), attachments: outcome, reviewPolicy: packageFiles.reviewPolicy, requiresOperatorSubmission: true });
           }
           return respond(res, 404, { ok: false, error: 'unknown_action' });
         } catch (error) {
@@ -531,7 +541,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
           // Never log URLs, profile values, job forms, tokens or private document contents.
           return respond(res, 422, { ok: false, error: message.slice(0, 160) });
         } finally {
-          Object.assign(cache, { context, page, state, applicationOrigin, applicationUrl, opportunityId, preparation });
+          Object.assign(cache, { context, page, state, applicationOrigin, applicationUrl, opportunityId, preparation, networkDiagnosis });
           cache.busy = false;
         }
       });

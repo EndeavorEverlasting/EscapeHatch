@@ -13,7 +13,7 @@
     "test": "npm run test:unit && npm run test:browser",
     "test:workbench": "tsx --test src/lib/application-puzzle.test.ts src/lib/source-bridge.test.ts browser-assist-control.test.ts opportunity-documents.test.ts",
     "test:runtime-control": "node --experimental-strip-types --test runtime-control.test.ts",
-    "test:managed-assist": "node --experimental-strip-types --test browser-assist-control.test.ts managed-preferences.test.ts managed-preparation-driver.test.ts managed-prepare-fallback.test.ts opportunity-documents.test.ts managed-answer-memory.test.ts managed-submission-observer.test.ts managed-listeners.test.ts",
+    "test:managed-assist": "node --experimental-strip-types --test browser-assist-control.test.ts managed-preferences.test.ts managed-preparation-driver.test.ts managed-prepare-fallback.test.ts opportunity-documents.test.ts managed-answer-memory.test.ts managed-submission-observer.test.ts managed-listeners.test.ts managed-progress-evidence.test.ts network-navigation-diagnosis.test.ts vpn-recovery.test.ts",
     "test:tracker": "tsx --test src/lib/tracker-bridge.test.ts src/lib/source-bridge.test.ts",
     "test:bootstrap": "tsx --test workspace-bootstrap.test.ts tracker-refresh.test.ts",
     "test:bootstrap:browser": "playwright test --config playwright.bootstrap.config.ts",

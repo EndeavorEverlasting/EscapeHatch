@@ -213,3 +213,104 @@ Acceptance scenarios: (1) returning user sees approved answers and saved pending
     python scripts/validate_governance.py
 
 Then isolate #95's conflicting integration in its own safe worktree, preserving its current head and all dirty operator files; resolve its real merge conflicts without blind reset. Run current workspace/installer/Windows tests, reconcile #98, then continue with #100/#101 tests and Windows P08. The output receipt must be CHANGED | PROVED | NEXT with exact paths, SHAs, tests/exits, merge/deploy/live distinctions, preserved prior behavior and one next executable action. Do not ask the user to retype their existing answers or rehearse this plan instead of running it.
+
+
+### 9.7 Executed continuity checkpoint — October 26
+
+This checkpoint supersedes the initial F0/F1 launch sequence above for the integrated slices. Refresh provider truth before new work; do not reconstruct answers or replay already integrated branches from historical observations.
+
+| Slice | Integrated provider evidence |
+|---|---|
+| Persistent workspace / installer, #95 | `133f677890297f3aaf1019442322e50ab636ad4a` |
+| Recovered Answer Library, #102 | `eee46cf85ad4857014e2b2216fbbfebfe4b090b8` |
+| Launcher diagnostics, #98 | `860a25c373c4c5ca96405e8315ea6136b902e413` |
+| Evidence-correct progress, #100 | `ba070efc264fdfd5a10b3424618c65bf09441715` |
+| Recovery CRUD/filter/source controls, #103 | `0d25f1a7c39897d8fa3e8c8b7ef44af1422effb3` |
+| Resumable journey and durable selection, #101 | `c9260ac9f3739f2999ddecfbec3cce375193ae3e` |
+
+**Observed local deployment:** The canonical installer selected a clean checkout pinned to the #101 merge artifact, without modifying the separately owned dirty prior checkout. Canonical Start/Status and the CMD front door returned owned-health readback on port 21031; reopening retained the same process. The actual installed Answer Library rendered recovered knowledge and retained it on reload with no source-unavailable warning. No answer values, credentials, documents, employer URLs or personal screenshots are published here. The preferences file stayed byte-identical. Startup's existing tracker sort changed application ordering; comparison against the matching prior workspace backup proved every opportunity record and every other workspace area unchanged. The installed checkout is a required source artifact: resolve it through the installation receipt and do not archive it while selected.
+
+**Protected live session:** A separate legacy runtime/browser on 21033 was preserved. Do not infer that its Chrome session migrated into the new runtime. Real employer sign-in, login-return filling, accepted attachments and clean-machine installation remain UNPROVEN. The first user-only gate is finishing the protected legacy session, then signing in to a selected opportunity in the canonical managed browser; observe same-window continuation and per-field effects without terminal Submit.
+
+**Validation evidence:** The journey candidate passed 103 unit tests, 73 managed-assist tests, both TypeScript checks, build, 13 bootstrap browser tests and the scene validator's ten Python tests. A full browser candidate passed 105 tests with one existing extension test skipped; the subsequent field-identity repair passed 23 targeted browser regressions. The closeout adds a real middleware/controller test for synthetic password login -> SSO -> stable employer form -> guarded resume -> actual field readback, preserving an existing field and never activating Submit. It also rejects same-origin job drift until explicit binding and keeps the same browser page. The three controller specs passed. These are synthetic proofs, not employer certification; exact-head CI and current validators remain authoritative for later commits.
+
+**P00/P01 and execution:** Existing governance/harness owners were reused and validated. The Answer Library projector/component/tests are registered in the existing artifact registry and codebase map; no second answer database was created. Native isolated workers and concurrent deterministic checks were executed, with coordinator rejoin/review and one writer per branch. Formal dispatch-manifest certification remains UNPROVEN because `harness/contracts/prompt-parallel-dispatch.v1.json` and `scripts/prompt_parallel_dispatch.py` are absent. Do not label native execution as a contract-valid receipt PASS.
+
+**Discovery gate:** Section 9.4 records the supported ZipRecruiter mechanism and provider access boundaries. The bounded initialize-only probe returned HTTP 429, and no search/import was performed. Do not bypass the rate-limit gate or treat JobSpy's code license as provider permission.
+
+**Changed-file inventory:** The following exact tracked paths changed between the refreshed initial main floor `4372430` and integrated product artifact `c9260ac` (the closeout further edits this handoff and the already listed controller spec). Public source only; real user artifacts stay outside Git.
+
+- `.github/workflows/harness.yml`
+- `.github/workflows/managed-browser-assist.yml`
+- `.github/workflows/web-cockpit.yml`
+- `AGENTS.md`
+- `ARTIFACT_REGISTRY.md`
+- `Close-EscapeHatch.ps1`
+- `Get-EscapeHatch.cmd`
+- `Install-EscapeHatch.cmd`
+- `Launch-EscapeHatch.cmd`
+- `Launch-EscapeHatch.ps1`
+- `README.md`
+- `Status-EscapeHatch.ps1`
+- `Uninstall-EscapeHatch.cmd`
+- `artifacts/escape-hatch/browser-assist-control.ts`
+- `artifacts/escape-hatch/import-context.ts`
+- `artifacts/escape-hatch/managed-auth-checkpoint.test.ts`
+- `artifacts/escape-hatch/managed-auth-checkpoint.ts`
+- `artifacts/escape-hatch/managed-progress-evidence.test.ts`
+- `artifacts/escape-hatch/managed-progress-evidence.ts`
+- `artifacts/escape-hatch/network-navigation-diagnosis.test.ts`
+- `artifacts/escape-hatch/network-navigation-diagnosis.ts`
+- `artifacts/escape-hatch/opportunity-documents.test.ts`
+- `artifacts/escape-hatch/opportunity-documents.ts`
+- `artifacts/escape-hatch/package.json`
+- `artifacts/escape-hatch/playwright.bootstrap.config.ts`
+- `artifacts/escape-hatch/playwright.config.ts`
+- `artifacts/escape-hatch/playwright.preview.config.ts`
+- `artifacts/escape-hatch/preference-file.ts`
+- `artifacts/escape-hatch/src/App.tsx`
+- `artifacts/escape-hatch/src/components/career-source-status.tsx`
+- `artifacts/escape-hatch/src/components/managed-browser-assist.tsx`
+- `artifacts/escape-hatch/src/components/recovered-answers.tsx`
+- `artifacts/escape-hatch/src/components/sources-page.tsx`
+- `artifacts/escape-hatch/src/components/workspace-startup.tsx`
+- `artifacts/escape-hatch/src/lib/answer-recovery.test.ts`
+- `artifacts/escape-hatch/src/lib/answer-recovery.ts`
+- `artifacts/escape-hatch/src/lib/application-journey-projection.test.ts`
+- `artifacts/escape-hatch/src/lib/application-journey-projection.ts`
+- `artifacts/escape-hatch/src/lib/assist-contract.ts`
+- `artifacts/escape-hatch/src/lib/storage.ts`
+- `artifacts/escape-hatch/src/lib/tracker-bridge.ts`
+- `artifacts/escape-hatch/src/lib/workspace-bootstrap.ts`
+- `artifacts/escape-hatch/src/main.tsx`
+- `artifacts/escape-hatch/tests/application-requirements-control.spec.ts`
+- `artifacts/escape-hatch/tests/managed-browser-assist.spec.ts`
+- `artifacts/escape-hatch/tests/persistence.spec.ts`
+- `artifacts/escape-hatch/tests/sources.spec.ts`
+- `artifacts/escape-hatch/tests/standalone-startup.spec.ts`
+- `artifacts/escape-hatch/tests/workspace-startup.spec.ts`
+- `artifacts/escape-hatch/tracker-control.ts`
+- `artifacts/escape-hatch/tracker-refresh.test.ts`
+- `artifacts/escape-hatch/tracker-refresh.ts`
+- `artifacts/escape-hatch/user-data.ts`
+- `artifacts/escape-hatch/vite.config.ts`
+- `artifacts/escape-hatch/vpn-recovery.test.ts`
+- `artifacts/escape-hatch/vpn-recovery.ts`
+- `artifacts/escape-hatch/workspace-bootstrap.test.ts`
+- `artifacts/escape-hatch/workspace-control.ts`
+- `artifacts/escape-hatch/workspace-file.ts`
+- `contracts/application-companion.v1.json`
+- `contracts/application-journey-scenes.v1.json`
+- `docs/WINDOWS_RUNTIME_LIFECYCLE.md`
+- `docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md`
+- `docs/agent/APPLICATION_JOURNEY_SCENE_SYSTEM_2026-10-25.md`
+- `docs/agent/P04_MICRO1_NETWORK_PROGRESS_AND_DOCUMENT_QA_2026-10-25.md`
+- `harness/CODEBASE_MAP.md`
+- `scripts/audit_resume_docx.py`
+- `scripts/validate_application_journey.py`
+- `scripts/windows/EscapeHatch-Install.ps1`
+- `skills/harness-operations/SKILL.md`
+- `tests/test_application_journey.py`
+- `tests/test_escapehatch_launch_frontdoor.py`
+- `tests/test_resume_docx_audit.py`
+- `tests/windows/Test-EscapeHatch-Install.ps1`

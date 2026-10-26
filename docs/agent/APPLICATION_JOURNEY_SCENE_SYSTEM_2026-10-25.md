@@ -165,3 +165,49 @@ npm run typecheck
 npm run build
 ```
 If the branch is already checked out elsewhere or locked by a worker, select a fresh isolated worktree path without resetting or replacing existing work. Never claim these commands ran merely because they appear in this handoff.
+
+## 9. October 26 canonical local sprint handoff
+
+**Purpose:** Continue and integrate the existing 14-scene/33-transition journey; do not create another architecture, career database, launcher, or agent-only promise. Owner: this runbook plus contracts/application-journey-scenes.v1.json, rooted in parent issue #69 and docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md. Parent outcome: install, recover approved career data, choose role/job URL, inspect requirements, ask only missing questions, sign in in the managed browser, recognize the returned form, resume safe verified filling/attachments/nonterminal steps, and stop for operator final review. Login, user absence, and missing information are routine resumable scenes, never reasons to erase context.
+
+### 9.1 Provider floor and merge collisions (refresh again when sprint starts)
+
+Observed 2026-10-26: main @ 4372430650d434338ca844a9e77eb2910c2c0e2a; draft #101 @ 3576b7bb4957f16f672619dd6913abf46a25a272 is stacked on draft #95 @ 57e2046aa406a69a04c60448a0a592c35c2d3118; draft #95 currently has dirty mergeability against main. Draft #98 owns launch front-door diagnostics. Draft #100 owns evidence-correct field/attachment states, VPN diagnosis and resume QA. Current main owns the Application Puzzle. On #101's observed SHA, five workflow runs completed successfully: Application Autofill Parent Integrity, Career State Validation, Deterministic Application Autopilot Core, Managed Browser Assist Validation, Harness Validation. Later heads and real Windows operation are NOT proven by these historical checks. Do not erase, overwrite, auto-close or quietly discard other active worktrees.
+
+### 9.2 First unproven gate: durable private context, not another fresh form
+
+PR #95 contains workspace-file.ts, workspace-control.ts, workspace-bootstrap.ts and workspace-startup.tsx. Integrate their existing single per-user local store, startup hydration before React state writers mount, revision compare-and-set, backup/archive and recovery/conflict handling. Browser localStorage is a cache/projection, not the sole authority. Switching between 127.0.0.1:21031 and 127.0.0.1:21033 or changing browser on the same machine must preserve the actual user workspace and opportunity binding; compare saved revisions/content, not just HTTP 200 or a screenshot. Identify exact checkout, PID, socket owner, runtime endpoint and signed instance before touching a listener. Never kill foreign processes, delete localStorage or flatten divergent edits. Across machines, real sign-in/source authorization is needed; do not claim independent local stores sync automatically.
+
+The visible /answers empty state is misleading when the app has previously approved information elsewhere. Main App.tsx passes only ANSWERS_KEY to AnswersPage, whereas Assist also uses ASSIST_ANSWERS_KEY, accepted AssistProfile, saved career preferences and question memory. Add a provenance-bearing, read-only projection of **approved reusable** knowledge to the existing Answer Library without creating another canonical answer store or writing generated guesses into approved records. Render Recovered, Needs review and Missing, with exact source ownership. Test fresh-browser /answers recovery, no duplicate cards, conflicting versions, role-specific scoping, persistence after restart and no sensitive-question inference. Eligibility, sponsorship, EEO, legal attestations, salary and privacy choices remain question- or opportunity-scoped and operator-approved.
+
+### 9.3 Preserve and finish login-to-resume
+
+Maintain #101's same Chrome context, stable two-observation employer-form recognition, automatic continuation of at most one previously authorized nonterminal Fill, visible I've signed in — check again and Resume filling this application, and guarded same-opportunity URL rebinding. Do not collect credential values or inspect external identity-provider DOM content. Reconcile #100's field-progress and attachment evidence so zero verified fields are never called filled and staged file controls are not called employer-accepted uploads. Integrate with main's current Application Puzzle without regressing verified safe form navigation. Preserve operator-only Submit and every #69 adversarial control; buttons labeled Submit can be intermediate or terminal depending on independently proven effect.
+
+### 9.4 Guided interface and search discovery (downstream of durable state)
+
+Give new users one obvious README entry and install link, one guided setup executable, and one canonical owned runtime. Add a persisted Guided mode toggle, visible next safe action, why this step matters, provenance and current progress, optional restrained glow/focus guidance, keyboard accessibility and reduced-motion fallback. Animations never block input or falsify progress. Based on the inspected upstream research, borrow the graph *concept* but defer XYFlow as a dependency; adapt View Transitions and existing Motion patterns only as enhancements, and use Playwright visual/responsive comparison and WCAG motion guidance as gates. Logo artwork is a candidate needing product review, not an approved replacement.
+
+After choosing a target title, discover postings through source adapters in the existing source/tracker/opportunity pipeline. Evaluate JobSpy or comparable open-source provider mechanics and license/maintenance, APIs and permitted scraping terms, then stage only permitted metadata with exact URL/source/freshness and dedupe by source ID + employer requisition. Never bypass CAPTCHA, anti-bot defenses, logins or access limits. Disqualifications must record user-selected reasons (fit, location, pay, seniority, closed, etc.) as explainable user-owned feedback; use that evidence to improve ranking without overwriting historical statuses or inventing eligibility. Discovery must not block the core application-critical release.
+
+### 9.5 Execution lanes and acceptance
+
+F0 (first): refresh remote default, PR heads, CI, worktrees, branch owners and overlap; map conflicts. F1: reconcile #95's persistence against main and #98 launcher with protected startup tests. F2: integrate read-only approved-answer projection and no-re-entry tests using the same workspace. F3: reconcile #101 browser resume with #100 progress evidence and main Application Puzzle; run managed browser regression. F4: optional guided mode/discovery adapters in distinct safe lanes. F5: typecheck/build/validators/Playwright, exact-head CI, Windows clean start and existing-user restart, then one real unsubmitted employer-form login-return and a second ATS; final Submit remains untouched. F1 precedes cross-port F2 and F3 claims; F2 and F3 may run in parallel only with separate writer worktrees and no overlapping owned files. Review and converge to actual default only after exact-head tests and applicable approvals.
+
+Acceptance scenarios: (1) returning user sees approved answers and saved pending application automatically on a fresh port/browser; (2) install -> select title/URL -> collect only missing prerequisites -> sign-in -> safe resume -> approved attachment -> human final review; (3) interruption, SSO redirect, browser restart and URL drift retain or safely invalidate the same opportunity; (4) concurrent edits, stale documents, unknown ATS, false Submit labels, VPN suspicion, disconnected sources and corrupted workspace preserve progress and show one deterministic recovery action; (5) disabling guided glow preserves complete keyboard-readable instruction and navigation. None of these is a PASS until observed in the appropriate real environment.
+
+### 9.6 First executable command sequence (Windows, inside existing canonical checkout)
+
+    git fetch --all --prune --tags
+    git status --short
+    git worktree list
+    gh pr view 95 --json number,state,isDraft,mergeStateStatus,headRefOid,baseRefName,statusCheckRollup
+    gh pr view 98 --json number,state,isDraft,mergeStateStatus,headRefOid,baseRefName,statusCheckRollup
+    gh pr view 100 --json number,state,isDraft,mergeStateStatus,headRefOid,baseRefName,statusCheckRollup
+    gh pr view 101 --json number,state,isDraft,mergeStateStatus,headRefOid,baseRefName,statusCheckRollup
+    python scripts/validate_application_journey.py
+    python scripts/validate_application_autofill_parent.py
+    python scripts/validate_local_runtime_lifecycle.py
+    python scripts/validate_governance.py
+
+Then isolate #95's conflicting integration in its own safe worktree, preserving its current head and all dirty operator files; resolve its real merge conflicts without blind reset. Run current workspace/installer/Windows tests, reconcile #98, then continue with #100/#101 tests and Windows P08. The output receipt must be CHANGED | PROVED | NEXT with exact paths, SHAs, tests/exits, merge/deploy/live distinctions, preserved prior behavior and one next executable action. Do not ask the user to retype their existing answers or rehearse this plan instead of running it.

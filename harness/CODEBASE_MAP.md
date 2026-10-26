@@ -254,6 +254,14 @@ git diff --check
 
 Do not claim browser/ATS, Google Drive, Microsoft Store, or Play Store runtime proof from repository validation. Resume presentation validation proves the contract; rendered resume proof requires the private output artifacts themselves. Application Assist repository tests prove the Fill Plan control loop; live ATS proof still requires the unpacked extension on a real application page. Product version validation proves authority/mirror/tag-plan policy; a published GitHub Release or store listing requires the downstream publication gate.
 
+Answer Library recovery is derived by `artifacts/escape-hatch/src/lib/answer-recovery.ts` and
+shown by `src/components/recovered-answers.tsx`. It reads the existing workspace profile,
+reviewed Assist proposals/reusable answers, and `/__escapehatch/managed-assist/preferences`.
+It never writes projected records back into an answer owner. Missing, unavailable, pending and
+conflicting sources remain distinct; question-scoped choices never become general fill authority.
+Run `npm --prefix artifacts/escape-hatch run test:unit` and `npm --prefix artifacts/escape-hatch run test:bootstrap:browser`
+for synthetic recovery on two ports and fresh browser contexts, including unchanged source bytes.
+
 ## Fresh-agent path
 
 1. Read `AGENTS.md`.

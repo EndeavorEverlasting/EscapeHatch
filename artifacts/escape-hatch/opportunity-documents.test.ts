@@ -3,7 +3,7 @@ import test from 'node:test';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { OpportunityDocumentStore } from './opportunity-documents.ts';
+import { OpportunityDocumentStore, migrateLegacyDocumentPackage } from './opportunity-documents.ts';
 import { parsePreferences, emptyPreferences } from './src/lib/application-preferences.ts';
 
 const pdf = (name: string, text: string) => ({ name, mimeType: 'application/pdf' as const, buffer: Buffer.from('%PDF-1.4\n' + text) });
@@ -48,5 +48,26 @@ test('tampered private document bytes cannot reuse a review confirmation', async
     const [directory] = await fs.readdir(root);
     await fs.writeFile(path.join(root, directory, value.documents.resume!.sha256 + '.pdf'), '%PDF-mutated');
     await assert.rejects(store.forUpload(id, url, false), /content changed/);
+  } finally { await fs.rm(root, { recursive: true, force: true }); }
+});
+
+test('legacy document recovery preserves exact bytes, opportunity scope and review without overwriting newer files', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-document-migration-'));
+  const legacy = path.join(root, 'legacy'), destination = path.join(root, 'stable');
+  const id = 'synthetic', url = 'https://jobs.example.test/one';
+  try {
+    const old = new OpportunityDocumentStore(legacy);
+    const value = await old.stage(id, url, 'resume', pdf('resume.pdf', 'reviewed source'));
+    await old.review(id, url, 'resume', value.documents.resume!.sha256);
+    await migrateLegacyDocumentPackage(destination, [legacy], id, url);
+    const stable = new OpportunityDocumentStore(destination);
+    assert.deepEqual((await stable.forUpload(id, url)).resume?.buffer, (await old.file(id, url, 'resume'))?.buffer);
+    await stable.stage(id, url, 'resume', pdf('newer.pdf', 'newer stable edit'));
+    await migrateLegacyDocumentPackage(destination, [legacy], id, url);
+    assert.equal((await stable.read(id, url)).documents.resume?.name, 'newer.pdf');
+    assert.equal((await old.read(id, url)).documents.resume?.name, 'resume.pdf');
+    const other = path.join(root, 'conflicting'); const alternative = new OpportunityDocumentStore(other);
+    await alternative.stage(id, url, 'resume', pdf('different.pdf', 'different source'));
+    await assert.rejects(migrateLegacyDocumentPackage(path.join(root, 'third'), [legacy, other], id, url), /need review/);
   } finally { await fs.rm(root, { recursive: true, force: true }); }
 });

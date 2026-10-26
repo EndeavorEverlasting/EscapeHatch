@@ -9,7 +9,8 @@ test('local source approval reaches the same candidate and opportunity in Assist
   });
   await page.goto('/sources');
   await expect(page.getByRole('heading', { name: 'Sources & identity' })).toBeVisible();
-  await expect(page.getByText('Google connection is unavailable', { exact: false })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Remembered career sources' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Refresh connected tracker' })).toBeVisible();
   await page.getByLabel('Résumé source').setInputFiles({ name: 'synthetic.txt', mimeType: 'text/plain', buffer: Buffer.from('Synthetic Candidate\nsynthetic@example.invalid\nSummary\nBuilds deterministic tools.') });
   await expect(page.getByRole('heading', { name: 'Review synthetic.txt' })).toBeVisible();
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('escape-hatch-profile') ?? '{}').email ?? '')).toBe('');

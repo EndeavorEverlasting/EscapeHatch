@@ -10,6 +10,8 @@ import { homedir } from 'node:os';
 import type { Plugin } from 'vite';
 import { isLoopbackAddress, readManagedRuntime } from './runtime-control.ts';
 import { parseTrackerSnapshot } from './src/lib/tracker-bridge.ts';
+import { readRememberedSources, readTrackerRefreshAvailability, refreshTrackerSnapshot } from './tracker-refresh.ts';
+import { userDataRoot } from './user-data.ts';
 
 const PREFIX = '/__escapehatch/tracker';
 
@@ -24,8 +26,9 @@ function respond(res: ServerResponse, code: number, value: object) {
 export function trackerPaths(env: NodeJS.ProcessEnv = process.env) {
   const local = env.LOCALAPPDATA || path.join(homedir(), 'AppData', 'Local');
   return {
-    snapshot: env.ESCAPEHATCH_TRACKER_SNAPSHOT || path.join(local, 'EscapeHatch', 'tracker-snapshot.v1.json'),
+    snapshot: env.ESCAPEHATCH_TRACKER_SNAPSHOT || path.join(userDataRoot(env), 'tracker-snapshot.v1.json'),
     googleAuth: path.join(local, 'TokenCorridor', 'connectors', 'google.json'),
+    sources: path.join(userDataRoot(env), 'career-sources.v1.json'),
   };
 }
 
@@ -43,6 +46,7 @@ export async function readTrackerStatus(env: NodeJS.ProcessEnv = process.env) {
     if (!snapshot) {
       return {
         ok: true as const,
+        refreshed: false as const,
         connection: 'NOT_CONNECTED' as const,
         reason: 'Tracker snapshot present but invalid schema.',
         localGoogleAuthPresent,
@@ -51,6 +55,7 @@ export async function readTrackerStatus(env: NodeJS.ProcessEnv = process.env) {
     }
     return {
       ok: true as const,
+      refreshed: false as const,
       connection: 'CONNECTED' as const,
       reason: snapshot.authPath,
       localGoogleAuthPresent: localGoogleAuthPresent || snapshot.localGoogleAuthPresent,
@@ -62,6 +67,7 @@ export async function readTrackerStatus(env: NodeJS.ProcessEnv = process.env) {
   } catch {
     return {
       ok: true as const,
+      refreshed: false as const,
       connection: 'NOT_CONNECTED' as const,
       reason: localGoogleAuthPresent
         ? 'Google auth file present but no EscapeHatch tracker snapshot yet.'
@@ -70,6 +76,15 @@ export async function readTrackerStatus(env: NodeJS.ProcessEnv = process.env) {
       snapshot: null,
     };
   }
+}
+
+/** Mutation endpoints require an explicit same-origin app action, not a cross-site form. */
+export function trackerRefreshRequestAllowed(req: IncomingMessage, origin: string): boolean {
+  const length = req.headers['content-length'];
+  return req.method === 'POST' && req.headers.origin === origin &&
+    req.headers['x-escapehatch-tracker'] === '1' &&
+    /^application\/json(?:\s*;|$)/i.test(String(req.headers['content-type'] || '')) &&
+    (length === undefined || (typeof length === 'string' && /^\d+$/.test(length) && Number(length) <= 1024));
 }
 
 export function createTrackerControlPlugin(): Plugin {
@@ -87,6 +102,20 @@ export function createTrackerControlPlugin(): Plugin {
         }
         if (url.pathname === PREFIX + '/status' && req.method === 'GET') {
           return respond(res, 200, await readTrackerStatus());
+        }
+        if (url.pathname === PREFIX + '/sources' && req.method === 'GET') {
+          const result = await readRememberedSources(trackerPaths().sources);
+          return respond(res, result.ok ? 200 : 422, { ...result, ...await readTrackerRefreshAvailability(trackerPaths().snapshot) });
+        }
+        if (url.pathname === PREFIX + '/refresh' && req.method === 'POST') {
+          if (!trackerRefreshRequestAllowed(req, 'http://127.0.0.1:' + port)) {
+            return respond(res, 403, { ok: false, refreshed: false, error: 'same_origin_action_required' });
+          }
+          req.resume(); // No caller-supplied target or credential is consumed.
+          const result = await refreshTrackerSnapshot(trackerPaths().snapshot);
+          return respond(res, result.ok ? 200 : 'error' in result && result.error === 'AUTH_REQUIRED' ? 401 : 422,
+            { ...result, state: result.ok ? 'REFRESHED' : 'error' in result ? result.error : 'REFRESH_FAILED',
+              reason: result.ok ? 'Tracker refreshed from Google Sheets.' : 'error' in result ? result.error : 'REFRESH_FAILED' });
         }
         return respond(res, 404, { ok: false, error: 'unknown_tracker_action' });
       });

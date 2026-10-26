@@ -1,12 +1,13 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
+import { userDataRoot, legacyPrivateRoots } from './user-data.ts';
 
 export type DocumentKind = 'resume' | 'cover';
 export type PrivatePdf = { name: string; mimeType: 'application/pdf'; buffer: Buffer };
 export type DocumentRecord = { name: string; sha256: string; size: number; reviewedAt?: string };
 export type DocumentPackage = { schema: 'escapehatch/opportunity-documents/v1'; opportunityId: string; url: string; documents: Partial<Record<DocumentKind, DocumentRecord>> };
-const defaultRoot = () => path.resolve(import.meta.dirname, '../../private/opportunity-documents');
+const defaultRoot = () => path.join(userDataRoot(), 'opportunity-documents');
 export function documentScope(opportunityId: unknown, url: unknown) {
   if (typeof opportunityId !== 'string' || !opportunityId.trim() || opportunityId.length > 256 || typeof url !== 'string' || url.length > 2048) throw new Error('Select a saved opportunity for its documents.');
   const parsed = new URL(url);
@@ -15,10 +16,12 @@ export function documentScope(opportunityId: unknown, url: unknown) {
 }
 export class OpportunityDocumentStore {
   private root: string;
-  constructor(root = defaultRoot()) { this.root = root; }
+  private migrateLegacy: boolean;
+  constructor(root?: string) { this.root = root ?? defaultRoot(); this.migrateLegacy = root === undefined; }
   private directory(id: string, url: string) { return path.join(this.root, createHash('sha256').update(JSON.stringify(documentScope(id, url))).digest('hex')); }
   async read(id: string, url: string): Promise<DocumentPackage> {
     const scope = documentScope(id, url);
+    if (this.migrateLegacy) await migrateLegacyDocumentPackage(this.root, legacyPrivateRoots().map(root => path.join(root, 'opportunity-documents')), id, url);
     try {
       const raw = JSON.parse(await fs.readFile(path.join(this.directory(id, url), 'manifest.json'), 'utf8')) as DocumentPackage;
       if (raw.schema !== 'escapehatch/opportunity-documents/v1' || raw.opportunityId !== scope.opportunityId || raw.url !== scope.url || !raw.documents) throw new Error();
@@ -66,5 +69,46 @@ export class OpportunityDocumentStore {
     if (!value.documents.resume && !value.documents.cover) throw new Error('Save documents for this opportunity first.');
     if (requireReview && Object.values(value.documents).some(item => !item.reviewedAt)) throw new Error('Document review required before upload.');
     return { resume: await this.file(id, url, 'resume'), cover: await this.file(id, url, 'cover'), reviewPolicy: requireReview ? 'operator_confirmed_review' : 'review_disabled_by_operator' };
+  }
+}
+
+/** Migrate only the requested, fully hash-verified package; preserve divergent legacy copies. */
+export async function migrateLegacyDocumentPackage(destination: string, legacyRoots: string[], id: string, url: string) {
+  const scope = documentScope(id, url);
+  const key = createHash('sha256').update(JSON.stringify(scope)).digest('hex');
+  const target = path.join(destination, key);
+  try { await fs.access(path.join(target, 'manifest.json')); return; } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+  const candidates: { manifest: DocumentPackage; files: PrivatePdf[] }[] = [];
+  for (const root of [...new Set(legacyRoots.map(value => path.resolve(value)))]) {
+    if (path.resolve(root) === path.resolve(destination)) continue;
+    const old = new OpportunityDocumentStore(root);
+    const manifest = await old.read(id, url);
+    if (!Object.keys(manifest.documents).length) continue;
+    const files: PrivatePdf[] = [];
+    for (const kind of ['resume', 'cover'] as const) {
+      const file = await old.file(id, url, kind);
+      if (file) files.push(file);
+    }
+    candidates.push({ manifest, files });
+  }
+  if (!candidates.length) return;
+  if (candidates.some(value => JSON.stringify(value.manifest) !== JSON.stringify(candidates[0].manifest))) throw new Error('Different legacy document packages need review. All original files were preserved.');
+  await fs.mkdir(destination, { recursive: true });
+  const temporary = path.resolve(destination, '.migration-' + randomUUID());
+  await fs.mkdir(temporary);
+  try {
+    const written = new Set<string>();
+    for (const file of candidates[0].files) {
+      const digest = createHash('sha256').update(file.buffer).digest('hex');
+      if (written.has(digest)) continue;
+      await fs.writeFile(path.join(temporary, digest + '.pdf'), file.buffer, { flag: 'wx', mode: 0o600 });
+      written.add(digest);
+    }
+    await fs.writeFile(path.join(temporary, 'manifest.json'), JSON.stringify(candidates[0].manifest), { flag: 'wx', mode: 0o600 });
+    try { await fs.rename(temporary, target); }
+    catch (error) { try { await fs.access(path.join(target, 'manifest.json')); } catch { throw error; } }
+  } finally {
+    if (path.dirname(temporary) !== path.resolve(destination)) throw new Error('Invalid migration cleanup path.');
+    await fs.rm(temporary, { recursive: true, force: true });
   }
 }

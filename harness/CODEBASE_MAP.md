@@ -86,6 +86,16 @@ The resolver verifies origin and requested remote head, preserves dirty/differen
 
 ## Product entry points
 
+Managed Windows startup: `Launch-EscapeHatch.cmd` → `Launch-EscapeHatch.ps1` →
+`scripts/windows/EscapeHatch-Install.ps1 -Action Bootstrap` → existing runtime manager.
+Install/remove use `Install-EscapeHatch.cmd` and `Uninstall-EscapeHatch.cmd`.
+`artifacts/escape-hatch/workspace-control.ts`, `workspace-file.ts`, `user-data.ts` and
+`src/lib/workspace-bootstrap.ts` own stable private startup recovery. `src/components/workspace-startup.tsx`
+holds the dashboard until context is validated/reconciled. `tracker-refresh.ts` owns real bounded
+provider reads; `import-context.ts` accepts validated existing local/connected-provider artifacts.
+Operational acceptance and data-preserving removal are documented in `docs/WINDOWS_RUNTIME_LIFECYCLE.md`;
+the full bootstrap phase map remains in `docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md`.
+
 The first-action guide and per-opportunity artifact workbench are documented in
 `docs/GUIDED_APPLICATION_WORKBENCH.md`. `src/components/guided-start.tsx` (under
 `artifacts/escape-hatch/`) leads to existing Sources and Applications. The
@@ -243,6 +253,14 @@ git diff --check
 - Product deployment: **not established**
 
 Do not claim browser/ATS, Google Drive, Microsoft Store, or Play Store runtime proof from repository validation. Resume presentation validation proves the contract; rendered resume proof requires the private output artifacts themselves. Application Assist repository tests prove the Fill Plan control loop; live ATS proof still requires the unpacked extension on a real application page. Product version validation proves authority/mirror/tag-plan policy; a published GitHub Release or store listing requires the downstream publication gate.
+
+Answer Library recovery is derived by `artifacts/escape-hatch/src/lib/answer-recovery.ts` and
+shown by `src/components/recovered-answers.tsx`. It reads the existing workspace profile,
+reviewed Assist proposals/reusable answers, and `/__escapehatch/managed-assist/preferences`.
+It never writes projected records back into an answer owner. Missing, unavailable, pending and
+conflicting sources remain distinct; question-scoped choices never become general fill authority.
+Run `npm --prefix artifacts/escape-hatch run test:unit` and `npm --prefix artifacts/escape-hatch run test:bootstrap:browser`
+for synthetic recovery on two ports and fresh browser contexts, including unchanged source bytes.
 
 ## Fresh-agent path
 

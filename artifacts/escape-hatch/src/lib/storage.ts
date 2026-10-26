@@ -170,6 +170,7 @@ export function writeStoredValue<T>(storage: StorageLike | undefined, key: strin
   try {
     if (!storage) return false;
     storage.setItem(key, JSON.stringify(value));
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('escapehatch-workspace-changed'));
     return true;
   } catch {
     // Storage can be unavailable or full; the in-memory state remains usable.

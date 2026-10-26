@@ -3,7 +3,7 @@ import test from 'node:test';
 import { projectAnswerRecovery } from './answer-recovery.ts';
 import { emptyProfile, type AnswerSnippet } from './storage.ts';
 import { emptyPreferences, normalizeQuestion } from './application-preferences.ts';
-import type { AssistAnswer } from './assist-contract.ts';
+import { emptyAssistProfile, type AssistAnswer, type ReviewedProposal } from './assist-contract.ts';
 
 const timestamp = '2026-10-26T12:00:00.000Z';
 const summary: AnswerSnippet = { id: 'base-summary', title: 'Professional summary', category: 'Career story', content: 'Reviewed career summary.', updatedAt: timestamp };
@@ -89,4 +89,46 @@ test('role-specific Assist answers retain question scope and provenance', () => 
   const result = projectAnswerRecovery({ assistAnswers: [{ ...assist, title: 'Why this role', canonicalId: 'why-this-role', provenance }] });
   assert.equal(result[0].scope, 'question');
   assert.deepEqual(result[0].variants[0].sources[0].provenance, provenance);
+});
+
+const proposal = (review: ReviewedProposal['review'], value = summary.content): ReviewedProposal => ({
+  id: 'summary-proposal', section: 'summary', field: 'professional_summary', value, review, confidence: 'high',
+  provenance: { source: 'resume', label: 'Synthetic reviewed résumé', capturedAt: timestamp },
+});
+
+test('accepted and edited exact Assist profile summaries recover without Assist Answers', () => {
+  for (const review of ['accepted', 'edited'] as const) {
+    const assistProfile = { ...emptyAssistProfile(emptyProfile), summary: summary.content, proposals: [proposal(review)] };
+    const before = JSON.stringify(assistProfile);
+    const result = projectAnswerRecovery({ assistProfile });
+    assert.equal(result.length, 1);
+    assert.equal(result[0].status, 'recovered');
+    assert.equal(result[0].variants[0].sources.length, 2);
+    assert.ok(result[0].variants[0].sources.every(source => source.owner === 'assist-profile'));
+    assert.equal(JSON.stringify(assistProfile), before);
+  }
+});
+
+test('changed summary does not inherit stale accepted approval and both values remain reviewable', () => {
+  const assistProfile = { ...emptyAssistProfile(emptyProfile), summary: 'Changed summary.', proposals: [proposal('accepted')] };
+  const result = projectAnswerRecovery({ assistProfile });
+  assert.equal(result[0].status, 'needs-review');
+  assert.deepEqual(result[0].variants.map(item => item.content), ['Changed summary.', summary.content]);
+  assert.equal(result[0].variants[0].sources[0].provenance, undefined);
+});
+
+test('proposed summary requires review and rejected proposals are excluded', () => {
+  const base = emptyAssistProfile(emptyProfile);
+  assert.equal(projectAnswerRecovery({ assistProfile: { ...base, proposals: [proposal('proposed')] } })[0].status, 'needs-review');
+  assert.deepEqual(projectAnswerRecovery({ assistProfile: { ...base, proposals: [proposal('rejected')] } }), []);
+  assert.equal(projectAnswerRecovery({ assistProfile: { ...base, summary: summary.content, proposals: [proposal('rejected')] } })[0].status, 'needs-review');
+});
+
+test('answer proposal approval is explicit and never inferred from résumé facts', () => {
+  const accepted = { ...proposal('accepted', 'A directly reviewed answer.'), section: 'answer' as const, field: 'What motivates your work?' };
+  const base = emptyAssistProfile(emptyProfile);
+  assert.equal(projectAnswerRecovery({ assistProfile: { ...base, proposals: [accepted] } })[0].status, 'recovered');
+  assert.equal(projectAnswerRecovery({ assistProfile: { ...base, proposals: [{ ...accepted, review: 'proposed' }] } })[0].status, 'needs-review');
+  assert.deepEqual(projectAnswerRecovery({ assistProfile: { ...base, proposals: [{ ...accepted, review: 'rejected' }] } }), []);
+  assert.deepEqual(projectAnswerRecovery({ assistProfile: { ...base, skills: ['Canadian law'], proposals: [] } }), []);
 });

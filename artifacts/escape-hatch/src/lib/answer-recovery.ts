@@ -1,9 +1,9 @@
 import type { AnswerSnippet, Profile } from './storage.ts';
-import type { AssistAnswer, Provenance } from './assist-contract.ts';
+import type { AssistAnswer, AssistProfile, Provenance } from './assist-contract.ts';
 import { matchQuestion, normalizeQuestion, questions, safeDiscoveredQuestion, type Preferences } from './application-preferences.ts';
 
 export type RecoveredSource = {
-  owner: 'answer-library' | 'assist-answers' | 'profile' | 'application-preferences' | 'question-memory';
+  owner: 'answer-library' | 'assist-answers' | 'assist-profile' | 'profile' | 'application-preferences' | 'question-memory';
   recordId: string;
   label: string;
   updatedAt?: string;
@@ -21,6 +21,7 @@ export type RecoveredKnowledge = {
 export type AnswerRecoveryInput = {
   answers?: readonly AnswerSnippet[];
   assistAnswers?: readonly AssistAnswer[];
+  assistProfile?: AssistProfile;
   profile?: Profile;
   preferences?: Preferences;
 };
@@ -59,7 +60,7 @@ export function projectAnswerRecovery(input: AnswerRecoveryInput): RecoveredKnow
       if (!existing.sources.some(item => item.owner === source.owner && item.recordId === source.recordId)) existing.sources.push(source);
     } else group.variants.push({ content, sources: [source] });
   };
-  const snippet = (answer: AnswerSnippet, owner: 'answer-library' | 'assist-answers', canonicalId?: string, provenance?: Provenance) => {
+  const snippet = (answer: AnswerSnippet, owner: 'answer-library' | 'assist-answers' | 'assist-profile', canonicalId?: string, provenance?: Provenance, review = false) => {
     if (!answer.content.trim()) return;
     const normalized = normalizeQuestion(answer.title);
     const known = matchQuestion(answer.title);
@@ -67,12 +68,35 @@ export function projectAnswerRecovery(input: AnswerRecoveryInput): RecoveredKnow
     const key = known || canonical || 'prompt:' + normalized;
     const scope = !known && canonical && reusableQuestions.has(canonical) && safeDiscoveredQuestion(answer.title) ? 'reusable' : 'question';
     add(key, answer.title, answer.category, scope, answer.content,
-      { owner, recordId: answer.id, label: owner === 'answer-library' ? 'Answer Library' : 'Saved Assist answer', updatedAt: answer.updatedAt, ...(provenance ? { provenance } : {}) });
+      { owner, recordId: answer.id, label: owner === 'answer-library' ? 'Answer Library' : owner === 'assist-profile' ? 'Reviewed Assist profile proposal' : 'Saved Assist answer', updatedAt: answer.updatedAt, ...(provenance ? { provenance } : {}) }, review);
   };
   for (const answer of input.answers || []) snippet(answer, 'answer-library');
   for (const answer of input.assistAnswers || []) {
     // A legacy opportunityId on a supposedly reusable record still limits its scope.
     if (answer.scope === 'reusable' && !answer.opportunityId) snippet(answer, 'assist-answers', answer.canonicalId, answer.provenance);
+  }
+  const assistProfile = input.assistProfile;
+  if (assistProfile) {
+    const summaryProposals = assistProfile.proposals.filter(item => item.section === 'summary' && item.review !== 'rejected');
+    if (assistProfile.summary.trim()) {
+      // Acceptance belongs to exact content, not a profile timestamp or an older proposal.
+      const accepted = summaryProposals.find(item => ['accepted', 'edited'].includes(item.review) && item.value === assistProfile.summary);
+      add('professional-summary', 'Professional summary', 'Career story', 'reusable', assistProfile.summary,
+        { owner: 'assist-profile', recordId: 'summary', label: 'Saved Assist profile summary', updatedAt: assistProfile.updatedAt,
+          ...(accepted ? { provenance: accepted.provenance } : {}) }, !accepted);
+    }
+    for (const proposal of summaryProposals) {
+      if (!proposal.value.trim()) continue;
+      add('professional-summary', 'Professional summary', 'Career story', 'reusable', proposal.value,
+        { owner: 'assist-profile', recordId: proposal.id, label: 'Assist summary proposal', updatedAt: proposal.provenance.capturedAt, provenance: proposal.provenance },
+        proposal.review === 'proposed' || proposal.value !== assistProfile.summary);
+    }
+    for (const proposal of assistProfile.proposals) {
+      if (proposal.section !== 'answer' || proposal.review === 'rejected') continue;
+      // The explicit reviewed value is projected verbatim; no answer is generated from career facts.
+      snippet({ id: proposal.id, title: proposal.field, category: 'Reviewed answers', content: proposal.value, updatedAt: proposal.provenance.capturedAt },
+        'assist-profile', undefined, proposal.provenance, proposal.review === 'proposed');
+    }
   }
   for (const [field, id] of Object.entries(contactFields)) {
     const value = input.profile?.[field as keyof Profile];

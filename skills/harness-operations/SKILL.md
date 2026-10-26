@@ -30,6 +30,7 @@ Use this skill for any EscapeHatch repository sprint that writes files, validate
 11. Run validation in manifest order plus product checks relevant to changed scope.
 12. Record exact results, skipped checks, proof ceiling, commit SHA, push/PR state, gaps, risks, and preserved parallel work.
 13. End with one executable next command that advances the first remaining unproven state.
+14. For a launch request, follow `docs/WINDOWS_RUNTIME_LIFECYCLE.md`: use the installation-selected source, recover stable user context, inspect workspace readiness plus source/tracker freshness, and observe the browser outcome before claiming ready. A healthy process alone is insufficient. Recover existing approved local/provider artifacts without publishing private values or silently overwriting divergent copies.
 
 ## Failure behavior
 

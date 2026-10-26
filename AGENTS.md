@@ -134,3 +134,19 @@ When no artifact exists yet, the next action must create or repair the next owne
 ## 9. Trifecta workflow shorthand
 
 When the operator invokes **trifecta**, resolve and apply TokenCorridor's **P08 Live Runtime Proof Executor**, **P82 Prototype-Measure-Refine Delivery Loop**, and **P07 Repo Sprint Executor** together. See `docs/agent/TRIFECTA.md` for canonical source locations, invocation boundaries, and proof reporting. This is a workflow reference under this governance contract, not a second governance authority. Missing prompt infrastructure or unavailable proof must be reported explicitly; the shorthand never grants credential access, personal-data disclosure, or final application submission authority.
+
+## 10. Application startup and user-context readiness
+
+Starting EscapeHatch means recovering the user's workspace, not merely observing a listening server.
+Use `Launch-EscapeHatch.cmd`, which delegates through the installation/bootstrap owner, and follow
+`docs/WINDOWS_RUNTIME_LIFECYCLE.md`. Preserve the installation's selected source and the stable
+user store across checkouts. Never replace a dirty checkout or browser edits to obtain a clean launch.
+
+Before reporting ready, verify the managed workspace readiness endpoint and observe the populated
+profile/progress or the explicit recovery screen. Inspect remembered sources and tracker freshness;
+neither HTTP 200, a process receipt, an auth-file presence flag, nor a stale snapshot proves user-context
+readiness or live cloud access. Missing, invalid, conflicting or unauthorized context must produce a
+specific recovery action and remain unproven until resolved. Use available authorized connectors to
+recover existing artifacts; never ask the user to reconstruct discoverable context or create new OAuth
+credentials by default. Keep private data and source identities outside Git. Uninstall preserves user
+state and external artifacts; erasure requires a separate explicit user request.

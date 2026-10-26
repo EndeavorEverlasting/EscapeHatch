@@ -86,6 +86,16 @@ The resolver verifies origin and requested remote head, preserves dirty/differen
 
 ## Product entry points
 
+Managed Windows startup: `Launch-EscapeHatch.cmd` → `Launch-EscapeHatch.ps1` →
+`scripts/windows/EscapeHatch-Install.ps1 -Action Bootstrap` → existing runtime manager.
+Install/remove use `Install-EscapeHatch.cmd` and `Uninstall-EscapeHatch.cmd`.
+`artifacts/escape-hatch/workspace-control.ts`, `workspace-file.ts`, `user-data.ts` and
+`src/lib/workspace-bootstrap.ts` own stable private startup recovery. `src/components/workspace-startup.tsx`
+holds the dashboard until context is validated/reconciled. `tracker-refresh.ts` owns real bounded
+provider reads; `import-context.ts` accepts validated existing local/connected-provider artifacts.
+Operational acceptance and data-preserving removal are documented in `docs/WINDOWS_RUNTIME_LIFECYCLE.md`;
+the full bootstrap phase map remains in `docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md`.
+
 The first-action guide and per-opportunity artifact workbench are documented in
 `docs/GUIDED_APPLICATION_WORKBENCH.md`. `src/components/guided-start.tsx` (under
 `artifacts/escape-hatch/`) leads to existing Sources and Applications. The

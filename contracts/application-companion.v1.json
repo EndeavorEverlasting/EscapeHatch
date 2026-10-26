@@ -162,5 +162,19 @@
     "no_store_packaging_claim",
     "no_live_google_drive_claim",
     "no_live_browser_or_mobile_runtime_claim"
-  ]
+  ],
+  "managed_local_bootstrap": {
+    "owner": "artifacts/escape-hatch/workspace-control.ts",
+    "schema_owner": "artifacts/escape-hatch/src/lib/workspace-bootstrap.ts",
+    "user_data_root": "%LOCALAPPDATA%/EscapeHatch (or explicit ESCAPEHATCH_DATA_HOME)",
+    "workspace_file": "workspace.v1.json",
+    "mount_order": "validate private state and reconcile browser before mounting state-writing hooks",
+    "conflict_policy": "preserve both copies; hold normal dashboard; explicit choice only",
+    "persistence": "atomic compare-and-set; cross-process exclusive lock; prior revision backup",
+    "preference_migration": "validated copy from git-common-dir primary checkout private file only when stable destination absent",
+    "readiness": "process health is distinct from workspace recovery and provider freshness",
+    "removal": "preserve user state, credentials and provider artifacts by default",
+    "regression_command": "npm --prefix artifacts/escape-hatch run test:bootstrap",
+    "browser_proof_command": "npm --prefix artifacts/escape-hatch run test:bootstrap:browser"
+  }
 }

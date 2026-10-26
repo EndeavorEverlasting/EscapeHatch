@@ -1,14 +1,34 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { userDataRoot, legacyPrivateRoots } from './user-data.ts';
 import { emptyPreferences, parsePreferences, type Preferences } from './src/lib/application-preferences.ts';
 
 export function preferenceFile() {
-  return process.env.ESCAPEHATCH_PREFERENCES_FILE || path.resolve(import.meta.dirname, '../../private/application-question-preferences.json');
+  return process.env.ESCAPEHATCH_PREFERENCES_FILE || path.join(userDataRoot(), 'application-question-preferences.json');
+}
+
+/** Resolve the original repository through Git, not a remembered checkout path. */
+export function legacyPreferenceFile() {
+  const root = legacyPrivateRoots().at(-1);
+  return root ? path.join(root, 'application-question-preferences.json') : null;
+}
+
+export async function migrateLegacyPreferences(destination = preferenceFile(), legacy?: string | null) {
+  try { await fs.access(destination); return; } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+  if (legacy === undefined) legacy = legacyPreferenceFile();
+  if (!legacy || path.resolve(destination) === path.resolve(legacy)) return;
+  let bytes;
+  try { bytes = await fs.readFile(legacy); } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return; throw error; }
+  if (bytes.length > 65536 || !parsePreferences(JSON.parse(bytes.toString('utf8').replace(/^\uFEFF/, '')))) throw new Error('Legacy preferences need review. Original data was preserved.');
+  await fs.mkdir(path.dirname(destination), { recursive: true });
+  try { await fs.writeFile(destination, bytes, { flag: 'wx', mode: 0o600 }); }
+  catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error; }
 }
 
 export async function readPreferences(file = preferenceFile()): Promise<Preferences> {
   try {
+    if (file === preferenceFile() && !process.env.ESCAPEHATCH_PREFERENCES_FILE) await migrateLegacyPreferences(file);
     const bytes = await fs.readFile(file);
     if (bytes.length > 65536) throw new Error('Invalid saved preferences; restore a valid preference export.');
     const data = parsePreferences(JSON.parse(bytes.toString('utf8').replace(/^\uFEFF/, '')));

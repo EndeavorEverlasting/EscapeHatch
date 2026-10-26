@@ -132,7 +132,7 @@ export function parseTrackerSnapshot(value: unknown): TrackerSnapshot | null {
   };
 }
 
-export function trackerRowToApplication(row: TrackerRow): Application {
+export function trackerRowToApplication(row: TrackerRow, capturedAt?: string): Application {
   const status = normalizeStatus(row.status);
   // Checkbox alone never upgrades to submitted; status text must say Submitted.
   const safeStatus = row.appliedCheckbox && status === 'saved' ? 'preparing' : status;
@@ -162,7 +162,7 @@ export function trackerRowToApplication(row: TrackerRow): Application {
         safeStatus === 'preparing' ? 'Review package and prepare managed application' : 'Review tracker row'),
     updatedAt: row.auditedOn && !Number.isNaN(Date.parse(row.auditedOn))
       ? new Date(row.auditedOn).toISOString()
-      : new Date().toISOString(),
+      : capturedAt && !Number.isNaN(Date.parse(capturedAt)) ? new Date(capturedAt).toISOString() : new Date().toISOString(),
   };
 }
 
@@ -170,7 +170,7 @@ export function mergeTrackerIntoApplications(
   existing: Application[],
   snapshot: TrackerSnapshot,
 ): Application[] {
-  const imported = snapshot.applications.map(trackerRowToApplication);
+  const imported = snapshot.applications.map(row => trackerRowToApplication(row, snapshot.capturedAtUtc));
   const byId = new Map(existing.map((item) => [item.id, item]));
   for (const item of imported) {
     const prior = byId.get(item.id);

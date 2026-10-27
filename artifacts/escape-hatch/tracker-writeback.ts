@@ -65,6 +65,24 @@ async function currentBinding(root: string): Promise<Target | null> {
   try { const snapshot = parseTrackerSnapshot(await readJson(path.join(root, 'tracker-snapshot.v1.json'))); return snapshot ? { spreadsheetId: snapshot.spreadsheetId, sheetName: snapshot.sheetName } : null; }
   catch { return null; }
 }
+/** Sheets stores dates as serial day numbers, including columns validated as dates.
+ * Preserve exact local calendar dates across readback and retries.
+ */
+const SHEETS_EPOCH_UTC = Date.UTC(1899, 11, 30);
+function sheetDateDay(value: string | number | undefined): string | null {
+  if (value === undefined || value === '') return null;
+  if (typeof value === 'number' || /^\d{4,6}$/.test(value)) {
+    const serial = Number(value);
+    if (!Number.isInteger(serial) || serial < 1 || serial > 2958465) return null;
+    return new Date(SHEETS_EPOCH_UTC + serial * 86400000).toISOString().slice(0, 10);
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(value);
+  if (!match) return null;
+  const iso = `${match[3]}-${match[1].padStart(2, '0')}-${match[2].padStart(2, '0')}`;
+  return !Number.isNaN(Date.parse(iso)) && new Date(iso + 'T00:00:00Z').toISOString().slice(0, 10) === iso ? iso : null;
+}
+function dateSerial(day: string) { return Math.round((Date.parse(day + 'T00:00:00Z') - SHEETS_EPOCH_UTC) / 86400000); }
 /** Pure plan: fresh header mapping and unique row identity, never a remembered row number alone. */
 export function planSubmissionWrite(snapshot: TrackerSnapshot, receipt: SubmissionEvidence, values: unknown[][], timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone) {
   const bound = snapshot.applications.filter(row => trackerOpportunityId(row) === receipt.opportunityId && receiptMatches(receipt, row.applyUrl));
@@ -75,14 +93,26 @@ export function planSubmissionWrite(snapshot: TrackerSnapshot, receipt: Submissi
   const row = matches[0], headers = values[0].map(value => String(value).trim().toLowerCase());
   const status = headers.indexOf('status'), applied = headers.indexOf('applied?'), date = headers.indexOf('date applied');
   if ([status, applied, date].some(index => index < 0) || new Set(headers.filter(Boolean)).size !== headers.filter(Boolean).length) throw new Error('CONFLICT');
-  const done = /^(submitted|applied)$/i.test(row.status.trim()) && row.appliedCheckbox;
-  if (!done && !['', 'saved', 'preparing', 'ready', 'ready to apply', 'in progress', 'not started'].includes(row.status.trim().toLowerCase())) throw new Error('CONFLICT');
+  const statusValue = row.status.trim().toLowerCase();
+  const done = /^(submitted|applied)$/i.test(statusValue) && row.appliedCheckbox;
+  // Preserve downstream statuses such as In Process or Interviewing, even if
+  // an employer confirmation receipt arrives after a later portal update.
+  if (!done && (row.appliedCheckbox ||
+      !['', 'saved', 'preparing', 'ready', 'ready to apply', 'research', 'resume ready',
+        'review required', 'verify submission', 'not started', 'draft'].includes(statusValue))) throw new Error('CONFLICT');
   const parts = new Intl.DateTimeFormat('en', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date(receipt.observedAt));
   const get = (type: string) => parts.find(item => item.type === type)!.value;
   const day = `${get('year')}-${get('month')}-${get('day')}`;
   const quoted = "'" + snapshot.sheetName.replace(/'/g, "''") + "'!";
-  const update = (column: number, value: string | boolean) => ({ range: quoted + String.fromCharCode(65 + column) + row.sheetRow, values: [[value]] });
-  const data = [...(done ? [] : [update(status, 'Submitted'), update(applied, true)]), ...(!row.dateApplied ? [update(date, day)] : [])];
+  const update = (column: number, value: string | boolean | number) => ({ range: quoted + String.fromCharCode(65 + column) + row.sheetRow, values: [[value]] });
+  const rawApplied = values[row.sheetRow - 1]?.[applied];
+  const appliedValue = rawApplied === false ? true : rawApplied === '☐' ? '☑' :
+    rawApplied === 'FALSE' ? 'TRUE' : rawApplied === '' ? '☑' : null;
+  if (!done && appliedValue === null) throw new Error('CONFLICT');
+  const existingDate = sheetDateDay(row.dateApplied);
+  if (row.dateApplied && !existingDate) throw new Error('CONFLICT');
+  const data = [...(done ? [] : [update(status, 'Submitted'), update(applied, appliedValue!)]),
+    ...(!existingDate ? [update(date, dateSerial(day))] : [])];
   return { data, row, done, day };
 }
 async function syncOne(entry: Entry, options: SyncOptions, persistIntent: () => Promise<void>): Promise<SyncState> {
@@ -117,7 +147,7 @@ async function syncOne(entry: Entry, options: SyncOptions, persistIntent: () => 
   }
   try {
     const values = await read(), plan = planSubmissionWrite(snapshot, receipt, values, entry.timeZone);
-    if (entry.expectedDate && plan.row.dateApplied && plan.row.dateApplied !== entry.expectedDate) return 'CONFLICT';
+    if (entry.expectedDate && plan.row.dateApplied && sheetDateDay(plan.row.dateApplied) !== entry.expectedDate) return 'CONFLICT';
     if (plan.done && !plan.data.length) return 'SYNCED';
     if (!plan.row.dateApplied) { entry.expectedDate = plan.day; await persistIntent(); }
     // Guard source rebinding and ordinary row moves before writing. Sheets has
@@ -128,7 +158,14 @@ async function syncOne(entry: Entry, options: SyncOptions, persistIntent: () => 
     await call(base.slice(0, -1) + ':batchUpdate', { method: 'POST', body: JSON.stringify({ valueInputOption: 'RAW', data: plan.data }) });
     const after = await read(), verified = planSubmissionWrite(snapshot, receipt, after, entry.timeZone);
     if (!verified.done || verified.row.sheetRow !== plan.row.sheetRow) return 'CONFLICT';
-    if (plan.data.some(item => { const cell = /!([A-Z])(\d+)$/.exec(item.range)!; return after[Number(cell[2]) - 1]?.[cell[1].charCodeAt(0) - 65] !== item.values[0][0]; })) return 'RETRY_REQUIRED';
+    if (plan.data.some(item => {
+      const cell = /!([A-Z])(\d+)$/.exec(item.range)!;
+      const observed = after[Number(cell[2]) - 1]?.[cell[1].charCodeAt(0) - 65];
+      const expected = item.values[0][0];
+      return typeof expected === 'number'
+        ? sheetDateDay(typeof observed === 'number' || typeof observed === 'string' ? observed : undefined) !== plan.day
+        : observed !== expected;
+    })) return 'RETRY_REQUIRED';
     return 'SYNCED';
   } catch (error) { return error instanceof Error && error.message === 'AUTH_REQUIRED' ? 'AUTH_REQUIRED' : error instanceof Error && error.message === 'CONFLICT' ? 'CONFLICT' : 'RETRY_REQUIRED'; }
   finally { clearTimeout(timer); controller.abort(); }

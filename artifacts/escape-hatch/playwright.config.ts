@@ -1,7 +1,8 @@
 import { defineConfig } from '@playwright/test';
+import { createIsolatedBrowserTestEnvironment } from './browser-test-isolation.ts';
 
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_PATH;
-const port = process.env.ESCAPEHATCH_TEST_PORT || process.env.PLAYWRIGHT_PORT || '21031';
+const { port, serverEnv } = createIsolatedBrowserTestEnvironment();
 export default defineConfig({
   testDir: './tests',
   testIgnore: 'workspace-startup.spec.ts',
@@ -16,7 +17,7 @@ export default defineConfig({
   },
   webServer: {
     command: 'npm run dev -- --host 127.0.0.1',
-    env: { PORT: port, BASE_PATH: '/', HOST: '127.0.0.1' },
+    env: serverEnv,
     url: `http://127.0.0.1:${port}/`,
     reuseExistingServer: false,
     timeout: 120_000,

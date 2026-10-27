@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { chromium } from '@playwright/test';
-import { ManagedListeners, readSubmissionReceipts } from './managed-listeners.ts';
+import { ManagedListeners, readSubmissionReceipts, migrateSubmissionReceipts, submissionAdapter, submissionReceiptFile } from './managed-listeners.ts';
 import { readPreferences, savePreferences, mergePreferenceEdits, updatePreferences, clearPreferences } from './preference-file.ts';
 import { emptyPreferences } from './src/lib/application-preferences.ts';
 
@@ -71,4 +71,60 @@ test('cockpit preference save preserves newer capture and supports explicit dele
   stale.preferences['identity.first_name'] = { ...current.preferences['identity.first_name'], value: 'Old', updated_at: '2026-01-01T00:00:00Z' };
   assert.equal(mergePreferenceEdits(current, stale).preferences['identity.first_name'].value, 'New');
   assert.equal(mergePreferenceEdits(current, stale, ['identity.first_name']).preferences['identity.first_name'], undefined);
+});
+
+test('stable receipt recovery preserves legacy evidence and cannot overwrite newer receipt stores', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-receipt-recovery-'));
+  const legacy = path.join(root, 'legacy'), stable = path.join(root, 'stable', 'receipts.json');
+  const receipt = { opportunityId: 'synthetic', sessionId: 'session', attemptId: 'attempt', applicationOrigin: 'https://jobs.example.test', applicationPath: '/job', observedAt: '2026-01-01T00:00:00Z', source: 'same_session_page_confirmation', evidenceCode: 'APPLICATION_RECEIVED_AFTER_USER_SUBMIT' };
+  try {
+    await fs.mkdir(legacy);
+    const old = path.join(legacy, 'managed-submission-receipts.json');
+    await fs.writeFile(old, JSON.stringify([receipt]));
+    await migrateSubmissionReceipts(stable, [legacy]);
+    assert.deepEqual(await readSubmissionReceipts(stable), [receipt]);
+    assert.deepEqual(await readSubmissionReceipts(old), [receipt]);
+    await fs.writeFile(stable, '[]');
+    await migrateSubmissionReceipts(stable, [legacy]);
+    assert.deepEqual(await readSubmissionReceipts(stable), []);
+    assert.ok(submissionReceiptFile().endsWith('managed-submission-receipts.json'));
+  } finally { await fs.rm(root, { recursive: true, force: true }); }
+});
+
+test('Lever adapter is exact hosted apply scope and never falls back to another job confirmation', () => {
+  const url = 'https://jobs.lever.co/synthetic/11111111-1111-4111-8111-111111111111/apply';
+  const adapter = submissionAdapter(url);
+  assert.equal(adapter.submitSelector, '#btn-submit');
+  assert.deepEqual(adapter.confirmationPaths, ['/synthetic/11111111-1111-4111-8111-111111111111/thanks']);
+  assert.equal(submissionAdapter(url.replace('jobs.lever.co', 'jobs.lever.co.evil.test')).submitSelector, '#root button');
+});
+
+for (const mode of ['success', 'reject', 'captcha', 'route-only']) test(`Lever ${mode} captures only fresh employer confirmation and persists before callback`, async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-lever-submission-'));
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  const page = await browser.newPage();
+  const receiptsFile = path.join(root, 'receipts.json');
+  let callbacks = 0;
+  const listeners = new ManagedListeners(receiptsFile, path.join(root, 'preferences.json'), async receipt => {
+    assert.equal((await readSubmissionReceipts(receiptsFile))[0].attemptId, receipt.attemptId);
+    callbacks++;
+    throw new Error('Synthetic provider unavailable');
+  });
+  const url = 'https://jobs.lever.co/synthetic/11111111-1111-4111-8111-111111111111/apply';
+  try {
+    await page.route('https://jobs.lever.co/**', route => route.fulfill({ contentType: 'text/html', body: `<div class="content"><form><input id="answer" value="operator entry"><button id="btn-submit" type="submit">SUBMIT APPLICATION</button></form></div><script>document.querySelector('form').onsubmit=e=>{e.preventDefault();const mode=${JSON.stringify(mode)};if(mode==='success'){history.pushState({},'',location.pathname.replace('/apply','/thanks'));document.querySelector('.content').innerHTML='<div class="application-confirmation"><h1>Application submitted!</h1></div>';}else if(mode==='route-only'){history.pushState({},'',location.pathname.replace('/apply','/thanks'));}else {document.querySelector('.content').insertAdjacentHTML('beforeend','<p class="application-error">'+(mode==='captcha'?'CAPTCHA verification required':'Unable to submit. Try again.')+'</p>');}}</script>` }));
+    await page.goto(url);
+    await listeners.attach(page, { opportunityId: 'synthetic-lever', employerName: 'Synthetic', applicationUrl: url }, false);
+    assert.equal((await listeners.arm()).submission?.state, 'ARMED');
+    assert.equal(await page.locator('#answer').inputValue(), 'operator entry');
+    await page.locator('#btn-submit').click();
+    let status = await listeners.status();
+    const expected = mode === 'success' ? 'CONFIRMED' : mode === 'route-only' ? 'PENDING' : 'VALIDATION_FAILED';
+    for (let i = 0; i < 50 && status.submission?.state !== expected; i++) { await new Promise(resolve => setTimeout(resolve, 20)); status = await listeners.status(); }
+    assert.equal(status.submission?.state, expected);
+    assert.equal(status.receipts.length, mode === 'success' ? 1 : 0);
+    assert.equal(callbacks, mode === 'success' ? 1 : 0);
+    if (mode === 'success') assert.match(status.error, /saved; tracker synchronization is pending/);
+    else assert.equal(status.submission?.receipt, null);
+  } finally { await listeners.dispose(); await browser.close(); await fs.rm(root, { recursive: true, force: true }); }
 });

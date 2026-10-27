@@ -4,6 +4,9 @@ import { fieldProgressState, attachmentProgressState, evidenceDescription } from
 import { assertInspectionScope, inspectApplicationRequirements, inspectRequiredFieldBlockers } from './application-requirements.ts';
 import { OpportunityDocumentStore, documentScope, type DocumentKind } from './opportunity-documents.ts';
 import { ManagedListeners } from './managed-listeners.ts';
+import { enqueueSubmissionSync, retrySubmissionSync, readSubmissionSyncStatus, startSubmissionSync } from './tracker-writeback.ts';
+import { readWorkspace } from './workspace-file.ts';
+import { APPLICATIONS_KEY } from './src/lib/storage.ts';
 import { withCareerPreferences } from './career-preferences.ts';
 import { captureMilitaryAnswers } from './managed-form.ts';
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -55,6 +58,23 @@ export function managedBrowserProfileDirectory(origin: string, env: NodeJS.Proce
     throw new Error('Managed browser profile requires a loopback application origin.');
   }
   return path.join(userDataRoot(env), 'managed-career-browser-origins', port);
+}
+
+/** Recover a known tab without issuing navigation, form writes or terminal actions. */
+export function selectExistingApplicationPage(context: BrowserContext, savedUrl: unknown, livePageUrl: unknown): Page {
+  const saved = new URL(validateApplicationUrl(savedUrl));
+  const live = new URL(validateApplicationUrl(livePageUrl));
+  const exact = saved.origin === live.origin && saved.pathname === live.pathname;
+  const leverForm = saved.hostname === 'jobs.lever.co' && saved.origin === live.origin &&
+    /^\/[^/]+\/[a-f0-9-]{36}\/?$/i.test(saved.pathname) && live.pathname === saved.pathname.replace(/\/$/, '') + '/apply';
+  if (!exact && !leverForm) throw new Error('Existing tab does not match the saved application.');
+  const matches = context.pages().filter(candidate => {
+    if (candidate.isClosed()) return false;
+    const actual = new URL(candidate.url());
+    return actual.origin === live.origin && actual.pathname === live.pathname && actual.search === live.search;
+  });
+  if (matches.length !== 1) throw new Error('Choose one unique existing application tab before enabling tracking.');
+  return matches[0];
 }
 
 function respond(res: ServerResponse, code: number, value: object) {
@@ -275,7 +295,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
   const cacheHost = globalThis as typeof globalThis & { [key: symbol]: SessionCache };
   const cacheKey = Symbol.for('escapehatch.managed-browser.' + (managed?.identity.instanceId || 'unmanaged'));
   const cache = cacheHost[cacheKey] ||= { context: null, page: null, state: 'idle', applicationOrigin: '', applicationUrl: '',
-    opportunityId: '', preparation: null, networkDiagnosis: null, authCheckpoint: INITIAL_CHECKPOINT, trustedReturnPath: null, busy: false, listeners: new ManagedListeners() };
+    opportunityId: '', preparation: null, networkDiagnosis: null, authCheckpoint: INITIAL_CHECKPOINT, trustedReturnPath: null, busy: false, listeners: new ManagedListeners(undefined, undefined, enqueueSubmissionSync) };
   let context = cache.context;
   let page = cache.page;
   let state = cache.state;
@@ -287,10 +307,16 @@ export function createManagedBrowserAssistPlugin(): Plugin {
   let authCheckpoint = cache.authCheckpoint || INITIAL_CHECKPOINT;
   let trustedReturnPath = cache.trustedReturnPath || null;
   let networkDiagnosis = cache.networkDiagnosis;
-  const listeners = cache.listeners;
+  // An installed upgrade may retain an old listener object in Vite's cache.
+  // Replace observation handles only; never close or navigate employer tabs.
+  const previousListeners = cache.listeners;
+  const listeners = previousListeners.implementationVersion === 2 ? previousListeners : new ManagedListeners(undefined, undefined, enqueueSubmissionSync);
+  const listenerReady = previousListeners === listeners ? Promise.resolve() : previousListeners.dispose();
+  cache.listeners = listeners;
   return {
     name: 'escapehatch-managed-browser-assist',
     configureServer(server) {
+      if (managed) startSubmissionSync();
       server.middlewares.use(async (req, res, next) => {
         const url = new URL(req.url || '/', 'http://127.0.0.1');
         if (!url.pathname.startsWith(PREFIX + '/')) return next();
@@ -301,6 +327,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             host !== '127.0.0.1:' + port) {
           return respond(res, 403, { ok: false, error: 'managed_local_runtime_required' });
         }
+        await listenerReady;
         if (url.pathname === PREFIX + '/status' && req.method === 'GET') {
           if (page?.isClosed()) { page = null; state = 'browser_closed'; authCheckpoint = INITIAL_CHECKPOINT; }
           if (page && applicationOrigin) {
@@ -334,6 +361,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             finalActionActivated: false,
             pendingManual: preparation?.pendingManual || [],
             listeners: listenerState,
+            trackerSync: await readSubmissionSyncStatus(),
           });
         }
         if (url.pathname === PREFIX + '/preferences' && req.method === 'GET') {
@@ -367,6 +395,28 @@ export function createManagedBrowserAssistPlugin(): Plugin {
         cache.busy = true;
         try {
           const payload = await readJson(req);
+          if (url.pathname === PREFIX + '/submission-sync/retry') return respond(res, 200, { ok: true, trackerSync: await retrySubmissionSync() });
+          if (url.pathname === PREFIX + '/listeners/bind-existing') {
+            if (!context) return respond(res, 409, { ok: false, error: 'managed_browser_context_unavailable' });
+            if (typeof payload.opportunityId !== 'string' || !payload.opportunityId || payload.opportunityId.length > 256) throw new Error('Select a saved opportunity.');
+            const workspace = await readWorkspace();
+            const applications = workspace?.workspace.values[APPLICATIONS_KEY];
+            const saved = Array.isArray(applications) ? applications.find(item => item.id === payload.opportunityId && item.url === payload.url && !['applied', 'closed'].includes(item.status)) : null;
+            if (!saved) throw new Error('Saved opportunity changed or is unavailable.');
+            const selected = selectExistingApplicationPage(context, saved.url, payload.livePageUrl);
+            await listeners.attach(selected, { opportunityId: saved.id, applicationUrl: selected.url(), employerName: saved.company }, false);
+            const status = await listeners.arm();
+            if (status.submission?.state !== 'ARMED') return respond(res, 409, { ok: false, error: status.error || 'submission_tracking_not_armed', listeners: status });
+            page = selected;
+            applicationUrl = saved.url;
+            applicationOrigin = new URL(saved.url).origin;
+            opportunityId = saved.id;
+            preparation = null; trustedReturnPath = new URL(selected.url()).pathname;
+            authCheckpoint = INITIAL_CHECKPOINT; networkDiagnosis = null;
+            state = 'submission_tracking_armed_existing_tab';
+            await selected.bringToFront();
+            return respond(res, 200, { ok: true, state, requiresOperatorSubmission: true, listeners: status });
+          }
           if (url.pathname === PREFIX + '/preferences') return respond(res, 200, { ok: true,
             preferences: await updatePreferences(current => mergePreferenceEdits(current, payload.preferences, payload.removedQuestions)) });
           if (url.pathname === PREFIX + '/preferences/clear') { await listeners.setRecording(false); await clearPreferences(); return respond(res, 200, { ok: true }); }

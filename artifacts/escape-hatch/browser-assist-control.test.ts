@@ -32,9 +32,12 @@ test('managed Chrome respects the canonical isolated data root even with inherit
 });
 
 test('managed Chrome rejects origins that cannot own a loopback runtime', () => {
-  for (const origin of ['https://example.com', 'http://localhost:21031', 'http://127.0.0.1:80',
+  for (const origin of ['https://example.com', 'http://localhost:21031', 'http://127.0.0.1:0', 'http://127.0.0.1:65536',
     'http://127.0.0.1:21031/path', 'http://127.0.0.1:21031/', 'http://user:pass@127.0.0.1:21031']) {
     assert.throws(() => managedBrowserProfileDirectory(origin));
+  }
+  for (const port of [1, 80, 1023, 65535]) {
+    assert.equal(path.basename(managedBrowserProfileDirectory(`http://127.0.0.1:${port}`)), String(port));
   }
 });
 

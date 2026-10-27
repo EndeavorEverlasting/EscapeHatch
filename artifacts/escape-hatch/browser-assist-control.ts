@@ -50,12 +50,11 @@ const FIELDS = [
 /** Keep employer sessions stable for one app origin, without sharing Chrome locks
  * with another runtime. Never migrate or take over the legacy shared profile. */
 export function managedBrowserProfileDirectory(origin: string, env: NodeJS.ProcessEnv = process.env): string {
-  const url = new URL(origin);
-  if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || !url.port ||
-      url.origin !== origin || Number(url.port) < 1024) {
+  const port = /^http:\/\/127\.0\.0\.1:([1-9]\d{0,4})$/.exec(origin)?.[1];
+  if (!port || Number(port) > 65535) {
     throw new Error('Managed browser profile requires a loopback application origin.');
   }
-  return path.join(userDataRoot(env), 'managed-career-browser-origins', url.port);
+  return path.join(userDataRoot(env), 'managed-career-browser-origins', port);
 }
 
 function respond(res: ServerResponse, code: number, value: object) {

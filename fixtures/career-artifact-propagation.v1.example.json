@@ -1,0 +1,314 @@
+{
+  "schema": "escapehatch/career-artifact-propagation-cases/v1",
+  "synthetic_only": true,
+  "cases": [
+    {
+      "name": "target-resume-update-flows-to-pdf-and-packet",
+      "changed_node": "target_resume",
+      "source_revision": "correction-r7",
+      "receipts": {
+        "resume_pdf": {
+          "status": "UPDATED_VERIFIED",
+          "source_revision": "correction-r7",
+          "destination_revision": "verified-r8",
+          "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "provider_readback": true,
+          "reason": "source comparison and byte verification"
+        },
+        "presubmit_packet": {
+          "status": "UPDATED_VERIFIED",
+          "source_revision": "correction-r7",
+          "destination_revision": "verified-r8",
+          "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "provider_readback": true,
+          "reason": "source comparison and byte verification"
+        },
+        "browser_draft": {
+          "status": "NOT_APPLICABLE",
+          "source_revision": "correction-r7",
+          "reason": "no active browser draft for this application"
+        }
+      },
+      "expected": "CURRENT"
+    },
+    {
+      "name": "owner-approved-letter-protected",
+      "changed_node": "reviewed_source",
+      "source_revision": "correction-r7",
+      "receipts": {
+        "master_resume": {
+          "status": "UPDATED_VERIFIED",
+          "source_revision": "correction-r7",
+          "destination_revision": "verified-r8",
+          "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "provider_readback": true,
+          "reason": "source comparison and byte verification"
+        },
+        "target_resume": {
+          "status": "UPDATED_VERIFIED",
+          "source_revision": "correction-r7",
+          "destination_revision": "verified-r8",
+          "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "provider_readback": true,
+          "reason": "source comparison and byte verification"
+        },
+        "approved_cover_letter": {
+          "status": "PROTECTED_NO_EDIT",
+          "source_revision": "correction-r7",
+          "reason": "user-approved letter must remain unchanged"
+        },
+        "resume_pdf": {
+          "status": "UPDATED_VERIFIED",
+          "source_revision": "correction-r7",
+          "destination_revision": "verified-r8",
+          "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "provider_readback": true,
+          "reason": "source comparison and byte verification"
+        },
+        "cover_letter_pdf": {
+          "status": "VERIFIED_UNCHANGED",
+          "source_revision": "correction-r7",
+          "destination_revision": "verified-r8",
+          "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "provider_readback": true,
+          "reason": "source comparison and byte verification"
+        },
+        "presubmit_packet": {
+          "status": "UPDATED_VERIFIED",
+          "source_revision": "correction-r7",
+          "destination_revision": "verified-r8",
+          "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "provider_readback": true,
+          "reason": "source comparison and byte verification"
+        },
+        "browser_draft": {
+          "status": "NOT_APPLICABLE",
+          "source_revision": "correction-r7",
+          "reason": "no active browser draft for this application"
+        }
+      },
+      "expected": "OPEN"
+    },
+    {
+      "name": "missing-pdf-receipt-fails",
+      "changed_node": "target_resume",
+      "source_revision": "correction-r7",
+      "receipts": {
+        "presubmit_packet": {
+          "status": "UPDATED_VERIFIED",
+          "source_revision": "correction-r7",
+          "destination_revision": "verified-r8",
+          "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "provider_readback": true,
+          "reason": "source comparison and byte verification"
+        },
+        "browser_draft": {
+          "status": "NOT_APPLICABLE",
+          "source_revision": "correction-r7",
+          "reason": "no active browser draft for this application"
+        }
+      },
+      "expected": "REJECT"
+    },
+    {
+      "name": "unapproved-letter-mutation-fails",
+      "changed_node": "reviewed_source",
+      "source_revision": "correction-r7",
+      "receipts": {
+        "master_resume": {
+          "status": "UPDATED_VERIFIED",
+          "source_revision": "correction-r7",
+          "destination_revision": "verified-r8",
+          "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "provider_readback": true,
+          "reason": "source comparison and byte verification"
+        },
+        "target_resume": {
+          "status": "UPDATED_VERIFIED",
+          "source_revision": "correction-r7",
+          "destination_revision": "verified-r8",
+          "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "provider_readback": true,
+          "reason": "source comparison and byte verification"
+        },
+        "approved_cover_letter": {
+          "status": "UPDATED_VERIFIED",
+          "source_revision": "correction-r7",
+          "destination_revision": "verified-r8",
+          "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "provider_readback": true,
+          "reason": "source comparison and byte verification"
+        },
+        "resume_pdf": {
+          "status": "UPDATED_VERIFIED",
+          "source_revision": "correction-r7",
+          "destination_revision": "verified-r8",
+          "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "provider_readback": true,
+          "reason": "source comparison and byte verification"
+        },
+        "cover_letter_pdf": {
+          "status": "VERIFIED_UNCHANGED",
+          "source_revision": "correction-r7",
+          "destination_revision": "verified-r8",
+          "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "provider_readback": true,
+          "reason": "source comparison and byte verification"
+        },
+        "presubmit_packet": {
+          "status": "UPDATED_VERIFIED",
+          "source_revision": "correction-r7",
+          "destination_revision": "verified-r8",
+          "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "provider_readback": true,
+          "reason": "source comparison and byte verification"
+        },
+        "browser_draft": {
+          "status": "NOT_APPLICABLE",
+          "source_revision": "correction-r7",
+          "reason": "no active browser draft for this application"
+        }
+      },
+      "expected": "REJECT"
+    },
+    {
+      "name": "fake-hash-fails",
+      "changed_node": "target_resume",
+      "source_revision": "correction-r7",
+      "receipts": {
+        "resume_pdf": {
+          "status": "UPDATED_VERIFIED",
+          "source_revision": "correction-r7",
+          "destination_revision": "verified-r8",
+          "artifact_sha256": "bad",
+          "provider_readback": true,
+          "reason": "source comparison and byte verification"
+        },
+        "presubmit_packet": {
+          "status": "UPDATED_VERIFIED",
+          "source_revision": "correction-r7",
+          "destination_revision": "verified-r8",
+          "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "provider_readback": true,
+          "reason": "source comparison and byte verification"
+        },
+        "browser_draft": {
+          "status": "NOT_APPLICABLE",
+          "source_revision": "correction-r7",
+          "reason": "no active browser draft for this application"
+        }
+      },
+      "expected": "REJECT"
+    },
+    {
+      "name": "stale-event-provenance-fails",
+      "changed_node": "target_resume",
+      "source_revision": "correction-r7",
+      "receipts": {
+        "resume_pdf": {
+          "status": "UPDATED_VERIFIED",
+          "source_revision": "correction-r7",
+          "destination_revision": "verified-r8",
+          "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "provider_readback": true,
+          "reason": "source comparison and byte verification"
+        },
+        "presubmit_packet": {
+          "status": "UPDATED_VERIFIED",
+          "source_revision": "previous-r6",
+          "destination_revision": "verified-r8",
+          "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "provider_readback": true,
+          "reason": "source comparison and byte verification"
+        },
+        "browser_draft": {
+          "status": "NOT_APPLICABLE",
+          "source_revision": "correction-r7",
+          "reason": "no active browser draft for this application"
+        }
+      },
+      "expected": "REJECT"
+    },
+    {
+      "name": "required-pdf-not-applicable-fails",
+      "changed_node": "target_resume",
+      "source_revision": "correction-r7",
+      "receipts": {
+        "resume_pdf": {
+          "status": "NOT_APPLICABLE",
+          "source_revision": "correction-r7",
+          "reason": "did not make it"
+        },
+        "presubmit_packet": {
+          "status": "UPDATED_VERIFIED",
+          "source_revision": "correction-r7",
+          "destination_revision": "verified-r8",
+          "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "provider_readback": true,
+          "reason": "source comparison and byte verification"
+        },
+        "browser_draft": {
+          "status": "NOT_APPLICABLE",
+          "source_revision": "correction-r7",
+          "reason": "no active browser draft for this application"
+        }
+      },
+      "expected": "REJECT"
+    },
+    {
+      "name": "blocked-dependency-stays-open",
+      "changed_node": "target_resume",
+      "source_revision": "correction-r7",
+      "receipts": {
+        "resume_pdf": {
+          "status": "BLOCKED",
+          "source_revision": "correction-r7",
+          "reason": "provider access unavailable",
+          "next_action": "restore authorized source access then rerun export verification"
+        },
+        "presubmit_packet": {
+          "status": "UPDATED_VERIFIED",
+          "source_revision": "correction-r7",
+          "destination_revision": "verified-r8",
+          "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "provider_readback": true,
+          "reason": "source comparison and byte verification"
+        },
+        "browser_draft": {
+          "status": "NOT_APPLICABLE",
+          "source_revision": "correction-r7",
+          "reason": "no active browser draft for this application"
+        }
+      },
+      "expected": "OPEN"
+    },
+    {
+      "name": "blocked-cannot-be-declared-current",
+      "changed_node": "target_resume",
+      "source_revision": "correction-r7",
+      "receipts": {
+        "resume_pdf": {
+          "status": "BLOCKED",
+          "source_revision": "correction-r7",
+          "reason": "provider access unavailable",
+          "next_action": "restore authorized source access then rerun export verification"
+        },
+        "presubmit_packet": {
+          "status": "UPDATED_VERIFIED",
+          "source_revision": "correction-r7",
+          "destination_revision": "verified-r8",
+          "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "provider_readback": true,
+          "reason": "source comparison and byte verification"
+        },
+        "browser_draft": {
+          "status": "NOT_APPLICABLE",
+          "source_revision": "correction-r7",
+          "reason": "no active browser draft for this application"
+        }
+      },
+      "declared_current": true,
+      "expected": "REJECT"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "schema": "escapehatch/managed-prepare-synthetic-proof/v1",
+  "provedAtUtc": "2026-10-18T19:03:58.619Z",
+  "runtimePort": 21032,
+  "launchState": "application_open_review_required",
+  "preparationState": "REVIEW_READY",
+  "preparationCode": "terminal_action_reserved_for_operator",
+  "pagesPrepared": 3,
+  "intermediateSteps": 2,
+  "finalActionActivated": false,
+  "terminalCommitsBefore": 0,
+  "terminalCommitsAfter": 0,
+  "nativeDraftsDelta": 2,
+  "zeroTerminalCommits": true
+}

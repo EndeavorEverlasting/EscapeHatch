@@ -19,8 +19,46 @@ This file is the canonical registry for durable EscapeHatch artifacts. A plausib
 
 ## Registered artifacts
 
+| Artifact | Path | Policy | Update trigger | Validation |
+| --- | --- | --- | --- | --- |
+| Installation lifecycle owner | `scripts/windows/EscapeHatch-Install.ps1` | tracked; preserves user-owned resources | install/bootstrap/remove behavior | `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/windows/Test-EscapeHatch-Install.ps1` |
+| Install adapter | `Install-EscapeHatch.cmd` | tracked thin entrypoint | installation owner changes | installer safety suite |
+| Uninstall adapter | `Uninstall-EscapeHatch.cmd` | tracked preservation-first entrypoint | installation owner changes | installer safety suite |
+| Installer safety regression | `tests/windows/Test-EscapeHatch-Install.ps1` | tracked synthetic Windows proof | ownership/idempotency changes | Windows PowerShell 5.1 |
+| User-data root resolver | `artifacts/escape-hatch/user-data.ts` | tracked; no checkout identity in user state | private root policy changes | `npm --prefix artifacts/escape-hatch run test:bootstrap` |
+| Workspace schema and reconciliation | `artifacts/escape-hatch/src/lib/workspace-bootstrap.ts` | tracked projection; existing parsers own fields | recovered area changes | bootstrap regression |
+| Private workspace file owner | `artifacts/escape-hatch/workspace-file.ts` | tracked CAS/atomic/lock mechanics | persistence changes | bootstrap regression |
+| Managed workspace endpoint | `artifacts/escape-hatch/workspace-control.ts` | tracked same-origin loopback boundary | startup/readiness changes | bootstrap regression |
+| Pre-mount workspace barrier | `artifacts/escape-hatch/src/components/workspace-startup.tsx` | tracked recovery UI | hydration/conflict changes | bootstrap browser proof |
+| Remembered career source UI | `artifacts/escape-hatch/src/components/career-source-status.tsx` | tracked private-source consumer | source connection changes | typecheck/browser proof |
+| Context artifact importer | `artifacts/escape-hatch/import-context.ts` | tracked explicit local ingress; no credentials | workspace/provider-export changes | bootstrap regression |
+| Stable opportunity document owner | `artifacts/escape-hatch/opportunity-documents.ts` | tracked existing package owner; hash-verified migration preserves review | private package persistence changes | `npm --prefix artifacts/escape-hatch run test:managed-assist` |
+| Document migration regression | `artifacts/escape-hatch/opportunity-documents.test.ts` | tracked exact-scope/review and conflict controls | document owner changes | managed-assist regression |
+| Bounded tracker refresh | `artifacts/escape-hatch/tracker-refresh.ts` | tracked read-only authenticated provider adapter | freshness/binding changes | bootstrap regression |
+| Workspace bootstrap regression | `artifacts/escape-hatch/workspace-bootstrap.test.ts` | tracked negative/positive controls | bootstrap changes | `npm --prefix artifacts/escape-hatch run test:bootstrap` |
+| Tracker refresh regression | `artifacts/escape-hatch/tracker-refresh.test.ts` | tracked no-network fault injection | provider adapter changes | bootstrap regression |
+| Bootstrap browser configuration | `artifacts/escape-hatch/playwright.bootstrap.config.ts` | tracked isolated synthetic proof | proof runtime changes | `npm --prefix artifacts/escape-hatch run test:bootstrap:browser` |
+| Startup browser regression | `artifacts/escape-hatch/tests/workspace-startup.spec.ts` | tracked synthetic recovery/preservation controls | startup changes | bootstrap browser proof |
+
+Standalone preview configuration and controls: `artifacts/escape-hatch/playwright.preview.config.ts` and `artifacts/escape-hatch/tests/standalone-startup.spec.ts`; validate using `npm --prefix artifacts/escape-hatch run test:preview:browser`.
+
+Managed bootstrap private outputs: `%LOCALAPPDATA%/EscapeHatch/workspace.v1.json`, its prior/recovery copies,
+stable application preferences, remembered source manifest, cached résumé and tracker snapshot remain
+user-owned and untracked. Installation receipt/shortcut removal never deletes these outputs.
+
 | Artifact | Owner path | Type | How to produce/update | Validation |
 | --- | --- | --- | --- | --- |
+| Guided workbench evidence | `docs/GUIDED_APPLICATION_WORKBENCH.md` | tracked bounded implementation/evidence | update with accepted behavior and measured proof | workbench tests and harness validator |
+| Guided-start interface | `artifacts/escape-hatch/src/components/guided-start.tsx` | tracked first-action guide | reuse profile and opportunity state | workbench browser tests |
+| Artifact drop intake | `artifacts/escape-hatch/src/components/artifact-dropzone.tsx` | tracked chooser/drop component | share existing source and document validators | workbench browser tests |
+| Application puzzle interface | `artifacts/escape-hatch/src/components/application-puzzle.tsx` | tracked current-form workbench | consume scoped inspection and canonical documents | workbench browser tests |
+| Application puzzle projection | `artifacts/escape-hatch/src/lib/application-puzzle.ts` | tracked pure scoped projection | expire/reset current-page evidence | `npm --prefix artifacts/escape-hatch run test:workbench` |
+| Application puzzle model proof | `artifacts/escape-hatch/src/lib/application-puzzle.test.ts` | tracked synthetic tests | add scope/staleness regressions | `npm --prefix artifacts/escape-hatch run test:workbench` |
+| Read-only application requirements | `artifacts/escape-hatch/application-requirements.ts` | tracked managed-page inspector | read scoped visible control metadata only | workbench unit/browser tests |
+| Guided workbench browser proof | `artifacts/escape-hatch/tests/application-workbench.spec.ts` | tracked synthetic journeys | prove drag/review/scope/layout/refresh | canonical Playwright configuration |
+| Application requirements middleware proof | `artifacts/escape-hatch/tests/application-requirements-control.spec.ts` | tracked real loopback middleware/browser proof | reject cross-origin/wrong-job reads and preserve DOM | canonical Playwright configuration |
+| Validation-focus race proof | `artifacts/escape-hatch/tests/validation-focus.spec.ts` | tracked deterministic real-input regression | hold old validation frame while selecting next input | canonical Playwright configuration |
+| Guided workbench dispatch record | `Outputs/prompt-parallel-dispatch/manifest.json` | tracked execution record, canonical validation blocked | native read-only review plus primary writer | schema/runner unavailable; see workbench evidence |
 | Agent governance doctrine | `AGENTS.md` | tracked canonical contract | governance sprint only | `python scripts/validate_governance.py` |
 | Harness manifest | `harness/manifest.v1.json` | tracked machine-readable registry | harness sprint only | `python scripts/validate_harness.py` |
 | Codebase map | `harness/CODEBASE_MAP.md` | tracked operator/agent map | update when structure/commands change | `python scripts/validate_harness.py` |
@@ -29,6 +67,14 @@ This file is the canonical registry for durable EscapeHatch artifacts. A plausib
 | Career source directory CLI | `scripts/career_source_directory.py` | tracked locator utility; private state external | register selected local/Google resume and tracker locators; no OAuth operations | `python -m unittest discover -s tests -p test_career_source_directory.py -v` |
 | Career source directory tests | `tests/test_career_source_directory.py` | tracked synthetic tests | exercise privacy, deduplication and fail-closed behavior | `python -m unittest discover -s tests -p test_career_source_directory.py -v` |
 | Career source directory doctrine | `docs/CAREER_SOURCE_DIRECTORY.md` | tracked P04/P08 execution contract | maintain user-selection, credential-reuse and live certification boundaries | `python scripts/validate_harness.py` |
+| Application autofill parent contract | `harness/contracts/application-autofill-parent.v1.json` | tracked P04 parent acceptance projection (not a second runtime state machine) | keep all nine full-product gates conjunctive, final submit operator-only | `python scripts/validate_application_autofill_parent.py` |
+| Application autofill parent validator | `scripts/validate_application_autofill_parent.py` | tracked fail-closed closure guard | validate mission, parent issue, gate receipts, false-closure blockers | `python scripts/validate_application_autofill_parent.py` |
+| Application autofill parent tests | `tests/test_application_autofill_parent.py` | tracked negative/positive fixtures | exercise mission drift, subtask false closure and incomplete runtime evidence | `python -m unittest discover -s tests -p test_application_autofill_parent.py -v` |
+| Application autofill parent CI | `.github/workflows/application-autofill-parent.yml` | tracked automated proof guard | run validator/tests on affected paths and main | GitHub Actions exact-head readback |
+| Managed browser progression contract | `contracts/managed-browser-progression.v1.json` | tracked versioned managed-Playwright progression authority (does not weaken MV3 session v1 auto-nav prohibition) | update prepare/inspect/activate invariants and cockpit state exposure only | `python scripts/validate_application_autofill_parent.py` plus managed-assist / autopilot executor tests |
+| Managed preparation driver | `artifacts/escape-hatch/managed-preparation-driver.ts` | tracked Playwright PreparationDriver for `prepareToFinalReview` | wire trusted adapter evidence + managed-form writers; never invent page consequences | `npm --prefix artifacts/escape-hatch run test:managed-assist` and `npx playwright test tests/application-autopilot-executor.spec.ts` |
+| Managed prepare synthetic product proof | `harness/reports/managed-prepare-synthetic-proof.v1.json` | tracked sanitized receipt for cockpit `/launch`+`/prepare` against repository synthetic ATS | regenerate with `ESCAPEHATCH_ALLOW_SYNTHETIC_ATS=1` managed runtime + `node --experimental-strip-types scripts/proof_managed_prepare_synthetic.mjs` | receipt must show `REVIEW_READY`, `finalActionActivated=false`, `zeroTerminalCommits=true` |
+| Managed prepare synthetic proof script | `scripts/proof_managed_prepare_synthetic.mjs` | tracked operator/agent proof driver | exercise product control plane only; never terminal submit | same as receipt above |
 | Application form taxonomy | `harness/contracts/application-form-taxonomy.v1.json` | tracked versioned harness contract | add/reuse semantic question IDs and generic aliases only | `python scripts/validate_application_harness.py` |
 | Application preference-cache policy | `harness/contracts/application-preference-cache.v1.json` | tracked versioned harness contract | update persistence/privacy/precedence policy; never add real values | `python scripts/validate_application_harness.py` |
 | Application form intake workflow | `harness/workflows/APPLICATION_FORM_INTAKE.md` | tracked workflow | update when form-mapping procedure changes | `python scripts/validate_harness.py` |
@@ -102,6 +148,17 @@ This file is the canonical registry for durable EscapeHatch artifacts. A plausib
 | Local runtime lifecycle contract | `contracts/local-runtime-lifecycle.v1.json` | tracked versioned runtime contract | update identity/state/kill/privacy rules; never add real tokens or local paths | `python scripts/validate_local_runtime_lifecycle.py` |
 | Local runtime lifecycle example fixture | `fixtures/local-runtime-lifecycle.v1.example.json` | tracked synthetic ownership fixture | exercise healthy/adoptable/unhealthy plus foreign/stale/mismatch negatives without real processes | `python scripts/validate_local_runtime_lifecycle.py` |
 | Local runtime lifecycle validator | `scripts/validate_local_runtime_lifecycle.py` | tracked contract validator | update fail-closed lifecycle identity/kill-policy checks | `python scripts/validate_local_runtime_lifecycle.py` |
+| Managed preference schema consumer | `artifacts/escape-hatch/src/lib/application-preferences.ts` | tracked product module | strict imports and exact taxonomy/option matching | `npm --prefix artifacts/escape-hatch run test:managed-assist` |
+| Managed preference local-file adapter | `artifacts/escape-hatch/preference-file.ts` | tracked product module | atomic private Save/read/Clear; no logging values | `npm --prefix artifacts/escape-hatch run test:managed-assist` |
+| Managed preference editor | `artifacts/escape-hatch/src/components/application-preferences.tsx` | tracked product UI | explicit Save/Export/Import/Clear controls | `npm --prefix artifacts/escape-hatch run typecheck` |
+| Managed semantic fill | `artifacts/escape-hatch/managed-form.ts` | tracked product module | fill known values only; preserve inputs and submission boundary | `npm --prefix artifacts/escape-hatch run test:managed-assist` |
+| Managed preference tests | `artifacts/escape-hatch/managed-preferences.test.ts` | tracked synthetic tests | persistence and actual-browser regression controls | `npm --prefix artifacts/escape-hatch run test:managed-assist` |
+
+| Integrated Sources/P08 proof | `harness/reports/integrated-source-bridge-proof-20261018.md` | tracked sanitized evidence | append measured local/runtime continuation; retain historical proof levels, no private payloads or credentials | `python scripts/validate_application_autofill_parent.py` and targeted Chromium regression suites |
+
+| Answer recovery projection | `artifacts/escape-hatch/src/lib/answer-recovery.ts` | tracked source | read-only provenance and scope projection of existing owners; no new answer store | `npm --prefix artifacts/escape-hatch run test:unit` |
+| Answer recovery tests | `artifacts/escape-hatch/src/lib/answer-recovery.test.ts` | tracked synthetic tests | deduplication, conflicts, approval, exact-question and opportunity exclusions | `npm --prefix artifacts/escape-hatch run test:unit` |
+| Recovered Answer Library | `artifacts/escape-hatch/src/components/recovered-answers.tsx` | tracked source | read-only projection and unavailable-source feedback | `npm --prefix artifacts/escape-hatch run test:bootstrap:browser` |
 
 ## User-owned local artifacts
 

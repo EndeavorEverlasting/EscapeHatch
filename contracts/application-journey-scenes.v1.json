@@ -1,0 +1,481 @@
+{
+  "schema": "escapehatch/application-journey-scenes/v1",
+  "version": 1,
+  "parent_issue": "https://github.com/EndeavorEverlasting/EscapeHatch/issues/69",
+  "owner": "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md",
+  "purpose": "Single scene and transition registry shared by installer, cockpit, managed browser, prerequisite collector, QA and agent handoffs.",
+  "scenes": [
+    {
+      "id": "INSTALL_ACQUIRE",
+      "entry_evidence": "downloaded entrypoint",
+      "required_evidence": [
+        "source_checkout"
+      ],
+      "coach_prompt": "Install EscapeHatch",
+      "primary_action": "GET_EH",
+      "completion": "specific_observed_evidence_only",
+      "resume_key": "opportunity_id_and_application_url",
+      "terminal_submit_automated": false
+    },
+    {
+      "id": "INSTALL_PREFLIGHT",
+      "entry_evidence": "installer started",
+      "required_evidence": [
+        "source_checkout",
+        "runtime_dependencies",
+        "install_destination"
+      ],
+      "coach_prompt": "Check the prerequisites for this device",
+      "primary_action": "INSTALL_DIAGNOSE",
+      "completion": "specific_observed_evidence_only",
+      "resume_key": "opportunity_id_and_application_url",
+      "terminal_submit_automated": false
+    },
+    {
+      "id": "INSTALL_APPROVAL",
+      "entry_evidence": "missing dependency or install option",
+      "required_evidence": [
+        "dependency_consent",
+        "selected_source"
+      ],
+      "coach_prompt": "Choose how to install missing components",
+      "primary_action": "INSTALL_REVIEW",
+      "completion": "specific_observed_evidence_only",
+      "resume_key": "opportunity_id_and_application_url",
+      "terminal_submit_automated": false
+    },
+    {
+      "id": "INSTALL_VERIFY",
+      "entry_evidence": "installer reports completion",
+      "required_evidence": [
+        "runtime_health",
+        "user_data_preserved"
+      ],
+      "coach_prompt": "Verify the app opens and preserves my workspace",
+      "primary_action": "INSTALL_STATUS",
+      "completion": "specific_observed_evidence_only",
+      "resume_key": "opportunity_id_and_application_url",
+      "terminal_submit_automated": false
+    },
+    {
+      "id": "HOME_READY",
+      "entry_evidence": "managed runtime healthy",
+      "required_evidence": [
+        "workspace_loaded"
+      ],
+      "coach_prompt": "Paste a job link to begin",
+      "primary_action": "NAVIGATE_INTAKE",
+      "completion": "specific_observed_evidence_only",
+      "resume_key": "opportunity_id_and_application_url",
+      "terminal_submit_automated": false
+    },
+    {
+      "id": "OPPORTUNITY_INTAKE",
+      "entry_evidence": "job URL selected",
+      "required_evidence": [
+        "https_url",
+        "posting_freshness",
+        "opportunity_binding"
+      ],
+      "coach_prompt": "Check this job and show me what is missing",
+      "primary_action": "INSPECT_JOB",
+      "completion": "specific_observed_evidence_only",
+      "resume_key": "opportunity_id_and_application_url",
+      "terminal_submit_automated": false
+    },
+    {
+      "id": "PREREQUISITES",
+      "entry_evidence": "source/profile/form inventory available",
+      "required_evidence": [
+        "approved_identity",
+        "approved_answers",
+        "reviewed_role_documents"
+      ],
+      "coach_prompt": "Ask me only for information you cannot verify",
+      "primary_action": "COLLECT_MISSING",
+      "completion": "specific_observed_evidence_only",
+      "resume_key": "opportunity_id_and_application_url",
+      "terminal_submit_automated": false
+    },
+    {
+      "id": "APPLICATION_ENTRY",
+      "entry_evidence": "managed browser launched",
+      "required_evidence": [
+        "expected_origin",
+        "opportunity_binding"
+      ],
+      "coach_prompt": "Open the employer application",
+      "primary_action": "OPEN_APPLICATION",
+      "completion": "specific_observed_evidence_only",
+      "resume_key": "opportunity_id_and_application_url",
+      "terminal_submit_automated": false
+    },
+    {
+      "id": "AUTH_HANDOFF",
+      "entry_evidence": "login or email-first gate visible",
+      "required_evidence": [
+        "user_login"
+      ],
+      "coach_prompt": "Sign in in the employer window; I will recognize when the form is available",
+      "primary_action": "AUTH_WATCH",
+      "completion": "specific_observed_evidence_only",
+      "resume_key": "opportunity_id_and_application_url",
+      "terminal_submit_automated": false
+    },
+    {
+      "id": "AUTH_RECHECK",
+      "entry_evidence": "employer page changed after sign-in",
+      "required_evidence": [
+        "same_opportunity",
+        "recognized_form",
+        "stable_readback"
+      ],
+      "coach_prompt": "Check again or continue when ready",
+      "primary_action": "AUTH_VERIFY",
+      "completion": "specific_observed_evidence_only",
+      "resume_key": "opportunity_id_and_application_url",
+      "terminal_submit_automated": false
+    },
+    {
+      "id": "FORM_PREPARATION",
+      "entry_evidence": "application form verified on employer origin",
+      "required_evidence": [
+        "allowed_fill_plan",
+        "document_review"
+      ],
+      "coach_prompt": "Resume my saved application preparation",
+      "primary_action": "PREPARE_REVIEW",
+      "completion": "specific_observed_evidence_only",
+      "resume_key": "opportunity_id_and_application_url",
+      "terminal_submit_automated": false
+    },
+    {
+      "id": "MANUAL_DECISION",
+      "entry_evidence": "unanswered or protected question encountered",
+      "required_evidence": [
+        "explicit_operator_answer"
+      ],
+      "coach_prompt": "Answer this question so I can continue safely",
+      "primary_action": "ANSWER_REQUIRED",
+      "completion": "specific_observed_evidence_only",
+      "resume_key": "opportunity_id_and_application_url",
+      "terminal_submit_automated": false
+    },
+    {
+      "id": "FINAL_REVIEW",
+      "entry_evidence": "trusted terminal control reached",
+      "required_evidence": [
+        "confirmed_fields",
+        "verified_documents",
+        "operator_review"
+      ],
+      "coach_prompt": "Review everything; submit yourself",
+      "primary_action": "FINAL_OPERATOR_ONLY",
+      "completion": "specific_observed_evidence_only",
+      "resume_key": "opportunity_id_and_application_url",
+      "terminal_submit_automated": false
+    },
+    {
+      "id": "RECOVERY",
+      "entry_evidence": "blocked, drifted, interrupted, or degraded session",
+      "required_evidence": [
+        "failure_receipt",
+        "safe_reentry"
+      ],
+      "coach_prompt": "Show the failed step and how to recover",
+      "primary_action": "RECOVER",
+      "completion": "specific_observed_evidence_only",
+      "resume_key": "opportunity_id_and_application_url",
+      "terminal_submit_automated": false
+    }
+  ],
+  "transitions": [
+    {
+      "from": "INSTALL_ACQUIRE",
+      "to": "INSTALL_PREFLIGHT",
+      "requires": "verified_transition_and_opportunity_binding"
+    },
+    {
+      "from": "INSTALL_PREFLIGHT",
+      "to": "INSTALL_APPROVAL",
+      "requires": "verified_transition_and_opportunity_binding"
+    },
+    {
+      "from": "INSTALL_PREFLIGHT",
+      "to": "INSTALL_VERIFY",
+      "requires": "verified_transition_and_opportunity_binding"
+    },
+    {
+      "from": "INSTALL_APPROVAL",
+      "to": "INSTALL_VERIFY",
+      "requires": "verified_transition_and_opportunity_binding"
+    },
+    {
+      "from": "INSTALL_VERIFY",
+      "to": "HOME_READY",
+      "requires": "verified_transition_and_opportunity_binding"
+    },
+    {
+      "from": "HOME_READY",
+      "to": "OPPORTUNITY_INTAKE",
+      "requires": "verified_transition_and_opportunity_binding"
+    },
+    {
+      "from": "OPPORTUNITY_INTAKE",
+      "to": "PREREQUISITES",
+      "requires": "verified_transition_and_opportunity_binding"
+    },
+    {
+      "from": "PREREQUISITES",
+      "to": "APPLICATION_ENTRY",
+      "requires": "verified_transition_and_opportunity_binding"
+    },
+    {
+      "from": "APPLICATION_ENTRY",
+      "to": "AUTH_HANDOFF",
+      "requires": "verified_transition_and_opportunity_binding"
+    },
+    {
+      "from": "APPLICATION_ENTRY",
+      "to": "FORM_PREPARATION",
+      "requires": "verified_transition_and_opportunity_binding"
+    },
+    {
+      "from": "AUTH_HANDOFF",
+      "to": "AUTH_RECHECK",
+      "requires": "verified_transition_and_opportunity_binding"
+    },
+    {
+      "from": "AUTH_RECHECK",
+      "to": "FORM_PREPARATION",
+      "requires": "verified_transition_and_opportunity_binding"
+    },
+    {
+      "from": "AUTH_RECHECK",
+      "to": "AUTH_HANDOFF",
+      "requires": "verified_transition_and_opportunity_binding"
+    },
+    {
+      "from": "FORM_PREPARATION",
+      "to": "MANUAL_DECISION",
+      "requires": "verified_transition_and_opportunity_binding"
+    },
+    {
+      "from": "MANUAL_DECISION",
+      "to": "FORM_PREPARATION",
+      "requires": "verified_transition_and_opportunity_binding"
+    },
+    {
+      "from": "FORM_PREPARATION",
+      "to": "FINAL_REVIEW",
+      "requires": "verified_transition_and_opportunity_binding"
+    },
+    {
+      "from": "RECOVERY",
+      "to": "AUTH_RECHECK",
+      "requires": "verified_transition_and_opportunity_binding"
+    },
+    {
+      "from": "RECOVERY",
+      "to": "INSTALL_PREFLIGHT",
+      "requires": "verified_transition_and_opportunity_binding"
+    },
+    {
+      "from": "RECOVERY",
+      "to": "PREREQUISITES",
+      "requires": "verified_transition_and_opportunity_binding"
+    },
+    {
+      "from": "RECOVERY",
+      "to": "APPLICATION_ENTRY",
+      "requires": "verified_transition_and_opportunity_binding"
+    },
+    {
+      "from": "INSTALL_ACQUIRE",
+      "to": "RECOVERY",
+      "requires": "recorded_blocker_or_error"
+    },
+    {
+      "from": "INSTALL_PREFLIGHT",
+      "to": "RECOVERY",
+      "requires": "recorded_blocker_or_error"
+    },
+    {
+      "from": "INSTALL_APPROVAL",
+      "to": "RECOVERY",
+      "requires": "recorded_blocker_or_error"
+    },
+    {
+      "from": "INSTALL_VERIFY",
+      "to": "RECOVERY",
+      "requires": "recorded_blocker_or_error"
+    },
+    {
+      "from": "HOME_READY",
+      "to": "RECOVERY",
+      "requires": "recorded_blocker_or_error"
+    },
+    {
+      "from": "OPPORTUNITY_INTAKE",
+      "to": "RECOVERY",
+      "requires": "recorded_blocker_or_error"
+    },
+    {
+      "from": "PREREQUISITES",
+      "to": "RECOVERY",
+      "requires": "recorded_blocker_or_error"
+    },
+    {
+      "from": "APPLICATION_ENTRY",
+      "to": "RECOVERY",
+      "requires": "recorded_blocker_or_error"
+    },
+    {
+      "from": "AUTH_HANDOFF",
+      "to": "RECOVERY",
+      "requires": "recorded_blocker_or_error"
+    },
+    {
+      "from": "AUTH_RECHECK",
+      "to": "RECOVERY",
+      "requires": "recorded_blocker_or_error"
+    },
+    {
+      "from": "FORM_PREPARATION",
+      "to": "RECOVERY",
+      "requires": "recorded_blocker_or_error"
+    },
+    {
+      "from": "MANUAL_DECISION",
+      "to": "RECOVERY",
+      "requires": "recorded_blocker_or_error"
+    },
+    {
+      "from": "FINAL_REVIEW",
+      "to": "RECOVERY",
+      "requires": "recorded_blocker_or_error"
+    }
+  ],
+  "state_authority": {
+    "source": "provider-readback-and-local-user-owned-evidence",
+    "never": "agent_claim_or_button_click_only",
+    "installation": "Windows installer receipt + managed runtime healthy",
+    "auth": "recognized same-application form stable across two status observations",
+    "submission": "operator action + independent employer confirmation"
+  },
+  "user_prompts": {
+    "display": "one_visible_question_at_a_time_with_why_and_destination",
+    "choices": [
+      "Answer now",
+      "I'll do this in the employer window",
+      "Skip if optional",
+      "Review saved answer"
+    ],
+    "ask_when": "specific_missing_or_ambiguous_slot",
+    "never_request": [
+      "password",
+      "MFA_code",
+      "CAPTCHA_solution",
+      "legal_attestation_via_autofill",
+      "EEO_or_accommodation_choice_without_explicit_user_action"
+    ],
+    "write_policy": "approved_value_to_private_canonical_profile_or_opportunity_preferences_only",
+    "answer_provenance": [
+      "user_confirmed",
+      "source_verified",
+      "unresolved"
+    ],
+    "replace_authorized_values": false
+  },
+  "bootstrap": {
+    "distribution": "downloadable_Get-EscapeHatch.cmd_windows",
+    "depends_on_pr": 95,
+    "script": "Get-EscapeHatch.cmd",
+    "delegates_to": "Install-EscapeHatch.cmd",
+    "install_receipt": "escapehatch-installation/v1",
+    "require_one_click_download": false,
+    "known_limit": "CMD downloader runs after Windows download/security prompts; not a signed EXE or MSI.",
+    "missing_dependency_policy": "show prerequisite + ask before winget; do not silently modify OS",
+    "source_policy": "clone separate dedicated checkout; preserve pre-existing installations and folders"
+  },
+  "auth_handoff": {
+    "watch_interval_ms": 1500,
+    "confirmed_on": "two_consecutive_same_page_readbacks_of_visible_application_form_on_same_origin_with_no_credential_gate",
+    "on_unknown": "keep user signed in/browser state intact; provide Check again",
+    "on_complete": "enable obvious Resume preparation action; auto-run only a previously authorized nonterminal fill, never final Submit",
+    "on_external_identity_origin": "observe only origin, no inspect credentials or autofill",
+    "on_page_mismatch": "block and preserve session; do not navigate or submit",
+    "on_browser_close": "record interrupted state; offer reopen without declaring completion"
+  },
+  "final_submission": "operator_only",
+  "privacy": {
+    "repository": "synthetic_only",
+    "credential_values": "never_collect_or_store",
+    "private_answers": "local_user_owned_store"
+  },
+  "upstream_selection": [
+    {
+      "ref": "xyflow-reactflow",
+      "use": "conceptual graph semantics only",
+      "adoption": "DEFER"
+    },
+    {
+      "ref": "browser-view-transitions",
+      "use": "progressive scene transitions with reduced-motion fallback",
+      "adoption": "ADAPT"
+    },
+    {
+      "ref": "motion-animate-presence",
+      "use": "optional existing React enter-exit continuity, not blocking flow",
+      "adoption": "ADAPT"
+    },
+    {
+      "ref": "mattpocock-wayfinder",
+      "use": "typed decision map and unproven-gate visibility",
+      "adoption": "ADAPT"
+    },
+    {
+      "ref": "UP-60B0939CC",
+      "use": "Playwright visual/scene regression",
+      "adoption": "REVIEW"
+    },
+    {
+      "ref": "UP-60FBA76B5",
+      "use": "motion accessibility requirements",
+      "adoption": "REVIEW"
+    }
+  ],
+  "acceptance": [
+    "no_login_is_not_false_filled",
+    "login_return_seen_in_under_two_successful_status_polls",
+    "manual_check_again_always_present",
+    "no_credential_read_or_write",
+    "opportunity_binding_preserved",
+    "unknown_cross_origin_blocks_fill",
+    "explicit_questions_have_destination_and_provenance",
+    "bootstrap_entrypoint_delivers_installer_only_after_source_ready",
+    "unknown_required_prerequisites_block_review_ready",
+    "terminal_action_never_automated",
+    "runtime_browser_proof_separate_from_synthetic_tests"
+  ],
+  "resume_persistence": {
+    "storage_key": "escape-hatch-journey-resume",
+    "storage_owner": "escapehatch-local-workspace/v1",
+    "allowed_fields": [
+      "opportunityId",
+      "applicationUrl"
+    ],
+    "empty_value": {
+      "opportunityId": "",
+      "applicationUrl": ""
+    },
+    "opportunity_id_max_length": 128,
+    "application_url_max_length": 2048,
+    "url_policy": "public_https_no_credentials_or_nondefault_port",
+    "binding": "exact_saved_nonterminal_opportunity_required",
+    "authority": "selection_only_no_login_launch_fill_or_submit_authority",
+    "context_readiness": false,
+    "conflict_policy": "preserve_divergent_nonempty_pointers",
+    "empty_semantics": "absence_default_not_forget_authority"
+  }
+}

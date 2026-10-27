@@ -22,8 +22,32 @@ Search for existing contracts, helpers, schemas, validators, scripts, naming con
 ### No completion without proof
 A task is not complete because code was written or a plan looks plausible. Completion requires actual validation evidence appropriate to the claimed proof ceiling.
 
+### EscapeHatch browser-application parent outcome is persistent
+The **P04 parent objective** is deterministic, end-to-end browser-based job-application preparation across varying ATS forms, using the user's reviewed career state, selected role documents and approved answers; final submission and attestations remain operator-controlled. Parent authority and nine conjunctive proof gates: https://github.com/EndeavorEverlasting/EscapeHatch/issues/69 and `harness/contracts/application-autofill-parent.v1.json`; the execution design remains owned by `docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md`.
+
+Every agent, lane, sprint, PR, handoff and completion report touching résumé import, source catalogs, Google authorization, form taxonomy, managed Chrome, attachments, navigation, recovery or event tracking must recover and link this parent, prove its own contribution, and state which **parent** gates remain unproven. Source access, imported PDFs, a filled single page, a synthetic green test, a merged PR or successful one-off ATS run never closes the parent. Preserve existing main and separately owned work; make the next bounded executable contribution toward the integrated browser workflow. Do not silently reduce the objective to retrieving résumé data. Run `python scripts/validate_application_autofill_parent.py` on affected changes.
+
+For the zero-friction, extension-free, review-only application experience and its verified-versus-unproven implementation gates, read `docs/agent/P04_ZERO_FRICTION_APPLICATION_EXECUTION_2026-10-20.md` before changing the managed browser, answer memory, job source bridge, onboarding or submission path. A safe registry-free field-fill/PDF fallback is `REVIEW_REQUIRED`, **not** `REVIEW_READY` or full parent completion.
+
+### Canonical installation-to-application scene graph is contractual
+
+All setup, installer, opportunity intake, prerequisite prompts, managed-browser login, resume, form preparation and final-review changes must consult `contracts/application-journey-scenes.v1.json` and `docs/agent/APPLICATION_JOURNEY_SCENE_SYSTEM_2026-10-25.md`. The scene registry is the single user-journey mapping; `docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md` and Issue #69 remain the implementation owner and parent completion gate. Run `python scripts/validate_application_journey.py` in addition to the existing application parent validator for related work. Preserve the installer PR #95, launcher #98, and parallel UI/progress work while reconciling exact-head integrations. Never treat credential page exit, URL change, successful request, locally saved answer or file-picker insertion as a completed application. Authentication credentials, MFA and CAPTCHA stay with the employer; final Submit and legal/EEO decisions stay operator-only.
+
 ### Resume presentation quality is contractual
 When an agent creates, refreshes, tailors, exports, or synchronizes a resume or CV, it must read and preserve the registered `contracts/resume-presentation.v1.json` presentation floor unless the user explicitly approves a different style. Content tailoring may change role-specific emphasis, but it must not silently regress typography, ATS-conservative structure, page-layout rules, output consistency, or required rendered-artifact QA. An optional visual projection may follow `contracts/resume-presentation-visual.v1.json` only when the user explicitly requests a non-ATS human-facing layout; that projection is never the default for Application Assist / employer submissions. Real resume content and contact data remain user-owned private inputs and must not be committed to this public repository. The operator folder `Source Resumes Not to Mutate but to Generate/` is read-only reference material.
+
+### Career claim fidelity is contractual
+
+All resume, cover-letter, career-profile, export, and browser-application text must preserve the user's current approved scope and chronology. A well-recalled partial period is **not** the total project duration. The user's explicit correction overrides old agent drafts and derivative PDFs, but factual claims still require evidence or appropriately attributed user testimony. Do not describe a multi-month responsibility as a brief coverage assignment merely because one six-week interval is easy to document. Avoid exact public duration unless the full duration is source-verified and useful.
+
+Before releasing generated text, load `contracts/career-claim-fidelity.v1.json` and run `python scripts/validate_career_claim_fidelity.py`; apply its local `--input` mode to untracked, source-grounded claim paragraphs when available. A passing synthetic check is **not** a proof of arbitrary text semantics, real source ingestion, PDF regeneration, or complete browser application readiness. Private claim records, resumes, contact data, and documents must remain outside this public repository.
+
+
+### Career artifact propagation must be reconciled
+
+A user correction, approved new achievement, or approved career-story edit is a **source event**, not permission to silently rewrite every document. Before closing the work, identify the affected master and role-specific resumes, approved cover letters, derived PDFs, pre-submission bundles, and browser-application fields. Use the canonical dependency and receipt contract at `harness/contracts/career-artifact-propagation.v1.json` and its validator once installed. For every reachable dependent, record `UPDATED_VERIFIED`, `VERIFIED_UNCHANGED`, `PROTECTED_NO_EDIT`, `BLOCKED`, or genuinely `NOT_APPLICABLE` with source revision and destination readback evidence. Never treat a plan, an export request, or a GitHub merge as verified downstream propagation. A missing or stale dependent must not be reported current.
+
+**Respect author approval and live work:** leave user-approved documents unchanged unless the operator expressly requests editing them; do not overwrite an active application session, submit an application, or replace private career assets without authorized provider writes. A protected artifact may be checked for impact and marked `PROTECTED_NO_EDIT` rather than mutated. Disclose stale or blocked outputs in the handoff; do not quietly backfill them or invent facts. Private career text, source locators, identities, and packet bytes must never enter tracked fixtures or public commits.
 
 ## 2. Instruction Precedence
 
@@ -110,3 +134,34 @@ When no artifact exists yet, the next action must create or repair the next owne
 ## 8. Governance Ownership
 
 `AGENTS.md` owns repository-wide agent governance. Changes to this doctrine must be deliberate, reviewable, and validated by the repository governance validator. Task prompts may specialize behavior inside their bounded scope but may not silently create a second governance authority.
+
+## 9. Trifecta workflow shorthand
+
+When the operator invokes **trifecta**, resolve and apply TokenCorridor's **P08 Live Runtime Proof Executor**, **P82 Prototype-Measure-Refine Delivery Loop**, and **P07 Repo Sprint Executor** together. See `docs/agent/TRIFECTA.md` for canonical source locations, invocation boundaries, and proof reporting. This is a workflow reference under this governance contract, not a second governance authority. Missing prompt infrastructure or unavailable proof must be reported explicitly; the shorthand never grants credential access, personal-data disclosure, or final application submission authority.
+
+## 10. Application startup and user-context readiness
+
+Starting EscapeHatch means recovering the user's workspace, not merely observing a listening server.
+Use `Launch-EscapeHatch.cmd`, which delegates through the installation/bootstrap owner, and follow
+`docs/WINDOWS_RUNTIME_LIFECYCLE.md`. Preserve the installation's selected source and the stable
+user store across checkouts. Never replace a dirty checkout or browser edits to obtain a clean launch.
+
+Before reporting ready, verify the managed workspace readiness endpoint and observe the populated
+profile/progress or the explicit recovery screen. Inspect remembered sources and tracker freshness;
+neither HTTP 200, a process receipt, an auth-file presence flag, nor a stale snapshot proves user-context
+readiness or live cloud access. Missing, invalid, conflicting or unauthorized context must produce a
+specific recovery action and remain unproven until resolved. Use available authorized connectors to
+recover existing artifacts; never ask the user to reconstruct discoverable context or create new OAuth
+credentials by default. Keep private data and source identities outside Git. Uninstall preserves user
+state and external artifacts; erasure requires a separate explicit user request.
+
+
+**P94 operator-first recovery route:** If startup opens synthetic/sample identity, answers or opportunities appear missing, or the operator cannot begin a real job application, immediately execute `docs/agent/APPLICATION_JOURNEY_SCENE_SYSTEM_2026-10-25.md` §9.8 on the actual installed Windows host. Resolve installation-selected source and real-vs-fixture process/data ownership, repair the first proven gate, and supply the usable existing Applications → Assist → employer-browser path. Synthetic tests and GitHub merges are not the operator's live acceptance. Protect 21033 and all private data; do not ask the operator to retest sample accounts or re-enter answers.
+
+**P04 operator-light real-application sprint:** When the operator asks the local agent to advance genuine saved job applications while they rest, read `docs/agent/P04_OPERATOR_LIGHT_APPLICATION_SPRINT_2026-10-27.md` before creating plans or synthetic tests. Use the existing career index, primary tracker, approved career profile, managed browser preparation controller, and installed private workspace to prepare the next up to three *unsubmitted*, verified-fit openings. Persist per-opportunity review checkpoints, proceed to another candidate on user-only gates, and deliver a concise real-workspace review queue. Never auto-submit, silently upload unapproved documents, launch applied/closed jobs, use Gmail, invent private facts or treat a green GitHub PR as a completed employer draft. The operator can rest; the local agent performs reachable steps without requiring continuous supervision. Section 9.8 of the canonical journey still owns recovery if the app opens synthetic/blank state.
+
+### Application-required-field and answer-memory regression guard (2026-10-27)
+
+For any application-form fill, verification, browser agent, or prompt handoff, inventory all required controls before reporting review readiness. Treat native `required`, `aria-required`, visible label/legend `*`, group-required metadata, and rendered required markers as signals; do not classify a starred employer question as optional merely because HTML validation is absent. The required inventory includes file inputs, hidden-but-labelled uploads, conditional/dynamically revealed questions and protected privacy/attestation checkboxes. Map using labels and group prompts, not click index. Read back actual selections and attached file-input state; verify employer acceptance separately. Legal/consent/EEO actions remain operator-controlled, and an unselected required privacy control must appear as a visible operator action, never disappear from readiness counts.
+
+Resume an existing real application and hydrate previously approved answers from the user's PRIVATE canonical workspace and current opportunity overlay before asking or guessing. A recent explicit user correction outranks older derivatives or defaults; persist future corrections through existing answer-memory owner (not a second store). Do not hardcode private applicant values or link private answer documents into public repository history. After each fill and every conditional reveal, re-inspect required fields; report exact unresolved field names and `REVIEW_REQUIRED` until safe checks and protected handoff are complete. Execute `node --experimental-strip-types --test application-requirements.test.ts` from `artifacts/escape-hatch` and the existing managed-assist/full parent validators as relevant; static/synthetic PASS alone does not prove a live ATS or installed build.

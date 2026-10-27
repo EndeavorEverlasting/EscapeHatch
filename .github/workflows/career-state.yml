@@ -6,19 +6,18 @@ on:
       - "contracts/**"
       - "fixtures/**"
       - "scripts/validate_career_state.py"
+      - "scripts/validate_career_claim_fidelity.py"
+      - "scripts/validate_career_artifact_propagation.py"
+      - "harness/contracts/career-artifact-propagation.v1.json"
+      - "docs/CAREER_ARTIFACT_PROPAGATION_HARNESS.md"
       - "scripts/validate_application_companion.py"
       - "scripts/export_study_guidance.py"
       - "tests/test_study_guidance_export.py"
       - ".github/workflows/career-state.yml"
   pull_request:
-    paths:
-      - "contracts/**"
-      - "fixtures/**"
-      - "scripts/validate_career_state.py"
-      - "scripts/validate_application_companion.py"
-      - "scripts/export_study_guidance.py"
-      - "tests/test_study_guidance_export.py"
-      - ".github/workflows/career-state.yml"
+    # Required by the promotion contract for every candidate to main.
+    # A path filter can omit the exact-head check even when local validators pass.
+    branches: [main]
 
 permissions:
   contents: read
@@ -35,12 +34,20 @@ jobs:
           python-version: "3.13"
       - name: Validate career-state graph
         run: python scripts/validate_career_state.py
+      - name: Validate career claim fidelity
+        run: python scripts/validate_career_claim_fidelity.py
+      - name: Validate career artifact propagation
+        run: python scripts/validate_career_artifact_propagation.py
+      - name: Validate generated career reconciliation scaffold
+        run: |
+          python scripts/validate_career_artifact_propagation.py --scaffold reviewed_source --source-revision synthetic-r1 > /tmp/career-propagation.json
+          python scripts/validate_career_artifact_propagation.py --input /tmp/career-propagation.json
       - name: Validate application companion
         run: python scripts/validate_application_companion.py
       - name: Test StudySyndicate export
         run: python tests/test_study_guidance_export.py
       - name: Compile product validators
-        run: python -m py_compile scripts/validate_career_state.py scripts/validate_application_companion.py scripts/export_study_guidance.py tests/test_study_guidance_export.py
+        run: python -m py_compile scripts/validate_career_state.py scripts/validate_career_claim_fidelity.py scripts/validate_career_artifact_propagation.py scripts/validate_application_companion.py scripts/export_study_guidance.py tests/test_study_guidance_export.py
       - name: Check whitespace
         shell: bash
         run: |

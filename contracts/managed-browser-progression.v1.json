@@ -1,0 +1,66 @@
+{
+  "schema": "escapehatch/managed-browser-progression/v1",
+  "version": 1,
+  "mission": "Authorize deterministic, operator-triggered intermediate application progression inside the managed Playwright Chrome lane only, stopping at final operator review without automatic terminal commits.",
+  "relationship_to_session_contract": {
+    "session_contract": "contracts/application-assist-session.v1.json",
+    "mv3_extension_surface": "browser/application-assist",
+    "invariant": "This contract does not amend or weaken the MV3 extension session v1 forbidden_actions auto_submit and click_next_or_continue. Extension-side automatic navigation remains prohibited.",
+    "authority_surface": "managed_playwright_browser_only",
+    "read_only_observer_note": "The optional MV3 submission observer grants observation and same-path reinjection only, never terminal click authority. It does not change managed final_action_activated_always_false."
+  },
+  "relationship_to_navigation_authority": {
+    "contract": "contracts/application-navigation-authority.v1.json",
+    "classifier_owner": "artifacts/escape-hatch/application-navigation-policy.ts",
+    "executor_owner": "artifacts/escape-hatch/application-autopilot-executor.ts",
+    "driver_owner": "artifacts/escape-hatch/managed-preparation-driver.ts",
+    "note": "Classification remains pure and evidence-bound. Activation is permitted only after prepareToFinalReview re-inspects and the managed driver rebinds the exact control fingerprints."
+  },
+  "driver_methods": {
+    "inspect": [
+      "bind_page_to_opportunity_session_and_origin",
+      "observe_field_and_control_fingerprints_and_live_validation",
+      "retrieve_trusted_versioned_ats_effect_evidence_independently_of_page_claims",
+      "identify_unresolved_questions_upload_verification_and_manual_gates",
+      "reject_unknown_or_stale_consequences"
+    ],
+    "prepareCurrentPage": [
+      "reuse_canonical_fill_plan_taxonomy_saved_preferences_and_managed_form_writers",
+      "fill_only_approved_semantically_matched_fields",
+      "support_native_react_and_spa_controls_without_question_order_dependence",
+      "preserve_user_edits_and_report_unresolved_questions",
+      "attach_role_appropriate_approved_pdfs_and_verify_observed_acceptance_when_requested",
+      "never_invent_or_infer_protected_applicant_facts"
+    ],
+    "activateVerifiedIntermediate": [
+      "accept_only_explicitly_authorized_preclassified_intermediate_action",
+      "reinspect_immediately_before_click",
+      "reject_terminal_unknown_drift_session_identity_change_and_unauthorized_disclosure",
+      "respect_pause_stop_undo_and_navigation_budgets",
+      "confirm_actual_progression_from_post_action_evidence"
+    ]
+  },
+  "preparation_states": {
+    "REVIEW_READY": "Trusted terminal control observed; operator must perform final submission personally.",
+    "REVIEW_REQUIRED": "Unresolved fields, validation errors, manual gates, missing uploads, or unauthorized intermediate action; operator decides.",
+    "BLOCKED": "Origin/session mismatch, loop, exhausted budget, or non-deterministic preparation; fail closed."
+  },
+  "invariants": [
+    "label_alone_never_grants_authority",
+    "terminal_application_commit_is_never_automated",
+    "adapter_evidence_never_derived_from_live_page_claims",
+    "managed_browser_progression_does_not_grant_mv3_extension_click_authority",
+    "operator_explicit_prepare_action_required_for_each_progression_run",
+    "final_action_activated_always_false"
+  ],
+  "cockpit_exposure": {
+    "component": "artifacts/escape-hatch/src/components/managed-browser-assist.tsx",
+    "control_plane": "artifacts/escape-hatch/browser-assist-control.ts",
+    "endpoint": "/__escapehatch/managed-assist/prepare",
+    "required_states_visible": [
+      "REVIEW_READY",
+      "REVIEW_REQUIRED",
+      "BLOCKED"
+    ]
+  }
+}

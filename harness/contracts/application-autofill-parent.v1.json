@@ -1,0 +1,130 @@
+{
+  "schema": "escapehatch/application-autofill-parent/v1",
+  "owner": "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md",
+  "parent_issue": "https://github.com/EndeavorEverlasting/EscapeHatch/issues/69",
+  "mission": "Deterministically prepare diverse real browser job application forms end-to-end from existing reviewed candidate and opportunity data, stopping before operator-controlled final submission.",
+  "parent_status": "OPEN",
+  "parent_completion_policy": "conjunctive_full_product_proof_only",
+  "runtime_reuse": [
+    "browser/application-assist/assist-core.js",
+    "artifacts/escape-hatch/src/lib/resume-import.ts",
+    "artifacts/escape-hatch/src/lib/assist-contract.ts",
+    "contracts/application-navigation-authority.v1.json",
+    "harness/contracts/application-form-taxonomy.v1.json",
+    "harness/contracts/application-preference-cache.v1.json"
+  ],
+  "downstream_dependencies": [
+    {
+      "kind": "source_catalog",
+      "ref": "https://github.com/EndeavorEverlasting/EscapeHatch/pull/66",
+      "completion_insufficient": true
+    },
+    {
+      "kind": "browser_launch_and_fill",
+      "ref": "https://github.com/EndeavorEverlasting/EscapeHatch/pull/63",
+      "completion_insufficient": true
+    },
+    {
+      "kind": "managed_browser_preferences",
+      "ref": "https://github.com/EndeavorEverlasting/EscapeHatch/pull/64",
+      "completion_insufficient": true
+    },
+    {
+      "kind": "navigation_classifier",
+      "ref": "https://github.com/EndeavorEverlasting/EscapeHatch/pull/67",
+      "completion_insufficient": true
+    },
+    {
+      "kind": "synthetic_consequence_fixture",
+      "ref": "https://github.com/EndeavorEverlasting/EscapeHatch/pull/68",
+      "completion_insufficient": true
+    },
+    {
+      "kind": "event_chain",
+      "ref": "https://github.com/EndeavorEverlasting/EscapeHatch/issues/60",
+      "completion_insufficient": true
+    },
+    {
+      "kind": "existing_google_bridge",
+      "ref": "https://github.com/EndeavorEverlasting/TokenCorridor/pull/73",
+      "completion_insufficient": true
+    }
+  ],
+  "required_gates": [
+    {
+      "gate": "SOURCE_TO_APPROVED_PROFILE",
+      "proof": "live user-selected source read, review and opportunity-bound import",
+      "status": "UNPROVEN",
+      "receipt": null
+    },
+    {
+      "gate": "MANAGED_BROWSER_LAUNCH",
+      "proof": "real local workstation managed browser launches target job form",
+      "status": "UNPROVEN",
+      "receipt": null
+    },
+    {
+      "gate": "SEMANTIC_CROSS_FORM_MAPPING",
+      "proof": "question taxonomy matches native, SPA and dynamic form controls independent of order",
+      "status": "UNPROVEN",
+      "receipt": null
+    },
+    {
+      "gate": "DETERMINISTIC_FILL_AND_PDFS",
+      "proof": "approved fields/attachments verified on real browser DOM, user edits preserved",
+      "status": "UNPROVEN",
+      "receipt": null
+    },
+    {
+      "gate": "CONSEQUENCE_SAFE_MULTISTEP",
+      "proof": "evidence-bound intermediate navigation and zero terminal auto-commits",
+      "status": "UNPROVEN",
+      "receipt": null
+    },
+    {
+      "gate": "SESSION_CONTINUITY",
+      "proof": "page transitions, reload and manual-review state preserve opportunity identity and answers",
+      "status": "UNPROVEN",
+      "receipt": null
+    },
+    {
+      "gate": "ADVERSARIAL_CROSS_ARCHETYPE",
+      "proof": "repo-owned diverse synthetic ATS fixtures, negative controls and full-suite regression",
+      "status": "UNPROVEN",
+      "receipt": null
+    },
+    {
+      "gate": "P08_REAL_BROWSER_USER_JOURNEY",
+      "proof": "local user-approved real ATS from opportunity through prepared final review, plus separate form archetype",
+      "status": "UNPROVEN",
+      "receipt": null
+    },
+    {
+      "gate": "MERGED_AND_LIVE_OBSERVED",
+      "proof": "authorized changes on default branch, launched and observed on local runtime",
+      "status": "UNPROVEN",
+      "receipt": null
+    }
+  ],
+  "operator_only": [
+    "final_submit",
+    "truth_certification",
+    "legal_or_eeo_attestation",
+    "captcha_or_mfa",
+    "ambiguous_controls"
+  ],
+  "forbidden_false_close": [
+    "source_discovered",
+    "credential_present",
+    "resume_read",
+    "resume_parsed",
+    "profile_imported",
+    "form_launched",
+    "one_page_filled",
+    "synthetic_fixture_passed",
+    "green_pull_request",
+    "merged_without_runtime_proof"
+  ],
+  "tracked_private_content": "forbidden",
+  "live_observation_required": true
+}

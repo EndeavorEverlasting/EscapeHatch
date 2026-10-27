@@ -1,0 +1,63 @@
+{
+  "schema": "escapehatch/application-navigation-adapter-evidence/v1",
+  "adapterId": "escapehatch-synthetic-ats@1",
+  "atsProvider": "synthetic-local-ats",
+  "originBinding": "runtime_substituted_from_fixture_listener_origin; never derived from the observed page",
+  "scopeNote": "Fixture-authored, context-scoped effect evidence for the synthetic ATS only. Every entry names the true observed effect of one control on one page of this fixture. This file proves nothing about any real employer site.",
+  "evidence": [
+    {
+      "pageFingerprint": "native-step-1",
+      "controlId": "apply-submit",
+      "controlFingerprint": "cta-native-step-1",
+      "enclosingFormAction": "/apply/step/1",
+      "enclosingFormMethod": "post",
+      "verifiedEffectClass": "DRAFT_WRITE_AND_ADVANCE",
+      "evidenceRefs": ["fixture://application-navigation-ats/native-step-1#draft-post-303"]
+    },
+    {
+      "pageFingerprint": "native-step-2",
+      "controlId": "apply-submit",
+      "controlFingerprint": "cta-native-step-2",
+      "enclosingFormAction": "/apply/step/2",
+      "enclosingFormMethod": "post",
+      "verifiedEffectClass": "DRAFT_WRITE_AND_ADVANCE",
+      "evidenceRefs": ["fixture://application-navigation-ats/native-step-2#draft-post-303"]
+    },
+    {
+      "pageFingerprint": "native-step-3",
+      "controlId": "apply-submit",
+      "controlFingerprint": "cta-native-step-3",
+      "enclosingFormAction": "/apply/submit",
+      "enclosingFormMethod": "post",
+      "verifiedEffectClass": "TERMINAL_APPLICATION_COMMIT",
+      "evidenceRefs": ["fixture://application-navigation-ats/native-step-3#terminal-post"]
+    },
+    {
+      "pageFingerprint": "decoy-commit",
+      "controlId": "apply-submit",
+      "controlFingerprint": "cta-decoy-commit",
+      "enclosingFormAction": "/apply/submit",
+      "enclosingFormMethod": "post",
+      "verifiedEffectClass": "TERMINAL_APPLICATION_COMMIT",
+      "evidenceRefs": ["fixture://application-navigation-ats/decoy-commit#terminal-post-despite-next-label"]
+    },
+    {
+      "pageFingerprint": "spa-step-1",
+      "controlId": "apply-submit",
+      "controlFingerprint": "cta-spa-step-1",
+      "enclosingFormAction": null,
+      "enclosingFormMethod": null,
+      "verifiedEffectClass": "DRAFT_WRITE_AND_ADVANCE",
+      "evidenceRefs": ["fixture://application-navigation-ats/spa-step-1#fetch-advance"]
+    },
+    {
+      "pageFingerprint": "spa-step-2",
+      "controlId": "apply-submit",
+      "controlFingerprint": "cta-spa-step-2",
+      "enclosingFormAction": null,
+      "enclosingFormMethod": null,
+      "verifiedEffectClass": "TERMINAL_APPLICATION_COMMIT",
+      "evidenceRefs": ["fixture://application-navigation-ats/spa-step-2#fetch-terminal"]
+    }
+  ]
+}

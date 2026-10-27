@@ -1,8 +1,140 @@
 # EscapeHatch Windows Runtime Lifecycle Plan
 
-Status: TRACKED PLAN — EH-R0 through EH-R2 integrated on the candidate; EH-R3/R4 are the active successor wave; EH-R5 remains pending.
+Status: BOOTSTRAP CANDIDATE — B0–B3 implemented with local Windows evidence; B4 exact-head checks, review and integration remain pending. Historical EH-R sections below retain their original evidence floor.
 
 Canonical planning owner for this work: `docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md`.
+
+## 2026-10-24 bootstrap recovery programme
+
+This section supersedes process-only readiness claims. A healthy process is not a recovered user workspace.
+The operator twice observed a blank profile/queue after launch; the fresh-browser P08 baseline reproduced
+0% profile readiness and a stale tracker despite existing approved local preferences and a private tracker.
+Source floor: refreshed `origin/main@9cc71711fb8152ea869ba2530a06f88b7ef4949a`.
+TokenCorridor prompt floor: `origin/main@84e5abd`; P141 scout, then separately invoked P08/P82/P07.
+Private career source identities and content belong only in the user's local store, never this plan.
+
+### P141 decision and P82 admission
+
+| Thesis | Falsification | Disposition |
+| --- | --- | --- |
+| Stable per-user workspace/bootstrap shared by every checkout | Existing code might already hydrate it. Inspection disproved that: App initializes browser-only state; preferences are checkout-relative. A fresh browser reproduced the failure. | SURVIVES; selected |
+| Installer/shortcut alone | Test whether process readiness implies profile readiness. Healthy process plus empty profile disproves it. | WEAKENED; necessary lifecycle component, insufficient alone |
+| Cloud-only hydration | Existing cloud context exists, but standalone app has no usable connector merely because this conversation does. Offline continuity remains required. | REJECTED as sole state owner |
+| More agent handoff prose | Repeated launch instructions already exist but runtime never loads the profile. | REJECTED as primary repair; strengthen executable readiness instead |
+
+Selected thesis: distribution/process identity must be separate from stable user state. Confidence HIGH for
+the ownership failure, UNKNOWN for full cloud automation until authorized provider access is exercised.
+P141 ends with this decision; implementation is admitted by the operator's separate trifecta invocation.
+
+P82 hypothesis: a validated per-user artifact plus a hydration barrier can recover a fresh browser without
+overwriting browser edits. Comparator: current launcher -> healthy server -> empty profile/stale snapshot.
+Prototype boundary: profile/answers/applications/assist/source bindings, same existing parsers, private file,
+loopback endpoint, pre-mount hydration, compare-and-set persistence. Measurements: visible populated profile,
+restart/clean-browser recovery, conflict/invalid/storage-failure rejection, no terminal application action.
+PROMOTE if recovery and preservation controls pass; WEAKEN if recovery needs extra manual shuttling;
+REJECT if identities or edits cannot be preserved; INCONCLUSIVE when the required runtime is unavailable.
+
+### Whole-outcome phase map
+
+| Phase / owner | Owned implementation and artifact | Dependencies / forbidden scope | Proof gate |
+| --- | --- | --- | --- |
+| B0 / coordinator | Stable user-data root, validated workspace file/API, hydration barrier, CAS persistence, preference migration | Preserve original checkout, private artifacts, browser edits; no invented legal/EEO facts | Negative + positive store tests, typecheck, build, fresh-browser and restart proof |
+| B1 / installer lane | Inspect/Install/Bootstrap/Uninstall, canonical launcher delegation, owned shortcut receipt | B0 shares stable user root; never remove user data, credentials, adopted resources, source checkouts or foreign processes | Isolated Windows install twice/remove twice/reinstall and ownership negatives |
+| B2 / coordinator | Local workspace import and source recovery; register existing Career provider routes privately | Reuse current source identity; existing authorized connector only; do not create folders or new OAuth credentials | Local artifact round trip, malformed/oversized rejection, freshness preserved; observed provider refresh separately |
+| B3 / coordinator | Launch/readiness procedure, contract/registry and retained regression floor | Depends on B0/B1; process HTTP 200 alone never PASS | Owning validators, browser recovery/protected existing-state control, exact-head checks/review |
+| B4 / coordinator | Converge lanes and integrate candidate | Fresh default, combined proof, reviews/checks; preserve sibling worktrees | Provider merge + refreshed containment/content proof |
+
+Uninstall preserves the entire user store and all Drive artifacts by default. Data erasure is a separate
+explicit destructive request, not an installer feature. Session/process receipts remain checkout-scoped;
+profile/answers/source identities do not. Browser storage remains a working copy, with conflicts surfaced
+instead of last-writer-wins. Bootstrap errors must precede the normal dashboard and offer local import/retry.
+Standalone development mode may remain browser-local, but must not be represented as managed recovery.
+
+Validation: artifact `test:bootstrap`, `test:unit`, `test:tracker`, `test:managed-assist`, `test:runtime-control`,
+`typecheck`, `build`; focused Playwright bootstrap/persistence proof on an isolated port; isolated Windows
+installer tests; governance/harness/local-runtime validators; working/staged/exact-candidate diff checks.
+No synthetic result certifies employer acceptance, cloud OAuth, store packaging, or an unexercised OS.
+
+### Recovery checkpoints and current disposition
+
+- B0 IMPLEMENTED / VALIDATED: stable workspace, approved-contact migration, pre-mount hydration,
+  raw-browser recovery archive, compare-and-set writes, and crash-released SQLite OS locking.
+  Independent review exposed inherited-key acceptance, assist-only data omission, malformed-browser
+  recovery dead ends, a sticky lock marker and timestamp-only false conflicts. Retained regressions
+  cover those incidents and real edits remain conflict-bearing. Root server modules now participate
+  in the canonical typecheck, closing the prior `src`-only coverage gap.
+- B1 IMPLEMENTED / WINDOWS INSTALL OBSERVED: eighteen isolated installation/removal ownership cases pass.
+  Actual standard-user install/dependency path and owned Start Menu creation completed. The first
+  real dependency probe exposed PS5.1 native-argument quoting; a quote-free Node >=22.16 probe is
+  exercised by Inspect in the safety suite. Live cold start exposed a captured-pipeline handle hang;
+  direct Start delegation repaired it, and canonical stop/start returned successfully. Only the
+  positively identified stuck launcher was terminated; server ownership was rechecked separately.
+- B2 LOCAL RECOVERY OBSERVED / AUTONOMOUS CLOUD REFRESH BLOCKED: the existing connected provider
+  yielded the canonical career source index/current resume and refreshed tracker. Private caches
+  were written/read back outside Git; the original artifacts/provider identities were preserved.
+  A failed Windows command-length write did not execute; direct filesystem-runtime recovery then
+  wrote and verified the caches. Two historical correspondence links required a retained manual-link
+  regression; they are plain text, not browser navigation. Saved resume review opened through the
+  product UI without manual path transfer or accepting proposed claims.
+- B3 IMPLEMENTED / OBSERVED: real managed startup rendered a populated profile (displayed readiness
+  100%) and 32 tracker rows, 12 provider-recorded Submitted statuses and 3 Ready rows. These are
+  tracker state, not new employer-site observations. The private dashboard screenshot remains in
+  `%LOCALAPPDATA%/EscapeHatch/proof/`, never public Git. Reload/source navigation recovered state.
+  The normal source/review/submission/document controls were exercised in synthetic browser proof.
+- B4 IN_PROGRESS: independent installer and provider-refresh branches converged into the owned
+  bootstrap candidate before combined checks. Native child-agent lanes and review actually ran;
+  EscapeHatch lacks the P07 typed dispatch manifest/receipt runner, so formal parallel-manifest
+  certification is UNPROVEN rather than inferred from prose. Mainline integration still requires
+  exact-head provider checks and the repository's review/approval gate.
+
+### 2026-10-25 review refinement
+
+PR #95 remains draft while exact-candidate checks and review are incomplete. Review found standalone
+localhost/static-preview startup failures, a dual-corruption recovery dead end, links-only assist context
+omission, sibling-checkout lifecycle routing, drive-root normalization, missing owned shortcut repair,
+and provider response-stream disposal gaps. These were repaired in their existing owners. Managed
+startup now receives an explicit HTML mode marker; missing/HTML workspace responses still block it.
+Standalone development and built preview mount browser-local state without requesting private context.
+Dual-corruption import archives both original copies; links alone count as retained context.
+
+Review controls: eight managed bootstrap browser cases pass; two built-preview controls pass through
+127.0.0.1 and localhost; focused bootstrap/provider unit suite passes 37 tests; strict root/module
+typecheck and build pass. The broader 89-case browser run passed 86, skipped one existing case, and
+exposed two exact-deadline test races. The test changed Date.now while countdown timers remained active,
+allowing a correctly expired button to disappear before locator keyboard activation. This is retained
+as a measured failure rather than waived as flakiness. The timer-control repair preserved genuine
+keyboard activation and passed 39 repeated boundary controls (13 cases, three repetitions); the
+combined full browser rerun and hosted Windows lifecycle gate are still required on the final head.
+
+Installer review fixes retain modified/adopted shortcuts, repair only missing owned shortcuts, and route
+Status/Stop to the installed source without dependency provisioning. Bootstrap rejects unproven/foreign
+runtime ownership before provisioning, verified with an actual isolated foreign loopback listener.
+Hashing uses platform SHA-256 without optional PowerShell module discovery. Provider cleanup controls include
+actual ten-second bounds during both fetch and streaming. Snapshot source comparison remains
+observation-based rather than an OS-level cross-process transaction; no stronger exclusion is claimed.
+
+Independent final review of candidate `4e470fe` exposed two further preservation gaps: a conflict choice
+kept the displaced saved copy only in a rolling backup, and shortcut deletion did not revalidate ownership
+after blocking shutdown/provisioning. The workspace owner now retains a unique conflict archive inside
+the existing revision/OS-lock transaction. A browser choice followed by another edit proves that both
+original conflicting copies survive; stale CAS choices cannot create an archive. Nine managed browser
+controls and 38 focused bootstrap/provider tests pass. Installer revalidation now covers the entire
+deletion set after blocking work; 18 Windows cases include stop-time shortcut changes in both removal
+and source replacement. Hosted Windows lifecycle passed on `4e470fe`. Hosted normal browser proof
+exposed an intermittent answer-dialog closure; a deterministic synthetic browser probe traced it to
+opening requestAnimationFrame autofocus stealing the input focus before keyboard clearing. The same
+family reproduced in application editing during stress. The modal focus owner and retained controls
+closed this observed defect by setting initial focus before paint while retaining passive keyboard and
+return-focus cleanup. Both retained delayed-frame regressions failed before repair; 42 repeated focus,
+validation, Escape and return-focus controls pass afterward. Typecheck and production build pass.
+The full combined exact-head hosted suite remains the release gate; earlier green heads do not certify it.
+
+The standalone app has no usable Google lease on the observed workstation; the conversation connector
+does not transfer that permission. The real read-only adapter is fault-injection tested, but autonomous
+subsequent provider refresh is BLOCKED until an existing authorized local connection is available.
+Preserve usable local state during that gate; never create a new OAuth project by default or relabel
+an old cache as freshly read. Clean-machine Node provisioning, signed packaging, cross-OS installation,
+and actual user-data erasure are not proven by this Windows source-checkout installer.
 
 ## Evidence floor
 
@@ -536,3 +668,51 @@ Do not rename it to `manifest.json` or claim dispatch proof until the canonical 
 DONE through Wave 1 on the provider candidate: launcher convergence + EH-R0 + EH-R1 + EH-R2 are integrated through `da6d2e40f348d7e7f59fb9ba998b54a9fa663656`, and the push Harness run on that exact head succeeded.
 
 Next unproven lanes: EH-R3 (Windows lifecycle regression/fault injection + CI wiring) and EH-R4 (friendly Close/Status adapters + runbook) are dependency-ready and must execute in parallel on isolated writers. EH-R5 remains the convergence owner after both return.
+
+### Bootstrap candidate changed-file inventory
+
+- `.github/workflows/harness.yml`
+- `.github/workflows/web-cockpit.yml`
+- `AGENTS.md`
+- `ARTIFACT_REGISTRY.md`
+- `Close-EscapeHatch.ps1`
+- `Install-EscapeHatch.cmd`
+- `Launch-EscapeHatch.ps1`
+- `Status-EscapeHatch.ps1`
+- `Uninstall-EscapeHatch.cmd`
+- `artifacts/escape-hatch/import-context.ts`
+- `artifacts/escape-hatch/opportunity-documents.test.ts`
+- `artifacts/escape-hatch/opportunity-documents.ts`
+- `artifacts/escape-hatch/package.json`
+- `artifacts/escape-hatch/playwright.bootstrap.config.ts`
+- `artifacts/escape-hatch/playwright.config.ts`
+- `artifacts/escape-hatch/playwright.preview.config.ts`
+- `artifacts/escape-hatch/preference-file.ts`
+- `artifacts/escape-hatch/src/App.tsx`
+- `artifacts/escape-hatch/src/components/career-source-status.tsx`
+- `artifacts/escape-hatch/src/components/sources-page.tsx`
+- `artifacts/escape-hatch/src/components/workspace-startup.tsx`
+- `artifacts/escape-hatch/src/lib/assist-contract.ts`
+- `artifacts/escape-hatch/src/lib/storage.ts`
+- `artifacts/escape-hatch/src/lib/tracker-bridge.ts`
+- `artifacts/escape-hatch/src/lib/workspace-bootstrap.ts`
+- `artifacts/escape-hatch/src/main.tsx`
+- `artifacts/escape-hatch/tests/persistence.spec.ts`
+- `artifacts/escape-hatch/tests/sources.spec.ts`
+- `artifacts/escape-hatch/tests/standalone-startup.spec.ts`
+- `artifacts/escape-hatch/tests/workspace-startup.spec.ts`
+- `artifacts/escape-hatch/tracker-control.ts`
+- `artifacts/escape-hatch/tracker-refresh.test.ts`
+- `artifacts/escape-hatch/tracker-refresh.ts`
+- `artifacts/escape-hatch/user-data.ts`
+- `artifacts/escape-hatch/vite.config.ts`
+- `artifacts/escape-hatch/workspace-bootstrap.test.ts`
+- `artifacts/escape-hatch/workspace-control.ts`
+- `artifacts/escape-hatch/workspace-file.ts`
+- `contracts/application-companion.v1.json`
+- `docs/WINDOWS_RUNTIME_LIFECYCLE.md`
+- `docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md`
+- `harness/CODEBASE_MAP.md`
+- `scripts/windows/EscapeHatch-Install.ps1`
+- `skills/harness-operations/SKILL.md`
+- `tests/windows/Test-EscapeHatch-Install.ps1`

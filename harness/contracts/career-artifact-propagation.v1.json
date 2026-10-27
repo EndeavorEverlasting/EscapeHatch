@@ -1,0 +1,100 @@
+{
+  "schema": "escapehatch/career-artifact-propagation/v1",
+  "version": 1,
+  "authority": "AGENTS.md",
+  "domain_owner": "contracts/career-claim-fidelity.v1.json",
+  "purpose": "A career-fact change must reconcile all downstream artifacts without rewriting approved documents or assuming stale exports are fresh.",
+  "policy": {
+    "source_event_required": true,
+    "source_revision_required": true,
+    "claim_current_only_after_provider_readback": true,
+    "never_auto_change_approved_document": true,
+    "no_private_records_in_tracked_fixtures": true,
+    "no_automatic_browser_final_submission": true,
+    "statuses": [
+      "UPDATED_VERIFIED",
+      "VERIFIED_UNCHANGED",
+      "PROTECTED_NO_EDIT",
+      "BLOCKED",
+      "NOT_APPLICABLE"
+    ],
+    "current_statuses": [
+      "UPDATED_VERIFIED",
+      "VERIFIED_UNCHANGED",
+      "NOT_APPLICABLE"
+    ],
+    "open_statuses": [
+      "PROTECTED_NO_EDIT",
+      "BLOCKED"
+    ]
+  },
+  "artifacts": [
+    {
+      "id": "reviewed_source",
+      "parents": [],
+      "required": true,
+      "policy": "review_only"
+    },
+    {
+      "id": "master_resume",
+      "parents": [
+        "reviewed_source"
+      ],
+      "required": true,
+      "policy": "editable"
+    },
+    {
+      "id": "target_resume",
+      "parents": [
+        "reviewed_source",
+        "master_resume"
+      ],
+      "required": true,
+      "policy": "editable"
+    },
+    {
+      "id": "approved_cover_letter",
+      "parents": [
+        "reviewed_source"
+      ],
+      "required": false,
+      "policy": "approved_locked"
+    },
+    {
+      "id": "resume_pdf",
+      "parents": [
+        "target_resume"
+      ],
+      "required": true,
+      "policy": "derived"
+    },
+    {
+      "id": "cover_letter_pdf",
+      "parents": [
+        "approved_cover_letter"
+      ],
+      "required": false,
+      "policy": "derived"
+    },
+    {
+      "id": "presubmit_packet",
+      "parents": [
+        "resume_pdf",
+        "cover_letter_pdf"
+      ],
+      "required": false,
+      "policy": "derived"
+    },
+    {
+      "id": "browser_draft",
+      "parents": [
+        "presubmit_packet"
+      ],
+      "required": false,
+      "policy": "operator_controlled"
+    }
+  ],
+  "validation": "python scripts/validate_career_artifact_propagation.py",
+  "private_receipt_source": "local_untracked_or_connected",
+  "proof_ceiling": "A graph and synthetic receipt pass confirms bookkeeping expectations only. It does not prove live provider revisions, export-byte identity, operator review, active application state, or browser submission."
+}

@@ -1,0 +1,70 @@
+{
+  "schema": "escapehatch/tracker-snapshot/v1",
+  "provider": "synthetic-fixture",
+  "spreadsheetId": "synthetic-not-a-real-sheet",
+  "sheetName": "Applications",
+  "capturedAtUtc": "2026-10-18T19:00:00Z",
+  "contentDigest": "synthetic-digest-do-not-treat-as-live",
+  "authPath": "repository_fixture",
+  "localGoogleAuthPresent": false,
+  "metrics": {
+    "trackedRoles": 4,
+    "appliedOrSubmittedCheckbox": 2,
+    "readyToApply": 1,
+    "inProcess": 1,
+    "submittedStatus": 1,
+    "highPriority": 1
+  },
+  "applications": [
+    {
+      "sheetRow": 10,
+      "appliedCheckbox": true,
+      "priority": "High",
+      "status": "Submitted",
+      "company": "Synthetic Employer One",
+      "role": "Program Lead",
+      "workMode": "Remote",
+      "location": "US",
+      "compensation": "$100k",
+      "applyUrl": "https://jobs.example.test/synthetic-one",
+      "dateApplied": "2026-10-10",
+      "followUp": "2026-11-01",
+      "nextAction": "Do not reapply",
+      "notes": "Synthetic submitted evidence",
+      "resumeDoc": "",
+      "resumePdf": "synthetic-resume.pdf"
+    },
+    {
+      "sheetRow": 11,
+      "appliedCheckbox": true,
+      "priority": "Low",
+      "status": "In Process",
+      "company": "Synthetic Employer Two",
+      "role": "Coordinator",
+      "applyUrl": "https://jobs.example.test/synthetic-two",
+      "nextAction": "Await response"
+    },
+    {
+      "sheetRow": 12,
+      "appliedCheckbox": false,
+      "priority": "Medium",
+      "status": "Ready to Apply",
+      "company": "Synthetic Thyme Analog",
+      "role": "Operations Lead",
+      "compensation": "$170k",
+      "workMode": "Remote",
+      "applyUrl": "https://jobs.example.test/synthetic-ready",
+      "nextAction": "Review package",
+      "resumePdf": "synthetic-ready-resume.pdf"
+    },
+    {
+      "sheetRow": 13,
+      "appliedCheckbox": false,
+      "priority": "High",
+      "status": "Saved",
+      "company": "Synthetic Employer Three",
+      "role": "Analyst",
+      "applyUrl": "https://jobs.example.test/synthetic-three"
+    }
+  ]
+}

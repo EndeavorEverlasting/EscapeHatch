@@ -28,6 +28,23 @@ const sessionNode = document.getElementById("sessionState");
 const importFile = document.getElementById("importFile");
 const api = globalThis.EscapeHatchAssist;
 
+async function submissionCommand(type) {
+  const response = await chrome.runtime.sendMessage({ type });
+  if (!response?.ok) throw new Error(response?.error || 'Submission listener unavailable.');
+  const observation = response.observation;
+  document.getElementById('submissionState').textContent = observation
+    ? `${observation.state}: ${observation.connected === false ? 'Document is loading; observer disconnected. ' : ''}${observation.reason}` : 'Submission listener is off.';
+}
+for (const [id, type] of [['armSubmission', 'submission-arm'], ['stopSubmission', 'submission-stop'], ['refreshSubmission', 'submission-status']]) {
+  document.getElementById(id).addEventListener('click', event => {
+    if (!event.isTrusted) return;
+    submissionCommand(type).catch(error => { document.getElementById('submissionState').textContent = error.message; });
+  });
+}
+submissionCommand('submission-status').catch(() => {
+  document.getElementById('submissionState').textContent = 'Observer status unavailable. Reopen the extension and check before submitting.';
+});
+
 function setStatus(message) {
   statusNode.textContent = message;
 }

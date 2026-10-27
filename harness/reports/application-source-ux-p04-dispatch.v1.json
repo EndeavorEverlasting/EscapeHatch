@@ -1,0 +1,277 @@
+{
+  "schema": "escapehatch/application-source-ux-dispatch/v1",
+  "title": "P04/P82 Integrated Sources → Applications",
+  "status": "PLANNED_NOT_DISPATCHED",
+  "owner": "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md",
+  "integration_spec": "docs/APPLICATION_SOURCE_INTEGRATED_UX_P04_P82_2026-10-18.md",
+  "contract": "harness/contracts/application-source-integration.v1.json",
+  "parent_issue": "https://github.com/EndeavorEverlasting/EscapeHatch/issues/69",
+  "snapshot_date": "2026-10-18",
+  "instruction": "Native TokenCorridor P04 adapter must revalidate current registry and convert this repository-scoped graph into its own validated dispatch/receipts. Never claim parallel launch from this file.",
+  "launch_order": [
+    "F0",
+    "A1",
+    "B1",
+    "C1",
+    "D1",
+    "I1",
+    "R1",
+    "M1"
+  ],
+  "waves": [
+    {
+      "id": 0,
+      "execution": "SERIAL",
+      "lanes": [
+        "F0"
+      ]
+    },
+    {
+      "id": 1,
+      "execution": "PARALLEL_IF_ISOLATED_WORKTREES",
+      "lanes": [
+        "A1",
+        "B1",
+        "C1",
+        "D1"
+      ]
+    },
+    {
+      "id": 2,
+      "execution": "SERIAL_CROSS_LANE_CONVERGENCE",
+      "lanes": [
+        "I1"
+      ]
+    },
+    {
+      "id": 3,
+      "execution": "REAL_USER_RUNTIME_PROOF",
+      "lanes": [
+        "R1"
+      ]
+    },
+    {
+      "id": 4,
+      "execution": "DISPOSABLE_SECOND_ACCOUNT_AND_RELEASE",
+      "lanes": [
+        "M1"
+      ]
+    }
+  ],
+  "lanes": [
+    {
+      "id": "F0",
+      "title": "Recover and certify baseline",
+      "repo": "EndeavorEverlasting/EscapeHatch",
+      "phase": "contract",
+      "depends_on": [],
+      "read_first": [
+        "AGENTS.md",
+        "harness/contracts/application-autofill-parent.v1.json",
+        "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md",
+        "docs/APPLICATION_SOURCE_INTEGRATED_UX_P04_P82_2026-10-18.md"
+      ],
+      "owned": [
+        "isolated baseline receipts",
+        "integration contract tests"
+      ],
+      "forbidden": [
+        "active agent worktrees",
+        "public credential material",
+        "existing #63/#64/#66 product changes"
+      ],
+      "proof": "fresh git/worktree/process owner map; validate shared source/application contract"
+    },
+    {
+      "id": "A1",
+      "title": "Recover existing auth and certify Drive content",
+      "repo": "EndeavorEverlasting/TokenCorridor",
+      "phase": "provider",
+      "depends_on": [
+        "F0"
+      ],
+      "read_first": [
+        "TokenCorridor PR #73",
+        "#220",
+        "tooling/connectors/google/"
+      ],
+      "owned": [
+        "TokenCorridor Google adapter only",
+        "private redacted local provider receipts"
+      ],
+      "forbidden": [
+        "new Cloud project default",
+        "EscapeHatch React UI",
+        "tokens in Git"
+      ],
+      "proof": "nonempty exact two real documents under reused existing authorized identity; metadata-only != read"
+    },
+    {
+      "id": "B1",
+      "title": "Implement single-owner source bridge",
+      "repo": "EndeavorEverlasting/EscapeHatch",
+      "phase": "domain",
+      "depends_on": [
+        "F0"
+      ],
+      "read_first": [
+        "EscapeHatch PR #66",
+        "scripts/career_source_directory.py",
+        "artifacts/escape-hatch/src/lib/storage.ts",
+        "artifacts/escape-hatch/src/lib/resume-import.ts"
+      ],
+      "owned": [
+        "source-provider interface",
+        "source profile revision bridge",
+        "synthetic source tests"
+      ],
+      "forbidden": [
+        "second candidate store",
+        "managed Chrome #63/#64 files",
+        "OAuth secrets"
+      ],
+      "proof": "local file revision→reviewed existing candidate→opportunity, idempotent/conflict safe"
+    },
+    {
+      "id": "C1",
+      "title": "Implement integrated Sources view",
+      "repo": "EndeavorEverlasting/EscapeHatch",
+      "phase": "ui",
+      "depends_on": [
+        "F0"
+      ],
+      "read_first": [
+        "artifacts/escape-hatch/src/App.tsx",
+        "harness/contracts/application-source-integration.v1.json"
+      ],
+      "owned": [
+        "new sources components/routes except shared App entry during parallel phase",
+        "synthetic browser UI tests"
+      ],
+      "forbidden": [
+        "standalone public website",
+        "second app shell",
+        "provider auth changes",
+        "overwriting browser worktrees"
+      ],
+      "proof": "connected/disconnected/import conflict/error UI; a11y/UX tests; no unsupported read success"
+    },
+    {
+      "id": "D1",
+      "title": "Integrate managed browser autopilot",
+      "repo": "EndeavorEverlasting/EscapeHatch",
+      "phase": "browser",
+      "depends_on": [
+        "F0"
+      ],
+      "read_first": [
+        "EscapeHatch PR #63",
+        "#64",
+        "#75",
+        "contracts/application-navigation-authority.v1.json"
+      ],
+      "owned": [
+        "existing managed browser engine",
+        "versioned managed-navigation authority",
+        "synthetic ATS real-Chromium tests"
+      ],
+      "forbidden": [
+        "source UI",
+        "TokenCorridor auth",
+        "final Submit",
+        "MV3 legacy policy weakening"
+      ],
+      "proof": "deterministic intermediate progress native+SPA, backend zero terminal effects"
+    },
+    {
+      "id": "I1",
+      "title": "Converge two views into one live product",
+      "repo": "EndeavorEverlasting/EscapeHatch",
+      "phase": "integration",
+      "depends_on": [
+        "A1",
+        "B1",
+        "C1",
+        "D1"
+      ],
+      "read_first": [
+        "integrated source/domain UI branches",
+        "current main",
+        "contracts/career-state.v1.schema.json"
+      ],
+      "owned": [
+        "serial App.tsx route wiring",
+        "actual canonical career state bridging",
+        "final integrated suite",
+        "PR/merge proof"
+      ],
+      "forbidden": [
+        "parallel edits to same shared file",
+        "unreviewed profile overwrite",
+        "cross-user credential migration"
+      ],
+      "proof": "one canonical account/source/opportunity package rendered in both views and used in browser"
+    },
+    {
+      "id": "R1",
+      "title": "P08 real Windows prepare-to-review",
+      "repo": "EndeavorEverlasting/EscapeHatch",
+      "phase": "runtime",
+      "depends_on": [
+        "I1"
+      ],
+      "read_first": [
+        "repository-owned Windows lifecycle docs",
+        "parent nine gates"
+      ],
+      "owned": [
+        "sanitized local runtime receipts",
+        "real user-approved opportunity to review"
+      ],
+      "forbidden": [
+        "agent writes to employer form",
+        "final Submit",
+        "attestations",
+        "private live evidence in Git"
+      ],
+      "proof": "actual authorized selected source read→approved package→real browser review; second ATS archetype"
+    },
+    {
+      "id": "M1",
+      "title": "Second user OAuth + hosted release proof",
+      "repo": "EndeavorEverlasting/EscapeHatch",
+      "phase": "multiuser",
+      "depends_on": [
+        "I1",
+        "R1"
+      ],
+      "read_first": [
+        "Google Picker/Drive OAuth docs",
+        "security/privacy/verification plan"
+      ],
+      "owned": [
+        "product-owned OAuth enrollment",
+        "two-user isolation tests",
+        "hosted release verification"
+      ],
+      "forbidden": [
+        "reusing first user's credential",
+        "unencrypted refresh tokens",
+        "public launch without operator publishing authority"
+      ],
+      "proof": "new user consent+exact read+revoke, zero tenant bleed, Google publishing/verification gates"
+    }
+  ],
+  "dependency_policy": "all_dependencies_proven_and_origin_branch_refreshed_before_start",
+  "state_policy": "planned_is_not_dispatched_or_live_proven",
+  "invariant_tests": [
+    "one_shell",
+    "single_candidate_owner",
+    "credential_reuse_first",
+    "new_user_requires_product_consent",
+    "no_cross_tenant_credentials",
+    "never_auto_submit",
+    "no_fake_content_read",
+    "all_parent_gates_referenced"
+  ]
+}

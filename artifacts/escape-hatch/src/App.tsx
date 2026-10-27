@@ -1,4 +1,4 @@
-import { forwardRef, type ChangeEvent, type FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { forwardRef, type ChangeEvent, type FormEvent, type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
@@ -78,6 +78,26 @@ import {
 } from '@/lib/assist-contract';
 import { applyAcceptedResumeImport, extractResumeText, getAcceptedResumeContactPatch, parseResumeText, type ResumeImport } from '@/lib/resume-import';
 import { initialSession, parseAssistSessionStatus, type AssistSession } from '@/lib/assist-session';
+import { ManagedBrowserAssist } from '@/components/managed-browser-assist';
+import { RecoveredAnswers, useRecoveredAnswers } from '@/components/recovered-answers';
+import { GuidedStart } from '@/components/guided-start';
+import { stageManagedLaunchIntent } from '@/lib/managed-launch-intent';
+import { SourcesPage, SourcePackageSummary } from '@/components/sources-page';
+import {
+  SOURCE_BINDINGS_KEY,
+  parseSourceBindings,
+  persistSourceApproval,
+  type SourceBinding,
+} from '@/lib/source-bridge';
+import {
+  connectionFromSnapshot,
+  isSubmittedLocked,
+  mergeTrackerIntoApplications,
+  selectNextActionableOpportunity,
+  trackerRowToApplication,
+  type TrackerConnectionState,
+  type TrackerSnapshot,
+} from '@/lib/tracker-bridge';
 
 const queryClient = new QueryClient();
 
@@ -309,22 +329,24 @@ function Modal({
   fallbackFocusRef?: React.RefObject<HTMLElement | null>;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const onCloseRef = useRef(onClose);
+  const previousActiveElementRef = useRef<HTMLElement | null>(null);
+
+  // Establish focus before paint. A delayed opening frame can otherwise steal
+  // focus after the user selects a field, sending their clear/edit key elsewhere.
+  useLayoutEffect(() => {
+    previousActiveElementRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    // A neutral target cannot turn the key that opened a recovered draft into
+    // an unintended Close or Save action when activation repeats.
+    (initialFocusRef?.current || dialogRef.current)?.focus();
+  }, []);
 
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
 
   useEffect(() => {
-    let cancelled = false;
-    const previousActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const focusTarget = initialFocusRef?.current || closeButtonRef.current;
-    const focusOnOpen = () => {
-      if (!cancelled) focusTarget?.focus();
-    };
-    window.requestAnimationFrame(focusOnOpen);
-
+    const previousActiveElement = previousActiveElementRef.current;
     const getFocusableElements = () => Array.from(
       dialogRef.current?.querySelectorAll<HTMLElement>(
         'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
@@ -350,10 +372,10 @@ function Modal({
       const activeElement = document.activeElement;
       const firstElement = focusableElements[0];
       const lastElement = focusableElements[focusableElements.length - 1];
-      if (event.shiftKey && (activeElement === firstElement || !dialog.contains(activeElement))) {
+      if (event.shiftKey && (activeElement === dialog || activeElement === firstElement || !dialog.contains(activeElement))) {
         event.preventDefault();
         lastElement.focus();
-      } else if (!event.shiftKey && (activeElement === lastElement || !dialog.contains(activeElement))) {
+      } else if (!event.shiftKey && (activeElement === dialog || activeElement === lastElement || !dialog.contains(activeElement))) {
         event.preventDefault();
         firstElement.focus();
       }
@@ -361,7 +383,6 @@ function Modal({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => {
-      cancelled = true;
       document.removeEventListener('keydown', handleKeyDown);
       const returnTarget = (returnFocusRef?.current?.isConnected ? returnFocusRef.current : null)
         || (fallbackFocusRef?.current?.isConnected ? fallbackFocusRef.current : null)
@@ -371,14 +392,14 @@ function Modal({
   }, []);
 
   return (
-    <div ref={dialogRef} className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/35 p-0 backdrop-blur-[2px] sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+    <div ref={dialogRef} tabIndex={-1} className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/35 p-0 backdrop-blur-[2px] sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
       <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl border border-border bg-card shadow-2xl sm:max-w-xl sm:rounded-2xl">
         <div className="flex items-start justify-between border-b border-border px-5 py-4 sm:px-7">
           <div>
             {eyebrow && <p className="font-mono-app text-[10px] font-medium uppercase tracking-[.18em] text-primary">{eyebrow}</p>}
             <h2 id="dialog-title" className="mt-1 font-display text-3xl">{title}</h2>
           </div>
-          <button ref={closeButtonRef} type="button" onClick={onClose} aria-label="Close dialog" data-testid="button-close-dialog" className="rounded-lg p-2 text-muted-foreground transition hover:bg-secondary hover:text-foreground"><X size={19} /></button>
+          <button type="button" onClick={onClose} aria-label="Close dialog" data-testid="button-close-dialog" className="rounded-lg p-2 text-muted-foreground transition hover:bg-secondary hover:text-foreground"><X size={19} /></button>
         </div>
         <div className="p-5 sm:p-7">{children}</div>
       </div>
@@ -488,6 +509,7 @@ function AppShell({ children, profile }: { children: ReactNode; profile: Profile
     { href: '/applications', label: 'Applications', icon: BriefcaseBusiness },
     { href: '/answers', label: 'Answer library', icon: Clipboard },
     { href: '/profile', label: 'Profile', icon: UserRound },
+    { href: '/sources', label: 'Sources', icon: FolderOpen },
     { href: '/assist', label: 'Browser assist', icon: RefreshCw },
   ];
   return (
@@ -514,7 +536,7 @@ function AppShell({ children, profile }: { children: ReactNode; profile: Profile
         </nav>
         <div className="mt-auto rounded-xl border border-border bg-background p-4">
           <div className="flex items-center gap-2"><ShieldCheck size={16} className="text-primary" /><span className="text-xs font-bold">Local by default</span></div>
-          <p className="mt-2 text-xs leading-5 text-muted-foreground">Your profile and notes stay in this browser. You choose what leaves it.</p>
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">Your workspace stays private on this computer. You choose what leaves it.</p>
         </div>
         <div className="mt-4 flex items-center gap-3 px-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/25 font-mono-app text-xs font-medium text-foreground">{initials(profile)}</span>
@@ -537,8 +559,48 @@ function PageIntro({ eyebrow, title, description, action }: { eyebrow: string; t
 
 function HomePage({ profile, answers, applications, setApplications }: { profile: Profile; answers: AnswerSnippet[]; applications: Application[]; setApplications: React.Dispatch<React.SetStateAction<Application[]>> }) {
   const completion = profileCompletion(profile);
+  const [tracker, setTracker] = useState<TrackerConnectionState>({ status: 'NOT_CONNECTED', reason: 'Checking tracker…' });
+  const [trackerBusy, setTrackerBusy] = useState(false);
+  useEffect(() => {
+    let activeFetch = true;
+    fetch('/__escapehatch/tracker/status', { credentials: 'same-origin' })
+      .then(async (response) => {
+        const json = await response.json() as { connection?: string; reason?: string; snapshot?: TrackerSnapshot | null };
+        if (!activeFetch) return;
+        if (json.snapshot) {
+          const connected = connectionFromSnapshot(json.snapshot);
+          setTracker(connected);
+          if (connected.status === 'CONNECTED') {
+            setApplications((current) => mergeTrackerIntoApplications(current, connected.snapshot));
+          }
+        } else {
+          setTracker({ status: 'NOT_CONNECTED', reason: json.reason || 'NOT CONNECTED' });
+        }
+      })
+      .catch(() => {
+        if (activeFetch) setTracker({ status: 'NOT_CONNECTED', reason: 'Managed runtime tracker endpoint unavailable.' });
+      });
+    return () => { activeFetch = false; };
+  }, [setApplications]);
+  const hydrateFromTracker = () => {
+    if (tracker.status !== 'CONNECTED') return;
+    setTrackerBusy(true);
+    try {
+      setApplications((current) => mergeTrackerIntoApplications(current, tracker.snapshot));
+    } finally {
+      setTrackerBusy(false);
+    }
+  };
+  const liveSnapshot = tracker.status === 'CONNECTED' ? tracker.snapshot : null;
+  const staleMeta = tracker.status === 'STALE' ? tracker : null;
+  const nextTracker = liveSnapshot ? selectNextActionableOpportunity(liveSnapshot) : null;
+  const nextTrackerApp = nextTracker ? trackerRowToApplication(nextTracker) : null;
+  const nextLocked = nextTracker ? isSubmittedLocked(nextTracker) : false;
   const active = applications.filter((application) => application.status !== 'closed');
-  const next = active.find((application) => application.status !== 'applied' && application.nextAction.trim()) || active.find((application) => application.status !== 'applied') || active[0];
+  const next = nextTrackerApp ||
+    active.find((application) => application.status !== 'applied' && application.nextAction.trim()) ||
+    active.find((application) => application.status !== 'applied') ||
+    active[0];
   const [appliedUndo, setAppliedUndo] = useState<{ applicationId: string; company: string; previousStatus: ApplicationStatus } | null>(null);
   useEffect(() => {
     if (!appliedUndo) return;
@@ -546,7 +608,12 @@ function HomePage({ profile, answers, applications, setApplications }: { profile
     return () => window.clearTimeout(timeout);
   }, [appliedUndo]);
   const markApplied = (application: Application) => {
-    setApplications((items) => items.map((item) => item.id === application.id ? { ...item, status: 'applied', updatedAt: now() } : item));
+    if (application.id.startsWith('tracker-') && application.status === 'applied') return;
+    setApplications((items) => {
+      const prior = items.find((item) => item.id === application.id);
+      if (prior?.status === 'applied' && prior.id.startsWith('tracker-')) return items;
+      return items.map((item) => item.id === application.id ? { ...item, status: 'applied', updatedAt: now() } : item);
+    });
     setAppliedUndo({ applicationId: application.id, company: application.company, previousStatus: application.status });
   };
   const undoMarkApplied = () => {
@@ -554,12 +621,51 @@ function HomePage({ profile, answers, applications, setApplications }: { profile
     setApplications((items) => items.map((item) => item.id === appliedUndo.applicationId ? { ...item, status: appliedUndo.previousStatus, updatedAt: now() } : item));
     setAppliedUndo(null);
   };
+  const metrics = liveSnapshot?.metrics;
+  const stats = metrics
+    ? [
+        { label: 'Tracked roles', value: String(metrics.trackedRoles), caption: `digest ${liveSnapshot.contentDigest.slice(0, 12)}…`, href: '/applications', testId: 'stat-tracked-roles' },
+        { label: 'Submitted', value: String(metrics.submittedStatus), caption: 'status text Submitted (not checkbox alone)', href: '/applications', testId: 'stat-submitted' },
+        { label: 'Ready to apply', value: String(metrics.readyToApply), caption: `${metrics.inProcess} in process · ${metrics.highPriority} high priority`, href: '/applications', testId: 'stat-ready' },
+      ]
+    : [
+        // Offline/stale: local workspace counts only — tracker panel above owns provenance; never label these as verified career totals.
+        { label: 'In motion', value: String(active.filter((item) => item.status !== 'saved').length), caption: tracker.status === 'STALE' ? 'local only · tracker stale' : 'local workspace only · tracker not connected', href: '/applications', testId: 'link-stat-0' },
+        { label: 'On deck', value: String(active.filter((item) => item.status === 'saved').length), caption: 'local opportunities to explore', href: '/applications', testId: 'link-stat-1' },
+        { label: 'Reusable answers', value: String(answers.length), caption: 'answers ready to borrow', href: '/answers', testId: 'link-stat-2' },
+      ];
   return <div>
-    <PageIntro eyebrow="Wednesday · your cockpit" title={profile.first_name ? `Keep going, ${displayName(profile)}.` : 'Make room for momentum.'} description="A small, private place to move one good opportunity forward at a time." />
+    <GuidedStart profile={profile} applications={applications} />
+    <PageIntro eyebrow="Your cockpit" title={profile.first_name ? `Keep going, ${displayName(profile)}.` : 'Make room for momentum.'} description="A small, private place to move one good opportunity forward at a time." />
+    <section className="mb-6 rounded-2xl border border-border bg-card p-5 shadow-sm" data-testid="tracker-connection-panel" data-tracker-status={tracker.status}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="font-mono-app text-[10px] uppercase tracking-[.18em] text-muted-foreground">career tracker</p>
+          <p className="mt-2 text-sm font-bold" data-testid="tracker-connection-status">
+            {tracker.status === 'CONNECTED' ? 'CONNECTED' : tracker.status === 'STALE' ? 'STALE' : 'NOT CONNECTED'}
+          </p>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground" data-testid="tracker-connection-reason">
+            {tracker.status === 'CONNECTED'
+              ? `Provenance: ${tracker.snapshot.authPath} · captured ${tracker.snapshot.capturedAtUtc} · sheet ${tracker.snapshot.sheetName}`
+              : tracker.status === 'STALE'
+                ? `${tracker.reason} · captured ${tracker.capturedAtUtc}`
+                : tracker.reason}
+          </p>
+        </div>
+        {tracker.status === 'CONNECTED' && (
+          <Button type="button" variant="outline" disabled={trackerBusy} onClick={hydrateFromTracker} data-testid="button-hydrate-tracker">
+            {trackerBusy ? 'Hydrating…' : 'Refresh applications from tracker'}
+          </Button>
+        )}
+      </div>
+      {staleMeta && <p className="mt-3 text-xs text-muted-foreground" data-testid="tracker-stale-digest">Stale digest {staleMeta.contentDigest.slice(0, 16)}… — metrics hidden until refresh.</p>}
+    </section>
     <div className="grid gap-4 md:grid-cols-[1.35fr_.65fr]">
-      <section className="animate-rise rounded-2xl bg-primary p-6 text-primary-foreground shadow-md sm:p-8">
-        <div className="flex items-start justify-between gap-4"><div><p className="font-mono-app text-[10px] uppercase tracking-[.18em] text-primary-foreground/65">one useful thing</p><h2 className="mt-3 max-w-lg font-display text-3xl leading-tight sm:text-4xl">{next ? `Move ${next.company} one step closer.` : 'Add one opportunity to your queue.'}</h2></div><span className="rounded-full border border-primary-foreground/20 px-3 py-1 font-mono-app text-[10px] uppercase tracking-widest text-primary-foreground/70">next</span></div>
-        {next ? <div className="mt-8 flex flex-col gap-4 rounded-xl bg-primary-foreground/10 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold">{next.nextAction || `Review the ${next.role} opportunity`}</p><p className="mt-1 text-xs text-primary-foreground/65">{next.company} · {next.role}</p></div>{next.status === 'applied' ? <span className="shrink-0 rounded-lg border border-primary-foreground/20 px-3.5 py-2.5 text-sm font-bold text-primary-foreground/80">Applied</span> : <Button variant="quiet" onClick={() => markApplied(next)} data-testid={`button-progress-${next.id}`} className="shrink-0">Mark applied <ArrowRight size={15} /></Button>}</div> : <Link href="/applications" data-testid="link-add-first-application" className="mt-8 inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-3 text-sm font-bold text-foreground transition hover:brightness-95">Add an opportunity <ArrowRight size={15} /></Link>}
+      <section className="animate-rise rounded-2xl bg-primary p-6 text-primary-foreground shadow-md sm:p-8" data-testid="home-next-opportunity">
+        <div className="flex items-start justify-between gap-4"><div><p className="font-mono-app text-[10px] uppercase tracking-[.18em] text-primary-foreground/65">one useful thing</p><h2 className="mt-3 max-w-lg font-display text-3xl leading-tight sm:text-4xl">{next ? `Move ${next.company} one step closer.` : tracker.status === 'CONNECTED' ? 'No Ready-to-Apply opportunities in the tracker.' : 'Connect your tracker or add one opportunity.'}</h2></div><span className="rounded-full border border-primary-foreground/20 px-3 py-1 font-mono-app text-[10px] uppercase tracking-widest text-primary-foreground/70">next</span></div>
+        {next ? <div className="mt-8 flex flex-col gap-4 rounded-xl bg-primary-foreground/10 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold" data-testid="home-next-action">{next.nextAction || `Review the ${next.role} opportunity`}</p><p className="mt-1 text-xs text-primary-foreground/65" data-testid="home-next-company-role">{next.company} · {next.role}</p>{next.url ? <a href={next.url} target="_blank" rel="noreferrer" data-testid="home-next-url" className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-primary-foreground underline">Open posting <ExternalLink size={12} /></a> : null}</div>{nextLocked ? <span className="shrink-0 rounded-lg border border-primary-foreground/20 px-3.5 py-2.5 text-sm font-bold text-primary-foreground/80" data-testid="home-next-locked">Submitted — do not reapply</span> : next.status === 'applied' ? <span className="shrink-0 rounded-lg border border-primary-foreground/20 px-3.5 py-2.5 text-sm font-bold text-primary-foreground/80">Applied</span> : <div className="flex shrink-0 flex-col gap-2 sm:items-end"><Link href={`/assist?opportunityId=${encodeURIComponent(next.id)}`}
+  onClick={() => stageManagedLaunchIntent(next.id, window.sessionStorage)}
+  data-testid="link-prepare-next" className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-3.5 py-2.5 text-sm font-bold text-foreground transition hover:brightness-95">Launch & fill in managed Chrome <ArrowRight size={15} /></Link><Button variant="quiet" onClick={() => markApplied(next)} data-testid={`button-progress-${next.id}`} className="shrink-0">Mark applied <ArrowRight size={15} /></Button></div>}</div> : tracker.status !== 'CONNECTED' ? <Link href="/sources" data-testid="link-connect-tracker" className="mt-8 inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-3 text-sm font-bold text-foreground transition hover:brightness-95">Review Sources <ArrowRight size={15} /></Link> : <Link href="/applications" data-testid="link-add-first-application" className="mt-8 inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-3 text-sm font-bold text-foreground transition hover:brightness-95">Review applications <ArrowRight size={15} /></Link>}
         {appliedUndo && <div role="status" aria-live="polite" data-testid="home-applied-undo-notice" className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary-foreground/20 bg-primary-foreground/10 px-4 py-3 text-sm"><span>Marked {appliedUndo.company} applied.</span><Button type="button" variant="quiet" onClick={undoMarkApplied} data-testid="button-undo-mark-applied">Undo</Button></div>}
       </section>
       <section className="animate-rise-delay-1 rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
@@ -570,7 +676,7 @@ function HomePage({ profile, answers, applications, setApplications }: { profile
       </section>
     </div>
     <div className="mt-10 grid gap-4 md:grid-cols-3">
-       {[{ label: 'In motion', value: active.filter((item) => item.status !== 'saved').length, caption: 'applications beyond saved', href: '/applications' }, { label: 'On deck', value: active.filter((item) => item.status === 'saved').length, caption: 'opportunities to explore', href: '/applications' }, { label: 'Reusable answers', value: answers.length, caption: 'answers ready to borrow', href: '/answers' }].map((stat, index) => <Link href={stat.href} data-testid={`link-stat-${index}`} key={stat.label} className="animate-rise-delay-2 rounded-xl border border-border bg-card p-5 transition hover:-translate-y-0.5 hover:shadow-md"><p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-muted-foreground">{stat.label}</p><p className="mt-4 font-display text-4xl">{stat.value}</p><p className="mt-1 text-xs text-muted-foreground">{stat.caption}</p></Link>)}
+       {stats.map((stat, index) => <Link href={stat.href} data-testid={stat.testId || `link-stat-${index}`} key={stat.label} className="animate-rise-delay-2 rounded-xl border border-border bg-card p-5 transition hover:-translate-y-0.5 hover:shadow-md"><p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-muted-foreground">{stat.label}</p><p className="mt-4 font-display text-4xl">{stat.value}</p><p className="mt-1 text-xs text-muted-foreground">{stat.caption}</p></Link>)}
     </div>
     <div className="mt-10 flex flex-col gap-5 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
       <div><p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-muted-foreground">quiet reminder</p><p className="mt-2 font-display text-2xl">You do not have to finish the whole search today.</p></div>
@@ -682,7 +788,7 @@ function ProfilePage({
         <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-7"><div className="mb-6 flex items-start justify-between"><div><h2 className="font-display text-2xl">Online & location</h2><p className="mt-1 text-sm text-muted-foreground">Useful context for forms and recruiter follow-up.</p></div><Link2 size={20} className="text-primary" /></div><div className="grid gap-4"><Field label="LinkedIn URL" name="linkedin_url" type="url" value={draft.linkedin_url} onChange={update('linkedin_url')} placeholder="linkedin.com/in/your-name" data-testid="input-linkedin-url" /><Field label="Street address" name="street_address" value={draft.street_address} onChange={update('street_address')} placeholder="Optional" data-testid="input-street-address" /></div><div className="mt-4 grid gap-4 sm:grid-cols-2"><Field label="City" name="city" value={draft.city} onChange={update('city')} placeholder="City" data-testid="input-city" /><Field label="Region / state" name="region" value={draft.region} onChange={update('region')} placeholder="Region" data-testid="input-region" /><Field label="Postal code" name="postal_code" value={draft.postal_code} onChange={update('postal_code')} placeholder="Postal code" data-testid="input-postal-code" /><Field label="Country" name="country" value={draft.country} onChange={update('country')} placeholder="Country" data-testid="input-country" /></div></section>
         <div className="flex items-center justify-end gap-3"><span className={`text-sm font-bold text-primary transition-opacity ${saved ? 'opacity-100' : 'opacity-0'}`}><Check size={15} className="mr-1 inline" />Saved locally</span><Button type="submit" data-testid="button-save-profile">Save profile <ArrowRight size={15} /></Button></div>
       </div>
-      <aside className="h-fit rounded-2xl border border-border bg-secondary/55 p-5 sm:p-6 lg:sticky lg:top-8"><div className="flex items-center justify-between"><p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-muted-foreground">readiness</p><span className="font-mono-app text-sm text-primary">{completion}%</span></div><div className="mt-4 h-2 overflow-hidden rounded-full bg-background"><div className="h-full rounded-full bg-accent transition-all duration-500" style={{ width: `${Math.max(completion, 2)}%` }} /></div><p className="mt-5 text-sm leading-6 text-muted-foreground">{completion < 100 ? 'A few essentials make copying details into a form much faster.' : 'Everything essential is in place. Nice work.'}</p><div className="mt-6 border-t border-border pt-5"><div className="flex gap-3"><ShieldCheck size={17} className="mt-0.5 shrink-0 text-primary" /><p className="text-xs leading-5 text-muted-foreground"><strong className="text-foreground">Private by design.</strong> This profile is stored in this browser's local storage. Export it when you want a backup; delete it whenever you want.</p></div></div></aside>
+      <aside className="h-fit rounded-2xl border border-border bg-secondary/55 p-5 sm:p-6 lg:sticky lg:top-8"><div className="flex items-center justify-between"><p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-muted-foreground">readiness</p><span className="font-mono-app text-sm text-primary">{completion}%</span></div><div className="mt-4 h-2 overflow-hidden rounded-full bg-background"><div className="h-full rounded-full bg-accent transition-all duration-500" style={{ width: `${Math.max(completion, 2)}%` }} /></div><p className="mt-5 text-sm leading-6 text-muted-foreground">{completion < 100 ? 'A few essentials make copying details into a form much faster.' : 'Everything essential is in place. Nice work.'}</p><div className="mt-6 border-t border-border pt-5"><div className="flex gap-3"><ShieldCheck size={17} className="mt-0.5 shrink-0 text-primary" /><p className="text-xs leading-5 text-muted-foreground"><strong className="text-foreground">Private by design.</strong> Your profile stays private on this computer. Export a backup whenever you need one.</p></div></div></aside>
     </form>
     <section className="mt-5 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-7" data-testid="draft-recovery-settings">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
@@ -717,6 +823,8 @@ function AnswerCard({ answer, onEdit, onDelete }: { answer: AnswerSnippet; onEdi
 }
 
 function AnswersPage({
+  assistProfile,
+  profile,
   answers,
   setAnswers,
   dismissedDraft,
@@ -726,6 +834,8 @@ function AnswersPage({
   draftRecoverySeconds,
   draftRecoveryWindowSeconds,
 }: {
+  assistProfile: AssistProfile;
+  profile: Profile;
   answers: AnswerSnippet[];
   setAnswers: React.Dispatch<React.SetStateAction<AnswerSnippet[]>>;
   dismissedDraft: DismissedAnswerDraft | null;
@@ -752,7 +862,11 @@ function AnswersPage({
     setRecoveredDraft(draft);
     setShowForm(true);
   };
-  const filtered = useMemo(() => answers.filter((answer) => (category === 'All' || answer.category === category) && `${answer.title} ${answer.content}`.toLowerCase().includes(search.toLowerCase())), [answers, category, search]);
+  const recovery = useRecoveredAnswers(profile, answers, assistProfile);
+  const recovered = recovery.items.filter(item => item.variants.length > 1 || item.variants.some(variant => variant.sources.length > 1 || variant.sources.some(source => source.owner !== 'answer-library')));
+  const projectedIds = new Set(recovered.flatMap(item => item.variants.flatMap(variant => variant.sources.filter(source => source.owner === 'answer-library').map(source => source.recordId))));
+  const visibleRecovered = recovered.filter(item => (category === 'All' || item.category === category || item.variants.some(variant => variant.sources.some(source => source.owner === 'answer-library' && answers.some(answer => answer.id === source.recordId && answer.category === category)))) && `${item.title} ${item.variants.map(variant => variant.content).join(' ')}`.toLowerCase().includes(search.toLowerCase()));
+  const filtered = answers.filter((answer) => !projectedIds.has(answer.id) && (category === 'All' || answer.category === category) && `${answer.title} ${answer.content}`.toLowerCase().includes(search.toLowerCase()));
   useEffect(() => {
     if (!deleted) return;
     const timeout = window.setTimeout(() => setDeleted(null), 8000);
@@ -816,7 +930,10 @@ function AnswersPage({
     {dismissedDraft && dismissedDraft.expiresAt > Date.now() && <div role="status" aria-live="polite" data-testid="answer-draft-notice" className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent/35 bg-accent/10 px-4 py-3 text-sm"><span className="flex flex-wrap items-center gap-x-3 gap-y-1"><span>You have an unsaved answer draft.</span><span data-testid="answer-draft-recovery-time">Recovery available for {formatRecoveryDuration(draftRecoverySeconds)}</span></span><span className="flex items-center gap-2"><Button type="button" onClick={recoverDraft} data-testid="button-recover-answer-draft">Recover draft</Button><Button type="button" variant="quiet" onClick={discardDraft} data-testid="button-discard-answer-draft">Discard</Button></span></div>}
     {deleted && <div role="status" aria-live="polite" data-testid="answer-undo-notice" className="mb-6 flex items-center justify-between gap-4 rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 text-sm"><span>Answer deleted.</span><Button type="button" variant="outline" onClick={undo} data-testid="button-undo-answer">Undo</Button></div>}
     <div className="mb-6 flex flex-col gap-3 sm:flex-row"><label className="relative block flex-1"><Search size={17} className="absolute left-3 top-3 text-muted-foreground" /><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search your answers" data-testid="input-search-answers" className="w-full rounded-lg border border-input bg-card py-2.5 pl-10 pr-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" /></label><div className="flex gap-1 overflow-x-auto rounded-lg border border-border bg-secondary p-1">{['All', ...categories].map((item) => <button type="button" key={item} onClick={() => setCategory(item)} data-testid={`button-filter-${item.toLowerCase().replaceAll(' ', '-')}`} className={`whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-bold transition ${category === item ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>{item}</button>)}</div></div>
-    {filtered.length === 0 ? <EmptyState icon={Clipboard} title={answers.length ? 'No matches here.' : 'Your good answers belong here.'} body={answers.length ? 'Try another search or category, or clear the filter.' : 'Save the thoughtful parts of applications once, then borrow them when time is tight.'} action={!answers.length ? <Button onClick={() => openForm(null)} data-testid="button-empty-add-answer"><Plus size={16} /> Add your first answer</Button> : undefined} /> : <div className="grid gap-4 lg:grid-cols-2">{filtered.map((answer) => <AnswerCard key={answer.id} answer={answer} onEdit={() => openForm(answer)} onDelete={() => remove(answer.id)} />)}</div>}
+    {recovery.loading && <p role="status" className="mb-4">Checking your saved answer sources…</p>}
+    {recovery.unavailable.length > 0 && <p role="status" className="mb-4">Could not read: {recovery.unavailable.join('; ')}. Existing records are preserved. Reopen Answer Library to retry.</p>}
+    <RecoveredAnswers items={visibleRecovered} onDelete={remove} onEdit={id => { const answer = answers.find(item => item.id === id); if (answer) openForm(answer); }} />
+    {filtered.length === 0 && visibleRecovered.length === 0 && !recovery.loading && recovery.unavailable.length === 0 ? <EmptyState icon={Clipboard} title={answers.length || recovered.length ? 'No matches here.' : 'Your good answers belong here.'} body={answers.length || recovered.length ? 'Try another search or category, or clear the filter.' : 'Save the thoughtful parts of applications once, then borrow them when time is tight.'} action={!answers.length && !recovered.length ? <Button onClick={() => openForm(null)} data-testid="button-empty-add-answer"><Plus size={16} /> Add your first answer</Button> : undefined} /> : <div className="grid gap-4 lg:grid-cols-2">{filtered.map((answer) => <AnswerCard key={answer.id} answer={answer} onEdit={() => openForm(answer)} onDelete={() => remove(answer.id)} />)}</div>}
     {showForm && <AnswerForm answer={editing} initialDraft={recoveredDraft} returnFocusRef={formReturnFocusRef} fallbackFocusRef={pageAddButtonRef} onClose={closeForm} onSave={saveAnswer} />}
   </div>;
 }
@@ -828,6 +945,9 @@ function AnswerForm({ answer, initialDraft, returnFocusRef, fallbackFocusRef, on
   const [errors, setErrors] = useState<{ title?: string; content?: string }>({});
   const titleRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLTextAreaElement>(null);
+  // Input handlers synchronously capture the user's last edit, independent of
+  // whether a controlled React state render has committed before the Save click.
+  const requiredDraft = useRef({ title, content });
   const clearError = (key: 'title' | 'content') => setErrors((current) => {
     if (!current[key]) return current;
     const next = { ...current };
@@ -836,22 +956,25 @@ function AnswerForm({ answer, initialDraft, returnFocusRef, fallbackFocusRef, on
   });
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    // Synchronously captured input events own required values at commit time.
+    // A rapid Fill -> click must never save an older rendered value.
+    const submittedTitle = requiredDraft.current.title;
+    const submittedContent = requiredDraft.current.content;
     const nextErrors = {
-      ...(title.trim() ? {} : { title: 'Add a short title before saving.' }),
-      ...(content.trim() ? {} : { content: 'Write an answer before saving.' }),
+      ...(submittedTitle.trim() ? {} : { title: 'Add a short title before saving.' }),
+      ...(submittedContent.trim() ? {} : { content: 'Write an answer before saving.' }),
     };
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
-      window.requestAnimationFrame(() => {
-        if (!title.trim()) titleRef.current?.focus();
-        else contentRef.current?.focus();
-      });
+      // These fields already exist. A later frame could steal the user's next edit.
+      if (!submittedTitle.trim()) titleRef.current?.focus();
+      else contentRef.current?.focus();
       return;
     }
-    onSave({ title: title.trim(), category, content: content.trim() });
+    onSave({ title: submittedTitle.trim(), category, content: submittedContent.trim() });
   };
   const dismiss = () => onClose({ title, category, content });
-  return <Modal title={answer ? 'Edit answer' : 'New answer'} eyebrow="Answer library" onClose={dismiss} returnFocusRef={returnFocusRef} fallbackFocusRef={fallbackFocusRef}><form onSubmit={submit} className="space-y-5"><Field label="Short title" name="answer-title" value={title} onChange={(event) => { setTitle(event.target.value); if (event.target.value.trim()) clearError('title'); }} placeholder="Why I am interested in this kind of work" required inputRef={titleRef} error={errors.title} data-testid="input-answer-title" /><SelectField label="Category" value={category} onChange={(event) => setCategory(event.target.value)} options={categories.map((item) => ({ value: item, label: item }))} testId="select-answer-category" /><TextArea label="Your answer" name="answer-content" value={content} onChange={(event) => { setContent(event.target.value); if (event.target.value.trim()) clearError('content'); }} placeholder="Write it in your own voice. It does not need to be perfect." required textareaRef={contentRef} error={errors.content} data-testid="textarea-answer-content" /><div className="flex justify-end gap-2 pt-2"><Button type="button" variant="outline" onClick={dismiss} data-testid="button-cancel-answer">Cancel</Button><Button type="submit" data-testid="button-save-answer"><Check size={16} /> Save answer</Button></div></form></Modal>;
+  return <Modal title={answer ? 'Edit answer' : 'New answer'} eyebrow="Answer library" onClose={dismiss} returnFocusRef={returnFocusRef} fallbackFocusRef={fallbackFocusRef}><form onSubmit={submit} className="space-y-5"><Field label="Short title" name="answer-title" value={title} onChange={(event) => { requiredDraft.current.title = event.target.value; setTitle(event.target.value); if (event.target.value.trim()) clearError('title'); }} placeholder="Why I am interested in this kind of work" required inputRef={titleRef} error={errors.title} data-testid="input-answer-title" /><SelectField label="Category" value={category} onChange={(event) => setCategory(event.target.value)} options={categories.map((item) => ({ value: item, label: item }))} testId="select-answer-category" /><TextArea label="Your answer" name="answer-content" value={content} onChange={(event) => { requiredDraft.current.content = event.target.value; setContent(event.target.value); if (event.target.value.trim()) clearError('content'); }} placeholder="Write it in your own voice. It does not need to be perfect." required textareaRef={contentRef} error={errors.content} data-testid="textarea-answer-content" /><div className="flex justify-end gap-2 pt-2"><Button type="button" variant="outline" onClick={dismiss} data-testid="button-cancel-answer">Cancel</Button><Button type="submit" data-testid="button-save-answer"><Check size={16} /> Save answer</Button></div></form></Modal>;
 }
 
 function statusTone(status: ApplicationStatus) {
@@ -882,6 +1005,33 @@ function ApplicationsPage({
   draftRecoverySeconds: number;
   draftRecoveryWindowSeconds: DraftRecoverySeconds;
 }) {
+  const [trackerBanner, setTrackerBanner] = useState<{ status: string; detail: string } | null>(null);
+  useEffect(() => {
+    let activeFetch = true;
+    fetch('/__escapehatch/tracker/status', { credentials: 'same-origin' })
+      .then(async (response) => {
+        const json = await response.json() as { connection?: string; reason?: string; snapshot?: TrackerSnapshot | null };
+        if (!activeFetch) return;
+        if (json.snapshot) {
+          const connected = connectionFromSnapshot(json.snapshot);
+          if (connected.status === 'CONNECTED') {
+            setApplications((current) => mergeTrackerIntoApplications(current, connected.snapshot));
+            setTrackerBanner({
+              status: 'CONNECTED',
+              detail: `${connected.snapshot.metrics.trackedRoles} tracked · ${connected.snapshot.metrics.submittedStatus} submitted · ${connected.snapshot.metrics.readyToApply} ready · captured ${connected.snapshot.capturedAtUtc}`,
+            });
+          } else if (connected.status === 'STALE') {
+            setTrackerBanner({ status: 'STALE', detail: connected.reason });
+          }
+        } else {
+          setTrackerBanner({ status: 'NOT_CONNECTED', detail: json.reason || 'NOT CONNECTED' });
+        }
+      })
+      .catch(() => {
+        if (activeFetch) setTrackerBanner({ status: 'NOT_CONNECTED', detail: 'Managed runtime tracker endpoint unavailable.' });
+      });
+    return () => { activeFetch = false; };
+  }, [setApplications]);
   const [filter, setFilter] = useState<'all' | ApplicationStatus>('all');
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<Application | null>(null);
@@ -966,6 +1116,7 @@ function ApplicationsPage({
   };
   return <div>
     <PageIntro eyebrow="Application queue" title="Keep the queue small." description="A short list you can actually move through is more useful than a perfect list you never open." action={<Button ref={pageAddButtonRef} onClick={() => openForm(null)} data-testid="button-add-application"><Plus size={16} /> Add opportunity</Button>} />
+    {trackerBanner && <div role="status" data-testid="applications-tracker-banner" data-tracker-status={trackerBanner.status} className="mb-6 rounded-xl border border-border bg-card px-4 py-3 text-sm"><span className="font-bold">{trackerBanner.status}</span><span className="mt-1 block text-xs text-muted-foreground">{trackerBanner.detail}</span></div>}
     <div role="status" aria-live="polite" aria-atomic="true" data-testid="application-form-announcement" className="sr-only">{formAnnouncement}</div>
     {dismissedDraft && dismissedDraft.expiresAt > Date.now() && <div role="status" aria-live="polite" data-testid="application-draft-notice" className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent/35 bg-accent/10 px-4 py-3 text-sm"><span className="flex flex-wrap items-center gap-x-3 gap-y-1"><span>You have an unsaved opportunity draft.</span><span data-testid="application-draft-recovery-time">Recovery available for {formatRecoveryDuration(draftRecoverySeconds)}</span></span><span className="flex items-center gap-2"><Button type="button" onClick={recoverDraft} data-testid="button-recover-application-draft">Recover draft</Button><Button type="button" variant="quiet" onClick={discardDraft} data-testid="button-discard-application-draft">Discard</Button></span></div>}
     {deleted && <div role="status" aria-live="polite" data-testid="application-undo-notice" className="mb-6 flex items-center justify-between gap-4 rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 text-sm"><span>Opportunity deleted.</span><Button type="button" variant="outline" onClick={undo} data-testid="button-undo-application">Undo</Button></div>}
@@ -980,6 +1131,7 @@ function ApplicationForm({ application, initialDraft, returnFocusRef, fallbackFo
   const [errors, setErrors] = useState<{ company?: string; role?: string }>({});
   const companyRef = useRef<HTMLInputElement>(null);
   const roleRef = useRef<HTMLInputElement>(null);
+  const requiredDraft = useRef({ company: form.company, role: form.role });
   const clearError = (key: 'company' | 'role') => setErrors((current) => {
     if (!current[key]) return current;
     const next = { ...current };
@@ -988,24 +1140,27 @@ function ApplicationForm({ application, initialDraft, returnFocusRef, fallbackFo
   });
   const update = (key: keyof typeof form) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const value = event.target.value;
+    if (key === 'company' || key === 'role') requiredDraft.current[key] = value;
     setForm((current) => ({ ...current, [key]: value }));
     if ((key === 'company' || key === 'role') && value.trim()) clearError(key);
   };
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    // Validate synchronously captured company/role edits before committing.
+    // React's pending render must not certify a stale pre-edit value.
+    const submittedCompany = requiredDraft.current.company;
+    const submittedRole = requiredDraft.current.role;
     const nextErrors = {
-      ...(form.company.trim() ? {} : { company: 'Add a company before saving.' }),
-      ...(form.role.trim() ? {} : { role: 'Add a role before saving.' }),
+      ...(submittedCompany.trim() ? {} : { company: 'Add a company before saving.' }),
+      ...(submittedRole.trim() ? {} : { role: 'Add a role before saving.' }),
     };
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
-      window.requestAnimationFrame(() => {
-        if (!form.company.trim()) companyRef.current?.focus();
-        else roleRef.current?.focus();
-      });
+      if (!submittedCompany.trim()) companyRef.current?.focus();
+      else roleRef.current?.focus();
       return;
     }
-    onSave({ ...form, company: form.company.trim(), role: form.role.trim() });
+    onSave({ ...form, company: submittedCompany.trim(), role: submittedRole.trim() });
   };
   const dismiss = () => onClose(form);
   return <Modal title={application ? 'Edit opportunity' : 'Add opportunity'} eyebrow="Application queue" onClose={dismiss} returnFocusRef={returnFocusRef} fallbackFocusRef={fallbackFocusRef}><form onSubmit={submit} className="space-y-5"><div className="grid gap-4 sm:grid-cols-2"><Field label="Company" name="company" value={form.company} onChange={update('company')} placeholder="Company name" required inputRef={companyRef} error={errors.company} data-testid="input-application-company" /><Field label="Role" name="role" value={form.role} onChange={update('role')} placeholder="Role or title" required inputRef={roleRef} error={errors.role} data-testid="input-application-role" /></div><Field label="Job link" name="url" type="url" value={form.url} onChange={update('url')} placeholder="https://..." data-testid="input-application-url" /><div className="grid gap-4 sm:grid-cols-2"><SelectField label="Status" value={form.status} onChange={update('status')} options={(Object.keys(statusLabels) as ApplicationStatus[]).map((key) => ({ value: key, label: statusLabels[key] }))} testId="select-application-status" /><SelectField label="Priority" value={form.priority} onChange={update('priority')} options={[{ value: 'high', label: 'High' }, { value: 'normal', label: 'Normal' }, { value: 'low', label: 'Low' }]} testId="select-application-priority" /></div><Field label="Next action" name="nextAction" value={form.nextAction} onChange={update('nextAction')} placeholder="Read the role brief, ask for a referral..." data-testid="input-application-next-action" /><TextArea label="Notes" name="notes" value={form.notes} onChange={update('notes')} placeholder="What stood out? What do you want to remember?" data-testid="textarea-application-notes" /><div className="flex justify-end gap-2 pt-2"><Button type="button" variant="outline" onClick={dismiss} data-testid="button-cancel-application">Cancel</Button><Button type="submit" data-testid="button-save-application"><Check size={16} /> Save opportunity</Button></div></form></Modal>;
@@ -1042,6 +1197,9 @@ function AssistProgress({ session }: { session: AssistSession }) {
 
 function AssistPage({
   profile,
+  assistProfile,
+  setAssistProfile,
+  sourceBindings,
   answers,
   applications,
   setProfile,
@@ -1049,13 +1207,15 @@ function AssistPage({
   setApplications,
 }: {
   profile: Profile;
+  assistProfile: AssistProfile;
+  setAssistProfile: React.Dispatch<React.SetStateAction<AssistProfile>>;
+  sourceBindings: SourceBinding[];
   answers: AnswerSnippet[];
   applications: Application[];
   setProfile: React.Dispatch<React.SetStateAction<Profile>>;
   setAnswers: React.Dispatch<React.SetStateAction<AnswerSnippet[]>>;
   setApplications: React.Dispatch<React.SetStateAction<Application[]>>;
 }) {
-  const [assistProfile, setAssistProfile] = useStoredState<AssistProfile>(ASSIST_KEY, emptyAssistProfile(profile), parseAssistProfile);
   const [session, setSession] = useStoredState<AssistSession>(ASSIST_SESSION_KEY, initialSession(), parseAssistSessionStatus);
   const [assistAnswers, setAssistAnswers] = useStoredState<AssistAnswer[]>(ASSIST_ANSWERS_KEY, [], (value) => Array.isArray(value) ? value.filter((item): item is AssistAnswer => Boolean(item && typeof item === 'object' && typeof (item as AssistAnswer).id === 'string' && typeof (item as AssistAnswer).content === 'string')) : null);
   const [resume, setResume] = useState<ResumeImport | null>(null);
@@ -1148,7 +1308,8 @@ function AssistPage({
   };
   const recordMilestone = () => {
     if (!milestone) return;
-    setApplications((items) => items.map((item) => item.id === milestone ? { ...item, status: 'applied', updatedAt: now() } : item));
+    setApplications((items) => items.map((item) => item.id === milestone ? { ...item, status: 'applied',
+      nextAction: 'Application submitted — follow up when appropriate', updatedAt: now() } : item));
     setFeedback('Applied milestone recorded by you. EscapeHatch did not infer it from page progress.');
   };
   const importSession = (event: ChangeEvent<HTMLInputElement>) => {
@@ -1181,7 +1342,9 @@ function AssistPage({
   };
 
   return <div>
-     <PageIntro eyebrow="Browser assist" title="Fill the repeatable parts." description="Review local profile knowledge here, then use the MV3 assistant to scan and fill one page at a time. It never advances or submits an application." action={<div className="flex flex-wrap justify-end gap-2"><Button variant="outline" type="button" onClick={() => fileRef.current?.click()} data-testid="button-import-resume"><FileUp size={16} /> Import resume</Button><Button variant="outline" type="button" onClick={exportSync} data-testid="button-export-assist-sync"><FileDown size={16} /> Export assist sync</Button><Button variant="outline" type="button" onClick={exportSession} data-testid="button-export-assist-session"><FileDown size={16} /> Export session status</Button><label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm font-bold hover:bg-secondary"><FileUp size={16} /> Import session<input ref={sessionFileRef} type="file" accept="application/json,.json" onChange={importSession} className="hidden" data-testid="input-import-assist-session" /></label><input ref={fileRef} type="file" accept=".pdf,.txt,text/plain,application/pdf" onChange={importResume} className="hidden" data-testid="input-import-resume" /></div>} />
+    <ManagedBrowserAssist assistProfile={assistProfile} setAssistProfile={setAssistProfile} profile={profile} setProfile={setProfile} applications={applications} setApplications={setApplications} />
+     <PageIntro eyebrow="Browser assist" title="Fill the repeatable parts." description="Launch an application in managed Chrome above. Review your reusable knowledge here, fill known contact fields, and prepare attachments without installing an extension." action={<div className="flex flex-wrap justify-end gap-2"><Button variant="outline" type="button" onClick={() => fileRef.current?.click()} data-testid="button-import-resume"><FileUp size={16} /> Import resume</Button><Button variant="outline" type="button" onClick={exportSync} data-testid="button-export-assist-sync"><FileDown size={16} /> Export assist sync</Button><Button variant="outline" type="button" onClick={exportSession} data-testid="button-export-assist-session"><FileDown size={16} /> Export session status</Button><label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm font-bold hover:bg-secondary"><FileUp size={16} /> Import session<input ref={sessionFileRef} type="file" accept="application/json,.json" onChange={importSession} className="hidden" data-testid="input-import-assist-session" /></label><input ref={fileRef} type="file" accept=".pdf,.txt,text/plain,application/pdf" onChange={importResume} className="hidden" data-testid="input-import-resume" /></div>} />
+    <SourcePackageSummary profile={profile} assistProfile={assistProfile} applications={applications} sourceBindings={sourceBindings} />
     {feedback && <p role="status" aria-live="polite" data-testid="assist-feedback" className="mb-5 rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 text-sm font-bold text-primary">{feedback}</p>}
     <div className="grid gap-5 lg:grid-cols-[1.25fr_.75fr]">
       <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-7">
@@ -1203,10 +1366,10 @@ function AssistPage({
         </div>
       </section>
       <aside className="h-fit rounded-2xl border border-border bg-primary p-5 text-primary-foreground shadow-sm sm:p-6">
-        <p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-primary-foreground/65">Load unpacked</p>
-        <h2 className="mt-2 font-display text-2xl">Use the active tab, not automation.</h2>
-        <ol className="mt-5 space-y-3 text-sm leading-6 text-primary-foreground/80"><li><strong className="text-primary-foreground">1.</strong> Open browser extensions and enable developer mode.</li><li><strong className="text-primary-foreground">2.</strong> Choose Load unpacked and select <code className="rounded bg-primary-foreground/10 px-1">browser/application-assist</code>.</li><li><strong className="text-primary-foreground">3.</strong> Export a reviewed sync, import it in the extension, then Start Assist on the application tab.</li></ol>
-        <p className="mt-5 border-t border-primary-foreground/15 pt-4 text-xs leading-5 text-primary-foreground/65">Active-tab access only. Passwords, uploads, attestations, demographic fields, and navigation controls are blocked.</p>
+        <p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-primary-foreground/65">Your application, one place</p>
+        <h2 className="mt-2 font-display text-2xl">The cockpit starts the browser.</h2>
+        <p className="mt-5 text-sm leading-6 text-primary-foreground/80">Select the opportunity above and click <strong className="text-primary-foreground">Launch application</strong>. EscapeHatch opens a separate managed Chrome window. Return here whenever the employer moves you to a new page to fill recognized fields or attach a PDF.</p>
+        <p className="mt-5 border-t border-primary-foreground/15 pt-4 text-xs leading-5 text-primary-foreground/65">The older extension is optional, not part of the native launch path. Authentication, legal answers, Next/Continue, and Submit are yours to control.</p>
       </aside>
     </div>
     {resume && <section className="mt-5 rounded-2xl border border-accent/50 bg-accent/10 p-5 sm:p-7" data-testid="resume-review-panel">
@@ -1215,7 +1378,7 @@ function AssistPage({
     </section>}
     {pendingSync && <section className="mt-5 rounded-2xl border border-accent/45 bg-accent/10 p-5" data-testid="assist-sync-conflict"><p className="font-bold">Incoming sync needs a choice</p><p className="mt-1 text-sm leading-6 text-muted-foreground">The incoming profile or answers differ from current work. Choose a side or merge unique entries; nothing is overwritten silently.</p><div className="mt-4 flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={() => applySync('keep-current')}>Keep current</Button><Button type="button" onClick={() => applySync('merge')}>Merge unique items</Button><Button type="button" onClick={() => applySync('use-incoming')}>Use incoming</Button></div></section>}
     <div className="mt-5"><AssistProgress session={session} /></div>
-    <section className="mt-5 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-7"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-muted-foreground">Explicit milestone</p><h2 className="mt-2 font-display text-2xl">Record what you decided</h2><p className="mt-1 text-sm leading-6 text-muted-foreground">Observed pages are not applications. Choose an opportunity only when you personally want to record an applied milestone.</p></div><div className="flex gap-2"><select value={milestone} onChange={(event) => setMilestone(event.target.value)} data-testid="select-assist-milestone" className="max-w-[220px] rounded-lg border border-input bg-background px-3 py-2.5 text-sm"><option value="">Choose opportunity</option>{applications.filter((item) => item.status !== 'closed').map((item) => <option key={item.id} value={item.id}>{item.company} · {item.role}</option>)}</select><Button type="button" onClick={recordMilestone} disabled={!milestone} data-testid="button-record-assist-milestone">Record applied</Button></div></div>{session.pages.length > 0 && <div className="mt-6 space-y-2">{session.pages.map((page) => <div key={page.key} className="flex flex-col gap-1 rounded-lg bg-secondary/55 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"><span className="font-bold">{page.title || 'Application page'}</span><span className="text-xs text-muted-foreground">{page.status} · {page.filled} filled · {formatUpdated(page.scannedAt)}</span></div>)}</div>}</section>
+    <section className="mt-5 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-7"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-muted-foreground">Explicit milestone</p><h2 className="mt-2 font-display text-2xl">Record what you decided</h2><p className="mt-1 text-sm leading-6 text-muted-foreground">Observed pages are not applications. Choose an opportunity only when you personally want to record an applied milestone.</p></div><div className="flex flex-wrap gap-2"><select value={milestone} onChange={(event) => setMilestone(event.target.value)} data-testid="select-assist-milestone" className="max-w-[220px] rounded-lg border border-input bg-background px-3 py-2.5 text-sm"><option value="">Choose opportunity</option>{applications.filter((item) => item.status !== 'closed').map((item) => <option key={item.id} value={item.id}>{item.company} · {item.role}</option>)}</select><Button type="button" onClick={recordMilestone} disabled={!milestone} data-testid="button-record-assist-milestone">Record applied</Button></div></div>{session.pages.length > 0 && <div className="mt-6 space-y-2">{session.pages.map((page) => <div key={page.key} className="flex flex-col gap-1 rounded-lg bg-secondary/55 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"><span className="font-bold">{page.title || 'Application page'}</span><span className="text-xs text-muted-foreground">{page.status} · {page.filled} filled · {formatUpdated(page.scannedAt)}</span></div>)}</div>}</section>
   </div>;
 }
 
@@ -1225,6 +1388,8 @@ function NotFoundPage() {
 
 function Router() {
   const [profile, setProfile] = useStoredState<Profile>(PROFILE_KEY, emptyProfile, parseProfileStorage);
+  const [assistProfile, setAssistProfile] = useStoredState<AssistProfile>(ASSIST_KEY, emptyAssistProfile(profile), parseAssistProfile);
+  const [sourceBindings, setSourceBindings] = useStoredState<SourceBinding[]>(SOURCE_BINDINGS_KEY, [], parseSourceBindings);
   const [answers, setAnswers] = useStoredState<AnswerSnippet[]>(ANSWERS_KEY, [], parseAnswersStorage);
   const [applications, setApplications] = useStoredState<Application[]>(APPLICATIONS_KEY, [], parseApplicationsStorage);
   const [draftRecoverySeconds, setDraftRecoverySeconds] = useStoredState(
@@ -1284,7 +1449,7 @@ function Router() {
     setApplications(workspace.applications);
     return persisted;
   };
-  return <AppShell profile={profile}><Switch><Route path="/"><HomePage profile={profile} answers={answers} applications={applications} setApplications={setApplications} /></Route><Route path="/profile"><ProfilePage profile={profile} answers={answers} applications={applications} setProfile={setProfile} setAnswers={setAnswers} setApplications={setApplications} onRestoreWorkspace={restoreWorkspace} draftRecoverySeconds={draftRecoverySeconds} setDraftRecoverySeconds={setDraftRecoverySeconds} /></Route><Route path="/answers"><AnswersPage answers={answers} setAnswers={setAnswers} dismissedDraft={dismissedAnswerDraft} setDismissedDraft={setDismissedAnswerDraft} draftExpiryAnnouncement={answerDraftExpiryAnnouncement} onDraftStarted={() => setAnswerDraftExpiryAnnouncement('')} draftRecoverySeconds={answerDraftRecoverySeconds} draftRecoveryWindowSeconds={draftRecoverySeconds} /></Route><Route path="/applications"><ApplicationsPage applications={applications} setApplications={setApplications} dismissedDraft={dismissedApplicationDraft} setDismissedDraft={setDismissedApplicationDraft} draftExpiryAnnouncement={applicationDraftExpiryAnnouncement} onDraftStarted={() => setApplicationDraftExpiryAnnouncement('')} draftRecoverySeconds={applicationDraftRecoverySeconds} draftRecoveryWindowSeconds={draftRecoverySeconds} /></Route><Route path="/assist"><AssistPage profile={profile} answers={answers} applications={applications} setProfile={setProfile} setAnswers={setAnswers} setApplications={setApplications} /></Route><Route component={NotFoundPage} /></Switch></AppShell>;
+  return <AppShell profile={profile}><Switch><Route path="/"><HomePage profile={profile} answers={answers} applications={applications} setApplications={setApplications} /></Route><Route path="/profile"><ProfilePage profile={profile} answers={answers} applications={applications} setProfile={setProfile} setAnswers={setAnswers} setApplications={setApplications} onRestoreWorkspace={restoreWorkspace} draftRecoverySeconds={draftRecoverySeconds} setDraftRecoverySeconds={setDraftRecoverySeconds} /></Route><Route path="/answers"><AnswersPage assistProfile={assistProfile} profile={profile} answers={answers} setAnswers={setAnswers} dismissedDraft={dismissedAnswerDraft} setDismissedDraft={setDismissedAnswerDraft} draftExpiryAnnouncement={answerDraftExpiryAnnouncement} onDraftStarted={() => setAnswerDraftExpiryAnnouncement('')} draftRecoverySeconds={answerDraftRecoverySeconds} draftRecoveryWindowSeconds={draftRecoverySeconds} /></Route><Route path="/applications"><ApplicationsPage applications={applications} setApplications={setApplications} dismissedDraft={dismissedApplicationDraft} setDismissedDraft={setDismissedApplicationDraft} draftExpiryAnnouncement={applicationDraftExpiryAnnouncement} onDraftStarted={() => setApplicationDraftExpiryAnnouncement('')} draftRecoverySeconds={applicationDraftRecoverySeconds} draftRecoveryWindowSeconds={draftRecoverySeconds} /></Route><Route path="/sources"><SourcesPage profile={profile} assistProfile={assistProfile} applications={applications} sourceBindings={sourceBindings} onApprove={(value) => { persistSourceApproval(getLocalStorage(), value); setProfile(value.profile); setAssistProfile(value.assist); setSourceBindings(value.bindings); }} onForget={() => setSourceBindings([])} /></Route><Route path="/assist"><AssistPage assistProfile={assistProfile} setAssistProfile={setAssistProfile} sourceBindings={sourceBindings} profile={profile} answers={answers} applications={applications} setProfile={setProfile} setAnswers={setAnswers} setApplications={setApplications} /></Route><Route component={NotFoundPage} /></Switch></AppShell>;
 }
 
 function RoutedErrorBoundary({ children }: { children: ReactNode }) {

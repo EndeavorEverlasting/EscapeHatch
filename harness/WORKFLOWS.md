@@ -2,6 +2,10 @@
 
 These workflows implement `AGENTS.md`; they do not override governance.
 
+## Whole-product browser application outcome (P04)
+
+https://github.com/EndeavorEverlasting/EscapeHatch/issues/69 is the operator-corrected parent goal for every Application Assist implementation, P04 distribution or P08 certification. Read `docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md` and `harness/contracts/application-autofill-parent.v1.json` during Task Pickup; run `python scripts/validate_application_autofill_parent.py` with relevant changes. Never stop at résumé source access, candidate import, a managed browser opening, or one filled application page. The intended end state is **opportunity → selected approved profile/attachments → deterministic semantically mapped fields → verified safe intermediate progression → review-ready unsubmitted application** across different form structures, with current state/user edits preserved. Final submit and sensitive attestations remain manual. This parent is still OPEN; report first unproven integration gate in every lane handoff.
+
 ## Workflow selection
 
 Use **Repository Location** for durable Windows checkout/worktree acquisition. Use **Task Pickup** for every writing sprint. Use **Application Form Intake** when application questions/pages are being mapped or automated. Use **Application Companion** when an installable/local client records career/application progress or synchronizes user-owned state. Use **Application Assist Session** when operating the browser extension control loop that fills deterministic allowed fields on a live application. Use **Resume Presentation** whenever an agent creates, refreshes, tailors, exports, or synchronizes a resume/CV. Use **Product Release Versioning** when establishing, bumping, tagging, or auditing the human-facing product release identity. Use **Repository Promotion** when advancing an exact validated candidate through the provider-bound promotion pipeline to an authorized merge/tag/deployment. Use **Failure Recovery** when a required command fails. Use **Handoff** before changing owners/chats or when an external blocker stops the lane.
@@ -25,9 +29,21 @@ $RepoPath = & .\scripts\resolve_repo.ps1 -Branch '<branch>' -ExpectedCommit '<sh
 
 Temporary directories remain valid for disposable validator snapshots.
 
+## Model-context selection (repository agents)
+
+This is the deterministic context *entrypoint* for repository agents; it does not create a model API or override host system instructions. Run:
+
+```bash
+python scripts/context_router.py --lane auto --task "describe the actual bounded task" --metrics-only
+```
+
+The selector resolves source IDs through `harness/context/sources.v1.json`, always includes `AGENTS.md` and the harness skill, and chooses lane-specific contracts or structural outlines. Use `--output` for a local source-pinned receipt; before reusing it pass `--verify-receipt`. Use explicit `--lane` when auto classification is ambiguous. A low byte budget blocks rather than dropping governance. Source outlines are navigation, **not proof that the full source was inspected**: retrieve exact sections when required by task semantics. The host's system instructions, task, tool schemas, private runtime, memory and conversation history have separate owners; their sizes, tokens, costs and latency remain UNMEASURED unless the host supplies telemetry. Never route private career data through public CI.
+
+Existing `skills/harness-operations/SKILL.md` and `harness/CODEBASE_MAP.md` are also being changed in the separately owned Windows PR #95. Keep those untouched here; after PR #95 integration, the skill owner must reconcile its unconditional-read rule against this context selection contract and retain a failure-oriented negative test. This routing slice cannot claim full agent-host activation until that integration is observed.
+
 ## Task Pickup
 
-1. Read `AGENTS.md`, `harness/reports/CURRENT_STATE.md`, `harness/CODEBASE_MAP.md`, `harness/manifest.v1.json`, and `ARTIFACT_REGISTRY.md`.
+1. Read `AGENTS.md`, then execute the Model-context selection entrypoint above. Load only the selected full files and navigate outlined files by section; if the router is unavailable or evidence is incomplete, fall back to the established full governance/harness reading procedure rather than dropping required authority.
 2. Resolve durable repository state when platform location matters.
 3. Inspect current branch, relevant history, open PRs, and canonical owners.
 4. Search existing helpers, contracts, validators, skills, reports, and output conventions before creating replacements.

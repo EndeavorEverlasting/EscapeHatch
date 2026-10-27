@@ -3,6 +3,49 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { expect, test } from '@playwright/test';
+import { emptyPreferences } from '../src/lib/application-preferences';
+
+// This suite owns browser-local CRUD/backup; file-backed recovery is exercised
+// through the real managed middleware in workspace-startup.spec.ts.
+test.beforeEach(async ({ page }) => {
+  await page.route('**/__escapehatch/managed-assist/preferences', route => route.fulfill({ json: { ok: true, preferences: emptyPreferences() } }));
+});
+
+test('recovered library copies retain category visibility and delete undo without deleting Assist knowledge', async ({ page }) => {
+  const summary = { id: 'base-summary', title: 'Professional summary', category: 'Career story', content: 'Synthetic summary.', updatedAt: '2026-10-26T12:00:00Z' };
+  await page.addInitScript(({ summary }) => {
+    localStorage.setItem('escape-hatch-answers', JSON.stringify([summary, { ...summary, id: 'second-category', category: 'Other' }]));
+    localStorage.setItem('escape-hatch-assist-answers', JSON.stringify([{ ...summary, id: 'assist-summary', scope: 'reusable', canonicalId: 'professional-summary' }]));
+  }, { summary });
+  await page.goto('/answers');
+  const recovered = page.getByTestId('recovered-answer').filter({ hasText: 'Professional summary' });
+  await expect(recovered).toHaveCount(1);
+  await page.getByTestId('button-filter-other').click();
+  await expect(recovered).toHaveCount(1);
+  await recovered.getByRole('button', { name: 'Edit saved library answer', exact: true }).first().click();
+  await expect(page.getByRole('dialog', { name: 'Edit answer' })).toBeVisible();
+  await page.getByTestId('button-cancel-answer').click();
+  page.once('dialog', dialog => dialog.accept());
+  await recovered.getByRole('button', { name: 'Delete saved library answer', exact: true }).first().click();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('escape-hatch-answers')!).length)).toBe(1);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('escape-hatch-assist-answers')!).length)).toBe(1);
+  await page.getByTestId('button-undo-answer').click();
+  await expect(recovered.getByRole('button', { name: 'Delete saved library answer', exact: true })).toHaveCount(2);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('escape-hatch-answers')!).length)).toBe(2);
+});
+
+test('corrupt-after-valid Assist source cannot leave stale recovered cards', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('escape-hatch-assist-answers', JSON.stringify([{ id: 'assist', title: 'Professional summary', category: 'Career story', content: 'Synthetic valid summary.', updatedAt: '2026-10-26T12:00:00Z', scope: 'reusable', canonicalId: 'professional-summary' }])));
+  await page.goto('/answers');
+  await expect(page.getByTestId('recovered-answer')).toContainText('Synthetic valid summary.');
+  await page.evaluate(() => {
+    localStorage.setItem('escape-hatch-assist-answers', 'corrupt synthetic bytes');
+    window.dispatchEvent(new StorageEvent('storage', { key: 'escape-hatch-assist-answers', newValue: 'corrupt synthetic bytes', storageArea: localStorage }));
+  });
+  await expect(page.getByRole('status').filter({ hasText: 'Could not read: Assist answers' })).toBeVisible();
+  await expect(page.getByTestId('recovered-answer')).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem('escape-hatch-assist-answers'))).toBe('corrupt synthetic bytes');
+});
 
 const profileValues = {
   name_prefix: 'Dr.',
@@ -53,22 +96,32 @@ async function pressRecoveryAtExactDeadline(
   key: 'Enter' | 'Space',
   deadline: number,
 ) {
-  await page.clock.setSystemTime(new Date(deadline - 100));
+  // Freeze the boundary only at the real native click, after all focus work.
+  // Otherwise locator refocusing can expire/detach the button before the key.
+  await page.clock.setSystemTime(new Date(deadline - 1_000));
   await recoveryButton.focus();
-  await page.evaluate((exactDeadline) => {
-    const pageWindow = window as Window & { __escapeHatchOriginalDateNow?: typeof Date.now };
-    pageWindow.__escapeHatchOriginalDateNow = Date.now;
-    Date.now = () => exactDeadline;
+  const expectedTarget = await recoveryButton.getAttribute('data-testid');
+  await recoveryButton.evaluate((button, exactDeadline) => {
+    const pageWindow = window as Window & { __escapeHatchOriginalDateNow?: typeof Date.now; __escapeHatchActivation?: { time: number; target: string | null } };
+    delete pageWindow.__escapeHatchActivation;
+    button.addEventListener('click', () => {
+      pageWindow.__escapeHatchOriginalDateNow = Date.now;
+      Date.now = () => exactDeadline;
+      pageWindow.__escapeHatchActivation = { time: Date.now(), target: button.getAttribute('data-testid') };
+    }, { capture: true, once: true });
   }, deadline);
   try {
-    await recoveryButton.press(key);
+    await page.keyboard.press(key);
+    expect(await page.evaluate(() => (window as Window & { __escapeHatchActivation?: unknown }).__escapeHatchActivation))
+      .toEqual({ time: deadline, target: expectedTarget });
   } finally {
     await page.evaluate(() => {
-      const pageWindow = window as Window & { __escapeHatchOriginalDateNow?: typeof Date.now };
+      const pageWindow = window as Window & { __escapeHatchOriginalDateNow?: typeof Date.now; __escapeHatchActivation?: unknown };
       if (pageWindow.__escapeHatchOriginalDateNow) {
         Date.now = pageWindow.__escapeHatchOriginalDateNow;
         delete pageWindow.__escapeHatchOriginalDateNow;
       }
+      delete pageWindow.__escapeHatchActivation;
     });
   }
 }
@@ -88,7 +141,9 @@ async function pressRecoveryRepeatedlyBeforeDeadline(
   key: 'Enter' | 'Space',
   deadline: number,
 ) {
-  await page.clock.setSystemTime(new Date(deadline - 100));
+  // Position well before the edge; exact timing is asserted by the temporary
+  // Date.now override during activation, not by real CI scheduling speed.
+  await page.clock.setSystemTime(new Date(deadline - 1_000));
   await recoveryButton.focus();
   await page.evaluate((beforeDeadline) => {
     const pageWindow = window as Window & { __escapeHatchOriginalDateNow?: typeof Date.now };
@@ -190,20 +245,20 @@ test('backs up and restores the complete workspace', async ({ page }) => {
   await expect(page.getByTestId('input-first_name')).toHaveValue(profileValues.first_name);
 
   await page.goto('/answers');
-  const restoredAnswer = page.getByRole('article').filter({ hasText: answerTitle });
+  const restoredAnswer = page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: answerTitle });
   await expect(restoredAnswer).toContainText('I like turning complex work into clear, useful experiences.');
   await page.reload();
-  await expect(page.getByRole('article')).toHaveCount(1);
-  await expect(page.getByRole('article').filter({ hasText: answerTitle })).toContainText(
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toHaveCount(1);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: answerTitle })).toContainText(
     'I like turning complex work into clear, useful experiences.',
   );
 
   await page.goto('/applications');
-  const restoredApplication = page.getByRole('article').filter({ hasText: company });
+  const restoredApplication = page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: company });
   await expect(restoredApplication).toContainText('Product designer');
   await expect(restoredApplication).toContainText('Review the role brief');
   await page.reload();
-  const reloadedApplication = page.getByRole('article').filter({ hasText: company });
+  const reloadedApplication = page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: company });
   await expect(reloadedApplication).toContainText('Product designer');
   await expect(reloadedApplication).toContainText('Review the role brief');
 
@@ -291,18 +346,18 @@ test('keeps the current draft, saved workspace, and storage unchanged when resto
   }))).resolves.toEqual(storageBeforeCancel);
 
   await page.goto('/answers');
-  await expect(page.getByRole('article')).toHaveCount(2);
-  await expect(page.getByRole('article').filter({ hasText: backupAnswerTitle })).toContainText(
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toHaveCount(2);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: backupAnswerTitle })).toContainText(
     'This answer belongs to the validated backup.',
   );
-  await expect(page.getByRole('article').filter({ hasText: currentAnswerTitle })).toContainText(
+  await expect(page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: currentAnswerTitle })).toContainText(
     'This answer should remain after cancelling restore.',
   );
 
   await page.goto('/applications');
-  await expect(page.getByRole('article')).toHaveCount(2);
-  await expect(page.getByRole('article').filter({ hasText: backupCompany })).toContainText('Backup role');
-  await expect(page.getByRole('article').filter({ hasText: currentCompany })).toContainText('Current role');
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toHaveCount(2);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: backupCompany })).toContainText('Backup role');
+  await expect(page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: currentCompany })).toContainText('Current role');
 
   await page.goto('/profile');
   await page.getByTestId('input-import-workspace').setInputFiles({
@@ -327,16 +382,16 @@ test('keeps the current draft, saved workspace, and storage unchanged when resto
   expect(JSON.parse(restoredStorage.applications ?? 'null')).toEqual(expectedBackup.applications);
 
   await page.goto('/answers');
-  await expect(page.getByRole('article')).toHaveCount(1);
-  await expect(page.getByRole('article').filter({ hasText: backupAnswerTitle })).toContainText(
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toHaveCount(1);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: backupAnswerTitle })).toContainText(
     'This answer belongs to the validated backup.',
   );
-  await expect(page.getByRole('article').filter({ hasText: currentAnswerTitle })).toHaveCount(0);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: currentAnswerTitle })).toHaveCount(0);
 
   await page.goto('/applications');
-  await expect(page.getByRole('article')).toHaveCount(1);
-  await expect(page.getByRole('article').filter({ hasText: backupCompany })).toContainText('Backup role');
-  await expect(page.getByRole('article').filter({ hasText: currentCompany })).toHaveCount(0);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toHaveCount(1);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: backupCompany })).toContainText('Backup role');
+  await expect(page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: currentCompany })).toHaveCount(0);
 });
 
 test('restores multiple saved items with full details and order after reload', async ({ page }) => {
@@ -410,10 +465,10 @@ test('restores multiple saved items with full details and order after reload', a
 
   await page.goto('/answers');
   await page.reload();
-  await expect(page.getByRole('article')).toHaveCount(answers.length);
-  await expect(page.getByRole('article').locator('h3')).toHaveText(answers.map((answer) => answer.title).reverse());
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toHaveCount(answers.length);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])').locator('h3')).toHaveText(answers.map((answer) => answer.title).reverse());
   for (const answer of answers) {
-    const card = page.getByRole('article').filter({ hasText: answer.title });
+    const card = page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: answer.title });
     await expect(card).toContainText(answer.category);
     await expect(card).toContainText(answer.content);
   }
@@ -421,19 +476,19 @@ test('restores multiple saved items with full details and order after reload', a
   await page.goto('/applications');
   await page.reload();
   const expectedOpportunityOrder = [...opportunities].reverse();
-  await expect(page.getByRole('article')).toHaveCount(expectedOpportunityOrder.length);
-  await expect(page.getByRole('article').locator('h3')).toHaveText(
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toHaveCount(expectedOpportunityOrder.length);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])').locator('h3')).toHaveText(
     expectedOpportunityOrder.map((opportunity) => opportunity.company),
   );
   for (const opportunity of expectedOpportunityOrder) {
-    const card = page.getByRole('article').filter({ hasText: opportunity.company });
+    const card = page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: opportunity.company });
     await expect(card).toContainText(opportunity.role);
     await expect(card).toContainText(opportunity.status === 'follow_up' ? 'Follow up' : 'Preparing');
     await expect(card).toContainText(opportunity.nextAction);
   }
 
   for (const opportunity of expectedOpportunityOrder) {
-    const card = page.getByRole('article').filter({ hasText: opportunity.company });
+    const card = page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: opportunity.company });
     await card.getByRole('button', { name: 'Details' }).click();
     await expect(card).toContainText(opportunity.notes);
     await card.getByRole('button', { name: 'Edit' }).click();
@@ -452,7 +507,7 @@ test('returns focus to the active filter when an edited opportunity leaves the q
   await page.getByTestId('button-save-application').click();
 
   await page.getByTestId('button-filter-application-preparing').click();
-  const opportunity = page.getByRole('article').filter({ hasText: 'Northstar Systems' });
+  const opportunity = page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: 'Northstar Systems' });
   await opportunity.getByRole('button', { name: 'Edit' }).click();
   await page.getByTestId('select-application-status').selectOption('closed');
   await page.getByTestId('button-save-application').click();
@@ -576,7 +631,7 @@ test('keeps an empty answer form open until a valid answer is saved', async ({ p
   await page.getByTestId('button-save-answer').click();
 
   await expect(dialog).not.toBeVisible();
-  await expect(page.getByRole('article')).toContainText(answerTitle);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toContainText(answerTitle);
 });
 
 test('explains missing answer details and focuses the first invalid field', async ({ page }) => {
@@ -639,19 +694,19 @@ test('keeps an application form open when company or role is missing', async ({ 
   await page.getByTestId('input-company').fill(firstCompany);
   await page.getByTestId('button-save-application').click();
   await expect(firstDialog).not.toBeVisible();
-  await expect(page.getByRole('article')).toContainText(firstCompany);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toContainText(firstCompany);
 
   await page.getByTestId('button-add-application').click();
   const secondDialog = page.getByRole('dialog');
   await page.getByTestId('input-company').fill(secondCompany);
   await page.getByTestId('button-save-application').click();
   await expect(secondDialog).toBeVisible();
-  await expect(page.getByRole('article')).toHaveCount(1);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toHaveCount(1);
 
   await page.getByTestId('input-role').fill(secondRole);
   await page.getByTestId('button-save-application').click();
   await expect(secondDialog).not.toBeVisible();
-  await expect(page.getByRole('article')).toHaveCount(2);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toHaveCount(2);
   await expect(page.locator('article').filter({ hasText: secondCompany })).toContainText(secondCompany);
 });
 
@@ -715,23 +770,23 @@ test('rejects edits that clear an answer title or content', async ({ page }) => 
   await page.getByTestId('input-answer-title').fill('');
   await page.getByTestId('button-save-answer').click();
   await expect(dialog).toBeVisible();
-  await expect(page.getByRole('article')).toHaveCount(1);
-  await expect(page.getByRole('article')).toContainText(answerTitle);
-  await expect(page.getByRole('article')).toContainText(answerContent);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toHaveCount(1);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toContainText(answerTitle);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toContainText(answerContent);
 
   await page.getByTestId('input-answer-title').fill(answerTitle);
   await page.getByTestId('textarea-answer-content').fill('');
   await page.getByTestId('button-save-answer').click();
   await expect(dialog).toBeVisible();
-  await expect(page.getByRole('article')).toHaveCount(1);
-  await expect(page.getByRole('article')).toContainText(answerTitle);
-  await expect(page.getByRole('article')).toContainText(answerContent);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toHaveCount(1);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toContainText(answerTitle);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toContainText(answerContent);
 
   await page.getByTestId('button-close-dialog').click();
   await page.reload();
-  await expect(page.getByRole('article')).toHaveCount(1);
-  await expect(page.getByRole('article')).toContainText(answerTitle);
-  await expect(page.getByRole('article')).toContainText(answerContent);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toHaveCount(1);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toContainText(answerTitle);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toContainText(answerContent);
 });
 
 test('rejects edits that clear an application company or role', async ({ page }) => {
@@ -753,23 +808,23 @@ test('rejects edits that clear an application company or role', async ({ page })
   await page.getByTestId('input-company').fill('');
   await page.getByTestId('button-save-application').click();
   await expect(dialog).toBeVisible();
-  await expect(page.getByRole('article')).toHaveCount(1);
-  await expect(page.getByRole('article')).toContainText(company);
-  await expect(page.getByRole('article')).toContainText(role);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toHaveCount(1);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toContainText(company);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toContainText(role);
 
   await page.getByTestId('input-company').fill(company);
   await page.getByTestId('input-role').fill('');
   await page.getByTestId('button-save-application').click();
   await expect(dialog).toBeVisible();
-  await expect(page.getByRole('article')).toHaveCount(1);
-  await expect(page.getByRole('article')).toContainText(company);
-  await expect(page.getByRole('article')).toContainText(role);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toHaveCount(1);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toContainText(company);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toContainText(role);
 
   await page.getByTestId('button-close-dialog').click();
   await page.reload();
-  await expect(page.getByRole('article')).toHaveCount(1);
-  await expect(page.getByRole('article')).toContainText(company);
-  await expect(page.getByRole('article')).toContainText(role);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toHaveCount(1);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toContainText(company);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toContainText(role);
 });
 
 test('keeps answer add, edit, and delete changes after reloads', async ({ page }) => {
@@ -782,7 +837,7 @@ test('keeps answer add, edit, and delete changes after reloads', async ({ page }
   await page.getByTestId('select-answer-category').selectOption({ label: 'Motivation' });
   await page.getByTestId('textarea-answer-content').fill('I like turning complex work into clear, useful experiences.');
   await page.getByTestId('button-save-answer').click();
-  await expect(page.getByRole('article')).toContainText(answerTitle);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toContainText(answerTitle);
 
   await page.reload();
   const savedAnswer = page.locator('article').filter({ hasText: answerTitle });
@@ -792,7 +847,7 @@ test('keeps answer add, edit, and delete changes after reloads', async ({ page }
   await page.getByTestId('input-answer-title').fill(editedTitle);
   await page.getByTestId('textarea-answer-content').fill('I make complex work clearer and more useful.');
   await page.getByTestId('button-save-answer').click();
-  await expect(page.getByRole('article')).toContainText(editedTitle);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toContainText(editedTitle);
 
   await page.reload();
   const editedAnswer = page.locator('article').filter({ hasText: editedTitle });
@@ -878,7 +933,7 @@ test('keeps application add, edit, and delete changes after reloads', async ({ p
   await page.getByTestId('input-nextAction').fill('Review the role brief');
   await page.getByTestId('textarea-notes').fill('Strong fit for the research team.');
   await page.getByTestId('button-save-application').click();
-  await expect(page.getByRole('article')).toContainText(company);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toContainText(company);
 
   await page.reload();
   const savedApplication = page.locator('article').filter({ hasText: company });
@@ -891,7 +946,7 @@ test('keeps application add, edit, and delete changes after reloads', async ({ p
   await page.getByTestId('input-nextAction').fill('Send a follow-up');
   await page.getByTestId('textarea-notes').fill('Updated notes after the interview.');
   await page.getByTestId('button-save-application').click();
-  await expect(page.getByRole('article')).toContainText(editedCompany);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toContainText(editedCompany);
 
   await page.reload();
   const editedApplication = page.locator('article').filter({ hasText: editedCompany });
@@ -1134,7 +1189,7 @@ test('recovers a dismissed answer draft without changing a saved answer', async 
   await page.getByTestId('textarea-answer-content').fill('The original answer.');
   await page.getByTestId('button-save-answer').click();
 
-  const savedAnswer = page.getByRole('article').filter({ hasText: 'Saved answer' });
+  const savedAnswer = page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: 'Saved answer' });
   await savedAnswer.getByRole('button', { name: 'Edit Saved answer' }).click();
   await page.getByTestId('input-answer-title').fill('Recovered answer');
   await page.getByTestId('select-answer-category').selectOption({ label: 'Motivation' });
@@ -1152,11 +1207,11 @@ test('recovers a dismissed answer draft without changing a saved answer', async 
   await expect(page.getByTestId('textarea-answer-content')).toHaveValue('The recovered content.');
   await page.getByTestId('button-save-answer').click();
 
-  await expect(page.getByRole('article').filter({ hasText: 'Recovered answer' })).toContainText('The recovered content.');
-  await expect(page.getByRole('article').filter({ hasText: 'Saved answer' })).toHaveCount(0);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: 'Recovered answer' })).toContainText('The recovered content.');
+  await expect(page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: 'Saved answer' })).toHaveCount(0);
 
   await page.reload();
-  const reloadedAnswer = page.getByRole('article').filter({ hasText: 'Recovered answer' });
+  const reloadedAnswer = page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: 'Recovered answer' });
   await expect(reloadedAnswer).toContainText('Motivation');
   await expect(reloadedAnswer).toContainText('The recovered content.');
 });
@@ -1174,7 +1229,7 @@ test('recovers a dismissed opportunity draft after Cancel and saves it normally'
   await page.getByTestId('button-cancel-application').click();
 
   await expect(page.getByTestId('application-draft-notice')).toContainText('You have an unsaved opportunity draft.');
-  await expect(page.getByRole('article')).toHaveCount(0);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toHaveCount(0);
   await page.getByTestId('button-recover-application-draft').click();
   const recoveredDialog = page.getByRole('dialog', { name: 'Add opportunity' });
   await expect(recoveredDialog).toBeVisible();
@@ -1186,11 +1241,11 @@ test('recovers a dismissed opportunity draft after Cancel and saves it normally'
   await expect(page.getByTestId('textarea-notes')).toHaveValue('Remember the accessibility work.');
   await page.getByTestId('button-save-application').click();
 
-  await expect(page.getByRole('article').filter({ hasText: 'Draft Labs' })).toContainText('Product designer');
-  await expect(page.getByRole('article').filter({ hasText: 'Draft Labs' })).toContainText('Review the role brief');
+  await expect(page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: 'Draft Labs' })).toContainText('Product designer');
+  await expect(page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: 'Draft Labs' })).toContainText('Review the role brief');
 
   await page.reload();
-  const reloadedOpportunity = page.getByRole('article').filter({ hasText: 'Draft Labs' });
+  const reloadedOpportunity = page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: 'Draft Labs' });
   await expect(reloadedOpportunity).toContainText('Follow up');
   await reloadedOpportunity.getByRole('button', { name: 'Edit' }).click();
   await expect(page.getByTestId('select-application-status')).toHaveValue('follow_up');
@@ -1305,7 +1360,7 @@ test('uses the selected recovery deadline for edited answer and opportunity draf
   await page.getByTestId('button-save-application').click();
 
   await page.goto('/answers');
-  const savedAnswer = page.getByRole('article').filter({ hasText: 'Saved answer' });
+  const savedAnswer = page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: 'Saved answer' });
   await savedAnswer.getByRole('button', { name: 'Edit Saved answer' }).click();
   await page.getByTestId('input-answer-title').fill('Edited answer');
   await page.getByTestId('textarea-answer-content').fill('The edited answer should be recoverable.');
@@ -1320,7 +1375,7 @@ test('uses the selected recovery deadline for edited answer and opportunity draf
   await expect(page.getByTestId('textarea-answer-content')).toHaveValue('The edited answer should be recoverable.');
   await page.getByTestId('button-save-answer').click();
 
-  const editedAnswer = page.getByRole('article').filter({ hasText: 'Edited answer' });
+  const editedAnswer = page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: 'Edited answer' });
   await editedAnswer.getByRole('button', { name: 'Edit Edited answer' }).click();
   await page.getByTestId('textarea-answer-content').fill('This edited answer should expire.');
   await page.getByTestId('button-cancel-answer').click();
@@ -1332,7 +1387,7 @@ test('uses the selected recovery deadline for edited answer and opportunity draf
   );
 
   await page.goto('/applications');
-  const savedOpportunity = page.getByRole('article').filter({ hasText: 'Saved Labs' });
+  const savedOpportunity = page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: 'Saved Labs' });
   await savedOpportunity.getByRole('button', { name: 'Edit' }).click();
   await page.getByTestId('input-role').fill('Edited role');
   await page.getByTestId('textarea-notes').fill('The edited opportunity should be recoverable.');
@@ -1519,9 +1574,9 @@ test('keeps answer and opportunity drafts separate when switching views', async 
   await expect(page.getByTestId('input-role')).toHaveValue('Product researcher');
   await page.getByTestId('button-save-application').click();
 
-  await expect(page.getByRole('article').filter({ hasText: 'Cross-view Labs' })).toContainText('Product researcher');
+  await expect(page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: 'Cross-view Labs' })).toContainText('Product researcher');
   await page.getByTestId('link-sidebar-answer-library').click();
-  await expect(page.getByRole('article').filter({ hasText: 'Cross-view answer' })).toContainText(
+  await expect(page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: 'Cross-view answer' })).toContainText(
     'Keep this answer while I check an opportunity.',
   );
 });
@@ -2060,6 +2115,8 @@ test('does not recover an answer draft with Enter or Space at its exact deadline
     await page.getByTestId('input-answer-title').fill(`Cross-view keyboard answer ${index}`);
     await page.getByTestId('textarea-answer-content').fill('This answer expires after changing views.');
     await page.getByTestId('button-cancel-answer').click();
+    // Deadline belongs to the original draft; route traversal must not reset it.
+    const exactDeadline = await page.evaluate(() => Date.now() + 8_000);
 
     for (let viewChange = 0; viewChange < 3; viewChange += 1) {
       await page.getByTestId('link-sidebar-applications').click();
@@ -2068,7 +2125,6 @@ test('does not recover an answer draft with Enter or Space at its exact deadline
       await expect(page.getByTestId('answer-draft-notice')).toBeVisible();
     }
 
-    const exactDeadline = await page.evaluate(() => Date.now() + 8_000);
     const recoveryButton = page.getByTestId('button-recover-answer-draft');
     await expect(page.getByTestId('answer-draft-notice')).toBeVisible();
     await expect(recoveryButton).toBeVisible();
@@ -2094,6 +2150,8 @@ test('does not recover an opportunity draft with Enter or Space at its exact dea
     await page.getByTestId('input-company').fill(`Cross-view keyboard Labs ${index}`);
     await page.getByTestId('input-role').fill('Deadline researcher');
     await page.getByTestId('button-cancel-application').click();
+    // Deadline belongs to the original draft; route traversal must not reset it.
+    const exactDeadline = await page.evaluate(() => Date.now() + 8_000);
 
     for (let viewChange = 0; viewChange < 3; viewChange += 1) {
       await page.getByTestId('link-sidebar-answer-library').click();
@@ -2102,7 +2160,6 @@ test('does not recover an opportunity draft with Enter or Space at its exact dea
       await expect(page.getByTestId('application-draft-notice')).toBeVisible();
     }
 
-    const exactDeadline = await page.evaluate(() => Date.now() + 8_000);
     const recoveryButton = page.getByTestId('button-recover-application-draft');
     await expect(page.getByTestId('application-draft-notice')).toBeVisible();
     await expect(recoveryButton).toBeVisible();
@@ -2126,13 +2183,13 @@ test('closes answer and opportunity forms with Escape without saving edits', asy
   await page.getByTestId('textarea-answer-content').fill('This should not be saved.');
   await page.keyboard.press('Escape');
   await expect(answerDialog).toBeHidden();
-  await expect(page.getByRole('article')).toHaveCount(0);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toHaveCount(0);
 
   await page.getByTestId('button-add-answer').click();
   await page.getByTestId('input-answer-title').fill('Saved answer');
   await page.getByTestId('textarea-answer-content').fill('The original answer.');
   await page.getByTestId('button-save-answer').click();
-  const savedAnswer = page.getByRole('article').filter({ hasText: 'Saved answer' });
+  const savedAnswer = page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: 'Saved answer' });
   await expect(savedAnswer).toContainText('The original answer.');
 
   await savedAnswer.getByRole('button', { name: 'Edit Saved answer' }).click();
@@ -2141,10 +2198,10 @@ test('closes answer and opportunity forms with Escape without saving edits', asy
   await page.getByTestId('textarea-answer-content').fill('Changed content.');
   await page.keyboard.press('Escape');
   await expect(answerEditDialog).toBeHidden();
-  await expect(page.getByRole('article')).toContainText('Saved answer');
-  await expect(page.getByRole('article')).toContainText('The original answer.');
-  await expect(page.getByRole('article')).not.toContainText('Changed answer');
-  await expect(page.getByRole('article')).not.toContainText('Changed content.');
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toContainText('Saved answer');
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toContainText('The original answer.');
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).not.toContainText('Changed answer');
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).not.toContainText('Changed content.');
 
   await page.goto('/applications');
   await page.getByTestId('button-add-application').click();
@@ -2154,13 +2211,13 @@ test('closes answer and opportunity forms with Escape without saving edits', asy
   await page.getByTestId('input-role').fill('Unsaved Role');
   await page.keyboard.press('Escape');
   await expect(applicationDialog).toBeHidden();
-  await expect(page.getByRole('article')).toHaveCount(0);
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toHaveCount(0);
 
   await page.getByTestId('button-add-application').click();
   await page.getByTestId('input-company').fill('Saved Company');
   await page.getByTestId('input-role').fill('Saved Role');
   await page.getByTestId('button-save-application').click();
-  const savedApplication = page.getByRole('article').filter({ hasText: 'Saved Company' });
+  const savedApplication = page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: 'Saved Company' });
   await expect(savedApplication).toContainText('Saved Role');
 
   await savedApplication.getByRole('button', { name: 'Edit' }).click();
@@ -2169,8 +2226,61 @@ test('closes answer and opportunity forms with Escape without saving edits', asy
   await page.getByTestId('input-role').fill('Changed Role');
   await page.keyboard.press('Escape');
   await expect(applicationEditDialog).toBeHidden();
-  await expect(page.getByRole('article')).toContainText('Saved Company');
-  await expect(page.getByRole('article')).toContainText('Saved Role');
-  await expect(page.getByRole('article')).not.toContainText('Changed Company');
-  await expect(page.getByRole('article')).not.toContainText('Changed Role');
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toContainText('Saved Company');
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).toContainText('Saved Role');
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).not.toContainText('Changed Company');
+  await expect(page.locator('article:not([data-testid="recovered-answer"])')).not.toContainText('Changed Role');
 });
+for (const kind of ['answer', 'application'] as const) {
+  test(`keeps user input focus when a delayed opening frame runs during ${kind} editing`, async ({ page }) => {
+    const isAnswer = kind === 'answer';
+    const route = isAnswer ? '/answers' : '/applications';
+    const firstId = isAnswer ? 'input-answer-title' : 'input-company';
+    const secondId = isAnswer ? 'textarea-answer-content' : 'input-role';
+    const saveId = isAnswer ? 'button-save-answer' : 'button-save-application';
+    const original = isAnswer ? 'Synthetic focus answer' : 'Synthetic Focus Employer';
+    await page.goto(route);
+    await page.getByTestId(isAnswer ? 'button-add-answer' : 'button-add-application').click();
+    await page.getByTestId(firstId).fill(original);
+    await page.getByTestId(secondId).fill('Synthetic supporting detail');
+    await page.getByTestId(saveId).click();
+    const saved = page.locator('article:not([data-testid="recovered-answer"])').filter({ hasText: original });
+    await expect(saved).toBeVisible();
+
+    // Hold an opening frame until after a real keyboard user selects the field.
+    // No timeout or scheduler luck is needed to exercise the focus boundary.
+    await page.evaluate(() => {
+      const host = window as Window & { __modalOriginalRAF?: typeof requestAnimationFrame; __modalFrames?: FrameRequestCallback[] };
+      host.__modalOriginalRAF = window.requestAnimationFrame;
+      host.__modalFrames = [];
+      window.requestAnimationFrame = callback => { host.__modalFrames!.push(callback); return host.__modalFrames!.length; };
+    });
+    try {
+      const edit = isAnswer ? saved.getByRole('button', { name: `Edit ${original}` }) : saved.locator('[data-testid^="button-edit-application-"]');
+      // Dispatch only the opening click while frames are held; subsequent focus,
+      // selection, clearing and Save use the browser's real input path.
+      await edit.dispatchEvent('click');
+      const field = page.getByTestId(firstId);
+      await field.focus();
+      await page.keyboard.press('ControlOrMeta+A');
+      await page.evaluate(() => {
+        const host = window as Window & { __modalOriginalRAF?: typeof requestAnimationFrame; __modalFrames?: FrameRequestCallback[] };
+        window.requestAnimationFrame = host.__modalOriginalRAF!;
+        for (const callback of host.__modalFrames || []) callback(performance.now());
+      });
+      await expect(field).toBeFocused();
+      await page.keyboard.press('Backspace');
+      await expect(field).toHaveValue('');
+      await page.getByTestId(saveId).click();
+      await expect(page.getByRole('dialog')).toBeVisible();
+      await expect(page.getByTestId(isAnswer ? 'answer-title-error' : 'company-error')).toBeVisible();
+      await expect(saved).toContainText(original);
+    } finally {
+      await page.evaluate(() => {
+        const host = window as Window & { __modalOriginalRAF?: typeof requestAnimationFrame; __modalFrames?: FrameRequestCallback[] };
+        if (host.__modalOriginalRAF) window.requestAnimationFrame = host.__modalOriginalRAF;
+        delete host.__modalOriginalRAF; delete host.__modalFrames;
+      });
+    }
+  });
+}

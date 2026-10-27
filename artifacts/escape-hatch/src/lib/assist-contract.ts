@@ -14,6 +14,8 @@ export type Provenance = {
   snippet?: string;
   page?: number;
   capturedAt: string;
+  sourceId?: string;
+  revision?: string;
 };
 
 export type ReviewState = 'proposed' | 'accepted' | 'edited' | 'rejected';
@@ -51,6 +53,7 @@ export type AssistEducation = {
   id: string;
   institution: string;
   credential: string;
+  fieldOfStudy?: string;
   dates: string;
   details: string;
   provenance: Provenance;
@@ -69,6 +72,8 @@ export type AssistProfile = {
   education: AssistEducation[];
   proposals: ReviewedProposal[];
   approvedAt?: string;
+  selectedExperienceId?: string;
+  selectedEducationId?: string;
 };
 
 export type AssistAnswer = AnswerSnippet & {
@@ -146,6 +151,10 @@ function validAssistAnswer(value: unknown): value is AssistAnswer {
     && text(value.content)?.trim() && date(value.updatedAt)
     && ['reusable', 'opportunity'].includes(String(value.scope))
     && (!value.canonicalId || typeof value.canonicalId === 'string'));
+}
+
+export function parseAssistAnswers(value: unknown): AssistAnswer[] | null {
+  return Array.isArray(value) && value.every(validAssistAnswer) ? value : null;
 }
 
 function validProfile(value: unknown): value is AssistProfile {

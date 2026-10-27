@@ -39,6 +39,14 @@ test('newest receipt wins while downstream statuses and newer evidence stay inta
   }
 });
 
+test('Lever listing receipts accept only that exact job apply path', () => {
+  const url = 'https://jobs.lever.co/synthetic/00000000-0000-0000-0000-000000000000';
+  const original = [{ ...application, url }];
+  const evidence = { ...receipt, applicationOrigin: 'https://jobs.lever.co', applicationPath: new URL(url).pathname + '/apply' };
+  assert.equal(reconcileSubmissionReceipts(original, [evidence])[0].status, 'applied');
+  assert.equal(reconcileSubmissionReceipts(original, [{ ...evidence, applicationPath: '/synthetic/other/apply' }]), original);
+});
+
 test('stale imported Ready snapshot cannot erase a local confirmed submission', () => {
   const row = { sheetRow: 2, appliedCheckbox: false, priority: 'normal', status: 'Ready to Apply', company: 'Synthetic', role: 'Role', applyUrl: url };
   const id = trackerOpportunityId(row);

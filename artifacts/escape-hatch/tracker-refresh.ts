@@ -87,7 +87,7 @@ async function readBoundedFile(file: string, limit: number) {
     return bytes.toString('utf8').replace(/^\uFEFF/, '');
   } finally { await handle.close(); }
 }
-async function acquireToken(env: NodeJS.ProcessEnv) {
+export async function acquireToken(env: NodeJS.ProcessEnv) {
   if (env.TOKEN_CORRIDOR_GOOGLE_TOKEN?.trim()) {
     const token = env.TOKEN_CORRIDOR_GOOGLE_TOKEN.trim();
     return token.length <= 16384 && !/[\r\n]/.test(token) ? { token, source: 'TokenCorridor process credential' } : null;
@@ -114,7 +114,7 @@ export async function readTrackerRefreshAvailability(snapshotFile: string, env: 
     message: 'An existing local Google credential can be used to attempt refresh. Authentication is verified by the provider response.' };
 }
 
-async function boundedJson(response: Response, signal: AbortSignal) {
+export async function boundedJson(response: Response, signal: AbortSignal) {
   const size = response.headers.get('content-length');
   if (size && (!/^\d+$/.test(size) || Number(size) > MAX_BYTES)) fail('RESPONSE_TOO_LARGE');
   if (!response.body) fail('INCOMPLETE_RESPONSE');

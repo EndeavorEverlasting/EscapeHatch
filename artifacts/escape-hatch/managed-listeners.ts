@@ -126,7 +126,7 @@ export class ManagedListeners {
   }
 
   async arm() {
-    try { if ((await this.observer?.arm())?.state === 'ARMED') this.error = ''; }
+    try { if (!this.observer) throw new Error('No bound submission observer.'); if ((await this.observer.arm()).state === 'ARMED') this.error = ''; }
     catch { this.error = 'Submission tracking could not arm on this page. Review the current application before trying again.'; }
     return this.status();
   }

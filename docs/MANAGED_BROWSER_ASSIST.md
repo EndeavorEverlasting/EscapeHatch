@@ -1,5 +1,17 @@
 # EscapeHatch — Native managed application browser (operator-controlled)
 
+## Confirmed submission and deterministic tracker synchronization
+
+Before the operator submits, select the correct saved opportunity and use **Track existing application tab** to recover a unique exact managed tab without navigation or lost entries. The listener must report `ARMED` for that opportunity. Lever listing URLs may bind only to that exact job's `/apply` tab. A trusted click changes observation to pending; only an explicit provider confirmation after that attempt creates a receipt. Rejection, CAPTCHA, a changed URL, or a preexisting success message never proves submission. Unsupported employer confirmation layouts remain unproved.
+
+The canonical receipt store is `%LOCALAPPDATA%\EscapeHatch\managed-submission-receipts.json` (or `ESCAPEHATCH_DATA_HOME` for isolated runs). Receipt persistence precedes synchronization. The same durable receipt automatically reconciles the existing private workspace's local application queue, even if the cockpit is closed. Its derived tracker outbox is `submission-tracker-outbox.v1.json` in the same data root. It pins the selected spreadsheet ID, sheet, and calendar timezone at enqueue; changing tracker bindings fails closed rather than moving pending writes to another tracker. Process restart replays receipts, and the background worker retries every 30 seconds. No LLM chooses cells or statuses.
+
+Remote writes use the existing Google credential adapter. A cached tracker is not proof of Google write authorization, and ChatGPT connector authorization is not transferred into the app. `AUTH_REQUIRED` preserves the receipt until an existing authorized local credential is available. Do not create a new Cloud project or copy connector/browser secrets. `CONFLICT`, `RETRY_REQUIRED`, and unreadable-store recovery remain visible rather than being called synchronized. The cockpit exposes aggregate saved-receipt counters and **Retry tracker synchronization**; normal retry does not require a human or agent.
+
+The writer reads current headers and a unique company/role/apply-URL row, writes only Status, Applied?, and an empty Date Applied, then verifies the planned cells. Unknown/downstream statuses are never downgraded, unrelated cells and existing dates are preserved, and a lost provider response is resolved by readback on retry. Date uses the timezone captured at enqueue (`ESCAPEHATCH_TIME_ZONE` when configured, otherwise the runtime account's calendar timezone). Blocked entries rotate so they cannot starve later receipts.
+
+Google Sheets values writes have no row-level compare-and-swap. Immediate pre/post identity checks reject observed row changes but cannot make concurrent human sorting atomic; avoid reordering the tracker during an in-flight write. An ambiguous identity/readback remains a conflict, not a verified sync. Live employer receipt capture and live Google write/readback require separate proof; synthetic browser/provider tests do not certify them. Final Submit remains exclusively the operator's action.
+
 ## Why this exists
 The cockpit previously told operators to visit chrome://extensions, enable developer mode, load
 an unpacked MV3 extension, export/import data, and reopen the application. That is a setup

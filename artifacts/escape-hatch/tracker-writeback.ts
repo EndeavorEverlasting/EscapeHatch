@@ -4,6 +4,7 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { userDataRoot } from './user-data.ts';
+import { trackerPaths } from './tracker-control.ts';
 import { acquireToken, boundedJson, createTrackerSnapshotFromValues } from './tracker-refresh.ts';
 import { parseSubmissionEvidence, type SubmissionEvidence } from './src/lib/submission-reconciliation.ts';
 import { parseTrackerSnapshot, trackerOpportunityId, type TrackerSnapshot } from './src/lib/tracker-bridge.ts';
@@ -61,8 +62,11 @@ function validTarget(target: Target | null) {
   return target === null || target && /^[A-Za-z0-9_-]{10,200}$/.test(target.spreadsheetId) && typeof target.sheetName === 'string' && target.sheetName.trim().length > 0 && target.sheetName.length <= 100;
 }
 function validZone(timeZone: string) { try { new Intl.DateTimeFormat('en', { timeZone }); return true; } catch { return false; } }
-async function currentBinding(root: string): Promise<Target | null> {
-  try { const snapshot = parseTrackerSnapshot(await readJson(path.join(root, 'tracker-snapshot.v1.json'))); return snapshot ? { spreadsheetId: snapshot.spreadsheetId, sheetName: snapshot.sheetName } : null; }
+function trackerSnapshotFile(root: string, env: NodeJS.ProcessEnv = process.env) {
+  return env.ESCAPEHATCH_TRACKER_SNAPSHOT || (root === userDataRoot(env) ? trackerPaths(env).snapshot : path.join(root, 'tracker-snapshot.v1.json'));
+}
+async function currentBinding(root: string, env: NodeJS.ProcessEnv = process.env): Promise<Target | null> {
+  try { const snapshot = parseTrackerSnapshot(await readJson(trackerSnapshotFile(root, env))); return snapshot ? { spreadsheetId: snapshot.spreadsheetId, sheetName: snapshot.sheetName } : null; }
   catch { return null; }
 }
 /** Sheets stores dates as serial day numbers, including columns validated as dates.
@@ -119,7 +123,7 @@ async function syncOne(entry: Entry, options: SyncOptions, persistIntent: () => 
   const { receipt } = entry;
   const root = scopeRoot(options);
   let snapshot: TrackerSnapshot | null;
-  try { snapshot = parseTrackerSnapshot(await readJson(path.join(root, 'tracker-snapshot.v1.json'))); }
+  try { snapshot = parseTrackerSnapshot(await readJson(trackerSnapshotFile(root, options.env || process.env))); }
   catch { return 'CONFLICT'; }
   if (!snapshot || !entry.target || snapshot.spreadsheetId !== entry.target.spreadsheetId || snapshot.sheetName !== entry.target.sheetName || !/^[A-Za-z0-9_-]{10,200}$/.test(snapshot.spreadsheetId)) return 'CONFLICT';
   const auth = await acquireToken(options.env || process.env);
@@ -152,7 +156,7 @@ async function syncOne(entry: Entry, options: SyncOptions, persistIntent: () => 
     if (!plan.row.dateApplied) { entry.expectedDate = plan.day; await persistIntent(); }
     // Guard source rebinding and ordinary row moves before writing. Sheets has
     // no row-level compare-and-swap; post-write identity/readback is mandatory.
-    const latest = parseTrackerSnapshot(await readJson(path.join(root, 'tracker-snapshot.v1.json')));
+    const latest = parseTrackerSnapshot(await readJson(trackerSnapshotFile(root, options.env || process.env)));
     if (!latest || latest.spreadsheetId !== snapshot.spreadsheetId || latest.sheetName !== snapshot.sheetName) return 'CONFLICT';
     if (JSON.stringify(await read()) !== JSON.stringify(values)) return 'CONFLICT';
     await call(base.slice(0, -1) + ':batchUpdate', { method: 'POST', body: JSON.stringify({ valueInputOption: 'RAW', data: plan.data }) });
@@ -182,7 +186,7 @@ export async function enqueueSubmissionSync(input: unknown, options: SyncOptions
       if (box.entries.length >= 1000) throw new Error('OUTBOX_FULL');
       const timeZone = options.timeZone || (options.env || process.env).ESCAPEHATCH_TIME_ZONE || Intl.DateTimeFormat().resolvedOptions().timeZone;
       if (!validZone(timeZone)) throw new Error('INVALID_TRACKER_TIME_ZONE');
-      box.entries.push({ receipt, target: await currentBinding(root), timeZone, state: 'PENDING', updatedAt: new Date().toISOString() });
+      box.entries.push({ receipt, target: await currentBinding(root, options.env || process.env), timeZone, state: 'PENDING', updatedAt: new Date().toISOString() });
       await writeOutbox(root, box);
     }
   });
@@ -197,7 +201,8 @@ export async function retrySubmissionSync(options: SyncOptions = {}) {
     const box = await readOutbox(root);
     for (const entry of box.entries.filter(item => item.state !== 'SYNCED').sort((a, b) => Date.parse(a.updatedAt) - Date.parse(b.updatedAt)).slice(0, 10)) {
       try {
-        if (!entry.target || JSON.stringify(await currentBinding(root)) !== JSON.stringify(entry.target)) { entry.state = 'CONFLICT'; entry.updatedAt = new Date().toISOString(); await writeOutbox(root, box); continue; }
+        // A changed Google target blocks only its provider write; a confirmed
+        // submission still reconciles the original local queue.
         const file = path.join(root, 'workspace.v1.json'), current = await readWorkspace(file);
         if (current) {
           const applications = parseApplicationsStorage(current.workspace.values[APPLICATIONS_KEY] || []);
@@ -205,7 +210,8 @@ export async function retrySubmissionSync(options: SyncOptions = {}) {
           const reconciled = reconcileSubmissionReceipts(applications, [entry.receipt]);
           if (reconciled !== applications) await saveWorkspace({ ...current.workspace, values: { ...current.workspace.values, [APPLICATIONS_KEY]: reconciled } }, current.revision, file);
         }
-        entry.state = await syncOne(entry, options, () => writeOutbox(root, box));
+        entry.state = !entry.target || JSON.stringify(await currentBinding(root, options.env || process.env)) !== JSON.stringify(entry.target)
+          ? 'CONFLICT' : await syncOne(entry, options, () => writeOutbox(root, box));
       } catch { entry.state = 'RETRY_REQUIRED'; }
       entry.updatedAt = new Date().toISOString();
       await writeOutbox(root, box);

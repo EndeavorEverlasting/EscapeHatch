@@ -4,9 +4,9 @@ export const PREFERENCE_KEY = 'escapeHatch.applicationQuestionPreferences.v1';
 export const PREFERENCE_SCHEMA = 'escapehatch-application-question-preferences/v1';
 export type Preference = { scope: 'profile_preference'; value: string; source: 'user'; updated_at: string };
 export type DiscoveredAnswer = { question: string; value: string; source: 'user' | 'observed_question'; updated_at: string; accepted: boolean };
-export type Preferences = { schema_version: typeof PREFERENCE_SCHEMA; exported_at: string; preferences: Record<string, Preference>; optional_omissions?: string[]; discovered_answers?: Record<string, DiscoveredAnswer>; job_titles?: string[]; professional_titles?: string[]; require_document_review?: boolean };
+export type Preferences = { schema_version: typeof PREFERENCE_SCHEMA; exported_at: string; preferences: Record<string, Preference>; optional_omissions?: string[]; discovered_answers?: Record<string, DiscoveredAnswer>; job_titles?: string[]; professional_titles?: string[]; require_document_review?: boolean; vpn_recovery_assist_enabled?: boolean };
 export const questions = taxonomy.questions;
-export const emptyPreferences = (): Preferences => ({ schema_version: PREFERENCE_SCHEMA, exported_at: new Date().toISOString(), preferences: {} });
+export const emptyPreferences = (): Preferences => ({ schema_version: PREFERENCE_SCHEMA, exported_at: new Date().toISOString(), preferences: {}, vpn_recovery_assist_enabled: true });
 
 export function parsePreferences(input: unknown): Preferences | null {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
@@ -19,6 +19,10 @@ export function parsePreferences(input: unknown): Preferences | null {
   const clean = emptyPreferences();
   if (data.optional_omissions) clean.optional_omissions = [...new Set(data.optional_omissions)];
   clean.exported_at = data.exported_at;
+  if (data.vpn_recovery_assist_enabled !== undefined) {
+    if (typeof data.vpn_recovery_assist_enabled !== 'boolean') return null;
+    clean.vpn_recovery_assist_enabled = data.vpn_recovery_assist_enabled;
+  }
   if (data.require_document_review !== undefined) {
     if (typeof data.require_document_review !== 'boolean') return null;
     clean.require_document_review = data.require_document_review;

@@ -516,7 +516,7 @@ function AppShell({ children, profile }: { children: ReactNode; profile: Profile
     <div className="shell-grain min-h-[100dvh] bg-background">
       <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border/80 bg-background/95 px-4 backdrop-blur-md lg:hidden">
         <Link href="/" className="flex items-center gap-2.5" data-testid="link-mobile-logo">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-sm font-extrabold text-primary-foreground">E</span>
+          <img src="/escapehatch-mascot.webp" alt="" aria-hidden="true" width={32} height={32} decoding="async" className="h-8 w-8 shrink-0 object-contain" data-testid="image-mobile-mascot" />
           <span className="font-display text-xl">EscapeHatch</span>
         </Link>
         <button type="button" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle navigation" data-testid="button-toggle-nav" className="rounded-lg p-2 hover:bg-secondary"><Menu size={21} /></button>
@@ -524,7 +524,7 @@ function AppShell({ children, profile }: { children: ReactNode; profile: Profile
       {menuOpen && <div className="fixed inset-x-0 top-16 z-30 border-b border-border bg-card p-3 shadow-md lg:hidden">{nav.map(({ href, label, icon: Icon }) => <Link key={href} href={href} onClick={() => setMenuOpen(false)} data-testid={`link-mobile-${label.toLowerCase().replaceAll(' ', '-')}`} className={`flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-bold ${location === href ? 'bg-secondary text-primary' : 'text-muted-foreground'}`}><Icon size={17} />{label}</Link>)}</div>}
       <aside className="fixed inset-y-0 left-0 hidden w-[244px] flex-col border-r border-border bg-card/55 px-5 py-6 lg:flex">
         <Link href="/" className="flex items-center gap-3 px-2" data-testid="link-sidebar-logo">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary font-extrabold text-primary-foreground">E</span>
+          <img src="/escapehatch-mascot.webp" alt="" aria-hidden="true" width={36} height={36} decoding="async" className="h-9 w-9 shrink-0 object-contain" data-testid="image-sidebar-mascot" />
           <span className="font-display text-[22px]">EscapeHatch</span>
         </Link>
         <p className="mt-2 px-2 font-mono-app text-[9px] uppercase tracking-[.16em] text-muted-foreground">your application cockpit</p>

@@ -64,4 +64,7 @@ test('mobile tutorial remains available and chick sound never auto-plays', async
   await page.getByTestId('button-mascot-puzzle').click();
   await expect(page.getByTestId('mascot-tutorial-overlay')).toBeVisible();
   await expect(page.getByTestId('mascot-overlay-avatar')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.getByTestId('button-mascot-chirp').click();
+  await expect.poll(() => page.evaluate(() => (window as typeof window & { __chirpCreated?: number }).__chirpCreated ?? 0)).toBe(1);
 });

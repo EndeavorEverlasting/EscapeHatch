@@ -109,6 +109,7 @@ test('divergent browser state is preserved and normal dashboard is held', async 
 test('missing context opens recovery with actionable import, not a zero dashboard', async ({ page }) => {
   await page.route('**/__escapehatch/workspace', route => route.fulfill({ json: { managed: true, revision: null, workspace: null, state: 'NEEDS_CONTEXT', message: 'Choose your existing local backup.' } }));
   await page.goto('/');
+  await expect(page.getByTestId('synthetic-workspace-warning')).toContainText('disposable sample data');
   await expect(page.getByRole('heading', { name: 'Bring your work with you.' })).toBeVisible();
   await expect(page.getByLabel('Import local workspace')).toBeVisible();
   await expect(page.getByRole('heading', { name: /Make room for momentum|Keep going,/ })).not.toBeVisible();

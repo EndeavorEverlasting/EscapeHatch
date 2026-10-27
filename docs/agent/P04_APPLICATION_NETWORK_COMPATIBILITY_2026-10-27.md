@@ -1,9 +1,9 @@
 # P04 / Trifecta / P11 — Application network and email verification recovery
 
-**Date:** 2026-10-27  
-**Parent:** [Application Assist issue #69](https://github.com/EndeavorEverlasting/EscapeHatch/issues/69) and `docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md`.  
-**Scope:** Browser compatibility recovery and guarded restoration, not login bypass, protected attestations, or automated final Submit.  
-**Evidence boundary:** Only synthetic test values in the public repository. User job submissions, email addresses, VPN account details, screenshots and interview deadlines stay private.  
+**Date:** 2026-10-27
+**Parent:** [Application Assist issue #69](https://github.com/EndeavorEverlasting/EscapeHatch/issues/69) and `docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md`.
+**Scope:** Browser compatibility recovery and guarded restoration, not login bypass, protected attestations, or automated final Submit.
+**Evidence boundary:** Only synthetic test values in the public repository. User job submissions, email addresses, VPN account details, screenshots and interview deadlines stay private.
 **Routing:** TokenCorridor P04 (factoring), trifecta P08 → P82 → P07, and P11 offline validation.
 
 ## Preserved design decisions

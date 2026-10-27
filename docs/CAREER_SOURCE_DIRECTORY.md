@@ -25,4 +25,37 @@ Support selectable local directories, synchronized cloud folders and provider-na
 
 ## Current proof ceiling
 
-Source registry implementation and tests are in this branch. Local ATS, UI integration, authenticated Drive imports and Windows P08 certification are NOT yet proven. Preserve parallel worktrees/PRs, fail closed and report CHANGED | PROVED | BLOCKED | NEXT.
+The source registry and selected-PDF connector-export ingress have synthetic coverage. The document UI previews saved snapshots and exposes an explicit refresh action. This does not certify native Drive OAuth, a Drive picker, automatic folder ingestion, or generalized end-to-end application readiness. Each actual connected read, private import, UI review and employer attachment requires its own runtime evidence. Preserve parallel worktrees/PRs and keep final submission manual.
+
+## Selected PDF ingress and early review
+
+`artifacts/escape-hatch/import-context.ts` extends the existing `import:context` entrypoint with `document`. It stages a selected PDF into the existing `OpportunityDocumentStore`; it does not create a competing résumé library or import career facts. This is a connected-agent export path, not native EscapeHatch Google authorization. An authorized connector may list candidate résumés and present their source links for early review while the agent prepares the rest of an application. Discovery, operator approval, private staging, and employer attachment are separate evidence events.
+
+For a Drive file, read provider metadata and fetch actual PDF bytes using the existing authorized connector. For a native Google Doc, export the selected revision as PDF, then have the operator review that exported PDF. Never treat approval of mutable source text as approval of a later rendered export. Do not persist credential files, signed download URLs, or provider tokens. For local intake, use the existing chooser/drop area or the same ingress command with `source.provider=local`.
+
+The agent creates a **private**, non-repository JSON export with this shape (synthetic example):
+
+```json
+{
+  "opportunityId": "saved-opportunity-id",
+  "url": "https://jobs.example.test/role/apply",
+  "kind": "resume",
+  "name": "review-candidate.pdf",
+  "filePath": "C:/private/review-candidate.pdf",
+  "expectedSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "expectedPreviousSha256": null,
+  "source": {
+    "provider": "google_drive",
+    "fileId": "selected_provider_file_id",
+    "modifiedTime": "2026-01-01T00:00:00Z"
+  }
+}
+```
+
+Resolve `opportunityId` and the application URL from the user's existing saved opportunity. Compute `expectedSha256` from the exact materialized PDF bytes; never copy the synthetic digest. Use `expectedPreviousSha256=null` for an empty slot; replacement requires the currently stored digest. A repeat import of identical bytes is idempotent. Local sources use exactly `{"provider":"local"}`. Drive origin is recorded connector-export metadata, not independent certification by the importer.
+
+From `artifacts/escape-hatch`, execute `npm run import:context -- document <absolute-private-export.json>`. Nonzero exit means import failed; original package contents remain. The command prints no private contents. Its stable destination is the existing Windows-account data root; test runs must set `ESCAPEHATCH_DATA_HOME` to disposable state. Shared per-opportunity write locks follow the existing workspace SQLite lock pattern, reject overlapping CLI/UI mutations, and release on process exit without manual lock-file cleanup.
+
+Select the saved opportunity in Application Assist, choose **Refresh saved documents**, preview the saved PDF, then confirm **I reviewed this résumé**. This can happen before opening the employer form. Source links open mutable Drive originals; the preview serves hash-verified staged bytes. Changing the bytes clears prior review; switching opportunities never carries approval to another package. CLI ingress never records approval, changes the review policy, fills the form or activates Submit. After employer attachment, verify the actual filename and acceptance indicator independently.
+
+Native in-app Drive browsing/account consent, automatic provider freshness polling, and a cross-opportunity approval library remain unimplemented. A source locator or a successful connected read alone does not prove those capabilities.

@@ -5,6 +5,13 @@ Product identity is owned by `VERSION`. Exact freshness is the Git commit (and a
 
 Schema/protocol versions (`escapehatch-*/vN`, contract `version` integers) are independent and are not product releases.
 
+## [1.2.0]
+
+### Added
+
+- Import selected local or connected-Drive PDF snapshots through the existing private document review package.
+- Show recorded Drive origin separately from the saved PDF and refresh externally imported documents before review.
+
 ## [1.1.1]
 
 ### Fixed

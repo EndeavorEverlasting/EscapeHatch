@@ -45,7 +45,7 @@ test('tampered private document bytes cannot reuse a review confirmation', async
   try {
     const value = await store.stage(id, url, 'resume', pdf('resume.pdf', 'source'));
     await store.review(id, url, 'resume', value.documents.resume!.sha256);
-    const [directory] = await fs.readdir(root);
+    const [directory] = (await fs.readdir(root, { withFileTypes: true })).filter(entry => entry.isDirectory()).map(entry => entry.name);
     await fs.writeFile(path.join(root, directory, value.documents.resume!.sha256 + '.pdf'), '%PDF-mutated');
     await assert.rejects(store.forUpload(id, url, false), /content changed/);
   } finally { await fs.rm(root, { recursive: true, force: true }); }

@@ -1,11 +1,25 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
+import { DatabaseSync } from 'node:sqlite';
 import { userDataRoot, legacyPrivateRoots } from './user-data.ts';
 
 export type DocumentKind = 'resume' | 'cover';
 export type PrivatePdf = { name: string; mimeType: 'application/pdf'; buffer: Buffer };
-export type DocumentRecord = { name: string; sha256: string; size: number; reviewedAt?: string };
+export type DocumentSource = { provider: 'local' } | { provider: 'google_drive'; fileId: string; modifiedTime: string };
+export type DocumentRecord = { name: string; sha256: string; size: number; reviewedAt?: string; source?: DocumentSource };
+/** Provider facts arrive through an authorized connector, never an arbitrary download URL. */
+export function parseDocumentSource(value: unknown): DocumentSource {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid document source.');
+  const item = value as Record<string, unknown>;
+  if (item.provider === 'local' && Object.keys(item).length === 1) return { provider: 'local' };
+  if (item.provider === 'google_drive' && Object.keys(item).sort().join(',') === 'fileId,modifiedTime,provider' &&
+      typeof item.fileId === 'string' && /^[A-Za-z0-9_-]{10,200}$/.test(item.fileId) &&
+      typeof item.modifiedTime === 'string' && Number.isFinite(Date.parse(item.modifiedTime)) && Date.parse(item.modifiedTime) <= Date.now() + 60000) {
+    return { provider: 'google_drive', fileId: item.fileId, modifiedTime: item.modifiedTime };
+  }
+  throw new Error('Invalid document source.');
+}
 export type DocumentPackage = { schema: 'escapehatch/opportunity-documents/v1'; opportunityId: string; url: string; documents: Partial<Record<DocumentKind, DocumentRecord>> };
 const defaultRoot = () => path.join(userDataRoot(), 'opportunity-documents');
 export function documentScope(opportunityId: unknown, url: unknown) {
@@ -19,6 +33,17 @@ export class OpportunityDocumentStore {
   private migrateLegacy: boolean;
   constructor(root?: string) { this.root = root ?? defaultRoot(); this.migrateLegacy = root === undefined; }
   private directory(id: string, url: string) { return path.join(this.root, createHash('sha256').update(JSON.stringify(documentScope(id, url))).digest('hex')); }
+  private async mutate<T>(id: string, url: string, action: () => Promise<T>): Promise<T> {
+    const directory = this.directory(id, url);
+    await fs.mkdir(this.root, { recursive: true });
+    // Same OS-backed lock pattern as workspace-file.ts. Keep it beside the
+    // package so legacy migration can still atomically create the directory.
+    const lock = new DatabaseSync(directory + '.lock.sqlite');
+    try { lock.exec('PRAGMA busy_timeout=0; BEGIN IMMEDIATE'); }
+    catch { lock.close(); throw new Error('Document package is busy. Retry after the other document action finishes.'); }
+    try { return await action(); }
+    finally { try { lock.exec('ROLLBACK'); } finally { lock.close(); } }
+  }
   async read(id: string, url: string): Promise<DocumentPackage> {
     const scope = documentScope(id, url);
     if (this.migrateLegacy) await migrateLegacyDocumentPackage(this.root, legacyPrivateRoots().map(root => path.join(root, 'opportunity-documents')), id, url);
@@ -28,6 +53,7 @@ export class OpportunityDocumentStore {
       for (const kind of ['resume', 'cover'] as const) {
         const item = raw.documents[kind];
         if (item && (!/^[a-f0-9]{64}$/.test(item.sha256) || typeof item.name !== 'string' || !Number.isInteger(item.size) || item.size <= 0 || item.size > 5 * 1024 * 1024 || (item.reviewedAt !== undefined && Number.isNaN(Date.parse(item.reviewedAt))))) throw new Error();
+        if (item?.source) parseDocumentSource(item.source);
       }
       return raw;
     } catch (error) {
@@ -42,13 +68,18 @@ export class OpportunityDocumentStore {
     try { await fs.writeFile(temp, JSON.stringify(value), { flag: 'wx', mode: 0o600 }); await fs.rename(temp, path.join(directory, 'manifest.json')); }
     finally { await fs.rm(temp, { force: true }); }
   }
-  async stage(id: string, url: string, kind: DocumentKind, file: PrivatePdf) {
+  async stage(id: string, url: string, kind: DocumentKind, file: PrivatePdf, source: DocumentSource = { provider: 'local' }, expectedPreviousSha256?: string | null): Promise<DocumentPackage> {
+    return this.mutate(id, url, () => this.stageUnlocked(id, url, kind, file, source, expectedPreviousSha256));
+  }
+  private async stageUnlocked(id: string, url: string, kind: DocumentKind, file: PrivatePdf, source: DocumentSource, expectedPreviousSha256?: string | null) {
+    const verifiedSource = parseDocumentSource(source);
     if (!['resume', 'cover'].includes(kind) || file.buffer.subarray(0, 5).toString('ascii') !== '%PDF-' || file.buffer.length > 5 * 1024 * 1024 || !/^[A-Za-z0-9_. -]{1,120}\.pdf$/i.test(file.name)) throw new Error('Invalid document.');
     const value = await this.read(id, url), sha256 = createHash('sha256').update(file.buffer).digest('hex');
+    const prior = value.documents[kind];
+    if (expectedPreviousSha256 !== undefined && (prior?.sha256 ?? null) !== expectedPreviousSha256 && prior?.sha256 !== sha256) throw new Error('Document package changed. Review the current selection before replacing it.');
     const directory = this.directory(id, url); await fs.mkdir(directory, { recursive: true });
     await fs.writeFile(path.join(directory, sha256 + '.pdf'), file.buffer, { mode: 0o600 });
-    const prior = value.documents[kind];
-    value.documents[kind] = { name: file.name, sha256, size: file.buffer.length, ...(prior?.sha256 === sha256 && prior.reviewedAt ? { reviewedAt: prior.reviewedAt } : {}) };
+    value.documents[kind] = { name: file.name, sha256, size: file.buffer.length, source: verifiedSource, ...(prior?.sha256 === sha256 && prior.reviewedAt ? { reviewedAt: prior.reviewedAt } : {}) };
     await this.write(value); return value;
   }
   async file(id: string, url: string, kind: DocumentKind): Promise<PrivatePdf | null> {
@@ -59,6 +90,9 @@ export class OpportunityDocumentStore {
     return { name: record.name, mimeType: 'application/pdf', buffer };
   }
   async review(id: string, url: string, kind: DocumentKind, sha256: unknown) {
+    return this.mutate(id, url, () => this.reviewUnlocked(id, url, kind, sha256));
+  }
+  private async reviewUnlocked(id: string, url: string, kind: DocumentKind, sha256: unknown) {
     const value = await this.read(id, url), record = value.documents[kind];
     if (!record || record.sha256 !== sha256) throw new Error('The document changed. Review the current version.');
     await this.file(id, url, kind);

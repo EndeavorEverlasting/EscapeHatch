@@ -27,14 +27,29 @@ export async function inspectApplicationRequirements(page: Page, opportunityId: 
         (!visible(control) && !(type === 'file' && visibleFileLabel))) return [];
       const labels = native ? Array.from(control.labels || []).map(label => label.textContent?.trim() || '').join(' ') : '';
       const labelledBy = (control.getAttribute('aria-labelledby') || '').split(/\s+/).map(id => document.getElementById(id)?.textContent || '').join(' ').trim();
-      const label = (control.getAttribute('aria-label') || labelledBy || labels || control.getAttribute('placeholder') || 'Unlabelled field').replace(/\s+/g, ' ').slice(0, 240);
+      // Asterisk-based labels are an employer-facing required signal even when
+      // native HTML validation and aria-required are absent (common in Lever/SPA forms).
+      // Radios often carry only an option label: use their fieldset/role-group prompt.
+      const group = control.closest('fieldset, [role="group"], [role="radiogroup"]');
+      const groupLabel = (group?.querySelector('legend, [aria-label], [class*="question-label"]')?.textContent || group?.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim().slice(0, 240);
+      const prompt = control.getAttribute('aria-label') || labelledBy || (groupLabel || labels) || control.getAttribute('placeholder') || 'Unlabelled field';
+      const label = prompt.replace(/\s+/g, ' ').slice(0, 240);
       const ariaRequired = control.getAttribute('aria-required');
-      const requirement = (native && control.required || ariaRequired === 'true') ? 'required' as const :
-        (ariaRequired === 'false' || native && !/\*|\brequired\b/i.test(label)) ? 'optional' as const : 'unknown' as const;
+      const explicitRequired = Boolean(native && control.required || ariaRequired === 'true');
+      const indicatedRequired = /\*|\brequired\b/i.test([label, labels, groupLabel].join(' '));
+      // Prefer a false positive requiring review to silently losing a marked requirement.
+      const requirement = explicitRequired || indicatedRequired ? 'required' as const :
+        ariaRequired === 'false' || native ? 'optional' as const : 'unknown' as const;
       // A value is not evidence of approval. Native validity is only a current-page observation.
       const radioSelected = type === 'radio' && control instanceof HTMLInputElement && Boolean(control.name) &&
         Array.from(document.getElementsByName(control.name)).some(item => item instanceof HTMLInputElement && item.type === 'radio' && item.checked && item.form === control.form && item.getRootNode() === control.getRootNode());
-      const populated = native ? (type === 'checkbox' || type === 'radio' ? (control as HTMLInputElement).checked || radioSelected : Boolean(control.value.trim())) && control.validity.valid : false;
+      const peers = group && (type === 'radio' || type === 'checkbox') ?
+        Array.from(group.querySelectorAll('input[type="radio"], input[type="checkbox"]')) as HTMLInputElement[] : [];
+      const groupSelected = peers.some(peer => peer.checked && !peer.disabled);
+      const populated = native ? (type === 'checkbox' || type === 'radio' ?
+        ((control as HTMLInputElement).checked || radioSelected || (!explicitRequired && indicatedRequired && groupSelected)) :
+        (type === 'file' ? (control as HTMLInputElement).files?.length! > 0 : Boolean(control.value.trim()))) &&
+        control.validity.valid : false;
       const isFile = type === 'file';
       const resume = /r[ée]sum[ée]|\bcv\b/i.test(label), cover = /cover\s*(letter|note)?/i.test(label);
       const kind = isFile ? (resume && !cover ? 'resume' as const : cover && !resume ? 'cover' as const : 'file' as const) : 'question' as const;

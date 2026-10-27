@@ -35,10 +35,11 @@ export function WorkspaceStartup({ children }: { children: ReactNode }) {
       if (latest.ok && confirmation.ok) {
         const latestState = await latest.json() as BootstrapResponse;
         const observed = await confirmation.json() as { listeners?: { receipts?: unknown[] } };
+        const localBefore = readBrowserWorkspace(localStorage);
         const merged = mergeConfirmedReceiptWorkspace(
           savedAtRevision.current,
           parseSavedWorkspace(latestState.workspace),
-          readBrowserWorkspace(localStorage),
+          localBefore,
           observed.listeners?.receipts || [],
         );
         if (merged && latestState.revision !== null) {
@@ -49,7 +50,7 @@ export function WorkspaceStartup({ children }: { children: ReactNode }) {
             // Update only the receipt-enriched queue, keeping the latest browser
             // profile/answers and deferring React state updates to the receipt poll.
             const afterBrowser = readBrowserWorkspace(localStorage);
-            if (JSON.stringify(afterBrowser) === JSON.stringify(merged)) {
+            if (JSON.stringify(afterBrowser) === JSON.stringify(localBefore)) {
               localStorage.setItem(APPLICATIONS_KEY, JSON.stringify(merged.values[APPLICATIONS_KEY] || []));
             }
           }

@@ -7,7 +7,7 @@ import { createTrackerSnapshotFromValues } from './tracker-refresh.ts';
 import { trackerOpportunityId } from './src/lib/tracker-bridge.ts';
 import { emptyProfile, APPLICATIONS_KEY, PROFILE_KEY } from './src/lib/storage.ts';
 import { saveWorkspace, readWorkspace } from './workspace-file.ts';
-import { mergeConfirmedReceiptWorkspace, WORKSPACE_SCHEMA } from './src/lib/workspace-bootstrap.ts';
+import { mergeConfirmedReceiptWorkspace, WORKSPACE_SCHEMA, type SavedWorkspace } from './src/lib/workspace-bootstrap.ts';
 import { reconcileSubmissionReceipts } from './src/lib/submission-reconciliation.ts';
 import { enqueueSubmissionSync, retrySubmissionSync, readSubmissionSyncStatus, planSubmissionWrite } from './tracker-writeback.ts';
 
@@ -62,13 +62,13 @@ test('workspace collision recovery accepts only a confirmed receipt delta and ke
   const r = receipt();
   const app = { id: r.opportunityId, company: 'Synthetic', role: 'Role', url, status: 'preparing' as const,
     priority: 'normal' as const, notes: 'original', nextAction: 'review', updatedAt: '2026-01-01' };
-  const base = { schema: WORKSPACE_SCHEMA, values: { [PROFILE_KEY]: emptyProfile, [APPLICATIONS_KEY]: [app] } };
+  const base: SavedWorkspace = { schema: WORKSPACE_SCHEMA, values: { [PROFILE_KEY]: emptyProfile, [APPLICATIONS_KEY]: [app] } };
   const remote = { schema: WORKSPACE_SCHEMA, values: { ...base.values, [APPLICATIONS_KEY]: reconcileSubmissionReceipts([app], [r]) } };
   const browser = { schema: WORKSPACE_SCHEMA, values: { ...base.values,
     [PROFILE_KEY]: { ...emptyProfile, first_name: 'BrowserEdit' },
     [APPLICATIONS_KEY]: [{ ...app, notes: 'browser notes', updatedAt: '2026-01-01' }] } };
   const merged = mergeConfirmedReceiptWorkspace(base, remote, browser, [r]);
-  assert.equal(merged?.values[PROFILE_KEY]?.first_name, 'BrowserEdit');
+  assert.equal((merged?.values[PROFILE_KEY] as typeof emptyProfile | undefined)?.first_name, 'BrowserEdit');
   const applications = merged?.values[APPLICATIONS_KEY] as typeof app[];
   assert.equal(applications[0].status, 'applied');
   assert.equal(applications[0].notes, 'browser notes');

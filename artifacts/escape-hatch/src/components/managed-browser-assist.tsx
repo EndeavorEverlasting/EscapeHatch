@@ -248,7 +248,9 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   }, [browserOpen, currentPage?.opportunityId, currentPage?.applicationUrl, applications]);
 
   useEffect(() => {
-    if (!browserOpen) return;
+    // Keep the listener/runtime and outbox observable even after Chrome closes.
+    // A closed tab must not freeze the last displayed sync result.
+    if (!runtimeChecked) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
     async function observe() {
@@ -269,13 +271,13 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
             setPreferencesRefresh(value => value + 1);
           }
         }
-        if (!result.browserOpen) { setBrowserOpen(false); return; }
+        setBrowserOpen(Boolean(result.browserOpen));
       } catch { if (!cancelled) { setCurrentPage(null); setListenerConnected(false); setListenerStatus(undefined); setTrackerSync(undefined); setRecordingMessage('Listener connection interrupted. No submission is assumed.'); } }
-      if (!cancelled) timer = setTimeout(observe, 1500);
+      if (!cancelled) timer = setTimeout(observe, browserOpen ? 1500 : 5000);
     }
     void observe();
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [browserOpen, setApplications]);
+  }, [browserOpen, runtimeChecked, setApplications]);
 
   async function updateListeners(change: { recordAnswers?: boolean; trackSubmission?: boolean }) {
     try {

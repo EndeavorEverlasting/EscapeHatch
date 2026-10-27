@@ -109,6 +109,16 @@ Runtime state and bounded logs are user-local and untracked:
 - receipt: `%LOCALAPPDATA%\EscapeHatch\runtime\<repoFingerprint>\runtime.json`
 - logs: `%LOCALAPPDATA%\EscapeHatch\logs\<repoFingerprint>\`
 
+Managed employer Chrome profiles live under the canonical user-data root at
+`managed-career-browser-origins/<loopback-port>/`. The profile stays stable across
+restarts and checkout upgrades on the same app origin; a different runtime port gets
+its own profile. `ESCAPEHATCH_DATA_HOME` also isolates these profiles for tests.
+The previous shared `managed-career-browser` profile is preserved, never copied,
+attached to, or terminated during this change. Existing sessions in that legacy
+profile remain there; the first launch from an origin-scoped profile can require
+employer sign-in again. Do not delete Chrome lock files or stop another runtime to
+recover a session. The protected 21033 browser is outside production recovery scope.
+
 The receipt contains the per-instance shutdown token. Do not copy it into tickets, chat, screenshots, repository files, or logs.
 
 ## Optional configuration

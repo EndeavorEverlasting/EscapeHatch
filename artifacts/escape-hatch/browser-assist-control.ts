@@ -7,13 +7,14 @@ import { ManagedListeners } from './managed-listeners.ts';
 import { withCareerPreferences } from './career-preferences.ts';
 import { captureMilitaryAnswers } from './managed-form.ts';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { homedir, networkInterfaces } from 'node:os';
+import { networkInterfaces } from 'node:os';
 import { diagnoseNavigationFailure, type NavigationDiagnosis } from './network-navigation-diagnosis.ts';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { chromium, type BrowserContext, type Page } from '@playwright/test';
 import type { Plugin } from 'vite';
 import { isLoopbackAddress, readManagedRuntime } from './runtime-control.ts';
+import { userDataRoot } from './user-data.ts';
 import { readPreferences, updatePreferences, clearPreferences, mergePreferenceEdits } from './preference-file.ts';
 import { fillSavedPreferences, openApplicationForm } from './managed-form.ts';
 import { emptyPreferences } from './src/lib/application-preferences.ts';
@@ -45,6 +46,17 @@ const FIELDS = [
   ['region', ['address-level1'], ['state', 'region']],
   ['postal_code', ['postal-code'], ['postalCode', 'postal_code', 'zip']],
 ] as const;
+
+/** Keep employer sessions stable for one app origin, without sharing Chrome locks
+ * with another runtime. Never migrate or take over the legacy shared profile. */
+export function managedBrowserProfileDirectory(origin: string, env: NodeJS.ProcessEnv = process.env): string {
+  const url = new URL(origin);
+  if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || !url.port ||
+      url.origin !== origin || Number(url.port) < 1024) {
+    throw new Error('Managed browser profile requires a loopback application origin.');
+  }
+  return path.join(userDataRoot(env), 'managed-career-browser-origins', url.port);
+}
 
 function respond(res: ServerResponse, code: number, value: object) {
   res.statusCode = code;
@@ -389,7 +401,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             trustedReturnPath = null;
             networkDiagnosis = null;
             if (!context) {
-              const folder = path.join(process.env.LOCALAPPDATA || path.join(homedir(), 'AppData', 'Local'), 'EscapeHatch', 'managed-career-browser');
+              const folder = managedBrowserProfileDirectory(expectedOrigin);
               await fs.mkdir(folder, { recursive: true });
               context = await chromium.launchPersistentContext(folder, {
                 channel: 'chrome', headless: false, acceptDownloads: false, viewport: null,

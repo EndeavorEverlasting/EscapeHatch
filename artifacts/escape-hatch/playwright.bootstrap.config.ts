@@ -26,9 +26,10 @@ export default defineConfig({
   use: { baseURL: 'http://127.0.0.1:21039', headless: true, launchOptions: process.platform === 'win32' ? { channel: 'chrome' } : {} },
   webServer: ['21039', '21040'].map(port => ({
     command: 'npm run dev -- --host 127.0.0.1', url: `http://127.0.0.1:${port}/`, reuseExistingServer: false,
-    env: { PORT: port, ESCAPEHATCH_DATA_HOME: dataHome, ESCAPEHATCH_PREFERENCES_FILE: path.join(dataHome, 'preferences.json'),
+    env: { PORT: port, LOCALAPPDATA: dataHome, ESCAPEHATCH_DATA_HOME: dataHome, ESCAPEHATCH_ALLOW_SYNTHETIC_ATS: '0', ESCAPEHATCH_PREFERENCES_FILE: path.join(dataHome, 'preferences.json'),
       ESCAPEHATCH_TRACKER_SNAPSHOT: path.join(dataHome, 'tracker.json'),
       ESCAPEHATCH_INSTANCE_ID: `bootstrap-proof-${port}`, ESCAPEHATCH_REPO_FINGERPRINT: 'b'.repeat(64),
-      ESCAPEHATCH_SHUTDOWN_TOKEN: 'synthetic-test-only', ESCAPEHATCH_STARTED_AT_UTC: new Date().toISOString() },
+      ESCAPEHATCH_SHUTDOWN_TOKEN: 'synthetic-test-only', ESCAPEHATCH_STARTED_AT_UTC: new Date().toISOString(),
+      VITE_ESCAPEHATCH_SYNTHETIC_TEST_WORKSPACE: '1' },
   })),
 });

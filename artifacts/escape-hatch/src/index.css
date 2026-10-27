@@ -131,3 +131,13 @@
   .application-puzzle .document-slot { padding: 0; border: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .artifact-dropzone { transition: none; } }
+
+/* Contextual mascot: a speech-card accent with motion only on direct pointer interaction. */
+.mascot-guidance { background-image: radial-gradient(circle at 6rem 2.5rem, hsl(var(--primary) / .09), transparent 18rem); }
+@media (prefers-reduced-motion: no-preference) {
+  .mascot-guidance-art { transition: transform 180ms ease-out; }
+  .mascot-guidance-art:hover { transform: translateY(-3px) rotate(-2deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mascot-guidance-art { animation: none; transition: none; }
+}

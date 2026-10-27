@@ -41,7 +41,7 @@ export async function inspectApplicationRequirements(page: Page, opportunityId: 
         /^(true|required)$/i.test(node?.getAttribute('data-required') || '') ||
         Boolean(node?.getAttribute('data-val-required')));
       const cssRequiredMark = labelElements.some(node => ['::before', '::after'].some(pseudo =>
-        /^['"]?\\*['"]?$/.test(getComputedStyle(node, pseudo).content.replace(/\\s/g, ''))));
+        /^['"]?\*['"]?$/.test(getComputedStyle(node, pseudo).content.replace(/\s/g, ''))));
       const explicitRequired = Boolean(native && control.required || ariaRequired === 'true' || requiredAttribute);
       const indicatedRequired = /\*|\brequired\b/i.test([label, labels, groupLabel].join(' ')) || cssRequiredMark;
       // Prefer a false positive requiring review to silently losing a marked requirement.

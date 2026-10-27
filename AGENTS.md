@@ -154,3 +154,6 @@ specific recovery action and remain unproven until resolved. Use available autho
 recover existing artifacts; never ask the user to reconstruct discoverable context or create new OAuth
 credentials by default. Keep private data and source identities outside Git. Uninstall preserves user
 state and external artifacts; erasure requires a separate explicit user request.
+
+
+**P94 operator-first recovery route:** If startup opens synthetic/sample identity, answers or opportunities appear missing, or the operator cannot begin a real job application, immediately execute `docs/agent/APPLICATION_JOURNEY_SCENE_SYSTEM_2026-10-25.md` §9.8 on the actual installed Windows host. Resolve installation-selected source and real-vs-fixture process/data ownership, repair the first proven gate, and supply the usable existing Applications → Assist → employer-browser path. Synthetic tests and GitHub merges are not the operator's live acceptance. Protect 21033 and all private data; do not ask the operator to retest sample accounts or re-enter answers.

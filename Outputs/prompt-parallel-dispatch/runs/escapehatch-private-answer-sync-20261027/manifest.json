@@ -1,0 +1,482 @@
+{
+  "schema_version": "prompt-parallel-dispatch/v1",
+  "run_id": "escapehatch-private-answer-sync-20261027",
+  "repository": "EndeavorEverlasting/EscapeHatch",
+  "plan_owner": "docs/agent/P04_PRIVATE_APPLICATION_ANSWER_SYNC_2026-10-27.md",
+  "authorization": {
+    "disposition": "P04_PLAN_DURABLE",
+    "implementation_dispatch_performed": false,
+    "reason": "No installed Windows host/runtime or independent local agent adapter is available in this ChatGPT provider runtime; repository changes were limited to this plan and manifest."
+  },
+  "base_ref": {
+    "provider_default_branch": "main",
+    "provider_default_head": "43de6758806539394787e409eb0a49ce5f2cc463",
+    "planning_branch": "plan/p04-private-answer-sync-20261027",
+    "freshness": "GITHUB_PROVIDER_OBSERVED_2026-10-27"
+  },
+  "graph": {
+    "expression": "EH-S0 -> {EH-S1 || EH-S2 || EH-S3} -> {EH-S4 || EH-S5} -> EH-S6",
+    "initial_width_after_foundation": 3,
+    "max_width": 3,
+    "parallel_disposition": "REQUIRED_AFTER_EH_S0_AND_ADAPTER_PROOF"
+  },
+  "status": "PLAN_PERSISTED_NOT_DISPATCHED_RUNNER_UNAVAILABLE",
+  "blockers": [
+    "Local Windows/worktree/process 21033 unavailable to this provider runtime",
+    "Local independent worker adapter not verified; P04 manifest runner/validator is absent from current EscapeHatch main",
+    "Cloud authorization and private source revision must be confirmed by installed application",
+    "No automatic submit or consent permission"
+  ],
+  "autonomy_gap": "On the installed host, inspect TokenCorridor's verified dispatch tooling; if available, validate this manifest and dispatch dependency-ready isolated writers. Preserve current worktrees.",
+  "convergence_owner": "EH-S6",
+  "lanes": [
+    {
+      "lane_id": "EH-S0",
+      "wave": 0,
+      "mission": "Extend canonical private preference record with revision/approval/scope semantics without competing profile store.",
+      "dependencies": [],
+      "owned_mutation_surfaces": [
+        "harness/contracts/application-preference-cache.v1.json",
+        "artifacts/escape-hatch/src/lib/application-preferences.ts",
+        "focused backward compatibility tests"
+      ],
+      "forbidden_surfaces": [
+        "real applicant answers in public Git or CI",
+        "synthetic identity in live employer form",
+        "final submit, consent, EEO or protected attestations",
+        "dirty or separately owned worktrees"
+      ],
+      "posture": "isolated writer",
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "github_repo_access"
+      ],
+      "required_capabilities": [
+        "isolated_worktree",
+        "node_or_python_tests"
+      ],
+      "evidence_inputs": [
+        {
+          "type": "repository_ref",
+          "owner": "EndeavorEverlasting/EscapeHatch",
+          "ref": "main",
+          "freshness": "refresh_before_mutation"
+        },
+        {
+          "type": "contract",
+          "owner": "EndeavorEverlasting/EscapeHatch",
+          "ref": "docs/agent/P04_PRIVATE_APPLICATION_ANSWER_SYNC_2026-10-27.md",
+          "freshness": "current_plan_branch"
+        }
+      ],
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2,
+        "availability": "UNVERIFIED_IN_CURRENT_CHAT_RUNTIME"
+      },
+      "launch": {
+        "mode": "argv",
+        "command": "python",
+        "args": [
+          "scripts/validate_application_autofill_parent.py"
+        ],
+        "notes": "PRECHECK_ONLY_NOT_IMPLEMENTATION; local owner resolves actual agent launcher before dispatch"
+      },
+      "expected_artifacts": [
+        "EH-S0 scoped code/tests and evidence receipt"
+      ],
+      "validation": [
+        "python scripts/validate_application_autofill_parent.py",
+        "npm run test:managed-assist"
+      ],
+      "convergence_owner": "EH-S6",
+      "status": "WAITING_IMPLEMENTATION_HOST"
+    },
+    {
+      "lane_id": "EH-S1",
+      "wave": 1,
+      "mission": "Implement exact authorized account-bound cloud read/write, ETags, auth/revoke and offline statuses.",
+      "dependencies": [
+        "EH-S0"
+      ],
+      "owned_mutation_surfaces": [
+        "new private Google Drive sync transport module",
+        "focused adapter tests"
+      ],
+      "forbidden_surfaces": [
+        "real applicant answers in public Git or CI",
+        "synthetic identity in live employer form",
+        "final submit, consent, EEO or protected attestations",
+        "dirty or separately owned worktrees"
+      ],
+      "posture": "isolated writer",
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "google_drive_scoped_user_connection"
+      ],
+      "required_capabilities": [
+        "authenticated_drive_file_read_write",
+        "revision_compare_and_swap"
+      ],
+      "evidence_inputs": [
+        {
+          "type": "repository_ref",
+          "owner": "EndeavorEverlasting/EscapeHatch",
+          "ref": "main",
+          "freshness": "refresh_before_mutation"
+        },
+        {
+          "type": "contract",
+          "owner": "EndeavorEverlasting/EscapeHatch",
+          "ref": "docs/agent/P04_PRIVATE_APPLICATION_ANSWER_SYNC_2026-10-27.md",
+          "freshness": "current_plan_branch"
+        }
+      ],
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2,
+        "availability": "UNVERIFIED_IN_CURRENT_CHAT_RUNTIME"
+      },
+      "launch": {
+        "mode": "argv",
+        "command": "python",
+        "args": [
+          "scripts/validate_application_autofill_parent.py"
+        ],
+        "notes": "PRECHECK_ONLY_NOT_IMPLEMENTATION; local owner resolves actual agent launcher before dispatch"
+      },
+      "expected_artifacts": [
+        "EH-S1 scoped code/tests and evidence receipt"
+      ],
+      "validation": [
+        "focused provider adapter tests",
+        "privacy boundary negative tests"
+      ],
+      "convergence_owner": "EH-S6",
+      "status": "WAITING_IMPLEMENTATION_HOST"
+    },
+    {
+      "lane_id": "EH-S2",
+      "wave": 1,
+      "mission": "Merge durable revisions and opportunity overrides without losing edits on concurrent devices.",
+      "dependencies": [
+        "EH-S0"
+      ],
+      "owned_mutation_surfaces": [
+        "artifacts/escape-hatch/preference-file.ts",
+        "focused local transaction tests"
+      ],
+      "forbidden_surfaces": [
+        "real applicant answers in public Git or CI",
+        "synthetic identity in live employer form",
+        "final submit, consent, EEO or protected attestations",
+        "dirty or separately owned worktrees"
+      ],
+      "posture": "isolated writer",
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "github_repo_access"
+      ],
+      "required_capabilities": [
+        "isolated_worktree",
+        "node_or_python_tests"
+      ],
+      "evidence_inputs": [
+        {
+          "type": "repository_ref",
+          "owner": "EndeavorEverlasting/EscapeHatch",
+          "ref": "main",
+          "freshness": "refresh_before_mutation"
+        },
+        {
+          "type": "contract",
+          "owner": "EndeavorEverlasting/EscapeHatch",
+          "ref": "docs/agent/P04_PRIVATE_APPLICATION_ANSWER_SYNC_2026-10-27.md",
+          "freshness": "current_plan_branch"
+        }
+      ],
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2,
+        "availability": "UNVERIFIED_IN_CURRENT_CHAT_RUNTIME"
+      },
+      "launch": {
+        "mode": "argv",
+        "command": "python",
+        "args": [
+          "scripts/validate_application_autofill_parent.py"
+        ],
+        "notes": "PRECHECK_ONLY_NOT_IMPLEMENTATION; local owner resolves actual agent launcher before dispatch"
+      },
+      "expected_artifacts": [
+        "EH-S2 scoped code/tests and evidence receipt"
+      ],
+      "validation": [
+        "existing managed preference tests",
+        "conflict and tombstone tests"
+      ],
+      "convergence_owner": "EH-S6",
+      "status": "WAITING_IMPLEMENTATION_HOST"
+    },
+    {
+      "lane_id": "EH-S3",
+      "wave": 1,
+      "mission": "Prove no cross-tenant/EEO/consent leakage, bad schema, stale overwrite or synthetic profile promotion.",
+      "dependencies": [
+        "EH-S0"
+      ],
+      "owned_mutation_surfaces": [
+        "new synthetic fixtures/tests",
+        "privacy/source sync validator"
+      ],
+      "forbidden_surfaces": [
+        "real applicant answers in public Git or CI",
+        "synthetic identity in live employer form",
+        "final submit, consent, EEO or protected attestations",
+        "dirty or separately owned worktrees"
+      ],
+      "posture": "isolated writer",
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "github_repo_access"
+      ],
+      "required_capabilities": [
+        "isolated_worktree",
+        "node_or_python_tests"
+      ],
+      "evidence_inputs": [
+        {
+          "type": "repository_ref",
+          "owner": "EndeavorEverlasting/EscapeHatch",
+          "ref": "main",
+          "freshness": "refresh_before_mutation"
+        },
+        {
+          "type": "contract",
+          "owner": "EndeavorEverlasting/EscapeHatch",
+          "ref": "docs/agent/P04_PRIVATE_APPLICATION_ANSWER_SYNC_2026-10-27.md",
+          "freshness": "current_plan_branch"
+        }
+      ],
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2,
+        "availability": "UNVERIFIED_IN_CURRENT_CHAT_RUNTIME"
+      },
+      "launch": {
+        "mode": "argv",
+        "command": "python",
+        "args": [
+          "scripts/validate_application_autofill_parent.py"
+        ],
+        "notes": "PRECHECK_ONLY_NOT_IMPLEMENTATION; local owner resolves actual agent launcher before dispatch"
+      },
+      "expected_artifacts": [
+        "EH-S3 scoped code/tests and evidence receipt"
+      ],
+      "validation": [
+        "new negative tests",
+        "python scripts/validate_application_autofill_parent.py"
+      ],
+      "convergence_owner": "EH-S6",
+      "status": "WAITING_IMPLEMENTATION_HOST"
+    },
+    {
+      "lane_id": "EH-S4",
+      "wave": 2,
+      "mission": "Hydrate the resolved stored answers in the existing real ATS controller and preserve operator-only actions.",
+      "dependencies": [
+        "EH-S1",
+        "EH-S2",
+        "EH-S3"
+      ],
+      "owned_mutation_surfaces": [
+        "artifacts/escape-hatch/managed-form.ts",
+        "browser readback/automation focused tests"
+      ],
+      "forbidden_surfaces": [
+        "real applicant answers in public Git or CI",
+        "synthetic identity in live employer form",
+        "final submit, consent, EEO or protected attestations",
+        "dirty or separately owned worktrees"
+      ],
+      "posture": "isolated writer",
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "github_repo_access"
+      ],
+      "required_capabilities": [
+        "isolated_worktree",
+        "node_or_python_tests"
+      ],
+      "evidence_inputs": [
+        {
+          "type": "repository_ref",
+          "owner": "EndeavorEverlasting/EscapeHatch",
+          "ref": "main",
+          "freshness": "refresh_before_mutation"
+        },
+        {
+          "type": "contract",
+          "owner": "EndeavorEverlasting/EscapeHatch",
+          "ref": "docs/agent/P04_PRIVATE_APPLICATION_ANSWER_SYNC_2026-10-27.md",
+          "freshness": "current_plan_branch"
+        }
+      ],
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2,
+        "availability": "UNVERIFIED_IN_CURRENT_CHAT_RUNTIME"
+      },
+      "launch": {
+        "mode": "argv",
+        "command": "python",
+        "args": [
+          "scripts/validate_application_autofill_parent.py"
+        ],
+        "notes": "PRECHECK_ONLY_NOT_IMPLEMENTATION; local owner resolves actual agent launcher before dispatch"
+      },
+      "expected_artifacts": [
+        "EH-S4 scoped code/tests and evidence receipt"
+      ],
+      "validation": [
+        "npm run test:managed-assist",
+        "python scripts/validate_application_journey.py"
+      ],
+      "convergence_owner": "EH-S6",
+      "status": "WAITING_IMPLEMENTATION_HOST"
+    },
+    {
+      "lane_id": "EH-S5",
+      "wave": 2,
+      "mission": "Show synced/offline/conflict/provenance states and correct one answer without manual JSON shuttling.",
+      "dependencies": [
+        "EH-S1",
+        "EH-S2",
+        "EH-S3"
+      ],
+      "owned_mutation_surfaces": [
+        "artifacts/escape-hatch/src/components/application-preferences.tsx",
+        "existing UI status tests"
+      ],
+      "forbidden_surfaces": [
+        "real applicant answers in public Git or CI",
+        "synthetic identity in live employer form",
+        "final submit, consent, EEO or protected attestations",
+        "dirty or separately owned worktrees"
+      ],
+      "posture": "isolated writer",
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "github_repo_access"
+      ],
+      "required_capabilities": [
+        "isolated_worktree",
+        "node_or_python_tests"
+      ],
+      "evidence_inputs": [
+        {
+          "type": "repository_ref",
+          "owner": "EndeavorEverlasting/EscapeHatch",
+          "ref": "main",
+          "freshness": "refresh_before_mutation"
+        },
+        {
+          "type": "contract",
+          "owner": "EndeavorEverlasting/EscapeHatch",
+          "ref": "docs/agent/P04_PRIVATE_APPLICATION_ANSWER_SYNC_2026-10-27.md",
+          "freshness": "current_plan_branch"
+        }
+      ],
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2,
+        "availability": "UNVERIFIED_IN_CURRENT_CHAT_RUNTIME"
+      },
+      "launch": {
+        "mode": "argv",
+        "command": "python",
+        "args": [
+          "scripts/validate_application_autofill_parent.py"
+        ],
+        "notes": "PRECHECK_ONLY_NOT_IMPLEMENTATION; local owner resolves actual agent launcher before dispatch"
+      },
+      "expected_artifacts": [
+        "EH-S5 scoped code/tests and evidence receipt"
+      ],
+      "validation": [
+        "npm run typecheck",
+        "npm run test:unit"
+      ],
+      "convergence_owner": "EH-S6",
+      "status": "WAITING_IMPLEMENTATION_HOST"
+    },
+    {
+      "lane_id": "EH-S6",
+      "wave": 3,
+      "mission": "Reconcile with current main and install; prove two authorized sessions, Drive revision readback, real browser review, protected final Submit.",
+      "dependencies": [
+        "EH-S4",
+        "EH-S5"
+      ],
+      "owned_mutation_surfaces": [
+        "approved integration/validation receipts only"
+      ],
+      "forbidden_surfaces": [
+        "real applicant answers in public Git or CI",
+        "synthetic identity in live employer form",
+        "final submit, consent, EEO or protected attestations",
+        "dirty or separately owned worktrees"
+      ],
+      "posture": "convergence owner",
+      "execution_environment": "OPERATOR_OR_PHYSICAL_RUNTIME",
+      "provider_access": [
+        "github_repo_access"
+      ],
+      "required_capabilities": [
+        "isolated_worktree",
+        "node_or_python_tests"
+      ],
+      "evidence_inputs": [
+        {
+          "type": "repository_ref",
+          "owner": "EndeavorEverlasting/EscapeHatch",
+          "ref": "main",
+          "freshness": "refresh_before_mutation"
+        },
+        {
+          "type": "contract",
+          "owner": "EndeavorEverlasting/EscapeHatch",
+          "ref": "docs/agent/P04_PRIVATE_APPLICATION_ANSWER_SYNC_2026-10-27.md",
+          "freshness": "current_plan_branch"
+        }
+      ],
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2,
+        "availability": "UNVERIFIED_IN_CURRENT_CHAT_RUNTIME"
+      },
+      "launch": {
+        "mode": "argv",
+        "command": "python",
+        "args": [
+          "scripts/validate_application_autofill_parent.py"
+        ],
+        "notes": "PRECHECK_ONLY_NOT_IMPLEMENTATION; local owner resolves actual agent launcher before dispatch"
+      },
+      "expected_artifacts": [
+        "EH-S6 scoped code/tests and evidence receipt"
+      ],
+      "validation": [
+        "python scripts/validate_application_autofill_parent.py",
+        "python scripts/validate_application_journey.py",
+        "npm run test:managed-assist",
+        "npm run typecheck",
+        "npm run build",
+        "P08 live host proof"
+      ],
+      "convergence_owner": "EH-S6",
+      "status": "WAITING_IMPLEMENTATION_HOST"
+    }
+  ]
+}

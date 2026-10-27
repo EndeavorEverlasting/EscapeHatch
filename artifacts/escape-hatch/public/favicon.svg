@@ -1,3 +1,20 @@
-<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="180" height="180" rx="36" fill="#FF3C00"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180">
+  <title>EscapeHatch</title>
+  <defs>
+    <linearGradient id="shell" x2="0.8" y2="1">
+      <stop stop-color="#46d6c3"/>
+      <stop offset="1" stop-color="#063e49"/>
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="174" height="174" rx="42" fill="#092d38"/>
+  <path d="M20 92C20 52 49 20 90 20s70 32 70 72v20H20z" fill="url(#shell)" stroke="#77efdc" stroke-width="4"/>
+  <ellipse cx="90" cy="103" rx="50" ry="51" fill="#fff0cc"/>
+  <path d="M72 58q21-33 44-6-14-3-18 18z" fill="#59d3b4"/>
+  <ellipse cx="70" cy="98" rx="10" ry="15" fill="#082a36"/>
+  <ellipse cx="110" cy="98" rx="10" ry="15" fill="#082a36"/>
+  <circle cx="73" cy="94" r="3.5" fill="white"/>
+  <circle cx="113" cy="94" r="3.5" fill="white"/>
+  <path d="M78 119q12-9 24 0-10 19-24 0z" fill="#ff9b51" stroke="#dd6737" stroke-width="2"/>
+  <path d="M18 114q72 39 144 0v17q-72 52-144 0z" fill="url(#shell)" stroke="#74dccc" stroke-width="4"/>
+  <path d="M22 116q68 34 136 0" fill="none" stroke="#ffd989" stroke-width="5"/>
 </svg>

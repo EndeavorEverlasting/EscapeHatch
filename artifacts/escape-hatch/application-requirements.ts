@@ -35,8 +35,15 @@ export async function inspectApplicationRequirements(page: Page, opportunityId: 
       const prompt = control.getAttribute('aria-label') || labelledBy || (groupLabel || labels) || control.getAttribute('placeholder') || 'Unlabelled field';
       const label = prompt.replace(/\s+/g, ' ').slice(0, 240);
       const ariaRequired = control.getAttribute('aria-required');
-      const explicitRequired = Boolean(native && control.required || ariaRequired === 'true');
-      const indicatedRequired = /\*|\brequired\b/i.test([label, labels, groupLabel].join(' '));
+      const labelElements = native ? Array.from(control.labels || []) : [];
+      const requiredAttribute = [control, group, ...labelElements].some(node =>
+        node?.getAttribute('aria-required') === 'true' ||
+        /^(true|required)$/i.test(node?.getAttribute('data-required') || '') ||
+        Boolean(node?.getAttribute('data-val-required')));
+      const cssRequiredMark = labelElements.some(node => ['::before', '::after'].some(pseudo =>
+        /^['"]?\\*['"]?$/.test(getComputedStyle(node, pseudo).content.replace(/\\s/g, ''))));
+      const explicitRequired = Boolean(native && control.required || ariaRequired === 'true' || requiredAttribute);
+      const indicatedRequired = /\*|\brequired\b/i.test([label, labels, groupLabel].join(' ')) || cssRequiredMark;
       // Prefer a false positive requiring review to silently losing a marked requirement.
       const requirement = explicitRequired || indicatedRequired ? 'required' as const :
         ariaRequired === 'false' || native ? 'optional' as const : 'unknown' as const;
@@ -48,7 +55,7 @@ export async function inspectApplicationRequirements(page: Page, opportunityId: 
       const groupSelected = peers.some(peer => peer.checked && !peer.disabled);
       const populated = native ? (type === 'checkbox' || type === 'radio' ?
         ((control as HTMLInputElement).checked || radioSelected || (!explicitRequired && indicatedRequired && groupSelected)) :
-        (type === 'file' ? (control as HTMLInputElement).files?.length! > 0 : Boolean(control.value.trim()))) &&
+        (type === 'file' ? ((control as HTMLInputElement).files?.length || 0) > 0 : Boolean(control.value.trim()))) &&
         control.validity.valid : false;
       const isFile = type === 'file';
       const resume = /r[ée]sum[ée]|\bcv\b/i.test(label), cover = /cover\s*(letter|note)?/i.test(label);

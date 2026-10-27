@@ -133,7 +133,13 @@ export async function fillSavedPreferences(page: Page, preferences: Preferences,
     if (['hidden', 'file', 'checkbox', 'password', 'submit', 'button', 'reset'].includes(descriptor.type)) continue;
     if (ids[index].length !== 1) { result.skipped.push('unmapped_or_ambiguous'); continue; }
     const id = ids[index][0];
-    if (preferences.optional_omissions?.includes(id) && !await control.evaluate(element => (element as HTMLInputElement).required === true || (element as Element).getAttribute('aria-required') === 'true')) { result.skipped.push(id + ':optional_omitted'); continue; }
+    if (preferences.optional_omissions?.includes(id) && !await control.evaluate(element => {
+      const field = element as HTMLInputElement;
+      const labelText = Array.from(field.labels || []).map(label => label.textContent || '').join(' ');
+      const groupText = element.closest('fieldset')?.querySelector('legend')?.textContent || '';
+      return field.required === true || element.getAttribute('aria-required') === 'true' ||
+        /\*|\brequired\b/i.test([labelText, groupText].join(' '));
+    })) { result.skipped.push(id + ':optional_omitted'); continue; }
     let value = id.startsWith('discovered:') ? discoveredValue(id.slice(11), preferences) : reusableValue(id, preferences);
     if (id === 'identity.phone' && value) value = internationalPhone(value, reusableValue('identity.country', preferences) || '');
     // Conditional detail is applicable only when a clearance is held. Never invent a clearance.

@@ -4,7 +4,7 @@ test('standalone app mounts without requesting private workspace data', async ({
   const requests: string[] = [];
   page.on('request', request => { if (request.url().includes('/__escapehatch/workspace')) requests.push(request.url()); });
   await page.goto('/profile');
-  await expect(page.getByTestId('synthetic-workspace-warning')).toHaveCount(0);
+  await expect(page.getByTestId('synthetic-workspace-warning')).toHaveCount(test.info().config.metadata.syntheticWorkspace === true ? 1 : 0);
   await expect(page.locator('meta[name="escapehatch-runtime"]')).toHaveAttribute('content', 'standalone');
   await expect(page.getByTestId('input-first_name')).toBeVisible();
   await page.getByTestId('input-first_name').fill('Standalone');

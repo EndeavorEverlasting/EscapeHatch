@@ -119,7 +119,12 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const [formObservation, setFormObservation] = useState<{ opportunityId: string; url: string; revision: number } | null>(null);
   const [listenerStatus, setListenerStatus] = useState<ServerResponse['listeners']>();
   const [trackerSync, setTrackerSync] = useState<ServerResponse['trackerSync']>();
+  // A historical ARMED snapshot is not proof of a current listener connection.
+  const [listenerConnected, setListenerConnected] = useState(false);
   const seenAnswers = useRef(0);
+  const submissionState = !listenerConnected ? 'DISCONNECTED' : !browserOpen ? 'BROWSER_CLOSED' :
+    !selectedOpportunityId || listenerStatus?.opportunityId !== selectedOpportunityId ? 'NOT_BOUND' :
+    listenerStatus?.submission?.state || 'DISARMED';
   const rememberOpportunity = (opportunity?: Application) => {
     // An unsaved URL or blank view selection cannot erase the last saved journey.
     if (!opportunity) return;
@@ -203,6 +208,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         setBrowserOpen(Boolean(result.browserOpen));
         setCurrentPage(result.currentPage || null);
         setListenerStatus(result.listeners);
+        setListenerConnected(true);
         if (result.trackerSync) setTrackerSync(result.trackerSync);
         if (result.listeners?.receipts?.length) setApplications(current => reconcileSubmissionReceipts(current, result.listeners!.receipts));
         if (result.preparationState) {
@@ -217,7 +223,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           });
         }
       }
-    }).catch(() => { if (active) setMessage('Managed browser is unavailable until EscapeHatch is started with its Windows launcher.'); })
+    }).catch(() => { if (active) { setListenerConnected(false); setListenerStatus(undefined); setTrackerSync(undefined); setMessage('Managed browser is unavailable until EscapeHatch is started with its Windows launcher.'); } })
       .finally(() => { if (active) setRuntimeChecked(true); });
     return () => { active = false; };
   }, []);
@@ -251,6 +257,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         if (cancelled) return;
         setCurrentPage(result.currentPage || null);
         setListenerStatus(result.listeners);
+        setListenerConnected(true);
         if (result.trackerSync) setTrackerSync(result.trackerSync);
         setAuthCheckpoint(result.authCheckpoint || null);
         setNeedsOpportunityConfirmation(Boolean(result.needsOpportunityConfirmation));
@@ -263,7 +270,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           }
         }
         if (!result.browserOpen) { setBrowserOpen(false); return; }
-      } catch { if (!cancelled) { setCurrentPage(null); setRecordingMessage('Listener connection interrupted. No submission is assumed.'); } }
+      } catch { if (!cancelled) { setCurrentPage(null); setListenerConnected(false); setListenerStatus(undefined); setTrackerSync(undefined); setRecordingMessage('Listener connection interrupted. No submission is assumed.'); } }
       if (!cancelled) timer = setTimeout(observe, 1500);
     }
     void observe();
@@ -274,7 +281,8 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     try {
       const result = await request('/listeners', { ...change, opportunityId: selectedOpportunityId, url });
       setListenerStatus(result.listeners);
-    } catch (error) { setRecordingMessage(error instanceof Error ? error.message : 'Listener update failed.'); }
+      setListenerConnected(true);
+    } catch (error) { setListenerStatus(undefined); setRecordingMessage(error instanceof Error ? error.message : 'Listener update failed.'); }
   }
 
   async function trackExistingTab() {
@@ -284,10 +292,11 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       if (live.hostname === 'jobs.lever.co' && /^\/[^/]+\/[^/]+\/?$/.test(live.pathname)) live.pathname = live.pathname.replace(/\/$/, '') + '/apply';
       const result = await request('/listeners/bind-existing', { opportunityId: selectedOpportunityId, url, livePageUrl: live.href, employerName: applications.find(item => item.id === selectedOpportunityId)?.company || '' });
       setListenerStatus(result.listeners);
+      setListenerConnected(true);
       setCurrentPage(result.currentPage || null);
       if (result.trackerSync) setTrackerSync(result.trackerSync);
       setRecordingMessage(result.listeners?.submission?.reason || 'Check the submission listener status before submitting.');
-    } catch (error) { setRecordingMessage(error instanceof Error ? error.message : 'Could not track the existing tab. No submission is assumed.'); }
+    } catch (error) { setListenerStatus(undefined); setRecordingMessage(error instanceof Error ? error.message : 'Could not track the existing tab. No submission is assumed.'); }
     finally { setBusy(false); }
   }
 
@@ -645,8 +654,19 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           <label className="flex items-start gap-2"><input type="checkbox" checked={listenerStatus?.recordingAnswers ?? false} disabled={!browserOpen || busy}
             onChange={event => void updateListeners({ recordAnswers: event.target.checked })} />Remember answers I enter in this application</label>
           <p className="mt-1 text-xs text-muted-foreground">Recognized answers are saved locally. New questions appear in reusable answers for review. Passwords, files, agreements and certifications are excluded.</p>
+          <p className="mb-2 text-xs text-muted-foreground">Select the saved job and start listening in its existing Chrome tab. Your employer form will not reload.</p>
           <button type="button" className={secondary} disabled={busy || !browserOpen || !selectedOpportunityId || !url} onClick={() => void trackExistingTab()}>Track existing application tab</button>
-          <label className="mt-3 flex items-start gap-2"><input type="checkbox" checked={listenerStatus?.opportunityId === selectedOpportunityId && !!listenerStatus?.submission && !['DISARMED', 'BLOCKED'].includes(listenerStatus.submission.state)}
+          <p role="status" aria-live="polite" data-testid="submission-listener-state" data-listener-state={submissionState}
+             className="mt-3 rounded-lg border border-border bg-background px-3 py-2 text-sm font-semibold">
+             Submission listener: {submissionState}{submissionState === 'ARMED' ? ' — listening for your Submit on this job' :
+               submissionState === 'DISCONNECTED' ? ' — running connection not verified' :
+               submissionState === 'NOT_BOUND' ? ' — select and bind this saved job' :
+               submissionState === 'PENDING' ? ' — click observed; waiting for employer confirmation' :
+               submissionState === 'CONFIRMED' ? ' — employer receipt observed' :
+               submissionState === 'VALIDATION_FAILED' ? ' — employer did not accept the application' :
+               ' — tracking is not armed for this job'}
+          </p>
+          <label className="mt-3 flex items-start gap-2"><input type="checkbox" checked={listenerConnected && listenerStatus?.opportunityId === selectedOpportunityId && !!listenerStatus?.submission && !['DISARMED', 'BLOCKED'].includes(listenerStatus.submission.state)}
             disabled={!browserOpen || busy || listenerStatus?.opportunityId !== selectedOpportunityId || listenerStatus?.submission?.state === 'CONFIRMED'} onChange={event => void updateListeners({ trackSubmission: event.target.checked })} />Track my submission when I click Submit in Chrome</label>
           <p className="mt-2" role="status" data-testid="submission-listener-status">{listenerStatus?.error || listenerStatus?.submission?.reason || 'Launch an application to connect tracking. Final submission stays yours.'}</p>
           {listenerStatus?.submission?.state === 'CONFIRMED' && listenerStatus.receipts?.some(receipt => !!receipt && typeof receipt === 'object' && 'opportunityId' in receipt && receipt.opportunityId === selectedOpportunityId) && <p className="mt-2 font-semibold">Employer confirmation received. This application is marked Applied in your local queue.</p>}

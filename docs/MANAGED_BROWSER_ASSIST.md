@@ -12,6 +12,27 @@ The writer reads current headers and a unique company/role/apply-URL row, writes
 
 Google Sheets values writes have no row-level compare-and-swap. Immediate pre/post identity checks reject observed row changes but cannot make concurrent human sorting atomic; avoid reordering the tracker during an in-flight write. An ambiguous identity/readback remains a conflict, not a verified sync. Live employer receipt capture and live Google write/readback require separate proof; synthetic browser/provider tests do not certify them. Final Submit remains exclusively the operator's action.
 
+## Submission listening status — observable operator contract (2026-10-27)
+
+The cockpit's **Submission listener** readout is a runtime-derived state, not a remembered toggle:
+
+| State | Meaning | Action |
+| --- | --- | --- |
+| `DISCONNECTED` | The current local service/status read failed or has not been verified | Use the existing installation's `Status-EscapeHatch.cmd`; relaunch through `Launch-EscapeHatch.cmd` if stopped |
+| `BROWSER_CLOSED` | Managed Chrome tab is no longer open | Reopen the original application through its existing saved opportunity, never a duplicate submission |
+| `NOT_BOUND` | Selected saved opportunity is not the listener's exact opportunity | Select the correct saved job and click **Track existing application tab** |
+| `DISARMED` | Connection exists; final Submit observation is off | Click **Track existing application tab** while the actual form has a unique enabled final Submit control |
+| `ARMED` | Exact-job bound live listener is ready to observe a user action | Review the existing employer form; operator alone chooses Submit |
+| `PENDING` | Trusted user Submit was observed but employer acceptance is not proven | Keep the response visible; inspect employer validation/rejection rather than duplicating the click |
+| `VALIDATION_FAILED` / `BLOCKED` | Validation rejection, drift, or unsafe event | Correct the actual employer form/rebind original job; no receipt is implied |
+| `CONFIRMED` | Explicit employer receipt after the user's attempt observed | Check durable receipt and **Tracker synchronization** independently |
+
+Do not equate **ARMED** with successful submission or **CONFIRMED** with remote Google write-back. On polling failure, the old ARMED state must disappear. A listener is not proven active merely because the runtime process is `OWNED_HEALTHY`; both runtime identity and the exact-job listener must be checked. Conversely `AUTH_REQUIRED` in the tracker panel means *Google writes* are pending despite a locally saved confirmation receipt, not that Chrome's listener is off.
+
+When the installed runtime is unavailable, do not kill or restart the occupied port blindly: use `Status-EscapeHatch.cmd` to distinguish `OWNED_HEALTHY`, `OWNED_UNHEALTHY`, `STOPPED`, and `FOREIGN_CONFLICT` before acting. The existing company application tab and any uncommitted work must be preserved.
+
+The first provider write to the canonical tracker is a separate acceptance gate: its `Applied?` column can be a validated `☐/☑` text dropdown rather than a boolean, `Date Applied` can be a date-validated numeric Sheets serial, and `Status` may initially read `Research`. The deterministic writer must preserve those native cell types, match a unique real opportunity, and read back all three changed values without downgrading later employer status. Synthetic boolean-only fixtures are insufficient. No automatic Google OAuth setup, credential inheritance from ChatGPT, or remote write is claimed merely by enabling the listener.
+
 ## Why this exists
 The cockpit previously told operators to visit chrome://extensions, enable developer mode, load
 an unpacked MV3 extension, export/import data, and reopen the application. That is a setup

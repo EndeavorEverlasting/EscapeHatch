@@ -32,7 +32,7 @@ export async function inspectApplicationRequirements(page: Page, opportunityId: 
       // Radios often carry only an option label: use their fieldset/role-group prompt.
       const group = control.closest('fieldset, [role="group"], [role="radiogroup"]');
       const groupLabel = (group?.querySelector('legend, [aria-label], [class*="question-label"]')?.textContent || group?.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim().slice(0, 240);
-      const prompt = control.getAttribute('aria-label') || labelledBy || (groupLabel || labels) || control.getAttribute('placeholder') || 'Unlabelled field';
+      const prompt = control.getAttribute('aria-label') || labelledBy || (type === 'radio' ? groupLabel || labels : labels || groupLabel) || control.getAttribute('placeholder') || 'Unlabelled field';
       const label = prompt.replace(/\s+/g, ' ').slice(0, 240);
       const ariaRequired = control.getAttribute('aria-required');
       const labelElements = native ? Array.from(control.labels || []) : [];
@@ -50,11 +50,13 @@ export async function inspectApplicationRequirements(page: Page, opportunityId: 
       // A value is not evidence of approval. Native validity is only a current-page observation.
       const radioSelected = type === 'radio' && control instanceof HTMLInputElement && Boolean(control.name) &&
         Array.from(document.getElementsByName(control.name)).some(item => item instanceof HTMLInputElement && item.type === 'radio' && item.checked && item.form === control.form && item.getRootNode() === control.getRootNode());
-      const peers = group && (type === 'radio' || type === 'checkbox') ?
-        Array.from(group.querySelectorAll('input[type="radio"], input[type="checkbox"]')) as HTMLInputElement[] : [];
-      const groupSelected = peers.some(peer => peer.checked && !peer.disabled);
-      const populated = native ? (type === 'checkbox' || type === 'radio' ?
-        ((control as HTMLInputElement).checked || radioSelected || (!explicitRequired && indicatedRequired && groupSelected)) :
+      // A selected radio satisfies a radio group. A checked sibling checkbox
+      // must NEVER satisfy a distinct required privacy/attestation checkbox.
+      const groupRadios = group && type === 'radio' ?
+        Array.from(group.querySelectorAll('input[type="radio"]')) as HTMLInputElement[] : [];
+      const radioGroupSelected = groupRadios.some(peer => peer.checked && !peer.disabled);
+      const populated = native ? (type === 'checkbox' ? (control as HTMLInputElement).checked :
+        type === 'radio' ? ((control as HTMLInputElement).checked || radioSelected || (!explicitRequired && indicatedRequired && radioGroupSelected)) :
         (type === 'file' ? ((control as HTMLInputElement).files?.length || 0) > 0 : Boolean(control.value.trim()))) &&
         control.validity.valid : false;
       const isFile = type === 'file';

@@ -88,6 +88,9 @@ test('optional omission persists, fills only explicitly required controls', asyn
     assert.equal(await page.getByLabel('Pronouns').inputValue(),'');
     await page.getByLabel('Pronouns').evaluate(e => e.setAttribute('required',''));
     assert.ok((await fillSavedPreferences(page,data)).filled.includes('identity.pronouns'));
+    await page.setContent('<label>Pronouns *<input></label>');
+    assert.ok((await fillSavedPreferences(page,data)).filled.includes('identity.pronouns'));
+    assert.equal(await page.getByLabel('Pronouns *').inputValue(),'they/them');
   } finally {await browser.close();}
 });
 

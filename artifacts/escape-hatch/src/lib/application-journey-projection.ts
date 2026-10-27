@@ -1,4 +1,4 @@
-import registry from '../../../../contracts/application-journey-scenes.v1.json';
+import registry from '../../../../contracts/application-journey-scenes.v1.json' with { type: 'json' };
 
 /** Private selection metadata only. It never restores login or action authority. */
 export type JourneyResume = { opportunityId: string; applicationUrl: string };

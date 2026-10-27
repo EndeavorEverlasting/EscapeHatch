@@ -32,7 +32,8 @@ export function reconcileSubmissionReceipts(applications: Application[], values:
       try {
         const url = new URL(application.url);
         return item.applicationOrigin === url.origin && (item.applicationPath === url.pathname ||
-          url.hostname === 'jobs.ashbyhq.com' && item.applicationPath === url.pathname.replace(/\/$/, '') + '/application');
+          url.hostname === 'jobs.ashbyhq.com' && item.applicationPath === url.pathname.replace(/\/$/, '') + '/application' ||
+          url.hostname === 'jobs.lever.co' && /^\/[^/]+\/[^/]+\/?$/.test(url.pathname) && item.applicationPath === url.pathname.replace(/\/$/, '') + '/apply');
       } catch { return false; }
     }).sort((left, right) => Date.parse(right.observedAt) - Date.parse(left.observedAt))[0];
     if (!receipt || application.submissionEvidence?.attemptId === receipt.attemptId ||

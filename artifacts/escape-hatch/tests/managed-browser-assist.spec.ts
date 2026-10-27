@@ -2,6 +2,45 @@ import { createHash } from 'node:crypto';
 import { expect, test } from '@playwright/test';
 import { trackerOpportunityId } from '../src/lib/tracker-bridge';
 
+test('existing-tab tracking and external sync status stay explicit without launching or submitting', async ({ page }) => {
+  const job = { id: 'existing-lever', company: 'Synthetic', role: 'Role', url: 'https://jobs.lever.co/synthetic/00000000-0000-0000-0000-000000000000', status: 'saved', priority: 'normal', notes: '', nextAction: '', updatedAt: new Date().toISOString() };
+  const actions: string[] = [];
+  let armed = false;
+  let connected = true;
+  await page.route('**/__escapehatch/managed-assist/**', async route => {
+    const action = new URL(route.request().url()).pathname.split('/').at(-1)!;
+    actions.push(action);
+    if (!connected) {
+      await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'synthetic_listener_disconnect' }) });
+      return;
+    }
+    if (action === 'bind-existing') {
+      expect(route.request().postDataJSON()).toMatchObject({ opportunityId: job.id, url: job.url, livePageUrl: job.url + '/apply' });
+      armed = true;
+    }
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, browserOpen: true, state: 'application_form_open_review_required',
+      currentPage: { opportunityId: job.id, applicationUrl: job.url, pageUrl: job.url + '/apply' },
+      listeners: { recordingAnswers: false, savedAnswers: 0, opportunityId: job.id, error: '', receipts: [], submission: { state: armed ? 'ARMED' : 'DISARMED', reason: armed ? 'Listening for user submit on this application.' : 'Listener is off.' } },
+      trackerSync: { state: 'AUTH_REQUIRED', pending: 0, synced: 0, authRequired: 1, conflicts: 0, retryRequired: 0 } }) });
+  });
+  await mockDocuments(page);
+  await page.goto('/');
+  await page.evaluate(job => localStorage.setItem('escape-hatch-applications', JSON.stringify([job])), job);
+  await page.goto('/assist?opportunityId=' + job.id);
+  await page.getByRole('button', { name: 'Track existing application tab' }).click();
+  await expect(page.getByTestId('submission-listener-status')).toContainText('Listening for user submit');
+  await expect(page.getByTestId('submission-listener-state')).toContainText('ARMED — listening for your Submit on this job');
+  await expect(page.getByText(/Tracker synchronization: AUTH_REQUIRED/)).toBeVisible();
+  await page.getByRole('button', { name: 'Retry tracker synchronization' }).click();
+  expect(actions).toContain('retry');
+  expect(actions).not.toContain('launch');
+  expect(actions).not.toContain('submit');
+  // An unreachable server must erase the historic ARMED label, not reassure the operator.
+  connected = false;
+  await expect(page.getByTestId('submission-listener-state')).toContainText('DISCONNECTED', { timeout: 7000 });
+  await expect(page.getByTestId('submission-listener-state')).not.toContainText('ARMED');
+});
+
 test('only persisted bound submission evidence advances the queue and survives reload', async ({ page }) => {
   let confirmed = false;
   const receipt = { opportunityId: 'synthetic-receipt', sessionId: 'session', attemptId: 'attempt',

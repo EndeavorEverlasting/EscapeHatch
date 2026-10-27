@@ -1,18 +1,23 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { DatabaseSync } from 'node:sqlite';
 import type { Page } from '@playwright/test';
 import { updatePreferences } from './preference-file.ts';
 import { installAnswerMemory, mergeCapturedAnswer, mergeQuestionCatalog, scanQuestionCatalog } from './managed-answer-memory.ts';
 import { installManagedSubmissionObserver, type ManagedSubmissionReceipt } from './managed-submission-observer.ts';
 import { parseSubmissionEvidence } from './src/lib/submission-reconciliation.ts';
+import { userDataRoot, legacyPrivateRoots } from './user-data.ts';
 
 export type ListenerScope = { opportunityId: string; applicationUrl: string; employerName: string };
-const receiptFile = () => path.resolve(import.meta.dirname, '../../private/managed-submission-receipts.json');
+export const submissionReceiptFile = () => path.join(userDataRoot(), 'managed-submission-receipts.json');
 
-export async function readSubmissionReceipts(file = receiptFile()): Promise<ManagedSubmissionReceipt[]> {
+export async function readSubmissionReceipts(file = submissionReceiptFile()): Promise<ManagedSubmissionReceipt[]> {
   try {
-    const data = JSON.parse(await fs.readFile(file, 'utf8'));
+    if ((await fs.stat(file)).size > 2 * 1024 * 1024) throw new Error('Receipt store oversized.');
+    const bytes = await fs.readFile(file);
+    if (bytes.length > 2 * 1024 * 1024) throw new Error('Receipt store oversized.');
+    const data = JSON.parse(bytes.toString('utf8'));
     if (!Array.isArray(data) || data.length > 1000 || data.some(value => !parseSubmissionEvidence(value))) {
       throw new Error('Invalid receipt store');
     }
@@ -23,7 +28,38 @@ export async function readSubmissionReceipts(file = receiptFile()): Promise<Mana
   }
 }
 
+/** Recover receipts without moving legacy evidence or replacing a newer stable store. */
+export async function migrateSubmissionReceipts(destination = submissionReceiptFile(), roots = legacyPrivateRoots()) {
+  try { await fs.access(destination); return; } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+  const records = new Map<string, ManagedSubmissionReceipt>();
+  for (const root of [...new Set(roots)]) {
+    const file = path.join(root, 'managed-submission-receipts.json');
+    if (path.resolve(file) === path.resolve(destination)) continue;
+    for (const receipt of await readSubmissionReceipts(file)) {
+      const previous = records.get(receipt.attemptId);
+      if (previous && JSON.stringify(previous) !== JSON.stringify(receipt)) throw new Error('Conflicting legacy submission receipts need review. Existing evidence preserved.');
+      records.set(receipt.attemptId, receipt);
+    }
+  }
+  if (!records.size) return;
+  if (records.size > 1000) throw new Error('Submission receipt archive needs review. Existing evidence preserved.');
+  await fs.mkdir(path.dirname(destination), { recursive: true });
+  try { await fs.writeFile(destination, JSON.stringify([...records.values()]), { flag: 'wx', mode: 0o600 }); }
+  catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error; }
+}
+
+/** Exact hosted Lever scope; no arbitrary same-origin job or suffix matching. */
+export function submissionAdapter(applicationUrl: string) {
+  const url = new URL(applicationUrl);
+  if (url.protocol === 'https:' && url.hostname === 'jobs.lever.co' && /^\/[^/]+\/[a-f0-9-]{36}\/apply\/?$/i.test(url.pathname)) {
+    const base = url.pathname.replace(/\/apply\/?$/, '');
+    return { submitSelector: '#btn-submit', successSelector: '.application-confirmation h1, .application-confirmation h2, .application-confirmation p, .application-confirmation, .content h1, .content h2', confirmationPaths: [base + '/thanks'] };
+  }
+  return { submitSelector: '#root button', successSelector: '#root h1, #root h2, #root [role="status"], #root [role="alert"], #root div', confirmationPaths: [] };
+}
+
 export class ManagedListeners {
+  readonly implementationVersion = 2;
   private stopMemory: (() => Promise<void>) | null = null;
   private observer: Awaited<ReturnType<typeof installManagedSubmissionObserver>> | null = null;
   private serial: Promise<void> = Promise.resolve();
@@ -34,9 +70,13 @@ export class ManagedListeners {
   private scope: ListenerScope | null = null;
   private receiptsPath: string;
   private preferencesPath?: string;
-  constructor(receiptsPath = receiptFile(), preferencesPath?: string) {
+  private recoverLegacy: boolean;
+  private onReceipt?: (receipt: ManagedSubmissionReceipt) => Promise<unknown>;
+  constructor(receiptsPath = submissionReceiptFile(), preferencesPath?: string, onReceipt?: (receipt: ManagedSubmissionReceipt) => Promise<unknown>) {
     this.receiptsPath = receiptsPath;
     this.preferencesPath = preferencesPath;
+    this.recoverLegacy = receiptsPath === submissionReceiptFile() && !process.env.ESCAPEHATCH_DATA_HOME;
+    this.onReceipt = onReceipt;
   }
 
   async attach(page: Page, scope: ListenerScope, recording = true) {
@@ -55,21 +95,40 @@ export class ManagedListeners {
       opportunityId: scope.opportunityId,
       sessionId: 'managed-' + randomUUID(),
       applicationUrl: scope.applicationUrl,
-      submitSelector: '#root button',
-      successSelector: '#root h1, #root h2, #root [role="status"], #root [role="alert"], #root div',
+      ...submissionAdapter(scope.applicationUrl),
       onChange: snapshot => {
         if (!snapshot.receipt || generation !== this.generation) return;
         const receipt = snapshot.receipt;
         this.serial = this.serial.then(async () => {
-          const current = await readSubmissionReceipts(this.receiptsPath);
-          if (current.some(item => item.attemptId === receipt.attemptId)) return;
+          if (this.recoverLegacy) await migrateSubmissionReceipts(this.receiptsPath);
           const directory = path.dirname(this.receiptsPath);
           await fs.mkdir(directory, { recursive: true });
+          const lock = new DatabaseSync(this.receiptsPath + '.lock.sqlite');
+          // Never drop an observed employer receipt on a transient concurrent
+          // writer. SQLite holds the cross-process lock, async backoff permits
+          // the owner to complete filesystem I/O before we retry.
+          let acquired = false;
+          for (let attempt = 0; attempt < 20; attempt++) {
+            try { lock.exec('PRAGMA busy_timeout=0; BEGIN IMMEDIATE'); acquired = true; break; }
+            catch (error) {
+              if (attempt === 19 || !/busy|locked/i.test(String(error))) { lock.close(); throw new Error('Submission receipt store busy; recovery review required.'); }
+              await new Promise(resolve => setTimeout(resolve, 30 * (attempt + 1)));
+            }
+          }
+          if (!acquired) { lock.close(); throw new Error('Submission receipt store busy; recovery review required.'); }
           const temporary = this.receiptsPath + '.' + randomUUID() + '.tmp';
           try {
-            await fs.writeFile(temporary, JSON.stringify([...current, receipt].slice(-1000)), { flag: 'wx', mode: 0o600 });
-            await fs.rename(temporary, this.receiptsPath);
-          } finally { await fs.rm(temporary, { force: true }); }
+            const current = await readSubmissionReceipts(this.receiptsPath);
+            if (!current.some(item => item.attemptId === receipt.attemptId)) {
+              if (current.length >= 1000) throw new Error('Submission receipt archive full.');
+              await fs.writeFile(temporary, JSON.stringify([...current, receipt]), { flag: 'wx', mode: 0o600 });
+              await fs.rename(temporary, this.receiptsPath);
+            }
+          } finally { try { await fs.rm(temporary, { force: true }); } finally { try { lock.exec('ROLLBACK'); } finally { lock.close(); } } }
+          // Durable evidence precedes provider reconciliation; replay can recover
+          // a process interruption between these two independently proven steps.
+          try { await this.onReceipt?.(receipt); }
+          catch { this.error = 'Employer confirmation saved; tracker synchronization is pending retry.'; }
         }).catch(() => { this.error = 'Submission was observed but its receipt could not be saved. Queue status remains unverified.'; });
       },
     });
@@ -77,7 +136,7 @@ export class ManagedListeners {
   }
 
   async arm() {
-    try { await this.observer?.arm(); }
+    try { if (!this.observer) throw new Error('No bound submission observer.'); if ((await this.observer.arm()).state === 'ARMED') this.error = ''; }
     catch { this.error = 'Submission tracking could not arm on this page. Review the current application before trying again.'; }
     return this.status();
   }
@@ -93,6 +152,7 @@ export class ManagedListeners {
   }
   async status() {
     await this.serial;
+    if (this.recoverLegacy) await migrateSubmissionReceipts(this.receiptsPath);
     return { recordingAnswers: this.recording && !!this.stopMemory, savedAnswers: this.savedAnswers,
       submission: this.observer?.snapshot() || null, opportunityId: this.scope?.opportunityId || '', error: this.error,
       receipts: await readSubmissionReceipts(this.receiptsPath) };

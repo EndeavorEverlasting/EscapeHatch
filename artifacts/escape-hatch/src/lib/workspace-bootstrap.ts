@@ -2,6 +2,7 @@ import { PROFILE_KEY, ANSWERS_KEY, APPLICATIONS_KEY, emptyProfile, parseProfileS
 import { ASSIST_KEY, ASSIST_ANSWERS_KEY, parseAssistProfile, parseAssistAnswers } from './assist-contract.ts';
 import { JOURNEY_RESUME_KEY, parseJourneyResume, type JourneyResume } from './application-journey-projection.ts';
 import { SOURCE_BINDINGS_KEY, parseSourceBindings } from './source-bridge.ts';
+import { reconcileSubmissionReceipts } from './submission-reconciliation.ts';
 
 export const WORKSPACE_SCHEMA = 'escapehatch-local-workspace/v1';
 export const workspaceParsers = {
@@ -124,4 +125,31 @@ export function applyBrowserWorkspace(storage: Storage, workspace: SavedWorkspac
     }
     throw new Error('Browser storage could not save the workspace. Your private artifact is unchanged.');
   }
+}
+
+/**
+ * Accept precisely one class of external workspace writer: confirmed receipts.
+ * All other concurrent modifications remain ordinary protected conflicts.
+ * The caller must independently read receipts from the current local service.
+ */
+export function mergeConfirmedReceiptWorkspace(
+  savedAtRevision: SavedWorkspace | null, providerNow: SavedWorkspace | null,
+  browserNow: SavedWorkspace, receipts: unknown[],
+): SavedWorkspace | null {
+  if (!savedAtRevision || !providerNow) return null;
+  const before = savedAtRevision.values, remote = providerNow.values;
+  const keys = new Set([...Object.keys(before), ...Object.keys(remote)]);
+  for (const key of keys) {
+    if (key !== APPLICATIONS_KEY && JSON.stringify(before[key]) !== JSON.stringify(remote[key])) return null;
+  }
+  const priorApps = parseApplicationsStorage(before[APPLICATIONS_KEY] ?? []);
+  const remoteApps = parseApplicationsStorage(remote[APPLICATIONS_KEY] ?? []);
+  const localApps = parseApplicationsStorage(browserNow.values[APPLICATIONS_KEY] ?? []);
+  if (!priorApps || !remoteApps || !localApps) return null;
+  const confirmedApps = reconcileSubmissionReceipts(priorApps, receipts);
+  if (confirmedApps === priorApps || JSON.stringify(confirmedApps) !== JSON.stringify(remoteApps)) return null;
+  return { schema: WORKSPACE_SCHEMA, values: {
+    ...browserNow.values,
+    [APPLICATIONS_KEY]: reconcileSubmissionReceipts(localApps, receipts),
+  } };
 }

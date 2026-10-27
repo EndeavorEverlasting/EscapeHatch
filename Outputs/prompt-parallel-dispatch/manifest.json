@@ -1,36 +1,48 @@
 {
   "schema_version": "prompt-parallel-dispatch/v1",
-  "run_id": "document-sources-20261027",
+  "run_id": "submission-sync-20261027",
   "repository": "EndeavorEverlasting/EscapeHatch",
   "base_ref": {
-    "provider_default_head": "857d8ed",
-    "reconciled_head": "1cc9916"
+    "provider_default_head": "0123dd084d22f17cfc4608b2cc4f64ddf68b3016"
   },
   "graph": {
     "max_width": 2,
     "parallel_disposition": "REQUIRED"
   },
   "convergence_owner": "primary agent",
-  "status": "NATIVE_DISPATCH_COMPLETED_CANONICAL_VALIDATION_BLOCKED",
+  "status": "NATIVE_DISPATCH_REJOINED_CANONICAL_VALIDATION_BLOCKED",
   "lanes": [
     {
-      "lane_id": "implementation",
+      "lane_id": "tracker-sync",
       "adapter": "primary agent",
-      "mission": "Extend canonical document store and import-context ingress; UI preview and refresh",
+      "branch": "codex/submission-sync-20261027",
+      "mission": "Deterministic durable receipt outbox and local/provider reconciliation",
       "mutation_surfaces": [
-        "artifacts/escape-hatch/import-context.ts",
-        "artifacts/escape-hatch/opportunity-documents.ts",
-        "artifacts/escape-hatch/src/components/opportunity-documents.tsx"
+        "artifacts/escape-hatch/tracker-writeback.ts",
+        "artifacts/escape-hatch/tracker-writeback.test.ts",
+        "artifacts/escape-hatch/src/components/managed-browser-assist.tsx"
       ]
     },
     {
-      "lane_id": "review",
+      "lane_id": "submission-capture",
       "adapter": "collaboration.spawn_agent",
-      "mission": "Read-only document ingress boundary review",
-      "mutation_surfaces": [],
-      "return_contract": "Concrete safety and regression findings",
+      "branch": "codex/submission-capture-20261027",
+      "target": "/root/submission_capture",
+      "return_commit": "1bdfa48",
+      "rejoined_commit": "9a7a207",
+      "mission": "Exact existing-tab bind and trusted Lever submission receipt capture",
+      "mutation_surfaces": [
+        "artifacts/escape-hatch/browser-assist-control.ts",
+        "artifacts/escape-hatch/managed-listeners.ts",
+        "artifacts/escape-hatch/managed-submission-observer.ts"
+      ]
+    },
+    {
+      "lane_id": "independent-review",
+      "adapter": "collaboration.followup_task",
       "target": "/root/document_source_review",
-      "result": "Completed; shared lock, explicit refresh, recorded origin and byte approval findings addressed"
+      "mutation_surfaces": [],
+      "result": "Target pinning, retry fairness, date readback and timezone findings repaired; no remaining release-blocking finding"
     }
   ],
   "blockers": [

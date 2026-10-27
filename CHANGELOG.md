@@ -5,6 +5,13 @@ Product identity is owned by `VERSION`. Exact freshness is the Git commit (and a
 
 Schema/protocol versions (`escapehatch-*/vN`, contract `version` integers) are independent and are not product releases.
 
+## [1.3.0]
+
+### Added
+
+- Bind submission tracking to an existing exact application tab without discarding form entries.
+- Persist confirmed receipts and reconcile the local queue automatically; retry bound Google tracker writes from a durable outbox with explicit authorization/conflict states.
+
 ## [1.2.0]
 
 ### Added

@@ -1,6 +1,6 @@
-import { ASSIST_KEY, type AssistProfile, type ReviewedProposal } from './assist-contract';
-import { PROFILE_KEY, type Application, type Profile } from './storage';
-import { applyAcceptedResumeImport, extractResumeText, getAcceptedResumeContactPatch, parseResumeText, type ResumeImport } from './resume-import';
+import { ASSIST_KEY, type AssistProfile, type ReviewedProposal } from './assist-contract.ts';
+import { PROFILE_KEY, type Application, type Profile } from './storage.ts';
+import { applyAcceptedResumeImport, extractResumeText, getAcceptedResumeContactPatch, parseResumeText, type ResumeImport } from './resume-import.ts';
 
 // References only. Candidate values continue to belong to AssistProfile/Profile.
 export const SOURCE_BINDINGS_KEY = 'escape-hatch-source-bindings-v1';

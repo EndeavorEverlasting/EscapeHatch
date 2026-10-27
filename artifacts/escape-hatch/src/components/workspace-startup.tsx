@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { PROFILE_KEY, ANSWERS_KEY, APPLICATIONS_KEY, emptyProfile, parseWorkspaceExportText } from '../lib/storage.ts';
-import { applyBrowserWorkspace, hasContext, parseSavedWorkspace, rawBrowserWorkspace, readBrowserWorkspace, reconcileWorkspace, WORKSPACE_SCHEMA, type BootstrapResponse, type SavedWorkspace } from '../lib/workspace-bootstrap.ts';
+import { applyBrowserWorkspace, hasContext, mergeConfirmedReceiptWorkspace, parseSavedWorkspace, rawBrowserWorkspace, readBrowserWorkspace, reconcileWorkspace, WORKSPACE_SCHEMA, type BootstrapResponse, type SavedWorkspace } from '../lib/workspace-bootstrap.ts';
 
 const ENDPOINT = '/__escapehatch/workspace';
 const REQUEST_HEADERS = { 'content-type': 'application/json', 'x-escapehatch-workspace': '1' };
@@ -18,16 +18,51 @@ export function WorkspaceStartup({ children }: { children: ReactNode }) {
   const [candidate, setCandidate] = useState<SavedWorkspace | null>(null);
   const [savedCandidate, setSavedCandidate] = useState<SavedWorkspace | null>(null);
   const revision = useRef<string | null>(null);
+  const savedAtRevision = useRef<SavedWorkspace | null>(null);
   const blocked = useRef(false);
   const recoveryImport = useRef(false);
   const save = async (workspace: SavedWorkspace, recoverInvalid = false, browserArchive?: Record<string, string | null>) => {
-    const response = await fetch(ENDPOINT, { method: 'PUT', credentials: 'same-origin', headers: REQUEST_HEADERS,
+    let chosen = workspace;
+    let response = await fetch(ENDPOINT, { method: 'PUT', credentials: 'same-origin', headers: REQUEST_HEADERS,
       body: JSON.stringify({ workspace, expectedRevision: revision.current, recoverInvalid, browserArchive }) });
+    if (response.status === 409 && savedAtRevision.current && !recoverInvalid && !browserArchive) {
+      // Only a provider revision proven to contain exactly a confirmed submission
+      // may be adopted automatically. Unrelated concurrent edits still need review.
+      const [latest, confirmation] = await Promise.all([
+        fetch(ENDPOINT, { credentials: 'same-origin', cache: 'no-store' }),
+        fetch('/__escapehatch/managed-assist/status', { credentials: 'same-origin', cache: 'no-store' }),
+      ]);
+      if (latest.ok && confirmation.ok) {
+        const latestState = await latest.json() as BootstrapResponse;
+        const observed = await confirmation.json() as { listeners?: { receipts?: unknown[] } };
+        const localBefore = readBrowserWorkspace(localStorage);
+        const merged = mergeConfirmedReceiptWorkspace(
+          savedAtRevision.current,
+          parseSavedWorkspace(latestState.workspace),
+          localBefore,
+          observed.listeners?.receipts || [],
+        );
+        if (merged && latestState.revision !== null) {
+          response = await fetch(ENDPOINT, { method: 'PUT', credentials: 'same-origin', headers: REQUEST_HEADERS,
+            body: JSON.stringify({ workspace: merged, expectedRevision: latestState.revision }) });
+          if (response.ok) {
+            chosen = merged;
+            // Update only the receipt-enriched queue, keeping the latest browser
+            // profile/answers and deferring React state updates to the receipt poll.
+            const afterBrowser = readBrowserWorkspace(localStorage);
+            if (JSON.stringify(afterBrowser) === JSON.stringify(localBefore)) {
+              localStorage.setItem(APPLICATIONS_KEY, JSON.stringify(merged.values[APPLICATIONS_KEY] || []));
+            }
+          }
+        }
+      }
+    }
     if (!response.ok) throw new Error(response.status === 409
       ? 'Your workspace changed in another window. Your browser edits are preserved. Reload to review both copies.'
       : 'Your workspace could not be saved to this computer. Your browser edits are preserved. Retry before closing.');
     const result = await response.json() as { revision: string };
     revision.current = result.revision;
+    savedAtRevision.current = chosen;
   };
   const recover = async () => {
     setMessage('Recovering your saved workspace…'); setNeedsContext(false); setConflicts(false); setBrowserInvalid(false); blocked.current = false;
@@ -37,6 +72,7 @@ export function WorkspaceStartup({ children }: { children: ReactNode }) {
       const result = await response.json() as BootstrapResponse;
       if (result.managed === false) { setReady(true); return; }
       setManaged(true); revision.current = result.revision;
+      savedAtRevision.current = result.workspace ? parseSavedWorkspace(result.workspace) : { schema: WORKSPACE_SCHEMA, values: {} };
       recoveryImport.current = result.state === 'RECOVERY_REQUIRED';
       // Inspect both copies before offering recovery. Either one may be unreadable.
       let invalidLocal = false;

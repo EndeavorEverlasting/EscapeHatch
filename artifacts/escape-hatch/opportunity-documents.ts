@@ -82,9 +82,10 @@ export class OpportunityDocumentStore {
     value.documents[kind] = { name: file.name, sha256, size: file.buffer.length, source: verifiedSource, ...(prior?.sha256 === sha256 && prior.reviewedAt ? { reviewedAt: prior.reviewedAt } : {}) };
     await this.write(value); return value;
   }
-  async file(id: string, url: string, kind: DocumentKind): Promise<PrivatePdf | null> {
+  async file(id: string, url: string, kind: DocumentKind, expectedSha256?: string): Promise<PrivatePdf | null> {
     const value = await this.read(id, url), record = value.documents[kind];
     if (!record) return null;
+    if (expectedSha256 !== undefined && record.sha256 !== expectedSha256) throw new Error('Document changed. Refresh and preview the current PDF.');
     const buffer = await fs.readFile(path.join(this.directory(id, url), record.sha256 + '.pdf'));
     if (createHash('sha256').update(buffer).digest('hex') !== record.sha256 || buffer.length !== record.size) throw new Error('Document content changed; choose and review the current file.');
     return { name: record.name, mimeType: 'application/pdf', buffer };
@@ -99,6 +100,11 @@ export class OpportunityDocumentStore {
     record.reviewedAt = new Date().toISOString(); await this.write(value); return value;
   }
   async forUpload(id: string, url: string, requireReview = true) {
+    // Approval and returned bytes must describe one snapshot even when an
+    // external connector importer tries to replace a document concurrently.
+    return this.mutate(id, url, () => this.forUploadUnlocked(id, url, requireReview));
+  }
+  private async forUploadUnlocked(id: string, url: string, requireReview: boolean) {
     const value = await this.read(id, url);
     if (!value.documents.resume && !value.documents.cover) throw new Error('Save documents for this opportunity first.');
     if (requireReview && Object.values(value.documents).some(item => !item.reviewedAt)) throw new Error('Document review required before upload.');

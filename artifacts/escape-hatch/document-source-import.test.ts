@@ -36,6 +36,8 @@ test('local and connector PDF exports share scoped byte review, conflict protect
     await assert.rejects(importContext('document', next, destination), /package changed/);
     await importContext('document', { ...next, expectedPreviousSha256: input.expectedSha256 }, destination);
     await assert.rejects(store.forUpload(input.opportunityId, input.url), /review required/);
+    await assert.rejects(store.file(input.opportunityId, input.url, 'resume', input.expectedSha256), /Document changed/);
+    assert.deepEqual((await store.file(input.opportunityId, input.url, 'resume', next.expectedSha256))?.buffer, changed);
     assert.deepEqual((await store.read(input.opportunityId, input.url)).documents.resume?.source, { provider: 'local' });
     await assert.rejects(importContext('document', { ...input, filePath: root }, destination), /INVALID_DOCUMENT_SIZE/);
   } finally { await fs.rm(root, { recursive: true, force: true }); }
@@ -60,4 +62,32 @@ test('independent processes cannot lose a document slot or race a review', async
     for (const kind of ['resume', 'cover'] as const) await first.stage(id, url, kind, pdf(kind + '.pdf'));
     assert.equal(Object.keys((await second.read(id, url)).documents).length, 2);
   } finally { await fs.rm(root, { recursive: true, force: true }); }
+});
+
+test('upload approval cannot race an external replacement into returning unreviewed bytes', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-document-upload-race-'));
+  const reader = new OpportunityDocumentStore(root), writer = new OpportunityDocumentStore(root);
+  const id = 'synthetic', url = 'https://jobs.example.test/upload-race';
+  const pdf = (text: string) => ({ name: 'resume.pdf', mimeType: 'application/pdf' as const, buffer: Buffer.from('%PDF-1.4\n' + text) });
+  let release!: () => void, observed!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  const checkpoint = new Promise<void>(resolve => { observed = resolve; });
+  try {
+    const saved = await reader.stage(id, url, 'resume', pdf('approved'));
+    await reader.review(id, url, 'resume', saved.documents.resume!.sha256);
+    const originalRead = reader.read.bind(reader);
+    let pause = true;
+    reader.read = async (...args) => {
+      const snapshot = await originalRead(...args);
+      if (pause) { pause = false; observed(); await gate; }
+      return snapshot;
+    };
+    const upload = reader.forUpload(id, url);
+    await checkpoint;
+    await assert.rejects(writer.stage(id, url, 'resume', pdf('unreviewed')), /busy/);
+    release();
+    assert.deepEqual((await upload).resume?.buffer, pdf('approved').buffer);
+    await writer.stage(id, url, 'resume', pdf('unreviewed'));
+    await assert.rejects(reader.forUpload(id, url), /review required/);
+  } finally { release(); await fs.rm(root, { recursive: true, force: true }); }
 });

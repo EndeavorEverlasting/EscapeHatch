@@ -350,7 +350,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             if (url.pathname === PREFIX + '/documents/file') {
               const kind = url.searchParams.get('kind');
               if (kind !== 'resume' && kind !== 'cover') throw new Error('Invalid document kind.');
-              const file = await documentStore.file(scope.opportunityId, scope.url, kind);
+              const file = await documentStore.file(scope.opportunityId, scope.url, kind, url.searchParams.get('sha256') ?? undefined);
               if (!file) return respond(res, 404, { ok: false, error: 'document_not_found' });
               res.statusCode = 200; res.setHeader('Content-Type', 'application/pdf'); res.setHeader('Cache-Control', 'no-store'); res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('Content-Disposition', 'inline; filename="' + file.name + '"'); return res.end(file.buffer);
             }

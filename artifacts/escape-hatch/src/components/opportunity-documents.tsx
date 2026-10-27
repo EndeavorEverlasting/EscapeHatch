@@ -48,7 +48,7 @@ export function useOpportunityDocuments(opportunityId: string, url: string) {
 }
 export function OpportunityDocuments({ documents, disabled, onBypass }: { documents: ReturnType<typeof useOpportunityDocuments>; disabled: boolean; onBypass: () => void }) {
   const data = documents.data;
-  const [preview, setPreview] = useState<{ scope: string; kind: 'resume' | 'cover' } | null>(null);
+  const [preview, setPreview] = useState<{ scope: string; kind: 'resume' | 'cover'; sha256: string } | null>(null);
   const [notice, setNotice] = useState<{ scope: string; text: string } | null>(null);
   const [intakeMessages, setIntakeMessages] = useState({ resume: '', cover: '' });
   const currentScope = useRef(documents.scopeKey); currentScope.current = documents.scopeKey;
@@ -76,7 +76,7 @@ export function OpportunityDocuments({ documents, disabled, onBypass }: { docume
     }
   }
   const [pendingPolicy, setPendingPolicy] = useState<{ scope: string; value: boolean } | null>(null);
-  const fileUrl = (kind: 'resume' | 'cover') => API + 'file?' + new URLSearchParams({ opportunityId: data?.package.opportunityId || '', url: data?.package.url || '', kind });
+  const fileUrl = (kind: 'resume' | 'cover') => API + 'file?' + new URLSearchParams({ opportunityId: data?.package.opportunityId || '', url: data?.package.url || '', kind, sha256: data?.package.documents[kind]?.sha256 || '' });
   return <section className="my-4 rounded-xl border border-border bg-card p-4" aria-label="Opportunity document review">
     <h3 className="font-display text-xl">Documents and review</h3>
     <p className="mt-2 text-sm">Selected files are saved privately for this opportunity. Selecting a file does not upload it to the employer or mean you reviewed it.</p>
@@ -126,12 +126,12 @@ export function OpportunityDocuments({ documents, disabled, onBypass }: { docume
         <p role="status" className="mt-2 break-words text-sm">{intakeMessages[kind]}</p>
         {item ? <><p className="mt-2 break-words text-sm">{item.name}</p><p className="text-xs">{item.reviewedAt ? 'You confirmed review on ' + new Date(item.reviewedAt).toLocaleString() : 'Not confirmed reviewed'}{data?.requireReview === false ? ' · Review checkpoint disabled' : ''}</p>
           <p className="mt-2 text-xs">{driveSourceLink(item) ? <>Recorded source: <a className="underline" href={driveSourceLink(item)!} target="_blank" rel="noreferrer">Open source in Google Drive</a>. Preview below shows the saved version; later Drive edits need a new import and review.</> : item.source?.provider === 'local' ? 'Source: local PDF' : 'Source not recorded; preview the saved PDF.'}</p>
-          <button className="mt-2 rounded border border-primary px-3 py-2 text-sm" type="button" disabled={disabled || documents.loading} onClick={() => setPreview({ scope: documents.scopeKey, kind })}>Preview {label}</button>
+          <button className="mt-2 rounded border border-primary px-3 py-2 text-sm" type="button" disabled={disabled || documents.loading} onClick={() => setPreview({ scope: documents.scopeKey, kind, sha256: item.sha256 })}>Preview {label}</button>
           <button className="mt-2 ml-2 rounded border border-primary px-3 py-2 text-sm" type="button" disabled={disabled || documents.loading || documents.intakePending || Boolean(item.reviewedAt)} onClick={() => { void documents.request('review', { kind, sha256: item.sha256, confirmed: true }).catch(() => {}); }}>I reviewed this {label}</button>
         </> : <p className="mt-2 text-sm">No {label} saved for this opportunity.</p>}
       </div>;
     })}</div>
-    {preview?.scope === documents.scopeKey && data && <div className="mt-3"><a className="underline" href={fileUrl(preview.kind)} target="_blank" rel="noreferrer">Open selected PDF in a new tab</a><iframe title="Selected document preview" className="mt-2 h-96 w-full border" src={fileUrl(preview.kind)} /><button type="button" onClick={() => setPreview(null)}>Close preview</button></div>}
+    {preview?.scope === documents.scopeKey && data && preview.sha256 === data.package.documents[preview.kind]?.sha256 && <div className="mt-3"><a className="underline" href={fileUrl(preview.kind)} target="_blank" rel="noreferrer">Open selected PDF in a new tab</a><iframe key={preview.sha256} title="Selected document preview" className="mt-2 h-96 w-full border" src={fileUrl(preview.kind)} /><button type="button" onClick={() => setPreview(null)}>Close preview</button></div>}
     <p role="status" className="mt-3 text-sm">{documents.error || (notice?.scope === documents.scopeKey ? notice.text : '') || (documents.loading ? 'Loading saved documents…' : documents.canUpload ? 'Documents are eligible for upload under your current review setting.' : 'Select this opportunity’s documents and complete the required review before uploading.')}</p>
   </section>;
 }

@@ -1,7 +1,7 @@
 import { prepareWithoutTrustedNavigation } from './managed-prepare-fallback.ts';
 import { INITIAL_CHECKPOINT, advanceAuthCheckpoint, inspectAuthObservation, resumeAllowed, type AuthCheckpoint } from './managed-auth-checkpoint.ts';
 import { fieldProgressState, attachmentProgressState, evidenceDescription } from './managed-progress-evidence.ts';
-import { assertInspectionScope, inspectApplicationRequirements } from './application-requirements.ts';
+import { assertInspectionScope, inspectApplicationRequirements, inspectRequiredFieldBlockers } from './application-requirements.ts';
 import { OpportunityDocumentStore, documentScope, type DocumentKind } from './opportunity-documents.ts';
 import { ManagedListeners } from './managed-listeners.ts';
 import { withCareerPreferences } from './career-preferences.ts';
@@ -499,6 +499,12 @@ export function createManagedBrowserAssistPlugin(): Plugin {
                 attach: () => attachPdfs(page!, packageFiles.resume, packageFiles.cover),
                 expectedUploads: (['resume', 'cover'] as const).filter(kind => Boolean(packageFiles[kind])),
               });
+              // A missing reviewed résumé does not appear in expectedUploads;
+              // always inspect the actual required file input and all starred fields.
+              fallback.preparation.pendingManual = [...new Set([
+                ...fallback.preparation.pendingManual,
+                ...await inspectRequiredFieldBlockers(page!, opportunityId, applicationUrl),
+              ])];
               preparation = fallback.preparation;
               state = preparation.state;
               return respond(res, 200, {
@@ -533,6 +539,14 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               requireUploadsVerified: true,
             });
             preparation = await prepareToFinalReview(driver, authorization, { maxSteps });
+            const requiredBlockers = await inspectRequiredFieldBlockers(page!, opportunityId, applicationUrl);
+            if (requiredBlockers.length) {
+              preparation = {
+                ...preparation, state: 'REVIEW_REQUIRED',
+                code: preparation.state === 'REVIEW_READY' ? 'required_field_reconciliation_failed' : preparation.code,
+                pendingManual: [...new Set([...preparation.pendingManual, ...requiredBlockers])],
+              };
+            }
             state = preparation.state === 'REVIEW_READY'
               ? 'REVIEW_READY'
               : preparation.state === 'BLOCKED'

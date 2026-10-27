@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from '@playwright/test';
-import { inspectApplicationRequirements } from './application-requirements.ts';
+import { inspectApplicationRequirements, unresolvedCurrentPageRequirements } from './application-requirements.ts';
 
 const applicationUrl = 'https://example.test/apply';
 
@@ -79,4 +79,23 @@ test('dynamic starred fields are re-inventoried after conditional controls appea
     assert.equal(after.requirements.filter(item => item.requirement === 'required').length, 2);
     assert.equal(after.requirements.find(item => /Proposed start date/.test(item.label))?.populated, false);
   } finally { await browser.close(); }
+});
+
+test('required-field blocker projection never counts a separate checkbox as consent', () => {
+  const blockers = unresolvedCurrentPageRequirements({
+    opportunityId: 'synthetic', applicationUrl, pageUrl: applicationUrl,
+    capturedAt: '2026-10-27T00:00:00Z', scope: 'current_page_only',
+    requirements: [
+      { id: 'resume', label: 'Resume/CV *', kind: 'resume', requirement: 'required', populated: false },
+      { id: 'consent', label: 'Applicant Privacy Notice *', kind: 'question', requirement: 'required', populated: false },
+      { id: 'newsletter', label: 'Newsletter', kind: 'question', requirement: 'optional', populated: true },
+      { id: 'custom', label: 'Unclassified custom widget', kind: 'question', requirement: 'unknown', populated: false },
+      { id: 'country', label: 'Country *', kind: 'question', requirement: 'required', populated: true },
+    ],
+  });
+  assert.deepEqual(blockers, [
+    'required_field_unresolved:Resume/CV *',
+    'required_operator_action:Applicant Privacy Notice *',
+    'unclassified_field_review:Unclassified custom widget',
+  ]);
 });

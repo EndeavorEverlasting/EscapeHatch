@@ -29,8 +29,18 @@ export async function saveWorkspace(input: unknown, expectedRevision: string | n
   // SQLite is used only for an OS-backed cross-process lock, never as a second
   // workspace database. Process exit/crash releases it; no stale marker deletion.
   const lock = new DatabaseSync(file + '.lock.sqlite');
-  try { lock.exec('PRAGMA busy_timeout=0; BEGIN IMMEDIATE'); }
-  catch { lock.close(); throw new Error('Workspace is busy. Retry after the other save finishes.'); }
+  // A background employer-receipt save must not make a foreground autosave
+  // fail immediately. Retry asynchronously so the current holder can finish
+  // writing and release the OS-backed cross-process transaction lock.
+  let acquired = false;
+  for (let attempt = 0; attempt < 20; attempt++) {
+    try { lock.exec('PRAGMA busy_timeout=0; BEGIN IMMEDIATE'); acquired = true; break; }
+    catch (error) {
+      if (attempt === 19 || !/busy|locked/i.test(String(error))) { lock.close(); throw new Error('Workspace is busy. Retry after the other save finishes.'); }
+      await new Promise(resolve => setTimeout(resolve, 30 * (attempt + 1)));
+    }
+  }
+  if (!acquired) { lock.close(); throw new Error('Workspace is busy. Retry after the other save finishes.'); }
   const temporary = file + '.' + randomUUID() + '.tmp';
   try {
     let prior;

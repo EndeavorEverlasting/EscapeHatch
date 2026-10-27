@@ -293,7 +293,9 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       const result = await request('/listeners/bind-existing', { opportunityId: selectedOpportunityId, url, livePageUrl: live.href, employerName: applications.find(item => item.id === selectedOpportunityId)?.company || '' });
       setListenerStatus(result.listeners);
       setListenerConnected(true);
-      setCurrentPage(result.currentPage || null);
+      // The binding response is server-scoped to the exact employer tab. Keep the
+      // current-page guard active before the first status poll arrives.
+      setCurrentPage(result.currentPage ?? { opportunityId: selectedOpportunityId, applicationUrl: url, pageUrl: live.href });
       if (result.trackerSync) setTrackerSync(result.trackerSync);
       setRecordingMessage(result.listeners?.submission?.reason || 'Check the submission listener status before submitting.');
     } catch (error) { setListenerStatus(undefined); setRecordingMessage(error instanceof Error ? error.message : 'Could not track the existing tab. No submission is assumed.'); }
@@ -672,7 +674,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           {listenerStatus?.submission?.state === 'CONFIRMED' && listenerStatus.receipts?.some(receipt => !!receipt && typeof receipt === 'object' && 'opportunityId' in receipt && receipt.opportunityId === selectedOpportunityId) && <p className="mt-2 font-semibold">Employer confirmation received. This application is marked Applied in your local queue.</p>}
           <p className="mt-2 text-xs text-muted-foreground">A click or page change alone never marks an application Applied. Tracking waits for employer confirmation, saves a receipt, and retries tracker synchronization independently.</p>
           <p className="mt-2 text-sm" role="status">{trackerSync ? `Tracker synchronization: ${trackerSync.state}. Saved receipts: ${trackerSync.synced} synced, ${trackerSync.pending} pending, ${trackerSync.authRequired} need Google authorization, ${trackerSync.conflicts} have conflicts, ${trackerSync.retryRequired} need retry.` : 'External tracker synchronization has not been verified.'}</p>
-          <button type="button" className={secondary} disabled={busy} onClick={() => { setBusy(true); void request('/submission-sync/retry', {}).then(result => { if (result.trackerSync) setTrackerSync(result.trackerSync); }).catch(() => setRecordingMessage('Tracker sync did not complete. The saved receipt is preserved for retry.')).finally(() => setBusy(false)); }}>Retry tracker synchronization</button>
+          <button type="button" className={secondary} disabled={busy} onClick={() => { setBusy(true); void request('/submission-sync/retry', {}).then(result => { setRecordingMessage(''); if (result.trackerSync) setTrackerSync(result.trackerSync); }).catch(() => setRecordingMessage('Tracker sync did not complete. The saved receipt is preserved for retry.')).finally(() => setBusy(false)); }}>Retry tracker synchronization</button>
         </section>
         <div className="mt-4 flex flex-wrap gap-2">
           <button type="button" className={secondary} disabled={busy || documents.intakePending || !browserOpen} onClick={() => void run('fill')} data-testid="button-managed-fill">

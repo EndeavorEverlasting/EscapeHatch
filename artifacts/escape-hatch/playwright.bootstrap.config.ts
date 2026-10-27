@@ -29,6 +29,7 @@ export default defineConfig({
     env: { PORT: port, ESCAPEHATCH_DATA_HOME: dataHome, ESCAPEHATCH_PREFERENCES_FILE: path.join(dataHome, 'preferences.json'),
       ESCAPEHATCH_TRACKER_SNAPSHOT: path.join(dataHome, 'tracker.json'),
       ESCAPEHATCH_INSTANCE_ID: `bootstrap-proof-${port}`, ESCAPEHATCH_REPO_FINGERPRINT: 'b'.repeat(64),
-      ESCAPEHATCH_SHUTDOWN_TOKEN: 'synthetic-test-only', ESCAPEHATCH_STARTED_AT_UTC: new Date().toISOString() },
+      ESCAPEHATCH_SHUTDOWN_TOKEN: 'synthetic-test-only', ESCAPEHATCH_STARTED_AT_UTC: new Date().toISOString(),
+      VITE_ESCAPEHATCH_SYNTHETIC_TEST_WORKSPACE: '1' },
   })),
 });

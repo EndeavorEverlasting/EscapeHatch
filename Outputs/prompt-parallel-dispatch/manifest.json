@@ -1,56 +1,44 @@
 {
-  "lanes": [
-    {
-      "mission": "Read-only review of independent document generations, queue and preparation sequencing",
-      "mutation_surfaces": [],
-      "return_contract": "Concrete source/test findings; no writes or merges",
-      "lane_id": "review",
-      "adapter": "collaboration.spawn_agent"
-    },
-    {
-      "mission": "Preserve independent artifact intake, preparation sequencing and live current-page scope",
-      "mutation_surfaces": [
-        "artifacts/escape-hatch/src/components/opportunity-documents.tsx",
-        "artifacts/escape-hatch/src/components/managed-browser-assist.tsx",
-        "artifacts/escape-hatch/src/components/application-puzzle.tsx",
-        "artifacts/escape-hatch/tests/application-workbench.spec.ts",
-        "docs/GUIDED_APPLICATION_WORKBENCH.md",
-        "VERSION",
-        "browser/application-assist/manifest.json",
-        "CHANGELOG.md",
-        "artifacts/escape-hatch/application-requirements.ts",
-        "artifacts/escape-hatch/browser-assist-control.ts",
-        "artifacts/escape-hatch/src/lib/application-puzzle.ts",
-        "artifacts/escape-hatch/src/lib/application-puzzle.test.ts",
-        "artifacts/escape-hatch/tests/application-requirements-control.spec.ts"
-      ],
-      "lane_id": "implementation",
-      "adapter": "primary agent"
-    }
-  ],
+  "schema_version": "prompt-parallel-dispatch/v1",
+  "run_id": "document-sources-20261027",
+  "repository": "EndeavorEverlasting/EscapeHatch",
+  "base_ref": {
+    "provider_default_head": "857d8ed",
+    "reconciled_head": "1cc9916"
+  },
   "graph": {
     "max_width": 2,
     "parallel_disposition": "REQUIRED"
   },
+  "convergence_owner": "primary agent",
+  "status": "NATIVE_DISPATCH_COMPLETED_CANONICAL_VALIDATION_BLOCKED",
+  "lanes": [
+    {
+      "lane_id": "implementation",
+      "adapter": "primary agent",
+      "mission": "Extend canonical document store and import-context ingress; UI preview and refresh",
+      "mutation_surfaces": [
+        "artifacts/escape-hatch/import-context.ts",
+        "artifacts/escape-hatch/opportunity-documents.ts",
+        "artifacts/escape-hatch/src/components/opportunity-documents.tsx"
+      ]
+    },
+    {
+      "lane_id": "review",
+      "adapter": "collaboration.spawn_agent",
+      "mission": "Read-only document ingress boundary review",
+      "mutation_surfaces": [],
+      "return_contract": "Concrete safety and regression findings",
+      "target": "/root/document_source_review",
+      "result": "Completed; shared lock, explicit refresh, recorded origin and byte approval findings addressed"
+    }
+  ],
   "blockers": [
     "harness/contracts/prompt-parallel-dispatch.v1.json absent",
     "scripts/prompt_parallel_dispatch.py absent"
   ],
-  "status": "BLOCKED_CANONICAL_VALIDATION_NATIVE_EXECUTION_AVAILABLE",
-  "schema_version": "prompt-parallel-dispatch/v1",
-  "base_ref": {
-    "provider_default_head": "92daa2107646ca8ccdd4c96e1d3607cbfe0099dd"
-  },
-  "run_id": "independent-document-intake-20261025",
-  "convergence_owner": "primary agent",
-  "repository": "EndeavorEverlasting/EscapeHatch",
   "execution": {
-    "review_adapter": "collaboration.followup_task",
-    "review_target": "/root/review_workbench",
-    "returned_findings": [
-      "per-kind cancellation correction sound",
-      "defer review-off bypass until all current selected reads/staging drain"
-    ],
-    "canonical_receipt_validation": "UNPROVEN_SCHEMA_AND_RUNNER_ABSENT"
+    "native_dispatch": true,
+    "canonical_receipt_validation": "UNPROVEN_MISSING_SCHEMA_AND_RUNNER"
   }
 }

@@ -10,6 +10,45 @@ async function drop(target: Locator, name: string, content: string, count = 1) {
   }, { name, content, count });
 }
 
+test('refresh reveals connector-exported snapshot for review before employer preparation', async ({ page }) => {
+  const job = { id: 'drive-preview', company: 'Synthetic Drive', role: 'Engineer', url: 'https://example.invalid/drive-preview', status: 'saved', priority: 'normal', notes: '', nextAction: '', updatedAt: new Date().toISOString() };
+  let available = false, reviewed = false, digest = 'a'.repeat(64);
+  const actions: string[] = [];
+  await page.route('**/__escapehatch/managed-assist/**', async route => {
+    const endpoint = new URL(route.request().url());
+    const action = endpoint.pathname.split('/').at(-1)!;
+    if (!endpoint.pathname.includes('/documents/')) return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, state: 'idle', browserOpen: false }) });
+    actions.push(action);
+    if (action === 'file') return route.fulfill({ contentType: 'application/pdf', body: '%PDF-1.4\nsynthetic snapshot' });
+    if (action === 'review') { expect(route.request().postDataJSON().sha256).toBe(digest); reviewed = true; }
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, requireReview: true,
+      package: { opportunityId: job.id, url: job.url, documents: available ? { resume: { name: 'drive-snapshot.pdf', sha256: digest, size: 28,
+        source: { provider: 'google_drive', fileId: 'synthetic_drive_file', modifiedTime: '2026-01-01T00:00:00Z' }, ...(reviewed ? { reviewedAt: new Date().toISOString() } : {}) } } : {} } }) });
+  });
+  await page.goto('/');
+  await page.evaluate(job => localStorage.setItem('escape-hatch-applications', JSON.stringify([job])), job);
+  await page.goto('/assist?opportunityId=' + job.id);
+  const documents = page.getByRole('region', { name: 'Opportunity document review', exact: true });
+  await expect(documents).toContainText('No résumé saved');
+  available = true;
+  await documents.getByRole('button', { name: 'Refresh saved documents' }).click();
+  await expect(documents).toContainText('drive-snapshot.pdf');
+  await expect(documents).toContainText('Not confirmed reviewed');
+  await expect(documents.getByRole('link', { name: 'Open source in Google Drive' })).toHaveAttribute('href', 'https://drive.google.com/file/d/synthetic_drive_file/view');
+  await documents.getByRole('button', { name: 'Preview résumé' }).click();
+  await expect(documents.getByTitle('Selected document preview')).toHaveAttribute('src', /documents\/file\?/);
+  digest = 'b'.repeat(64);
+  await documents.getByRole('button', { name: 'Refresh saved documents' }).click();
+  await expect(documents.getByTitle('Selected document preview')).toHaveCount(0);
+  await documents.getByRole('button', { name: 'Preview résumé' }).click();
+  await expect(documents.getByTitle('Selected document preview')).toHaveAttribute('src', new RegExp('sha256=' + digest));
+  await documents.getByRole('button', { name: 'I reviewed this résumé' }).click();
+  await expect(documents).toContainText('You confirmed review');
+  expect(actions).toContain('file');
+  expect(actions).toContain('review');
+  expect(actions).not.toContain('prepare');
+});
+
 test('independent document reads preserve both slots and serialize private staging', async ({ page }) => {
   const job = { id: 'independent-documents', company: 'Synthetic Documents', role: 'Engineer', url: 'https://example.invalid/job/documents', status: 'saved', priority: 'normal', notes: '', nextAction: '', updatedAt: new Date().toISOString() };
   const pkg: { opportunityId: string; url: string; documents: Record<string, { name: string; sha256: string; size: number }> } = { opportunityId: job.id, url: job.url, documents: {} };

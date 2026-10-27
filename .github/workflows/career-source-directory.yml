@@ -1,0 +1,24 @@
+name: Career source directory
+on:
+  pull_request:
+    paths:
+      - scripts/career_source_directory.py
+      - tests/test_career_source_directory.py
+      - docs/CAREER_SOURCE_DIRECTORY.md
+      - .github/workflows/career-source-directory.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-registry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test privacy, source identity and idempotency
+        run: python -m unittest discover -s tests -p test_career_source_directory.py -v
+      - name: Harness compliance
+        run: python scripts/validate_harness.py

@@ -1,7 +1,7 @@
 /** Explicit agent/operator ingress for connector exports; never fetches or invents credentials. */
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { createTrackerSnapshotFromValues } from './tracker-refresh.ts';
 import { userDataRoot } from './user-data.ts';
@@ -9,6 +9,7 @@ import { saveWorkspace, readWorkspace } from './workspace-file.ts';
 import { parseSavedWorkspace } from './src/lib/workspace-bootstrap.ts';
 import { parseWorkspaceExport } from './src/lib/storage.ts';
 import { PROFILE_KEY, ANSWERS_KEY, APPLICATIONS_KEY } from './src/lib/storage.ts';
+import { OpportunityDocumentStore, documentScope, parseDocumentSource } from './opportunity-documents.ts';
 
 async function atomicPrivateCopy(file: string, value: unknown) {
   await fs.mkdir(path.dirname(file), { recursive: true });
@@ -20,6 +21,37 @@ async function atomicPrivateCopy(file: string, value: unknown) {
   } finally { await fs.rm(temporary, { force: true }); }
 }
 export async function importContext(kind: string, input: unknown, destination = userDataRoot()) {
+  if (kind === 'document') {
+    const item = input as Record<string, unknown>;
+    if (!item || typeof item !== 'object' || Array.isArray(item) ||
+        Object.keys(item).sort().join(',') !== 'expectedPreviousSha256,expectedSha256,filePath,kind,name,opportunityId,source,url' ||
+        !['resume', 'cover'].includes(String(item.kind)) || typeof item.filePath !== 'string' || !path.isAbsolute(item.filePath) ||
+        typeof item.name !== 'string' || typeof item.expectedSha256 !== 'string' || !/^[a-f0-9]{64}$/.test(item.expectedSha256) ||
+        (item.expectedPreviousSha256 !== null && (typeof item.expectedPreviousSha256 !== 'string' || !/^[a-f0-9]{64}$/.test(item.expectedPreviousSha256)))) throw new Error('INVALID_DOCUMENT_EXPORT');
+    const source = parseDocumentSource(item.source);
+    const scope = documentScope(item.opportunityId, item.url);
+    if ((await fs.lstat(item.filePath)).isSymbolicLink()) throw new Error('SELECT_REGULAR_DOCUMENT_FILE');
+    // Reject oversized/non-file inputs before reading. Hash the same bounded bytes staged.
+    const handle = await fs.open(item.filePath, 'r');
+    let buffer: Buffer;
+    try {
+      const stat = await handle.stat();
+      if (!stat.isFile() || !stat.size || stat.size > 5 * 1024 * 1024) throw new Error('INVALID_DOCUMENT_SIZE');
+      buffer = Buffer.alloc(stat.size + 1);
+      let offset = 0;
+      while (offset < buffer.length) {
+        const result = await handle.read(buffer, offset, buffer.length - offset, null);
+        if (!result.bytesRead) break;
+        offset += result.bytesRead;
+      }
+      if (offset !== stat.size) throw new Error('DOCUMENT_CHANGED_DURING_READ');
+      buffer = buffer.subarray(0, offset);
+    } finally { await handle.close(); }
+    if (createHash('sha256').update(buffer).digest('hex') !== item.expectedSha256) throw new Error('DOCUMENT_HASH_MISMATCH');
+    await new OpportunityDocumentStore(path.join(destination, 'opportunity-documents')).stage(scope.opportunityId, scope.url,
+      item.kind as 'resume' | 'cover', { name: item.name, mimeType: 'application/pdf', buffer }, source, item.expectedPreviousSha256 as string | null);
+    return 'DOCUMENT_STAGED_REVIEW_REQUIRED';
+  }
   if (kind === 'workspace') {
     let workspace = parseSavedWorkspace(input);
     if (!workspace) {
@@ -47,11 +79,11 @@ export async function importContext(kind: string, input: unknown, destination = 
     await atomicPrivateCopy(file, snapshot);
     return 'TRACKER_IMPORTED';
   }
-  throw new Error('Use workspace or tracker with an explicit validated local artifact.');
+  throw new Error('Use workspace, tracker or document with an explicit validated local artifact.');
 }
 async function main() {
   const [kind, inputFile] = process.argv.slice(2);
-  if (!inputFile) throw new Error('Usage: npm run import:context -- workspace|tracker <private-export.json>');
+  if (!inputFile) throw new Error('Usage: npm run import:context -- workspace|tracker|document <private-export.json>');
   if ((await fs.stat(inputFile)).size > 2 * 1024 * 1024) throw new Error('INPUT_TOO_LARGE');
   const result = await importContext(kind, JSON.parse((await fs.readFile(inputFile, 'utf8')).replace(/^\uFEFF/, '')));
   console.log(result + '; private contents omitted');

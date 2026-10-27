@@ -7,6 +7,8 @@ import { createTrackerSnapshotFromValues } from './tracker-refresh.ts';
 import { trackerOpportunityId } from './src/lib/tracker-bridge.ts';
 import { emptyProfile, APPLICATIONS_KEY, PROFILE_KEY } from './src/lib/storage.ts';
 import { saveWorkspace, readWorkspace } from './workspace-file.ts';
+import { mergeConfirmedReceiptWorkspace, WORKSPACE_SCHEMA } from './src/lib/workspace-bootstrap.ts';
+import { reconcileSubmissionReceipts } from './src/lib/submission-reconciliation.ts';
 import { enqueueSubmissionSync, retrySubmissionSync, readSubmissionSyncStatus, planSubmissionWrite } from './tracker-writeback.ts';
 
 const url = 'https://jobs.lever.co/synthetic/00000000-0000-0000-0000-000000000000';
@@ -53,6 +55,28 @@ test('canonical tracker glyphs, Research status and date-validated serial surviv
   assert.equal(after[1][7], 'unchanged');
   const progressed = [cells[0], ['☑', 'Medium', 'In Process', 'Synthetic', 'Role', url, serial, 'unchanged']];
   assert.throws(() => planSubmissionWrite(current, evidence, progressed), /CONFLICT/);
+});
+
+
+test('workspace collision recovery accepts only a confirmed receipt delta and keeps unrelated browser edits', () => {
+  const r = receipt();
+  const app = { id: r.opportunityId, company: 'Synthetic', role: 'Role', url, status: 'preparing' as const,
+    priority: 'normal' as const, notes: 'original', nextAction: 'review', updatedAt: '2026-01-01' };
+  const base = { schema: WORKSPACE_SCHEMA, values: { [PROFILE_KEY]: emptyProfile, [APPLICATIONS_KEY]: [app] } };
+  const remote = { schema: WORKSPACE_SCHEMA, values: { ...base.values, [APPLICATIONS_KEY]: reconcileSubmissionReceipts([app], [r]) } };
+  const browser = { schema: WORKSPACE_SCHEMA, values: { ...base.values,
+    [PROFILE_KEY]: { ...emptyProfile, first_name: 'BrowserEdit' },
+    [APPLICATIONS_KEY]: [{ ...app, notes: 'browser notes', updatedAt: '2026-01-01' }] } };
+  const merged = mergeConfirmedReceiptWorkspace(base, remote, browser, [r]);
+  assert.equal(merged?.values[PROFILE_KEY]?.first_name, 'BrowserEdit');
+  const applications = merged?.values[APPLICATIONS_KEY] as typeof app[];
+  assert.equal(applications[0].status, 'applied');
+  assert.equal(applications[0].notes, 'browser notes');
+  const unrelated = { ...remote, values: { ...remote.values,
+    [PROFILE_KEY]: { ...emptyProfile, last_name: 'OtherWriter' } } };
+  assert.equal(mergeConfirmedReceiptWorkspace(base, unrelated, browser, [r]), null);
+  assert.equal(mergeConfirmedReceiptWorkspace(base, remote, browser, []), null);
+  assert.equal(mergeConfirmedReceiptWorkspace(null, remote, browser, [r]), null);
 });
 
 test('receipt survives restart and missing auth; local workspace reconciles without a browser or agent', async () => {

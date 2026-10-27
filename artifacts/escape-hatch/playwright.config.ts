@@ -6,6 +6,7 @@ const { port, serverEnv } = createIsolatedBrowserTestEnvironment();
 export default defineConfig({
   testDir: './tests',
   testIgnore: 'workspace-startup.spec.ts',
+  metadata: { syntheticWorkspace: true },
   fullyParallel: false,
   timeout: 30_000,
   reporter: 'list',

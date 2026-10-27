@@ -5,6 +5,7 @@ import path from 'node:path';
 
 test('fresh browser recovers private context, edited state survives a fresh browser', async ({ page, browser }) => {
   await page.goto('/profile');
+  await expect(page.getByTestId('synthetic-workspace-warning')).toContainText('Do not use this window for real job applications');
   await expect(page.getByTestId('input-first_name')).toHaveValue('Synthetic');
   await expect(page.getByTestId('input-email')).toHaveValue('synthetic@example.test');
   await page.getByTestId('input-first_name').fill('Updated');

@@ -8,6 +8,7 @@ test('cross-application answer slots distinguish employment eligibility, notice,
   assert.equal(matchQuestion('Are you comfortable completing a live coding exercise as part of the interview process? *'), 'interview.live_coding_comfort');
   assert.equal(matchQuestion('How did you hear about us? *'), 'recruitment.discovery_source');
   assert.equal(matchQuestion('Country of residence'), 'identity.country');
+  assert.equal(matchQuestion('Previously employed by Magnet Forensics or acquired/merged company? *', 'Magnet Forensics'), 'employment.prior_employer_relationship');
 });
 
 test('approved user correction persists, while opportunity source must not bleed between jobs', () => {

@@ -56,6 +56,16 @@ export function matchQuestion(prompt: string, employerName = ''): string | null 
   const employer = normalizeQuestion(employerName);
   if (employer && text === 'are you a current employee of ' + employer) text = 'are you a current employee of this company';
   if (employer && text === 'have you previously been employed by ' + employer) text = 'have you previously been employed by this company';
+  // Employer-named former employment questions are a distinct per-application
+  // relationship, including subsidiaries or acquired companies.
+  if (employer && [
+    'previously employed by ', 'have you previously worked for ',
+    'have you ever been employed by ', 'have you ever worked for ',
+  ].some(prefix => text.startsWith(prefix + employer) &&
+    (text.length === (prefix + employer).length ||
+      /^( or| including| and| before| at any time| in the past)/.test(text.slice((prefix + employer).length))))) {
+    return 'employment.prior_employer_relationship';
+  }
   const matches = questions.filter(q => q.aliases.some(alias => normalizeQuestion(alias) === text));
   return matches.length === 1 ? matches[0].id : null;
 }

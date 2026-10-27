@@ -311,7 +311,11 @@ export function createManagedBrowserAssistPlugin(): Plugin {
   // Replace observation handles only; never close or navigate employer tabs.
   const previousListeners = cache.listeners;
   const listeners = previousListeners.implementationVersion === 2 ? previousListeners : new ManagedListeners(undefined, undefined, enqueueSubmissionSync);
-  const listenerReady = previousListeners === listeners ? Promise.resolve() : previousListeners.dispose();
+  // Older cached listeners and synthetic middleware fixtures may predate dispose().
+  // Preserve the employer tab; replace obsolete handles without invoking an absent method.
+  // A new listener starts unarmed and requires exact-application binding before Submit.
+  const listenerReady = previousListeners === listeners || typeof previousListeners?.dispose !== 'function'
+    ? Promise.resolve() : previousListeners.dispose();
   cache.listeners = listeners;
   return {
     name: 'escapehatch-managed-browser-assist',

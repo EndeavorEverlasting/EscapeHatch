@@ -20,7 +20,10 @@ test('starred Lever-style controls and private required consent are never silent
           <label><input type="radio" name="previous" value="no">No</label>
         </fieldset>
         <label>Country legally eligible to work in <input aria-required="true" id="country"></label>
-        <label for="consent">Applicant Privacy Notice *</label><input id="consent" type="checkbox">
+        <fieldset><legend>Communication preferences</legend>
+          <label for="consent">Applicant Privacy Notice *</label><input id="consent" type="checkbox">
+          <label>Optional newsletter <input id="newsletter" type="checkbox"></label>
+        </fieldset>
         <label>Optional notes <input id="notes"></label>
       </form>` }));
     await page.goto(applicationUrl);
@@ -49,6 +52,11 @@ test('starred Lever-style controls and private required consent are never silent
     assert.equal(second.requirements.find(item => item.kind === 'resume')?.populated, true);
     assert.ok(second.requirements.filter(item => /Previously employed/.test(item.label)).every(item => item.populated));
     assert.equal(second.requirements.find(item => /Privacy Notice/.test(item.label))?.populated, false);
+    assert.equal(await page.locator('#consent').isChecked(), false);
+    // A separate checkbox in the same fieldset must not satisfy privacy consent.
+    await page.locator('#newsletter').check();
+    const afterNewsletter = await inspectApplicationRequirements(page, 'job-one', applicationUrl);
+    assert.equal(afterNewsletter.requirements.find(item => /Privacy Notice/.test(item.label))?.populated, false);
     assert.equal(await page.locator('#consent').isChecked(), false);
   } finally { await browser.close(); }
 });

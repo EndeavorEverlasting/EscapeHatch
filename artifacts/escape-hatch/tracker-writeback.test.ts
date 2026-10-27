@@ -21,7 +21,8 @@ test('plan uses exact receipt, fresh headers and unique opportunity; row moves r
   const plan = planSubmissionWrite(s, r, reordered);
   assert.equal(plan.row.sheetRow, 3);
   assert.deepEqual(plan.data.map(item => item.range), ["'Applications'!C3", "'Applications'!F3", "'Applications'!G3"]);
-  assert.deepEqual(plan.data.map(item => item.values[0][0]), ['Submitted', true, '2026-01-02']);
+  const expectedSerial = Math.round((Date.parse('2026-01-02T00:00:00Z') - Date.UTC(1899, 11, 30)) / 86400000);
+  assert.deepEqual(plan.data.map(item => item.values[0][0]), ['Submitted', true, expectedSerial]);
   assert.throws(() => planSubmissionWrite(s, { ...r, opportunityId: 'other' }, values()), /CONFLICT/);
   assert.throws(() => planSubmissionWrite(s, { ...r, applicationPath: '/synthetic/other/apply' }, values()), /CONFLICT/);
   assert.throws(() => planSubmissionWrite(s, r, [...values(), values()[1]]), /CONFLICT/);
@@ -29,6 +30,29 @@ test('plan uses exact receipt, fresh headers and unique opportunity; row moves r
   assert.throws(() => planSubmissionWrite(s, r, progressed), /CONFLICT/);
   const evening = planSubmissionWrite(s, { ...r, observedAt: '2026-01-03T02:00:00Z' }, values(), 'America/New_York');
   assert.equal(evening.day, '2026-01-02');
+});
+
+test('canonical tracker glyphs, Research status and date-validated serial survive exact readback', () => {
+  // Mirrors the canonical Google Sheet (Applied? is a text dropdown, not a boolean).
+  const cells: (string | number | boolean)[][] = [
+    ['Applied?', 'Priority', 'Status', 'Company', 'Role', 'Apply Link', 'Date Applied', 'Notes'],
+    ['☐', 'Medium', 'Research', 'Synthetic', 'Role', url, '', 'unchanged'],
+  ];
+  const target = { spreadsheetId: 'synthetic_sheet_id', sheetName: 'Applications' };
+  const current = createTrackerSnapshotFromValues(cells, target, 'synthetic', new Date('2026-01-01'));
+  const evidence = { ...receipt(), opportunityId: trackerOpportunityId(current.applications[0]) };
+  const planned = planSubmissionWrite(current, evidence, cells, 'America/New_York');
+  const serial = Math.round((Date.parse('2026-01-02T00:00:00Z') - Date.UTC(1899, 11, 30)) / 86400000);
+  assert.deepEqual(planned.data.map(item => item.values[0][0]), ['Submitted', '☑', serial]);
+  const after = [
+    cells[0], ['☑', 'Medium', 'Submitted', 'Synthetic', 'Role', url, serial, 'unchanged'],
+  ];
+  const verified = planSubmissionWrite(current, evidence, after, 'America/New_York');
+  assert.equal(verified.done, true);
+  assert.deepEqual(verified.data, []);
+  assert.equal(after[1][7], 'unchanged');
+  const progressed = [cells[0], ['☑', 'Medium', 'In Process', 'Synthetic', 'Role', url, serial, 'unchanged']];
+  assert.throws(() => planSubmissionWrite(current, evidence, progressed), /CONFLICT/);
 });
 
 test('receipt survives restart and missing auth; local workspace reconciles without a browser or agent', async () => {
@@ -64,7 +88,9 @@ test('date write readback is verified and conflicting partial provider writes ne
   try {
     await fs.writeFile(path.join(root, 'tracker-snapshot.v1.json'), JSON.stringify(snapshot()));
     await enqueueSubmissionSync(receipt(), options);
-    assert.equal((await retrySubmissionSync(options)).retryRequired, 1);
+    // A provider response that confirms status but writes an impossible date
+    // is a hard source conflict, not an invitation to overwrite the user's row.
+    assert.equal((await retrySubmissionSync(options)).conflicts, 1);
     const after = await retrySubmissionSync(options);
     assert.equal(after.conflicts, 1); assert.equal(after.synced, 0);
   } finally { await fs.rm(root, { recursive: true, force: true }); }

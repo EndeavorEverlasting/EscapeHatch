@@ -15,3 +15,7 @@ npm run dev
 ```
 
 The dev server binds to `127.0.0.1` by default. Set `PORT`, `BASE_PATH`, or `HOST` explicitly when needed.
+
+## Brand and mascot
+
+The operator-provided [chick-and-hatch identity](BRAND_IDENTITY.md) is used consistently in desktop navigation, mobile navigation and favicon. Preserve the accessible wordmark, source provenance and brand regression checks when evolving the product.

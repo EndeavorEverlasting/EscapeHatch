@@ -109,6 +109,24 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
         </div>
         {!suggestProfessionalTitles(data.professional_titles || [], currentRole || '', currentPosting, reviewedExperience).length && <p className="mt-3 text-sm">No matching target evidence yet. Add your titles and the opportunity posting.</p>}
       </section>
+      <section className="mt-5 rounded-xl border border-border p-4" aria-label="Application network recovery">
+        <h3 className="font-display text-xl">Application network recovery</h3>
+        <label className="mt-3 flex items-start gap-2 text-sm">
+          <input type="checkbox" data-testid="vpn-recovery-assist-toggle"
+            checked={data.vpn_recovery_assist_enabled !== false}
+            onChange={event => {
+              setDirty(true); onEdit?.();
+              setData(current => ({ ...current, vpn_recovery_assist_enabled: event.target.checked }));
+            }} />
+          Offer VPN compatibility recovery when an employer application is blocked
+        </label>
+        <p className="mt-2 text-xs text-muted-foreground">
+          On by default. Save Preferences to keep your choice. This preference does not disconnect your VPN.
+          A retry requires a verified provider connection, supported restoration, a safe kill-switch check,
+          and your explicit approval before temporary disconnection. Connection protection is restored
+          after the bounded retry, not left off while you complete an interview or application.
+        </p>
+      </section>
       <div className="mt-4 flex flex-wrap gap-3">
         <label className="block w-full">New professional title<input className="mt-1 block w-full rounded border border-input bg-background p-2" aria-label="New professional title" maxLength={160} value={newTitle} onChange={event => setNewTitle(event.target.value)} /></label>
         <button type="button" disabled={!newTitle.trim()} onClick={() => {

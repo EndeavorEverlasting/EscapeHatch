@@ -104,8 +104,18 @@ export class ManagedListeners {
           const directory = path.dirname(this.receiptsPath);
           await fs.mkdir(directory, { recursive: true });
           const lock = new DatabaseSync(this.receiptsPath + '.lock.sqlite');
-          try { lock.exec('PRAGMA busy_timeout=0; BEGIN IMMEDIATE'); }
-          catch { lock.close(); throw new Error('Submission receipt store busy.'); }
+          // Never drop an observed employer receipt on a transient concurrent
+          // writer. SQLite holds the cross-process lock, async backoff permits
+          // the owner to complete filesystem I/O before we retry.
+          let acquired = false;
+          for (let attempt = 0; attempt < 20; attempt++) {
+            try { lock.exec('PRAGMA busy_timeout=0; BEGIN IMMEDIATE'); acquired = true; break; }
+            catch (error) {
+              if (attempt === 19 || !/busy|locked/i.test(String(error))) { lock.close(); throw new Error('Submission receipt store busy; recovery review required.'); }
+              await new Promise(resolve => setTimeout(resolve, 30 * (attempt + 1)));
+            }
+          }
+          if (!acquired) { lock.close(); throw new Error('Submission receipt store busy; recovery review required.'); }
           const temporary = this.receiptsPath + '.' + randomUUID() + '.tmp';
           try {
             const current = await readSubmissionReceipts(this.receiptsPath);

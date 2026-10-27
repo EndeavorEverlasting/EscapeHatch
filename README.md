@@ -25,3 +25,7 @@ No completed application is inferred from a URL change, login success, field fil
 The canonical mapping is [`contracts/application-journey-scenes.v1.json`](contracts/application-journey-scenes.v1.json). Its owning [execution design](docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md), [scene runbook](docs/agent/APPLICATION_JOURNEY_SCENE_SYSTEM_2026-10-25.md), and [P04 parent gate](https://github.com/EndeavorEverlasting/EscapeHatch/issues/69) apply to installer, application intake, prerequisites, authentication handoff, form preparation, interruption recovery, and final review.
 
 Development entrypoint, for developers with an existing checkout: [artifacts/escape-hatch/README.md](artifacts/escape-hatch/README.md). Do not confuse the developer launcher with the clean-machine installer.
+
+## Product identity
+
+The approved chick-and-hatch mascot, usage, provenance and release checks are recorded in [the cockpit brand identity contract](artifacts/escape-hatch/BRAND_IDENTITY.md). The real application journey, private career state and operator-only final submission are unchanged by branding.

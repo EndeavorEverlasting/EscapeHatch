@@ -68,3 +68,20 @@ export async function inspectApplicationRequirements(page: Page, opportunityId: 
   if (page.url() !== pageUrl) throw new Error('Page changed during inspection. Inspect again.');
   return { opportunityId, applicationUrl, pageUrl, capturedAt: new Date().toISOString(), scope: 'current_page_only', requirements };
 }
+
+/** Review blockers from the observed current page; no answer values or private bytes. */
+export function unresolvedCurrentPageRequirements(inspection: FormInspection): string[] {
+  return [...new Set(inspection.requirements.filter(field => !field.populated && field.requirement !== 'optional')
+    .map(field => {
+      const protectedAction = /privacy|consent|attest|certif|acknowledg|agree to|terms of/i.test(field.label);
+      const status = field.requirement === 'unknown' ? 'unclassified_field_review' :
+        protectedAction ? 'required_operator_action' : 'required_field_unresolved';
+      return status + ':' + field.label;
+    }))];
+}
+
+/** Reinspects after all SPA re-renders; inaccessible inventory itself blocks readiness. */
+export async function inspectRequiredFieldBlockers(page: Page, opportunityId: string, applicationUrl: string): Promise<string[]> {
+  try { return unresolvedCurrentPageRequirements(await inspectApplicationRequirements(page, opportunityId, applicationUrl)); }
+  catch { return ['required_field_inventory_unverified']; }
+}

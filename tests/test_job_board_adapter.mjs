@@ -29,7 +29,17 @@ for (const host of ["www.ziprecruiter.com", "www.glassdoor.com"]) {
 assert.equal(board.canAttachToOpportunity(questions, null).attached, false);
 assert.equal(board.canAttachToOpportunity(questions, { operatorSelected: true,
   provider: "indeed", opportunityKey: "indeed:aaaaaaaaaaaaaaaa",
-  expectedFormOrigin: "https://smartapply.indeed.com" }).attached, true);
+  expectedFormOrigin: "https://smartapply.indeed.com" }).attached, false);
+assert.equal(board.canAttachToOpportunity(questions, { operatorSelected: true,
+  provider: "indeed", opportunityKey: "indeed:aaaaaaaaaaaaaaaa",
+  expectedFormOrigin: "https://smartapply.indeed.com",
+  trustedTransitionObserved: true, formTabId: 10, formSessionNonce: "synthetic-nonce",
+  expectedSessionNonce: "synthetic-nonce" }).attached, true);
+assert.equal(board.canAttachToOpportunity(questions, { operatorSelected: true,
+  provider: "indeed", opportunityKey: "indeed:aaaaaaaaaaaaaaaa",
+  expectedFormOrigin: "https://smartapply.indeed.com",
+  trustedTransitionObserved: true, formTabId: 10, formSessionNonce: "wrong-nonce",
+  expectedSessionNonce: "synthetic-nonce" }).attached, false);
 assert.equal(board.canAttachToOpportunity(questions, { operatorSelected: true,
   provider: "indeed", opportunityKey: "indeed:aaaaaaaaaaaaaaaa",
   expectedFormOrigin: "https://evil.invalid" }).attached, false);

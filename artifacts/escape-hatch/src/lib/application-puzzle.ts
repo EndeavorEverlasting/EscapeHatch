@@ -2,7 +2,7 @@ export type FormRequirement = {
   id: string;
   label: string;
   requirement: 'required' | 'optional' | 'unknown';
-  kind: 'resume' | 'cover' | 'file' | 'question';
+  kind: 'resume' | 'cover' | 'case_study' | 'file' | 'question';
   populated: boolean;
 };
 export type FormInspection = {

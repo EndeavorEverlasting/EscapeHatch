@@ -241,10 +241,10 @@ async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> 
   return parsed as Record<string, unknown>;
 }
 
-export async function attachPdfs(page: Page, resume: ReturnType<typeof parsePrivatePdf>, cover: ReturnType<typeof parsePrivatePdf>) {
+export async function attachPdfs(page: Page, resume: ReturnType<typeof parsePrivatePdf>, cover: ReturnType<typeof parsePrivatePdf>, caseStudy: ReturnType<typeof parsePrivatePdf> = null) {
   const inputs = await page.locator('input[type="file"]').all();
   const outcome: Record<string, string> = {};
-  for (const [kind, file] of [['resume', resume], ['cover', cover]] as const) {
+  for (const [kind, file] of [['resume', resume], ['cover', cover], ['case_study', caseStudy]] as const) {
     if (!file) continue;
     const matches: typeof inputs = [];
     for (const input of inputs) {
@@ -254,13 +254,13 @@ export async function attachPdfs(page: Page, resume: ReturnType<typeof parsePriv
           const label = field.labels ? Array.from(field.labels).map((x) => x.textContent || '').join(' ') : '';
           return [field.name, field.id, field.getAttribute('aria-label') || '', label].join(' ').toLowerCase().replace(/[_-]/g, ' ');
         });
-        if ((kind === 'resume' ? /\b(resume|r[ée]sum[ée]|cv)\b/i : /\b(cover[\s_-]*letter)\b/i).test(attrs)) matches.push(input);
+        if ((kind === 'resume' ? /\b(resume|r[ée]sum[ée]|cv)\b/i : kind === 'cover' ? /\b(cover[\s_-]*letter)\b/i : /\bcase[\s_-]*study\b/i).test(attrs)) matches.push(input);
       } catch { /* page changed; leave control unmodified */ }
     }
     if (matches.length === 0) {
       // Portal-based uploaders leave their anonymous file inputs under body. Bind the chooser
       // to the uniquely labelled upload widget instead of guessing an input by DOM order.
-      const labels = page.locator('label[id$="_label"]').filter({ hasText: kind === 'resume' ? /^Resume:\s*\(Word\/PDF\)/i : /^Cover Letter:\s*\(Word\/PDF\)/i });
+      const labels = page.locator('label[id$="_label"]').filter({ hasText: kind === 'resume' ? /^Resume:\s*\(Word\/PDF\)/i : kind === 'cover' ? /^Cover Letter:\s*\(Word\/PDF\)/i : /^Case Study:\s*\(Word\/PDF\)/i });
       if (await labels.count() !== 1) { outcome[kind] = 'manual_required'; continue; }
       const labelId = await labels.getAttribute('id');
       const widgetId = labelId?.replace(/(?:\.file)?_label$/, '') || '';
@@ -381,7 +381,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             if (url.pathname === PREFIX + '/documents/status') return respond(res, 200, { ok: true, package: await documentStore.read(scope.opportunityId, scope.url), requireReview: (await readPreferences()).require_document_review !== false });
             if (url.pathname === PREFIX + '/documents/file') {
               const kind = url.searchParams.get('kind');
-              if (kind !== 'resume' && kind !== 'cover') throw new Error('Invalid document kind.');
+              if (kind !== 'resume' && kind !== 'cover' && kind !== 'case_study') throw new Error('Invalid document kind.');
               const file = await documentStore.file(scope.opportunityId, scope.url, kind, url.searchParams.get('sha256') ?? undefined);
               if (!file) return respond(res, 404, { ok: false, error: 'document_not_found' });
               res.statusCode = 200; res.setHeader('Content-Type', 'application/pdf'); res.setHeader('Cache-Control', 'no-store'); res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('Content-Disposition', 'inline; filename="' + file.name + '"'); return res.end(file.buffer);
@@ -438,7 +438,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               if (typeof payload.requireReview !== 'boolean') throw new Error('Choose a document review setting.');
               await updatePreferences(current => ({ ...current, require_document_review: payload.requireReview as boolean }));
             } else {
-              if (kind !== 'resume' && kind !== 'cover') throw new Error('Invalid document kind.');
+              if (kind !== 'resume' && kind !== 'cover' && kind !== 'case_study') throw new Error('Invalid document kind.');
               if (url.pathname === PREFIX + '/documents/stage') {
                 const file = parsePrivatePdf(payload.file); if (!file) throw new Error('Choose a PDF.');
                 await documentStore.stage(scope.opportunityId, scope.url, kind, file);
@@ -556,9 +556,9 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             // Only the CURRENT employer page determines which documents are requested.
             // Missing or unreviewed optional cover letters cannot block preparation.
             const formRequirements = await inspectApplicationRequirements(page!, opportunityId, applicationUrl);
-            const requestedKinds = (['resume', 'cover'] as const).filter(kind =>
+            const requestedKinds = (['resume', 'cover', 'case_study'] as const).filter(kind =>
               formRequirements.requirements.some(field => field.kind === kind));
-            const requiredKinds = (['resume', 'cover'] as const).filter(kind =>
+            const requiredKinds = (['resume', 'cover', 'case_study'] as const).filter(kind =>
               formRequirements.requirements.some(field => field.kind === kind && field.requirement === 'required'));
             const packageFiles = await documentStore.forCurrentEmployerForm(
               opportunityId, applicationUrl, requestedKinds, uploadPolicy);
@@ -580,7 +580,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               const fallback = await prepareWithoutTrustedNavigation({
                 fill: () => fillSavedPreferences(page!, approvedPreferences,
                   typeof payload.employerName === 'string' ? payload.employerName.slice(0, 160) : ''),
-                attach: () => attachPdfs(page!, packageFiles.resume, packageFiles.cover),
+                attach: () => attachPdfs(page!, packageFiles.resume, packageFiles.cover, packageFiles.case_study),
                 expectedUploads: requiredKinds.filter(kind => Boolean(packageFiles[kind])),
               });
               // A missing reviewed résumé does not appear in expectedUploads;
@@ -598,7 +598,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               });
             }
             const registry = parseTrustedAdapterRegistry(payload.adapterRegistry);
-            await attachPdfs(page, packageFiles.resume, packageFiles.cover);
+            await attachPdfs(page, packageFiles.resume, packageFiles.cover, packageFiles.case_study);
             const maxSteps = typeof payload.maxSteps === 'number' && Number.isInteger(payload.maxSteps)
               ? payload.maxSteps
               : 10;
@@ -610,7 +610,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               prepareAttachments: async () => {
                 const current = await documentStore.forCurrentEmployerForm(
                   opportunityId, applicationUrl, requestedKinds, (await readPreferences()).require_document_review !== false);
-                await attachPdfs(page!, current.resume, current.cover);
+                await attachPdfs(page!, current.resume, current.cover, current.case_study);
               },
               verifyAttachments: async () => {
                 // Only an adapter's explicit document receipt is sufficient for automated progression.
@@ -688,7 +688,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
           if (url.pathname === PREFIX + '/attach') {
             if (payload.resume || payload.cover) throw new Error('Save the selected documents to this opportunity before attaching.');
             const packageFiles = await documentStore.forUpload(opportunityId, applicationUrl, (await readPreferences()).require_document_review !== false);
-            const outcome = await attachPdfs(page, packageFiles.resume, packageFiles.cover);
+            const outcome = await attachPdfs(page, packageFiles.resume, packageFiles.cover, packageFiles.case_study);
             state = attachmentProgressState(outcome);
             return respond(res, 200, { ok: true, state, evidenceSummary: evidenceDescription(state), attachments: outcome, reviewPolicy: packageFiles.reviewPolicy, requiresOperatorSubmission: true });
           }

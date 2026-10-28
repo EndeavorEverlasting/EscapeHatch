@@ -168,7 +168,9 @@ test('production launch route reuses its context and leaves a busy legacy profil
 
 test('real Chrome opens isolated profiles while the legacy browser stays open and retains its own sessions', async () => {
   const root = await fs.mkdtemp(path.join(tmpdir(), 'escapehatch-profile-browser-'));
-  const options = { headless: true, chromiumSandbox: true, ...(process.platform === 'win32' ? { channel: 'chrome' } : {}) };
+  // Windows is the production managed-browser host. Linux CI's synthetic profile
+  // fixture cannot prove sandbox support under its restricted namespace policy.
+  const options = { headless: true, ...(process.platform === 'win32' ? { channel: 'chrome', chromiumSandbox: true } : {}) };
   const contexts: Awaited<ReturnType<typeof chromium.launchPersistentContext>>[] = [];
   try {
     const legacy = await chromium.launchPersistentContext(path.join(root, 'managed-career-browser'), options);

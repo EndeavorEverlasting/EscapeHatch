@@ -44,4 +44,43 @@ assert.equal(board.canAttachToOpportunity(questions, { operatorSelected: true,
   provider: "indeed", opportunityKey: "indeed:aaaaaaaaaaaaaaaa",
   expectedFormOrigin: "https://evil.invalid" }).attached, false);
 assert.equal(board.classify("https://smartapply.indeed.com/beta/indeedapply/form/unknown-module/x").mayPrepareAfterPolicyGate, false);
+
+const supporting = board.classify("https://smartapply.indeed.com/beta/indeedapply/form/supporting-documents-module/cover-letter");
+const ownerSelected = {
+  operatorSelected: true, provider: "indeed", opportunityKey: "indeed:aaaaaaaaaaaaaaaa",
+  workspaceOwnerId: "synthetic-applicant-a", expectedFormOrigin: "https://smartapply.indeed.com",
+  trustedTransitionObserved: true, formTabId: 10,
+  formSessionNonce: "synthetic-nonce", expectedSessionNonce: "synthetic-nonce"
+};
+const reviewedLetter = {
+  kind: "cover_letter", reviewed: true, opportunityKey: ownerSelected.opportunityKey,
+  ownerId: ownerSelected.workspaceOwnerId,
+  paragraphs: ["Hi, Hiring Team.", "Synthetic work across field\n operations.", "Sincerely,\nSynthetic Applicant"]
+};
+const textForm = { heading: "Supporting documents",
+  fields: [{ tag: "textarea", label: "Cover letter", visible: true, value: "", maxLength: 4000 }] };
+const planned = board.planIndeedCoverLetterText(supporting, ownerSelected, reviewedLetter, textForm);
+assert.equal(planned.state, "TEXT_PLAN_READY");
+assert.equal(planned.text, "Hi, Hiring Team.\n\nSynthetic work across field operations.\n\nSincerely, Synthetic Applicant");
+assert.equal(planned.characters, planned.text.length);
+assert.equal(planned.userFinalSubmit, "OPERATOR_ONLY");
+assert.equal(planned.employerAcceptance, "UNVERIFIED");
+assert.equal(board.planIndeedCoverLetterText(supporting, { ...ownerSelected, workspaceOwnerId: "synthetic-applicant-b" }, reviewedLetter, textForm).reason, "applicant_owner_unverified");
+assert.equal(board.planIndeedCoverLetterText(supporting, ownerSelected, { ...reviewedLetter, opportunityKey: "indeed:bbbbbbbbbbbbbbbb" }, textForm).reason, "reviewed_role_letter_required");
+assert.equal(board.planIndeedCoverLetterText(supporting, { ...ownerSelected, trustedTransitionObserved: false }, reviewedLetter, textForm).reason, "unverified_form_session");
+assert.equal(board.planIndeedCoverLetterText(supporting, ownerSelected, reviewedLetter, { ...textForm,
+  fields: [{ ...textForm.fields[0], value: "Applicant edit" }] }).reason, "preserve_existing_applicant_edit");
+assert.equal(board.planIndeedCoverLetterText(supporting, ownerSelected, reviewedLetter, { ...textForm,
+  fields: [...textForm.fields, ...textForm.fields] }).reason, "unique_editable_cover_letter_textarea_required");
+assert.equal(board.planIndeedCoverLetterText(supporting, ownerSelected, reviewedLetter, { ...textForm,
+  fields: [{ ...textForm.fields[0], tag: "div" }] }).reason, "unique_editable_cover_letter_textarea_required");
+assert.equal(board.planIndeedCoverLetterText(supporting, ownerSelected, { ...reviewedLetter,
+  paragraphs: ["a".repeat(4001)] }, textForm).reason, "text_exceeds_observed_limit");
+assert.equal(board.planIndeedCoverLetterText(supporting, ownerSelected, reviewedLetter, { ...textForm,
+  fields: [{ ...textForm.fields[0], maxLength: 60 }] }).reason, "text_exceeds_observed_limit");
+assert.equal(board.planIndeedCoverLetterText(supporting, ownerSelected, reviewedLetter, { ...textForm,
+  heading: "EEO disclosure" }).reason, "supporting_document_section_unverified");
+assert.equal(board.indeedResumeUploadImpact(supporting, "resume").state, "OPERATOR_APPROVAL_REQUIRED");
+assert.equal(board.indeedResumeUploadImpact(supporting, "resume").effect, "REPLACES_ONE_GLOBAL_INDEED_RESUME");
+assert.equal(board.indeedResumeUploadImpact(supporting, "cover").state, "REVIEW_REQUIRED");
 console.log("JOB_BOARD_ADAPTER_SYNTHETIC: PASS");

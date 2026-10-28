@@ -7,7 +7,7 @@
 import type { PreparationResult } from './application-autopilot-executor.ts';
 import type { FillOutcome } from './managed-form.ts';
 
-type UploadKind = 'resume' | 'cover';
+type UploadKind = 'resume' | 'cover' | 'case_study';
 export type FallbackPreparation = {
   preparation: PreparationResult;
   filled: string[];

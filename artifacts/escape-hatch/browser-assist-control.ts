@@ -542,7 +542,15 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             }
             const preferences = await readPreferences();
             const uploadPolicy = preferences.require_document_review !== false;
-            const packageFiles = await documentStore.forUpload(opportunityId, applicationUrl, uploadPolicy);
+            // Only the CURRENT employer page determines which documents are requested.
+            // Missing or unreviewed optional cover letters cannot block preparation.
+            const formRequirements = await inspectApplicationRequirements(page!, opportunityId, applicationUrl);
+            const requestedKinds = (['resume', 'cover'] as const).filter(kind =>
+              formRequirements.requirements.some(field => field.kind === kind));
+            const requiredKinds = (['resume', 'cover'] as const).filter(kind =>
+              formRequirements.requirements.some(field => field.kind === kind && field.requirement === 'required'));
+            const packageFiles = await documentStore.forCurrentEmployerForm(
+              opportunityId, applicationUrl, requestedKinds, uploadPolicy);
             const contact = reviewedContactFields(payload.profile);
             const now = new Date().toISOString();
             const ids: Record<string, string> = { linkedin_url: 'linkedin', region: 'region' };
@@ -562,7 +570,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
                 fill: () => fillSavedPreferences(page!, approvedPreferences,
                   typeof payload.employerName === 'string' ? payload.employerName.slice(0, 160) : ''),
                 attach: () => attachPdfs(page!, packageFiles.resume, packageFiles.cover),
-                expectedUploads: (['resume', 'cover'] as const).filter(kind => Boolean(packageFiles[kind])),
+                expectedUploads: requiredKinds.filter(kind => Boolean(packageFiles[kind])),
               });
               // A missing reviewed résumé does not appear in expectedUploads;
               // always inspect the actual required file input and all starred fields.
@@ -589,12 +597,13 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               registry,
               preferences: approvedPreferences,
               prepareAttachments: async () => {
-                const current = await documentStore.forUpload(opportunityId, applicationUrl, (await readPreferences()).require_document_review !== false);
+                const current = await documentStore.forCurrentEmployerForm(
+                  opportunityId, applicationUrl, requestedKinds, (await readPreferences()).require_document_review !== false);
                 await attachPdfs(page!, current.resume, current.cover);
               },
               verifyAttachments: async () => {
                 // Only an adapter's explicit document receipt is sufficient for automated progression.
-                for (const kind of ['resume', 'cover'] as const) {
+                for (const kind of requiredKinds) {
                   const file = packageFiles[kind]; if (!file) continue;
                   const receipt = page!.locator('[data-document-kind="' + kind + '"][data-upload-status="accepted"]');
                   if (await receipt.count() !== 1 || await receipt.getAttribute('data-filename') !== file.name) return false;

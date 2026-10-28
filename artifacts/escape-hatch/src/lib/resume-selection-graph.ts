@@ -201,6 +201,46 @@ export function resolveResumeForPlatform(g: ResumeGraph, selection: Selection): 
   if (parentsCurrent && current?.id === selected.id) return decision(slot.id, 'KEEP_CURRENT', 'ISOLATED_ATTACHMENT_CURRENT', selected.id);
   return decision(slot.id, 'UPLOAD_REQUIRES_CONSENT', 'ISOLATED_APPLICATION_ATTACHMENT_REVIEW', selected.id);
 }
+/**
+ * Queue-wide effective master selection for a single account-wide platform slot.
+ * This aggregates reviewed domain weights across a bounded set of queued jobs,
+ * rather than thrashing the site's shared default for every individual posting.
+ * No applicant data, provider IO or upload happens here.
+ */
+export function resolveEffectiveMasterForQueue(
+  g: ResumeGraph, input: { opportunityIds: string[]; platformSlotId: string }
+): Decision {
+  let nodes: Map<string, Node>;
+  try { nodes = validateResumeGraph(g); } catch { return fail(input.platformSlotId, 'INVALID_GRAPH'); }
+  const slot = nodes.get(input.platformSlotId);
+  if (slot?.type !== 'platform_slot' || slot.scope !== 'persistent_global' ||
+      slot.observation !== 'verified') return fail(input.platformSlotId, 'PERSISTENT_PLATFORM_SCOPE_UNVERIFIED');
+  if (!uniqueStrings(input.opportunityIds) || input.opportunityIds.length === 0) return fail(slot.id, 'MISSING_QUEUE_OPPORTUNITIES');
+  const weights: Record<string, number> = {};
+  for (const id of input.opportunityIds) {
+    const job = nodes.get(id);
+    if (job?.type !== 'opportunity') return fail(slot.id, 'QUEUE_HAS_UNKNOWN_OPPORTUNITY');
+    for (const [tag, weight] of Object.entries(job.domainWeights)) weights[tag] = (weights[tag] ?? 0) + weight;
+  }
+  const ancestors = new Map(g.edges.filter(e => e.kind === 'derives_from').map(e => [e.from, e]));
+  const memo = new Map<string, boolean>();
+  const available = g.nodes.filter((x): x is ResumeNode =>
+    x.type === 'resume' && x.review === 'approved' && fresh(x, nodes, ancestors, memo));
+  const canonical = available.find(x => x.tier === 'canonical');
+  if (!canonical) return fail(slot.id, 'CANONICAL_MASTER_NOT_APPROVED_OR_STALE');
+  const ranked = available.filter(x => x.tier === 'domain')
+    .map(x => ({node:x, score:domainScore(x,weights)}))
+    .filter(x => x.score > 0)
+    .sort((a,b) => b.score-a.score || (a.node.id < b.node.id ? -1 : a.node.id > b.node.id ? 1 : 0));
+  if (ranked.length > 1 && ranked[0].score === ranked[1].score) return fail(slot.id,'QUEUE_DOMAIN_CONFLICT_REVIEW_REQUIRED');
+  const chosen = ranked[0]?.node ?? canonical;
+  const slotEdge = g.edges.find(e => e.kind === 'slot_points_to' && e.from === slot.id);
+  const current = slotEdge && nodes.get(slotEdge.to);
+  if (current?.type === 'resume' && current.id === chosen.id &&
+      available.some(x => x.id === chosen.id)) return decision(slot.id,'KEEP_CURRENT','QUEUE_EFFECTIVE_MASTER_ALREADY_SELECTED',chosen.id);
+  return decision(slot.id,'UPLOAD_REQUIRES_CONSENT','QUEUE_EFFECTIVE_MASTER_REPLACEMENT_NEEDS_CONSENT',chosen.id);
+}
+
 /** Return affected downstream derivative IDs; never mutate approved artifacts. */
 export function impactedResumeDescendants(g: ResumeGraph, changedId: string): string[] {
   const nodes = validateResumeGraph(g);

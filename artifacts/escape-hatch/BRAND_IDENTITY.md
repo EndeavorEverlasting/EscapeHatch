@@ -56,6 +56,12 @@ The registry lists reference/review states; this release adopts bounded interact
 
 ## 2026-10-28: birdsong throughout the application journey
 
+### Recorded application outcome
+
+The applicant finishing one job needs a truthful close and an obvious next choice. When the live bound opportunity exactly matches an applied local record, Assist shows a single outcome panel instead of a binding error and more preparation controls. The approved chick stays at 72px or smaller; existing display/body type, teal and paper tokens remain. A ruled definition list separates saved application status, employer receipt capture and automatic tracker synchronization. Aggregate tracker success must never stand in for per-application proof. `View applications` opens the ledger; `Choose another job` dismisses this outcome locally without navigating, closing or submitting the employer tab.
+
+Design references: `UP-1B0AFA8BE` (state-based component critique), `impeccable` (hierarchy and concrete recovery copy), `UP-60B0939CC` (browser-observed desktop/mobile checks). These are registered review references, not copied code or assets; no new dependency or external visual license is introduced. The memorable element is the existing hatch/chick, with quiet evidence rows rather than a new dashboard of decorative cards. `tests/application-outcome.spec.ts` owns exact-binding, pending-versus-captured, sync honesty, active/closed negatives, mobile fit and polling-safe next-job behavior.
+
 The signed-off chick artwork remains a **bundled first-party asset** under `public/escapehatch-mascot.webp`. Vite ships it when the app is built/served; nobody must transfer a private source image, manually copy mascot bytes between developer environments, or load a third-party image URL. The original operator art remains a private reference. Bundle regression tests enforce the approved deployed derivative.
 
 A second sound experience is `src/components/birdsong-control.tsx`, mounted by the permanent `AppShell` rather than the Today-only guide:

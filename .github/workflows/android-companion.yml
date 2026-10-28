@@ -42,9 +42,9 @@ jobs:
           gradle-version: "8.7"
       - name: Install Android SDK platform
         run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
-      - name: Compile companion debug APK
+      - name: Compile and test companion debug APK
         working-directory: android/application-assist
-        run: gradle --no-daemon :app:assembleDebug
+        run: gradle --no-daemon :app:assembleDebug :app:testDebugUnitTest
       - name: Preserve debug-only APK for device testing
         uses: actions/upload-artifact@v4
         with:

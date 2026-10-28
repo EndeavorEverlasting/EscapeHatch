@@ -178,7 +178,7 @@ export async function installManagedSubmissionObserver(page: Page, options: Subm
       const controls = terminals();
       const containers = Array.from(document.querySelectorAll(successSelector)).filter(visible);
       // Explicit receipt language only. Generic Thanks, a URL or a hidden posting quote fails closed.
-      const receiptPattern = /^(?:(?:success[.!]? )?(?:we(?:'ve| have) (?:successfully )?received your application|your application (?:has been|was) (?:successfully )?(?:received|submitted)|application (?:successfully )?submitted(?: successfully)?|thank you for (?:submitting your application|applying(?: to [a-z0-9 .&-]+)?))) [.!]?(?: we(?:'ll| will) contact you if there are next steps\.)?$/i;
+      const receiptPattern = /^(?:(?:success[.!]? )?(?:we(?:'ve| have) (?:successfully )?received your application|your application (?:has been|was) (?:successfully )?(?:received|submitted)|application (?:successfully )?submitted(?: successfully)?|thank you for (?:submitting your application|applying(?: to [a-z0-9 .&-]+)?)))[.!]?(?: we(?:'ll| will) contact you if there are next steps\.)?$/i;
       const processingPattern = /^(?:your application (?:is being|is currently being) processed|we (?:are|re) processing your application|application (?:is being processed|under review)|your application is under review)[.!]?$/i;
       const matches = containers.filter(element => receiptPattern.test(normalize((element as HTMLElement).innerText).replaceAll('\u2019', "'")));
       const distinct = matches.filter(element => !matches.some(other => other !== element && element.contains(other)));

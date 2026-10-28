@@ -20,6 +20,7 @@ export type PlatformSlotNode = {
   id: string; type: 'platform_slot'; owner: string; platform: string;
   scope: 'persistent_global' | 'isolated_application' | 'unknown';
   observation: 'verified' | 'unverified'; // provider/browser readback, not assumption
+  observationReceiptDigest?: string; // non-PII hash of the actual observed scope evidence
 };
 export type ApplicationNode = {
   id: string; type: 'application'; owner: string; opportunityId: string;
@@ -80,7 +81,8 @@ export function validateResumeGraph(g: ResumeGraph): Map<string, Node> {
             !Number.isFinite(w) || w <= 0 || w > 4)) die('invalid reviewed opportunity domain weights');
     } else if (n.type === 'platform_slot') {
       if (!validId(n.platform) || !['persistent_global', 'isolated_application', 'unknown'].includes(n.scope) ||
-          !['verified', 'unverified'].includes(n.observation)) die('invalid platform slot');
+          !['verified', 'unverified'].includes(n.observation) ||
+          (n.observation === 'verified' && !sha(n.observationReceiptDigest ?? ''))) die('invalid platform slot');
     } else if (n.type === 'application') {
       if (!validId(n.opportunityId) || !['draft', 'in_progress', 'submitted'].includes(n.state)) die('invalid application');
     } else die('unknown node type');
@@ -89,6 +91,8 @@ export function validateResumeGraph(g: ResumeGraph): Map<string, Node> {
   if (canonicalCount !== 1) die('one canonical master required per owner graph revision');
   const derivation = new Map<string, string>();
   const slotEdges = new Map<string, string>();
+  const jobTargets = new Map<string, string>();
+  const applicationAttachments = new Set<string>();
   const edges = new Set<string>();
   for (const e of g.edges) {
     const a = nodes.get(e?.from), b = nodes.get(e?.to);
@@ -103,17 +107,24 @@ export function validateResumeGraph(g: ResumeGraph): Map<string, Node> {
           !sha(e.parentDigest ?? '') || derivation.has(a.id)) die('invalid derivation');
       derivation.set(a.id, b.id);
     } else if (e.kind === 'targets_opportunity') {
-      if (a.type !== 'resume' || a.tier !== 'job' || b.type !== 'opportunity') die('invalid job target');
+      if (a.type !== 'resume' || a.tier !== 'job' || b.type !== 'opportunity' || jobTargets.has(a.id)) die('invalid job target');
+      jobTargets.set(a.id,b.id);
     } else if (e.kind === 'slot_points_to') {
       if (a.type !== 'platform_slot' || b.type !== 'resume' || slotEdges.has(a.id)) die('invalid platform slot binding');
       slotEdges.set(a.id, b.id);
     } else if (e.kind === 'application_uses') {
-      if (a.type !== 'application' || b.type !== 'resume') die('invalid application attachment');
+      if (a.type !== 'application' || b.type !== 'resume' || applicationAttachments.has(a.id)) die('invalid application attachment');
+      applicationAttachments.add(a.id);
     } else die('unknown edge kind');
   }
   for (const n of g.nodes) {
     if (n.type === 'resume' && n.tier !== 'canonical' && !derivation.has(n.id)) die('derivative has no source master');
     if (n.type === 'application' && nodes.get(n.opportunityId)?.type !== 'opportunity') die('application lacks opportunity');
+    if (n.type === 'resume' && n.tier === 'job' && !jobTargets.has(n.id)) die('job derivative lacks unique opportunity');
+    if (n.type === 'application') {
+      const uses = g.edges.find(e => e.kind === 'application_uses' && e.from === n.id);
+      if (uses && jobTargets.has(uses.to) && jobTargets.get(uses.to) !== n.opportunityId) die('application crossed opportunity');
+    }
   }
   // Globally memoized iterative walk: O(V + E), not a separate traversal per node.
   const resolved = new Set<string>();
@@ -147,7 +158,7 @@ function fresh(n: ResumeNode, nodes: Map<string, Node>,
   return good;
 }
 function domainScore(n: ResumeNode, weights: Record<string, number>): number {
-  return Object.entries(weights).reduce((v, [tag, w]) => v + (n.domainTags?.includes(tag) ? w : 0), 0);
+  return (n.domainTags ?? []).reduce((score, tag) => score + (weights[tag] ?? 0), 0);
 }
 /**
  * The planner never uploads. An unverified/unknown platform slot fails closed.

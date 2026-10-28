@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -15,6 +16,34 @@ package = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(package)
 
 class WindowsPreviewPackage(unittest.TestCase):
+    def test_source_rejects_windows_case_and_file_directory_collisions(self):
+        for names in (('scripts/File', 'scripts/file'), ('scripts/node', 'scripts/Node/file'), ('scripts/file.',)):
+            listing = b''.join(b'100644 blob ' + b'a' * 40 + b'\t' + name.encode() + b'\0' for name in names)
+            with self.subTest(names=names), patch.object(package, 'git', side_effect=[b'b' * 40 + b'\n', listing]):
+                with self.assertRaisesRegex(ValueError, 'Windows'):
+                    package.snapshot(ROOT)
+
+    @unittest.skipUnless(shutil.which('powershell.exe') and hasattr(Path, 'is_junction'), 'Windows junction support required')
+    def test_existing_archive_and_checksum_junctions_are_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            archive = package.build(ROOT, root / 'output')
+            linked_directory = root / 'foreign'
+            linked_directory.mkdir()
+            for target in (archive, archive.with_suffix('.zip.sha256')):
+                original = root / (target.name + '.preserved')
+                target.replace(original)
+                result = subprocess.run(['cmd.exe', '/d', '/c', 'mklink', '/J', str(target), str(linked_directory)], capture_output=True, text=True, timeout=15)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                try:
+                    with self.assertRaisesRegex(ValueError, 'links or junctions'):
+                        package.build(ROOT, archive.parent)
+                    self.assertTrue(target.is_junction())
+                    self.assertEqual(list(linked_directory.iterdir()), [])
+                finally:
+                    target.rmdir()
+                    original.replace(target)
+
     def test_committed_bundle_is_deterministic_and_ignores_untracked_bytes(self):
         with tempfile.TemporaryDirectory() as temp:
             output = Path(temp)
@@ -66,6 +95,13 @@ class WindowsPreviewPackage(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn('INSTALL_RELEASE_PATH_INVALID', result.stdout)
             del manifest['files']['../escape']
+            for alias in ('scripts/windows', 'VERSION.'):
+                manifest['files'][alias] = '0' * 64
+                receipt.write_text(json.dumps(manifest))
+                result = run()
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('INSTALL_RELEASE_PATH_INVALID', result.stdout)
+                del manifest['files'][alias]
             receipt.write_text(json.dumps(manifest))
             app_data = root / 'user-data'
             shortcuts = root / 'shortcuts'

@@ -55,6 +55,16 @@ function Verify-Release([string]$Root) {
         throw 'INSTALL_RELEASE_INVALID: unsupported preview manifest.'
     }
     $names = @($release.files.PSObject.Properties.Name)
+    $windowsNames = New-Object 'Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+    foreach ($name in $names) {
+        if (-not $windowsNames.Add($name) -or $name -match '(^|/)([^/]*[. ]|)(/|$)') { throw 'INSTALL_RELEASE_PATH_INVALID: ambiguous Windows filename.' }
+    }
+    foreach ($name in $names) {
+        $parts = $name.Split('/')
+        for ($index = 1; $index -lt $parts.Length; $index++) {
+            if ($windowsNames.Contains(($parts[0..($index - 1)] -join '/'))) { throw 'INSTALL_RELEASE_PATH_INVALID: file/directory collision.' }
+        }
+    }
     foreach ($required in @('VERSION', 'Get-EscapeHatch.cmd', 'scripts/windows/EscapeHatch-Install.ps1', 'scripts/windows/EscapeHatch-Runtime.ps1', 'artifacts/escape-hatch/package.json')) {
         if ($names -cnotcontains $required) { throw 'INSTALL_RELEASE_INCOMPLETE: required source is missing.' }
     }

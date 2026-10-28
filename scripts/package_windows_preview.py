@@ -24,6 +24,7 @@ def git(repo: Path, *args: str) -> bytes:
 def snapshot(repo: Path) -> tuple[str, dict[str, bytes]]:
     commit = git(repo, 'rev-parse', '--verify', 'HEAD^{commit}').decode().strip()
     entries = []
+    windows_names = set()
     for record in git(repo, 'ls-tree', '-rz', '--full-tree', commit).split(b'\0'):
         if not record:
             continue
@@ -37,7 +38,13 @@ def snapshot(repo: Path) -> tuple[str, dict[str, bytes]]:
             raise ValueError('Release source contains an unsupported path or entry')
         if any(part in ('node_modules', '.env', 'private', 'test-results') for part in path.parts):
             raise ValueError('Release source contains a forbidden private/runtime path')
+        folded = name.casefold()
+        if folded in windows_names or any(part.endswith((' ', '.')) for part in path.parts):
+            raise ValueError('Release source contains a Windows filename collision')
+        windows_names.add(folded)
         entries.append((name, blob))
+    if any(str(parent).casefold() in windows_names for name, _ in entries for parent in PurePosixPath(name).parents if str(parent) != '.'):
+        raise ValueError('Release source contains a Windows file/directory collision')
     # Read raw committed blobs in one process; archive export attributes must
     # never transform the bytes represented by this source identity.
     request = ''.join(blob + '\n' for _, blob in entries).encode('ascii')
@@ -75,6 +82,9 @@ def build(repo: Path, output: Path) -> Path:
     output.mkdir(parents=True, exist_ok=True)
     target = output / f'EscapeHatch-preview-{commit}.zip'
     digest_file = target.with_suffix('.zip.sha256')
+    for path in (target, digest_file):
+        if path.is_symlink() or getattr(path, 'is_junction', lambda: False)():
+            raise ValueError('Release output must not contain links or junctions')
     for path, data in ((target, payload), (digest_file, (hashlib.sha256(payload).hexdigest() + '  ' + target.name + '\n').encode())):
         if path.exists():
             if path.read_bytes() != data:

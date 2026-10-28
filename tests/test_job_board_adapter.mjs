@@ -10,13 +10,13 @@ assert.equal(questions.maySubmit, false);
 assert.equal(questions.mayPrepareAfterPolicyGate, true);
 const resume = board.classify("https://smartapply.indeed.com/beta/indeedapply/form/resume-module/structured-data-review");
 assert.equal(resume.stage, "RESUME");
-const listing = board.classify("https://www.indeed.com/viewjob?jk=3ac648c2c798f4da&from=shareddesktop_copy");
-assert.equal(listing.opportunityKey, "indeed:3ac648c2c798f4da");
+const listing = board.classify("https://www.indeed.com/viewjob?jk=aaaaaaaaaaaaaaaa&from=shareddesktop_copy");
+assert.equal(listing.opportunityKey, "indeed:aaaaaaaaaaaaaaaa");
 assert.equal(listing.mayPrepareAfterPolicyGate, false);
 for (const url of [
   "http://smartapply.indeed.com/beta/indeedapply/form/questions-module/questions/1",
   "https://smartapply.indeed.com.evil.invalid/beta/indeedapply/form/questions-module/questions/1",
-  "https://www.indeed.com.evil.invalid/viewjob?jk=3ac648c2c798f4da",
+  "https://www.indeed.com.evil.invalid/viewjob?jk=aaaaaaaaaaaaaaaa",
   "https://user@smartapply.indeed.com/beta/indeedapply/form/questions-module",
   "https://smartapply.indeed.com:444/beta/indeedapply/form/questions-module"
 ]) assert.equal(board.classify(url).supported, false);
@@ -28,10 +28,10 @@ for (const host of ["www.ziprecruiter.com", "www.glassdoor.com"]) {
 }
 assert.equal(board.canAttachToOpportunity(questions, null).attached, false);
 assert.equal(board.canAttachToOpportunity(questions, { operatorSelected: true,
-  provider: "indeed", opportunityKey: "indeed:3ac648c2c798f4da",
+  provider: "indeed", opportunityKey: "indeed:aaaaaaaaaaaaaaaa",
   expectedFormOrigin: "https://smartapply.indeed.com" }).attached, true);
 assert.equal(board.canAttachToOpportunity(questions, { operatorSelected: true,
-  provider: "indeed", opportunityKey: "indeed:3ac648c2c798f4da",
+  provider: "indeed", opportunityKey: "indeed:aaaaaaaaaaaaaaaa",
   expectedFormOrigin: "https://evil.invalid" }).attached, false);
 assert.equal(board.classify("https://smartapply.indeed.com/beta/indeedapply/form/unknown-module/x").mayPrepareAfterPolicyGate, false);
 console.log("JOB_BOARD_ADAPTER_SYNTHETIC: PASS");

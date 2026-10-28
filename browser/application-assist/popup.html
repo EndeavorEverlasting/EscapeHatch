@@ -32,6 +32,8 @@
         linear-gradient(180deg, #f8f5f0 0%, var(--bg) 100%);
     }
     h1 { font-size: 1.15rem; margin: 0 0 4px; letter-spacing: -0.02em; }
+    .brand-heading { display: flex; align-items: center; gap: 8px; }
+    .brand-heading img { flex: 0 0 36px; object-fit: contain; border-radius: 8px; }
     .lede { margin: 0 0 10px; color: var(--muted); font-size: 12px; }
     .mode-chip {
       display: inline-flex;
@@ -45,7 +47,7 @@
       font-size: 11px;
       color: var(--muted);
     }
-    #sessionState, #status {
+    #sessionState, #jobBoardState, #status {
       min-height: 1.3em;
       margin: 0 0 10px;
       padding: 8px 10px;
@@ -168,10 +170,11 @@
   </style>
 </head>
 <body>
-  <h1>EscapeHatch Application Assist</h1>
+  <h1 class="brand-heading"><img src="escapehatch-mascot.webp" alt="" width="36" height="36">EscapeHatch Application Assist</h1>
   <p class="lede">Same semantic session controls for mouse, keyboard, and phone. Phone lands on commands first — not a shrunken desktop form.</p>
   <div class="mode-chip" id="modeChip" aria-live="polite">Mode: detecting</div>
   <div id="sessionState" role="status" aria-live="polite">Session: idle</div>
+  <div id="jobBoardState" role="status" aria-live="polite">Application page: checking</div>
 
   <div id="commandPalette" role="dialog" aria-label="Command palette" aria-modal="true">
     <p class="kbd-hint">Type to filter. Enter runs the action. Esc closes without changing session state.</p>
@@ -250,6 +253,7 @@
   <p class="privacy">User-owned browser-local state. Writes go through a canonical Fill Plan and policy gate. Phone is withheld unless explicitly marked as the primary career number you control. Never auto-submits, never clicks Next/Continue, never attests.</p>
   <script src="assist-core.js"></script>
   <script src="modality.js"></script>
+  <script src="job-board-adapter.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

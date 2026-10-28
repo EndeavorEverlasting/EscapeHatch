@@ -1,0 +1,206 @@
+{
+  "schema_version": "prompt-parallel-dispatch/v1",
+  "run_id": "escapehatch-job-boards-20261028",
+  "repository": "EndeavorEverlasting/EscapeHatch",
+  "parent_issue": "https://github.com/EndeavorEverlasting/EscapeHatch/issues/69",
+  "plan_owner": "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md",
+  "continuation": "docs/agent/P04_JOB_BOARD_APPLICATION_PLATFORMS_2026-10-28.md",
+  "base_ref": {
+    "provider_default_branch": "main",
+    "observed_default_head": "4e05791f74cf088838310c641e0360f327478ec7",
+    "writing_branch": "feat/indeed-board-assist-and-extension-identity-20261028"
+  },
+  "graph": {
+    "expression": "JB0 -> {JB1 || JB4} -> JB2 -> JB3 -> JB5 -> JB6",
+    "max_width": 2,
+    "parallel_disposition": "REQUIRED_NOT_OBSERVED"
+  },
+  "runtime_partition": {
+    "host": "CURRENT_CHAT_RUNTIME",
+    "providers": [
+      "GitHub",
+      "Google Drive"
+    ],
+    "local_host": "LOCAL_AGENT_RUNTIME",
+    "operator": "OPERATOR_OR_PHYSICAL_RUNTIME"
+  },
+  "autonomy_gap": "No independent local host/Chrome adapter available from GitHub provider; no observed parallel execution. Local branch writer must reconcile open PR #130 and launch tested lanes on verified host.",
+  "canonical_validation": "BLOCKED_SCHEMA_AND_RUNNER_ABSENT_IN_ESCAPEHATCH",
+  "status": "IMPLEMENTATION_COMMITTED_ON_ISOLATED_BRANCH__CI_AND_LIVE_PROOF_PENDING",
+  "lanes": [
+    {
+      "lane_id": "JB0",
+      "wave": 0,
+      "mission": "Recover exact latest main/PR ownership/validators; verify no collision with #130/#125",
+      "dependencies": [],
+      "host": "CURRENT_CHAT_RUNTIME",
+      "adapter": "GitHub provider",
+      "mutation_surfaces": [],
+      "forbidden_surfaces": [
+        "private ATS",
+        "employer Submit",
+        "user local Chrome"
+      ],
+      "validation": [
+        "review live GitHub default head",
+        "list changed files"
+      ]
+    },
+    {
+      "lane_id": "JB1",
+      "wave": 1,
+      "mission": "Expand current semantic form taxonomy and actual fill contract for Indeed SmartApply",
+      "dependencies": [
+        "JB0"
+      ],
+      "host": "LOCAL_AGENT_RUNTIME",
+      "adapter": "repository owned runner after local bootstrap",
+      "mutation_surfaces": [
+        "artifacts/escape-hatch/managed-form.ts",
+        "canonical form taxonomy owners",
+        "synthetic tests"
+      ],
+      "forbidden_surfaces": [
+        "final submit",
+        "privacy attestations",
+        "submitted ledger rows"
+      ],
+      "validation": [
+        "node tests/test_job_board_adapter.mjs",
+        "python scripts/validate_application_autofill_parent.py"
+      ]
+    },
+    {
+      "lane_id": "JB4",
+      "wave": 1,
+      "mission": "Complete Chrome toolbar first-party logo bootstrap and desktop popup proof",
+      "dependencies": [
+        "JB0"
+      ],
+      "host": "LOCAL_AGENT_RUNTIME",
+      "adapter": "canonical Windows launcher",
+      "mutation_surfaces": [
+        "browser/application-assist/worker.js",
+        "browser/application-assist/modality.js",
+        "browser/application-assist/popup.html",
+        "branding tests"
+      ],
+      "forbidden_surfaces": [
+        "private user profile",
+        "parallel PR #130 docs"
+      ],
+      "validation": [
+        "python tests/test_extension_branding_and_board.py",
+        "node tests/test_application_assist_modality.mjs",
+        "actual Chrome icon screenshot"
+      ]
+    },
+    {
+      "lane_id": "JB2",
+      "wave": 2,
+      "mission": "Integrate provider-bound safe intermediate SmartApply filling and operator-owned review",
+      "dependencies": [
+        "JB1"
+      ],
+      "host": "LOCAL_AGENT_RUNTIME",
+      "adapter": "repo managed browser runner",
+      "mutation_surfaces": [
+        "existing browser-assist/app executor owners",
+        "synthetic ATS tests"
+      ],
+      "forbidden_surfaces": [
+        "terminal Submit",
+        "unknown effect clicks",
+        "manual answers"
+      ],
+      "validation": [
+        "test:managed-assist",
+        "python scripts/validate_application_journey.py"
+      ]
+    },
+    {
+      "lane_id": "JB3",
+      "wave": 3,
+      "mission": "Extend the same safe observed contract to ZipRecruiter and Glassdoor using site-specific synthetic fixtures",
+      "dependencies": [
+        "JB2"
+      ],
+      "host": "LOCAL_AGENT_RUNTIME",
+      "adapter": "repo managed browser runner",
+      "mutation_surfaces": [
+        "site adapter",
+        "fixture suite"
+      ],
+      "forbidden_surfaces": [
+        "unverified employer actions",
+        "unreviewed applicant fields"
+      ],
+      "validation": [
+        "cross-vendor synthetic tests",
+        "protected original ATS tests"
+      ]
+    },
+    {
+      "lane_id": "JB5",
+      "wave": 4,
+      "mission": "P08 observe real Indeed plus one company ATS protected control, inspect branding and session transitions",
+      "dependencies": [
+        "JB2",
+        "JB4"
+      ],
+      "host": "LOCAL_AGENT_RUNTIME",
+      "adapter": "verified Windows host",
+      "mutation_surfaces": [
+        "sanitized runtime receipts only"
+      ],
+      "forbidden_surfaces": [
+        "final applicant submission",
+        "employee/private evidence in Git"
+      ],
+      "validation": [
+        "owned launcher proof",
+        "Chrome extension toolbar icon",
+        "real form observed",
+        "negative control"
+      ]
+    },
+    {
+      "lane_id": "JB6",
+      "wave": 5,
+      "mission": "Converge passing exact-head PRs, merge when authorized and prove installed live version",
+      "dependencies": [
+        "JB3",
+        "JB5"
+      ],
+      "host": "LOCAL_AGENT_RUNTIME",
+      "adapter": "repo/CI provider plus Windows",
+      "mutation_surfaces": [
+        "integration receipts",
+        "reviewed implementation"
+      ],
+      "forbidden_surfaces": [
+        "unrelated branches",
+        "operator-only ATS choice"
+      ],
+      "validation": [
+        "exact-head CI",
+        "provider merge readback",
+        "P08 host readback"
+      ]
+    }
+  ],
+  "execution_receipt": {
+    "branch_created": true,
+    "provider_code_mutations": true,
+    "synthetic_tests_executed": false,
+    "parallel_jobs_launched": false,
+    "validated_runner": false,
+    "live_windows_observed": false,
+    "ats_submission_observed": false
+  },
+  "protected": {
+    "submission_parent_status": "OPEN",
+    "privacy": "synthetic source only; no private applicant data",
+    "operator_final_submit": true
+  }
+}

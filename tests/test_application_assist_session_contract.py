@@ -57,6 +57,13 @@ class ApplicationAssistSessionContractTests(unittest.TestCase):
         self.assertEqual(observation["receipt_scope"], "extension_local_metadata_only_no_queue_projection")
         for name in ("submission-observer.js", "worker.js"):
             source = (BROWSER / name).read_text(encoding="utf-8")
+            if name == "worker.js":
+                # The ONLY worker fetch is a fixed first-party packaged WebP asset.
+                # Never relax submission observation's no-network contract for other URLs.
+                local_asset_fetch = "fetch(chrome.runtime.getURL('escapehatch-mascot.webp'))"
+                self.assertEqual(source.count("fetch("), 1)
+                self.assertIn(local_asset_fetch, source)
+                source = source.replace(local_asset_fetch, "")
             for action in (".click(", ".submit(", ".requestSubmit(", "fetch(", "XMLHttpRequest"):
                 self.assertNotIn(action, source)
 

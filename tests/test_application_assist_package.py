@@ -7,6 +7,7 @@ import json
 import subprocess
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -118,6 +119,54 @@ class ApplicationAssistPackageTests(unittest.TestCase):
                 with self.assertRaises(PACKAGE.PackageError):
                     PACKAGE.package_extension(self.repo, self.root / case)
                 self.assertEqual({file.relative_to(target).as_posix(): file.read_bytes() for file in target.rglob("*") if file.is_file()}, before)
+
+    def test_store_archive_is_deterministic_rooted_and_excludes_receipt(self):
+        archive = PACKAGE.package_store_archive(self.repo, self.output)
+        other = PACKAGE.package_store_archive(self.repo, self.root / "other")
+        self.assertEqual(archive.read_bytes(), other.read_bytes())
+        with zipfile.ZipFile(archive) as zipped:
+            self.assertEqual(set(zipped.namelist()), set(self.expected))
+            self.assertIn("manifest.json", zipped.namelist())
+            for name, content in self.expected.items():
+                self.assertEqual(zipped.read(name), content)
+        metadata = json.loads(archive.with_suffix(".zip.release.json").read_text())
+        self.assertEqual(metadata["archive"]["sha256"], hashlib.sha256(archive.read_bytes()).hexdigest())
+        self.assertEqual(metadata["sourceCommit"], self.head)
+        original = archive.stat().st_mtime_ns
+        PACKAGE.package_store_archive(self.repo, self.output, verify_only=True)
+        self.assertEqual(archive.stat().st_mtime_ns, original)
+
+    def test_store_archive_missing_tampered_and_partial_fail_closed(self):
+        with self.assertRaises(PACKAGE.PackageError):
+            PACKAGE.package_store_archive(self.repo, self.output, verify_only=True)
+        self.assertFalse(self.output.exists())
+        archive = PACKAGE.package_store_archive(self.repo, self.output)
+        archive.write_bytes(b"tampered")
+        with self.assertRaises(PACKAGE.PackageError):
+            PACKAGE.package_store_archive(self.repo, self.output)
+        self.assertEqual(archive.read_bytes(), b"tampered")
+        archive.unlink()
+        with self.assertRaises(PACKAGE.PackageError):
+            PACKAGE.package_store_archive(self.repo, self.output)
+        self.assertFalse(archive.exists())
+
+    def test_store_archive_changed_metadata_is_preserved_and_rejected(self):
+        archive = PACKAGE.package_store_archive(self.repo, self.output)
+        metadata = archive.with_suffix(".zip.release.json")
+        metadata.write_bytes(b"{}")
+        with self.assertRaises(PACKAGE.PackageError):
+            PACKAGE.package_store_archive(self.repo, self.output, verify_only=True)
+        self.assertEqual(metadata.read_bytes(), b"{}")
+
+    def test_enrollment_never_promotes_package_proof_to_browser_installation(self):
+        package = self.build()
+        diagnostics = PACKAGE.enrollment_diagnostics(package)
+        self.assertEqual(diagnostics["packageState"], "PACKAGE_VERIFIED")
+        self.assertEqual(diagnostics["enrollmentState"], "ENROLLMENT_REQUIRED")
+        self.assertEqual(diagnostics["installationState"], "UNKNOWN")
+        self.assertIsNone(diagnostics["storeUploadArchive"])
+        self.assertEqual(diagnostics["sourceCommit"], self.head)
+        self.assertIn("Chrome Web Store", diagnostics["consumerAction"])
 
     def test_committed_symlink_is_rejected_before_output_creation(self):
         # Construct a Git symlink without requiring Windows symlink privileges.

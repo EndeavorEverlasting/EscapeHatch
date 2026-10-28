@@ -1,9 +1,12 @@
 name: Application Assist Session Validation
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - "browser/application-assist/**"
+      - "scripts/package_application_assist.py"
+      - "tests/test_application_assist_package.py"
       - "contracts/application-assist-session.v1.json"
       - "contracts/application-assist-modality.v1.json"
       - "docs/APPLICATION_ASSIST_SESSION.md"
@@ -15,6 +18,8 @@ on:
   pull_request:
     paths:
       - "browser/application-assist/**"
+      - "scripts/package_application_assist.py"
+      - "tests/test_application_assist_package.py"
       - "contracts/application-assist-session.v1.json"
       - "contracts/application-assist-modality.v1.json"
       - "docs/APPLICATION_ASSIST_SESSION.md"
@@ -40,6 +45,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Test immutable packaging and enrollment boundaries
+        run: python tests/test_application_assist_package.py
+      - name: Build and verify Chrome Web Store upload candidate
+        run: |
+          python scripts/package_application_assist.py --store-zip --enrollment
+          python scripts/package_application_assist.py --store-zip --verify
+      - name: Preserve extension upload candidate and provenance
+        uses: actions/upload-artifact@v4
+        with:
+          name: application-assist-${{ github.sha }}
+          path: |
+            Outputs/application-assist/*.zip
+            Outputs/application-assist/*.zip.release.json
+          if-no-files-found: error
       - name: Validate assist session contract and extension safety
         run: python tests/test_application_assist_session_contract.py
       - name: Validate assist modality contract

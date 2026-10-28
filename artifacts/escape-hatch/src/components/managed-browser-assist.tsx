@@ -1,7 +1,8 @@
 import { useOpportunityDocuments } from './opportunity-documents';
 import { ApplicationPuzzle } from './application-puzzle';
+import { ApplicationOutcome } from './application-outcome';
 import type { CurrentApplicationPage } from '@/lib/application-puzzle';
-import { reconcileSubmissionReceipts } from '@/lib/submission-reconciliation';
+import { parseSubmissionEvidence, reconcileSubmissionReceipts, submissionMatchesApplication } from '@/lib/submission-reconciliation';
 import type { AssistProfile } from '@/lib/assist-contract';
 import { CareerRecords } from './career-records';
 import { useEffect, useRef, useState, type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
@@ -92,6 +93,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   // Never silently reuse an earlier/submitted employer as the next application.
   const [url, setUrl] = useState('');
   const [selectedOpportunityId, setSelectedOpportunityId] = useState('');
+  const [dismissedOutcomeId, setDismissedOutcomeId] = useState('');
   const operatorSelected = useRef(false);
   const [savedJourney, setSavedJourney] = useState(() => readStoredValue(getLocalStorage(), JOURNEY_RESUME_KEY, EMPTY_JOURNEY_RESUME, parseJourneyResume));
   const autoLaunchAttempted = useRef(false);
@@ -240,6 +242,10 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     if (!browserOpen || !currentPage || operatorSelected.current) return;
     // Readback restores a known binding; it never issues new launch/fill authority.
     autoLaunchAttempted.current = true;
+    if (applications.some(item => item.id === currentPage.opportunityId && item.url === currentPage.applicationUrl && item.status === 'applied')) {
+      setContinuityError('');
+      return; // Completed jobs have an outcome, never another pending journey.
+    }
     const bound = applications.find(item => item.id === currentPage.opportunityId &&
       item.url === currentPage.applicationUrl && item.status !== 'applied' && item.status !== 'closed');
     if (bound) {
@@ -517,6 +523,21 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   };
   const button = 'inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50';
   const secondary = 'inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-bold hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50';
+
+  const completedApplication = currentPage && applications.find(item =>
+    item.id === currentPage.opportunityId && item.url === currentPage.applicationUrl && item.status === 'applied');
+  if (completedApplication && completedApplication.id !== dismissedOutcomeId) {
+    const receipt = parseSubmissionEvidence(listenerStatus?.submission?.receipt);
+    const captured = listenerConnected && listenerStatus?.opportunityId === completedApplication.id &&
+      listenerStatus.submission?.state === 'CONFIRMED' && receipt?.opportunityId === completedApplication.id &&
+      submissionMatchesApplication(receipt, completedApplication.url);
+    return <ApplicationOutcome application={completedApplication} receiptCaptured={Boolean(captured)}
+      onChooseAnother={() => {
+        setDismissedOutcomeId(completedApplication.id);
+        operatorSelected.current = true;
+        setSelectedOpportunityId(''); setUrl(''); setContinuityError(''); setMessage('Choose a saved job to prepare next. The previous employer tab stays open.');
+      }} />;
+  }
 
   return (
     <><section className="mb-6 rounded-2xl border border-primary/25 bg-card p-5 shadow-sm sm:p-7" data-testid="managed-browser-assist">

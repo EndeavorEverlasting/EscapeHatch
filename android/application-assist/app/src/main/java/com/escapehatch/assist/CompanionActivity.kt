@@ -68,17 +68,7 @@ class CompanionActivity : AppCompatActivity() {
             store.save(session)
             return
         }
-        if (store.load() == null) {
-            store.save(
-                AssistSession(
-                    sessionId = "sess-${UUID.randomUUID()}",
-                    origin = "manual://companion",
-                    status = "active",
-                    company = "Example Co",
-                    role = "Automation Engineer",
-                ),
-            )
-        }
+        // Cold start is not a real employer session. Wait for an explicit Share or deep link.
     }
 
     private fun postQuietNotification() {
@@ -100,7 +90,7 @@ class CompanionActivity : AppCompatActivity() {
     private fun render() {
         val session = store.load()
         statusView.text = if (session == null) {
-            "No session"
+            "Ready to help. Share an employer job link from your phone browser to EscapeHatch."
         } else {
             buildString {
                 appendLine("storageKey=${AssistSessionStore.STORAGE_KEY}")

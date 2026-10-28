@@ -687,10 +687,19 @@ export function createManagedBrowserAssistPlugin(): Plugin {
           }
           if (url.pathname === PREFIX + '/attach') {
             if (payload.resume || payload.cover || payload.case_study) throw new Error('Save the selected documents to this opportunity before attaching.');
-            const packageFiles = await documentStore.forUpload(opportunityId, applicationUrl, (await readPreferences()).require_document_review !== false);
+            // The CURRENT observed form, not every saved optional draft, determines
+            // attachment kinds. Generic Supporting Documents/Add remains unclassified:
+            // do not guess capacity or substitute a job résumé into a global slot.
+            const observed = await inspectApplicationRequirements(page, opportunityId, applicationUrl);
+            const requested = (['resume', 'cover', 'case_study'] as const).filter(kind =>
+              observed.requirements.some(field => field.kind === kind));
+            const packageFiles = await documentStore.forCurrentEmployerForm(
+              opportunityId, applicationUrl, requested, (await readPreferences()).require_document_review !== false);
             const outcome = await attachPdfs(page, packageFiles.resume, packageFiles.cover, packageFiles.case_study);
             state = attachmentProgressState(outcome);
-            return respond(res, 200, { ok: true, state, evidenceSummary: evidenceDescription(state), attachments: outcome, reviewPolicy: packageFiles.reviewPolicy, requiresOperatorSubmission: true });
+            return respond(res, 200, { ok: true, state, evidenceSummary: evidenceDescription(state), attachments: outcome,
+              reviewPolicy: packageFiles.reviewPolicy, genericSupportingDocumentsRequireReview:
+                observed.requirements.some(field => field.kind === 'file'), requiresOperatorSubmission: true });
           }
           return respond(res, 404, { ok: false, error: 'unknown_action' });
         } catch (error) {

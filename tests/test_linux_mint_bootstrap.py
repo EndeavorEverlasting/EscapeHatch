@@ -99,6 +99,27 @@ class LinuxMintBootstrapTests(unittest.TestCase):
         self.assertIn('No installed source yet',result.stdout)
         self.assertFalse(source.exists())
 
+    def test_mint_menu_shortcut_user_scoped_and_nonclobbering(self):
+        shortcut_source=ROOT/"scripts/linux/install_shortcut.py"
+        sandbox=Path(self.tmp.name)/"checkout"
+        shutil.copyfile(shortcut_source,sandbox/"scripts/linux/install_shortcut.py")
+        home=Path(self.tmp.name)/"home"
+        home.mkdir()
+        env=self.env|{"HOME":str(home),"XDG_DATA_HOME":str(home/".local/share")}
+        script=sandbox/"scripts/linux/install_shortcut.py"
+        result=subprocess.run([sys.executable,str(script)],env=env,capture_output=True,text=True)
+        self.assertEqual(0,result.returncode,result.stderr)
+        launcher=home/".local/bin/escapehatch"
+        desktop=home/".local/share/applications/escapehatch.desktop"
+        self.assertIn("Managed by EscapeHatch",launcher.read_text())
+        self.assertIn("Exec=",desktop.read_text())
+        self.assertEqual(0o700, launcher.stat().st_mode & 0o777)
+        self.assertEqual(0,subprocess.run([sys.executable,str(script)],env=env).returncode)
+        launcher.write_text("# owned by another app\n")
+        refused=subprocess.run([sys.executable,str(script)],env=env,capture_output=True,text=True)
+        self.assertEqual(2,refused.returncode)
+        self.assertEqual("# owned by another app\n",launcher.read_text())
+
     def test_shell_syntax_and_no_exposed_host(self):
         s=subprocess.run(['bash','-n',str(BOOTSTRAP)],capture_output=True,text=True)
         self.assertEqual(0,s.returncode,s.stderr)

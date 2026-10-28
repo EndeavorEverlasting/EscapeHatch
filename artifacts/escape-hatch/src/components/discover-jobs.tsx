@@ -62,7 +62,7 @@ export function DiscoverJobs({applications,setApplications}:{applications:Applic
       <article key={job.id} className="rounded-xl border border-border bg-background p-4" data-testid="discovery-result">
         <h3 className="text-lg font-bold">{job.title} · {job.company}</h3>
         <p className="text-sm text-muted-foreground">{job.location} · {job.domain} / {job.occupation} · {job.seniority}</p>
-        <p className="text-sm font-bold">{payLabel(job)}</p>
+        <p className="rounded-lg bg-primary/10 px-2 py-1 text-sm font-bold text-primary">{payLabel(job)}</p>
         <div className="mt-3 flex flex-wrap gap-2">
           <a href={job.applicationLink} target="_blank" rel="noopener noreferrer" className="rounded-lg border px-3 py-2 text-sm underline">View listing</a>
           <button type="button" disabled={applications.some(a=>a.url===job.applicationLink)} onClick={()=>save(job)} className="rounded-lg bg-primary px-3 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50" data-testid="discovery-save">Save to queue</button>

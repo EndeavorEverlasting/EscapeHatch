@@ -22,15 +22,21 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      # GitHub hosted Ubuntu already provides Android cmdline-tools; the old
-      # setup-android action invokes the removed sdkmanager 'tools' package.
-      - name: Validate hosted Android SDK
+      # Hosted Ubuntu provides commandline-tools, but not always ANDROID_HOME
+      # or sdkmanager on PATH. Avoid setup-android's retired 'tools' package.
+      - name: Discover Android SDK and commandline tools
         shell: bash
         run: |
           set -euo pipefail
-          : "${ANDROID_HOME:?\"Hosted runner must provide Android SDK\"}"
-          command -v sdkmanager
-          sdkmanager --version
+          sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          test -d "$sdk_root/cmdline-tools"
+          sdkmanager_path="$(find "$sdk_root/cmdline-tools" -type f -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
+          test -n "$sdkmanager_path"
+          test -x "$sdkmanager_path"
+          echo "ANDROID_HOME=$sdk_root" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$sdk_root" >> "$GITHUB_ENV"
+          echo "$(dirname "$sdkmanager_path")" >> "$GITHUB_PATH"
+          "$sdkmanager_path" --version
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.7"

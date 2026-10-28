@@ -18,6 +18,7 @@ import { once } from 'node:events';
 import { JOURNEY_RESUME_KEY, EMPTY_JOURNEY_RESUME } from './src/lib/application-journey-projection.ts';
 import { hasContext } from './src/lib/workspace-bootstrap.ts';
 import { ASSIST_KEY, emptyAssistProfile } from './src/lib/assist-contract.ts';
+import { authorizeAgentContext, parseWorkspaceOwnerBinding, OWNER_BINDING_SCHEMA, AGENT_CONTEXT_SCHEMA, type WorkspaceOwnerBinding, type AgentContextEnvelope } from './src/lib/workspace-owner-binding.ts';
 
 const workspace = (first_name = 'Synthetic') => ({ schema: WORKSPACE_SCHEMA, values: { [PROFILE_KEY]: { ...emptyProfile, first_name } } });
 test('unmanaged dev metadata works with localhost without opening private storage', async () => {
@@ -287,4 +288,58 @@ test('different emails remain a hard context conflict despite matching names', (
   const bob = { ...alice, email: 'bob@example.test' };
   const saved = { schema: WORKSPACE_SCHEMA, values: { [PROFILE_KEY]: alice, [ASSIST_KEY]: emptyAssistProfile(bob) } };
   assert.deepEqual(reconcileWorkspace({ schema: WORKSPACE_SCHEMA, values: {} }, saved).conflicts, ['OWNER_CONTEXT_CONFLICT']);
+});
+
+test('versioned applicant binding admits only the selected owner and exact reviewed source revision', () => {
+  const alice = '11111111-1111-4111-8111-111111111111';
+  const bob = '22222222-2222-4222-8222-222222222222';
+  const workspaceA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const workspaceB = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const installation = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+  const profileRevision = 'a'.repeat(64);
+  const sourceRevision = 'b'.repeat(64);
+  const bind = (ownerId: string, workspaceId: string): WorkspaceOwnerBinding => ({
+    schema: OWNER_BINDING_SCHEMA, ownerId, workspaceId, installationId: installation,
+    boundAt: '2026-10-28T12:00:00.000Z', selection: 'applicant-confirmed',
+  });
+  const sourceA = { sourceId: 'reviewed-resume', ownerId: alice, workspaceId: workspaceA, revision: sourceRevision };
+  const request = (ownerId: string, workspaceId: string): AgentContextEnvelope => ({
+    schema: AGENT_CONTEXT_SCHEMA, ownerId, workspaceId, installationId: installation,
+    profileRevision, sources: [sourceA],
+  });
+  const active = bind(alice, workspaceA);
+  assert.equal(parseWorkspaceOwnerBinding(active)?.ownerId, alice);
+  assert.deepEqual(authorizeAgentContext(active, request(alice, workspaceA), profileRevision, [sourceA]),
+    { ok: true, ownerId: alice, workspaceId: workspaceA, sourceCount: 1 });
+  assert.deepEqual(authorizeAgentContext(null, request(alice, workspaceA), profileRevision, [sourceA]),
+    { ok: false, reason: 'OWNER_UNBOUND' });
+  assert.deepEqual(authorizeAgentContext(active, request(bob, workspaceA), profileRevision, [sourceA]),
+    { ok: false, reason: 'OWNER_MISMATCH' });
+  assert.deepEqual(authorizeAgentContext(active, request(alice, workspaceB), profileRevision, [sourceA]),
+    { ok: false, reason: 'WORKSPACE_MISMATCH' });
+  assert.deepEqual(authorizeAgentContext(active, request(alice, workspaceA), 'c'.repeat(64), [sourceA]),
+    { ok: false, reason: 'REVISION_REQUIRED' });
+  assert.deepEqual(authorizeAgentContext(active, request(alice, workspaceA), profileRevision, [{ ...sourceA, ownerId: bob }]),
+    { ok: false, reason: 'SOURCE_SCOPE_MISMATCH' });
+  assert.deepEqual(authorizeAgentContext(bind(bob, workspaceB), request(alice, workspaceA), profileRevision, [sourceA]),
+    { ok: false, reason: 'OWNER_MISMATCH' });
+});
+
+test('two developers sharing a repository cannot promote their profiles into another applicant context', () => {
+  // These developer identities intentionally do not occur in the contract:
+  // a checkout, collaborator or agent author cannot determine the applicant.
+  const applicant = '11111111-1111-4111-8111-111111111111';
+  const developer = '22222222-2222-4222-8222-222222222222';
+  const workspaceId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const installationId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+  const binding = { schema: OWNER_BINDING_SCHEMA, ownerId: applicant, workspaceId,
+    installationId, boundAt: '2026-10-28T12:00:00.000Z', selection: 'applicant-confirmed' };
+  const request = { schema: AGENT_CONTEXT_SCHEMA, ownerId: applicant, workspaceId, installationId,
+    profileRevision: 'a'.repeat(64), sources: [] };
+  assert.equal(authorizeAgentContext(binding, request, 'a'.repeat(64), []).ok, true);
+  assert.deepEqual(authorizeAgentContext(binding, { ...request, ownerId: developer }, 'a'.repeat(64), []),
+    { ok: false, reason: 'OWNER_MISMATCH' });
+  assert.equal(parseWorkspaceOwnerBinding({ ...binding, ownerId: 'developer@example.test' }), null);
+  assert.equal(parseWorkspaceOwnerBinding({ ...binding, selection: 'auto-from-repository' }), null);
+  assert.equal(parseWorkspaceOwnerBinding({ ...binding, developerPrivateProfile: 'must-not-import' }), null);
 });

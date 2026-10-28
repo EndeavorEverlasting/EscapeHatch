@@ -127,8 +127,13 @@ export async function installManagedSubmissionObserver(page: Page, options: Subm
           continuations.some(prefix => url.pathname.startsWith(prefix))); }
       catch { return false; }
     };
-    if (!permitted(event.url) || !permitted(frame.url())) return;
+    // Do not discard valid metadata scans on an out-of-scope route: the reducer
+    // must transition to BLOCKED rather than leave a stale PENDING listener.
     if (event.kind !== 'attempt' && event.url !== frame.url()) return;
+    if (event.kind === 'attempt' && (!permitted(event.url) || !permitted(frame.url()))) {
+      publish({ state: 'BLOCKED', reason: 'Application identity or path changed; review before re-arming.', receipt: null });
+      return;
+    }
     if (event.kind === 'attempt') {
       attemptId = randomUUID();
       attemptStageKey = event.documentId + ':' + (event.stageKey || '');

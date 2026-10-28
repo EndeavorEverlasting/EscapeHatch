@@ -343,3 +343,44 @@ test('two developers sharing a repository cannot promote their profiles into ano
   assert.equal(parseWorkspaceOwnerBinding({ ...binding, selection: 'auto-from-repository' }), null);
   assert.equal(parseWorkspaceOwnerBinding({ ...binding, developerPrivateProfile: 'must-not-import' }), null);
 });
+
+test('two applicant stores stay independent when two developer harnesses reuse one checkout', async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-applicant-isolation-'));
+  const installationId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+  const applicants = [
+    { ownerId: '11111111-1111-4111-8111-111111111111', workspaceId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', name: 'Applicant A' },
+    { ownerId: '22222222-2222-4222-8222-222222222222', workspaceId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', name: 'Applicant B' },
+  ];
+  try {
+    const rows = [];
+    for (const [index, applicant] of applicants.entries()) {
+      const file = path.join(directory, String(index), 'workspace.v1.json');
+      const candidate = { schema: WORKSPACE_SCHEMA, values: { [PROFILE_KEY]: { ...emptyProfile, first_name: applicant.name } } };
+      const receipt = await saveWorkspace(candidate, null, file);
+      const readback = await readWorkspace(file);
+      assert.deepEqual(readback?.workspace, candidate);
+      const binding = {
+        schema: OWNER_BINDING_SCHEMA, ownerId: applicant.ownerId, workspaceId: applicant.workspaceId,
+        installationId, boundAt: '2026-10-28T12:00:00.000Z', selection: 'applicant-confirmed',
+      };
+      const request = {
+        schema: AGENT_CONTEXT_SCHEMA, ownerId: applicant.ownerId, workspaceId: applicant.workspaceId,
+        installationId, profileRevision: receipt.revision, sources: [],
+      };
+      rows.push({ binding, request, revision: receipt.revision });
+    }
+    for (const row of rows) {
+      assert.equal(authorizeAgentContext(row.binding, row.request, row.revision, []).ok, true);
+    }
+    // Any of the independent developer harnesses can present an *untrusted*
+    // old context request, but the current applicant's binding must deny it.
+    assert.deepEqual(authorizeAgentContext(rows[0].binding, rows[1].request, rows[0].revision, []),
+      { ok: false, reason: 'OWNER_MISMATCH' });
+    assert.deepEqual(authorizeAgentContext(rows[1].binding, rows[0].request, rows[1].revision, []),
+      { ok: false, reason: 'OWNER_MISMATCH' });
+    assert.equal((await readWorkspace(path.join(directory, '0', 'workspace.v1.json')))?.workspace.values[PROFILE_KEY].first_name,
+      'Applicant A');
+    assert.equal((await readWorkspace(path.join(directory, '1', 'workspace.v1.json')))?.workspace.values[PROFILE_KEY].first_name,
+      'Applicant B');
+  } finally { await fs.rm(directory, { recursive: true, force: true }); }
+});

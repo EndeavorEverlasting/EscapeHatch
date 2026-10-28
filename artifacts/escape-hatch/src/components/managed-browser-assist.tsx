@@ -662,19 +662,21 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           <button type="button" className={secondary} disabled={busy || !browserOpen || !selectedOpportunityId || !url} onClick={() => void trackExistingTab()}>Track existing application tab</button>
           <p role="status" aria-live="polite" data-testid="submission-listener-state" data-listener-state={submissionState}
              className="mt-3 rounded-lg border border-border bg-background px-3 py-2 text-sm font-semibold">
-             Submission listener: {submissionState}{submissionState === 'ARMED' ? ' — listening for your Submit on this job' :
+             Submission listener: {submissionState}{submissionState === 'ARMED' ? ' — observing form transitions for this job' :
                submissionState === 'DISCONNECTED' ? ' — running connection not verified' :
                submissionState === 'NOT_BOUND' ? ' — select and bind this saved job' :
-               submissionState === 'PENDING' ? ' — click observed; waiting for employer confirmation' :
+               submissionState === 'PENDING' ? ' — a form action was observed; awaiting another step or an employer receipt' :
+               submissionState === 'IN_PROGRESS' ? ' — another application step needs completion' :
+               submissionState === 'PROCESSING' ? ' — employer is processing; final receipt not yet verified' :
                submissionState === 'CONFIRMED' ? ' — employer receipt observed' :
                submissionState === 'VALIDATION_FAILED' ? ' — employer did not accept the application' :
                ' — tracking is not armed for this job'}
           </p>
           <label className="mt-3 flex items-start gap-2"><input type="checkbox" checked={listenerConnected && listenerStatus?.opportunityId === selectedOpportunityId && !!listenerStatus?.submission && !['DISARMED', 'BLOCKED'].includes(listenerStatus.submission.state)}
-            disabled={!browserOpen || busy || listenerStatus?.opportunityId !== selectedOpportunityId || listenerStatus?.submission?.state === 'CONFIRMED'} onChange={event => void updateListeners({ trackSubmission: event.target.checked })} />Track my submission when I click Submit in Chrome</label>
+            disabled={!browserOpen || busy || listenerStatus?.opportunityId !== selectedOpportunityId || listenerStatus?.submission?.state === 'CONFIRMED'} onChange={event => void updateListeners({ trackSubmission: event.target.checked })} />Track my application through its pages and final confirmation in Chrome</label>
           <p className="mt-2" role="status" data-testid="submission-listener-status">{listenerStatus?.error || listenerStatus?.submission?.reason || 'Launch an application to connect tracking. Final submission stays yours.'}</p>
           {listenerStatus?.submission?.state === 'CONFIRMED' && listenerStatus.receipts?.some(receipt => !!receipt && typeof receipt === 'object' && 'opportunityId' in receipt && receipt.opportunityId === selectedOpportunityId) && <p className="mt-2 font-semibold">Employer confirmation received. This application is marked Applied in your local queue.</p>}
-          <p className="mt-2 text-xs text-muted-foreground">A click or page change alone never marks an application Applied. Tracking waits for employer confirmation, saves a receipt, and retries tracker synchronization independently.</p>
+          <p className="mt-2 text-xs text-muted-foreground">A Submit or Next button can lead to more questions. EscapeHatch stays connected through verified same-job pages. Neither a click nor a processing message marks Applied; only an explicit employer receipt does. Receipt and tracker synchronization are independently verified.</p>
           <p className="mt-2 text-sm" role="status">{trackerSync ? `Tracker synchronization: ${trackerSync.state}. Saved receipts: ${trackerSync.synced} synced, ${trackerSync.pending} pending, ${trackerSync.authRequired} need Google authorization, ${trackerSync.conflicts} have conflicts, ${trackerSync.retryRequired} need retry.` : 'External tracker synchronization has not been verified.'}</p>
           <button type="button" className={secondary} disabled={busy} onClick={() => { setBusy(true); void request('/submission-sync/retry', {}).then(result => { setRecordingMessage(''); if (result.trackerSync) setTrackerSync(result.trackerSync); }).catch(() => setRecordingMessage('Tracker sync did not complete. The saved receipt is preserved for retry.')).finally(() => setBusy(false)); }}>Retry tracker synchronization</button>
         </section>

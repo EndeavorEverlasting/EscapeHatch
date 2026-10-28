@@ -55,15 +55,19 @@ class CompanionActivity : AppCompatActivity() {
         }
         val handoff = HandoffIntents.fromIntent(intent)
         if (handoff != null) {
+            // External Android intents are untrusted selection hints, not session authority.
+            val url = HandoffAdmission.publicJobUrl(handoff.url) ?: return
             val existing = store.load()
+            val sameJob = existing?.origin == url
             val session = AssistSession(
-                sessionId = handoff.sessionId ?: existing?.sessionId ?: "sess-${UUID.randomUUID()}",
-                origin = handoff.url ?: existing?.origin ?: "unknown://",
-                status = existing?.status ?: "active",
-                company = handoff.company ?: existing?.company,
-                role = handoff.role ?: existing?.role,
-                unresolvedFieldCount = existing?.unresolvedFieldCount ?: 0,
-                questionText = handoff.questionText ?: existing?.questionText,
+                // Never accept an unverified external session ID or inherit a different job.
+                sessionId = if (sameJob) existing!!.sessionId else "sess-${UUID.randomUUID()}",
+                origin = url,
+                status = if (sameJob) existing!!.status else "active",
+                company = handoff.company?.take(160) ?: (if (sameJob) existing!!.company else null),
+                role = handoff.role?.take(160) ?: (if (sameJob) existing!!.role else null),
+                unresolvedFieldCount = if (sameJob) existing!!.unresolvedFieldCount else 0,
+                questionText = handoff.questionText?.take(2000) ?: (if (sameJob) existing!!.questionText else null),
             )
             store.save(session)
             return

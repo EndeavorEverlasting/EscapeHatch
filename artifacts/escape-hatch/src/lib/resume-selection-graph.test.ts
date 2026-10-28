@@ -13,8 +13,8 @@ function fixture(): ResumeGraph {
       { id: 'construction', type: 'resume', owner: 'synthetic-owner-a', tier: 'domain', domainTags: ['construction'], revision: 'c1', digest: H('d'), review: 'approved' },
       { id: 'job-specific', type: 'resume', owner: 'synthetic-owner-a', tier: 'job', revision: 'j1', digest: H('e'), review: 'approved' },
       { id: 'example-role', type: 'opportunity', owner: 'synthetic-owner-a', postingDigest: H('f'), domainWeights: { management: 4, it: 2, construction: 1 } },
-      { id: 'global', type: 'platform_slot', owner: 'synthetic-owner-a', platform: 'indeed', scope: 'persistent_global', observation: 'verified' },
-      { id: 'perapp', type: 'platform_slot', owner: 'synthetic-owner-a', platform: 'employer-ats', scope: 'isolated_application', observation: 'verified' },
+      { id: 'global', type: 'platform_slot', owner: 'synthetic-owner-a', platform: 'indeed', scope: 'persistent_global', observation: 'verified', observationReceiptDigest: H('a') },
+      { id: 'perapp', type: 'platform_slot', owner: 'synthetic-owner-a', platform: 'employer-ats', scope: 'isolated_application', observation: 'verified', observationReceiptDigest: H('b') },
       { id: 'unknown', type: 'platform_slot', owner: 'synthetic-owner-a', platform: 'glassdoor', scope: 'unknown', observation: 'unverified' },
       { id: 'draft-application', type: 'application', owner: 'synthetic-owner-a', opportunityId: 'example-role', state: 'in_progress' },
     ],
@@ -108,4 +108,32 @@ test('submitting an application cannot change immutable attachment provenance',(
  (g.nodes.find(n=>n.id==='draft-application') as {state:string}).state='submitted';
  assert.equal(resolveResumeForPlatform(g,select).candidateId,'pm');
  assert.equal(g.edges.find(e=>e.kind==='application_uses')?.to,'job-specific');
+});
+
+test('unproven provider slot cannot claim verified persistence with no receipt',()=>{
+ const g=fixture(),slot=g.nodes.find(n=>n.id==='global');
+ if(!slot || slot.type!=='platform_slot')throw Error('fixture');
+ delete slot.observationReceiptDigest;
+ assert.equal(resolveResumeForPlatform(g,select).reason,'INVALID_GRAPH');
+});
+test('a job derivative cannot belong to multiple opportunities or attach to a different one',()=>{
+ const g=fixture();
+ g.nodes.push({id:'other-opportunity',type:'opportunity',owner:g.owner,postingDigest:H('f'),domainWeights:{it:3}});
+ g.edges.push({kind:'targets_opportunity',from:'job-specific',to:'other-opportunity'});
+ assert.throws(()=>validateResumeGraph(g),/invalid job target/);
+ const a=fixture();
+ (a.nodes.find(n=>n.id==='draft-application') as {opportunityId:string}).opportunityId='other-opportunity';
+ a.nodes.push({id:'other-opportunity',type:'opportunity',owner:a.owner,postingDigest:H('f'),domainWeights:{it:2}});
+ assert.throws(()=>validateResumeGraph(a),/crossed opportunity/);
+});
+test('large DAG of approved domain variants validates without recursive traversal',()=>{
+ const g=fixture(),count=1200;
+ for(let i=0;i<count;i++){
+   const id='synthetic-domain-'+i;
+   g.nodes.push({id,type:'resume',owner:g.owner,tier:'domain',review:'approved',
+     revision:'d'+i,digest:H('b'),domainTags:['unique-domain-'+i]});
+   g.edges.push({kind:'derives_from',from:id,to:'base',parentDigest:H('a')});
+ }
+ assert.equal(validateResumeGraph(g).size,10+count);
+ assert.equal(resolveResumeForPlatform(g,select).candidateId,'pm');
 });

@@ -9,7 +9,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { DatabaseSync } from 'node:sqlite';
 import { chromium } from '@playwright/test';
-import { emptyPreferences, parsePreferences, optionMatches, matchQuestion, normalizeQuestion, expandProfessionalTitles, suggestProfessionalTitles } from './src/lib/application-preferences.ts';
+import { emptyPreferences, parsePreferences, optionMatches, matchQuestion, normalizeQuestion, reusableValue, expandProfessionalTitles, suggestProfessionalTitles } from './src/lib/application-preferences.ts';
 import { savePreferences, readPreferences, clearPreferences, updatePreferences } from './preference-file.ts';
 import { fillSavedPreferences, openApplicationForm, internationalPhone, captureMilitaryAnswers } from './managed-form.ts';
 import { attachPdfs, parsePrivatePdf } from './browser-assist-control.ts';
@@ -378,4 +378,17 @@ test('full name and exact decorated EEO metadata fill without changing existing 
     assert.equal(await page.locator('[name="gender"]').first().isChecked(), true);
     assert.equal(await page.evaluate(() => (window as unknown as { submitted?: boolean }).submitted), undefined);
   } finally { await browser.close(); }
+});
+
+test('why-me/why-this-role prompts are distinct opportunity-bound questions, never globally reusable',()=>{
+ const prefs=emptyPreferences();
+ for(const [label,id] of [
+   ['Why are you interested in this role?','narrative.why_this_role'],
+   ['Why should we hire you?','narrative.why_me'],
+   ['Why do you want to work for our company?','narrative.why_this_company']
+ ]){
+   assert.equal(matchQuestion(label),id);
+   prefs.preferences[id]={scope:'profile_preference',source:'user',value:'Synthetic opportunity-specific answer',updated_at:new Date().toISOString()};
+   assert.equal(reusableValue(id,prefs),null,'per-opportunity narrative must not leak into next employer');
+ }
 });

@@ -37,6 +37,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+      - name: Supporting-materials graph policy and review gates
+        run: |
+          python scripts/validate_application_materials_graph.py
+          node --experimental-strip-types --test artifacts/escape-hatch/src/lib/application-materials-graph.test.ts
       - name: Safe provider origin and multi-step Indeed classification
         run: node tests/test_job_board_adapter.mjs
       - name: Preserve desktop popup vs phone modality

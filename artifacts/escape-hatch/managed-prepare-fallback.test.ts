@@ -58,3 +58,13 @@ test('a no-upload employer form does not invent missing cover or résumé blocke
   assert.equal(result.preparation.state, 'REVIEW_REQUIRED');
   assert.equal(result.preparation.finalActionActivated, false);
 });
+
+test('case study without verified employer file receipt remains review required', async () => {
+ const r=await prepareWithoutTrustedNavigation({
+  fill: async()=>({filled:[],skipped:[]}),
+  attach: async()=>({case_study:'attached_to_input_review_required'}),
+  expectedUploads:['case_study'],
+ });
+ assert.ok(r.preparation.pendingManual.includes('case_study_employer_upload_acceptance_unverified'));
+ assert.equal(r.preparation.finalActionActivated,false);
+});

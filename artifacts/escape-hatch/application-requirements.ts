@@ -60,8 +60,8 @@ export async function inspectApplicationRequirements(page: Page, opportunityId: 
         (type === 'file' ? ((control as HTMLInputElement).files?.length || 0) > 0 : Boolean(control.value.trim()))) &&
         control.validity.valid : false;
       const isFile = type === 'file';
-      const resume = /r[ée]sum[ée]|\bcv\b/i.test(label), cover = /cover\s*(letter|note)?/i.test(label);
-      const kind = isFile ? (resume && !cover ? 'resume' as const : cover && !resume ? 'cover' as const : 'file' as const) : 'question' as const;
+      const resume = /r[ée]sum[ée]|\bcv\b/i.test(label), cover = /cover\s*(letter|note)?/i.test(label), caseStudy = /\bcase\s*study\b/i.test(label);
+      const kind = isFile ? (resume && !cover && !caseStudy ? 'resume' as const : cover && !resume && !caseStudy ? 'cover' as const : caseStudy && !cover && !resume ? 'case_study' as const : 'file' as const) : 'question' as const;
       return [{ id: 'field-' + index, label, requirement, kind, populated: Boolean(populated) }];
     }).slice(0, 200);
   });

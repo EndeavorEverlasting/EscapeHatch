@@ -112,6 +112,10 @@ Use the unpacked Manifest V3 extension under `browser/application-assist` for sa
 10. After the operator manually submits, optionally **Record Confirmation Evidence** as metadata for companion progress.
 11. Validate with `python tests/test_application_assist_session_contract.py` and `node tests/test_application_assist_session.mjs`.
 
+## Supporting documents and narrative answer graph (P00/P01/P04)
+
+Consult `harness/contracts/application-materials-graph.v1.json` when preparing employer documents, cover letters, case studies, or why-me/why-this-role answers. The live employer upload slot determines accepted types and observed capacity; a lone Add button never proves one/two/three slots. The review packet prioritizes an approved cover letter, an isolated job résumé when verified, then an approved case study if capacity permits. Preserve the current platform-wide master and skip unrequested optional uploads. Narrative answers and cover letters derive from the same reviewed claim evidence; private file bytes and user responses never enter Git. Require operator review, source hash and post-upload observation; final Submit remains operator-only. Run `python scripts/validate_application_materials_graph.py` and the application-materials graph tests. Agent-2 and derivative lanes must not omit supporting documents as “unnecessary.”
+
 ## Resume Presentation
 
 Resume content is user-owned private state. The repository owns the presentation contract that agents must use to avoid silently degrading a polished current resume into a generic template.

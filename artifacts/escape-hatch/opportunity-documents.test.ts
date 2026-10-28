@@ -110,3 +110,26 @@ test('current employer form can require no uploads; optional cover drafts never 
     await assert.rejects(store.forCurrentEmployerForm(id, url, ['unknown' as 'resume'], true), /Unrecognized/);
   } finally { await fs.rm(root, { recursive: true, force: true }); }
 });
+
+test('independent case study is privately stored and hash-reviewed without changing resume or cover', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-case-study-'));
+  const store = new OpportunityDocumentStore(root), url = 'https://jobs.example.test/role-1';
+  try {
+    await store.stage('applicant-A-job', url, 'resume', pdf('role.pdf','r'));
+    await store.stage('applicant-A-job', url, 'cover', pdf('letter.pdf','c'));
+    const staged = await store.stage('applicant-A-job', url, 'case_study', pdf('study.pdf','s'));
+    assert.equal(staged.documents.case_study?.reviewedAt, undefined);
+    let selected = await store.forCurrentEmployerForm('applicant-A-job', url, ['case_study'], true);
+    assert.equal(selected.case_study, null);
+    await store.review('applicant-A-job', url, 'case_study', staged.documents.case_study!.sha256);
+    selected = await store.forCurrentEmployerForm('applicant-A-job', url, ['case_study'], true);
+    assert.equal(selected.case_study?.name, 'study.pdf');
+    assert.equal(selected.resume, null);
+    assert.equal(selected.cover, null);
+    assert.equal((await store.read('applicant-A-job', url)).documents.resume?.name, 'role.pdf');
+    assert.equal((await store.read('applicant-A-job', url)).documents.cover?.name, 'letter.pdf');
+    const unbound = await store.forCurrentEmployerForm('another-opportunity', url, ['case_study'], true);
+    assert.equal(unbound.case_study, null);
+    await assert.rejects(store.review('another-opportunity', url, 'case_study', staged.documents.case_study!.sha256), /changed/);
+  } finally { await fs.rm(root, {recursive:true,force:true}); }
+});

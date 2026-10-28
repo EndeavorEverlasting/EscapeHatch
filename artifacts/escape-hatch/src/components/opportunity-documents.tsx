@@ -7,7 +7,7 @@ function driveSourceLink(item: ReviewDocument) {
   return item.source?.provider === 'google_drive' && /^[A-Za-z0-9_-]{10,200}$/.test(item.source.fileId)
     ? 'https://drive.google.com/file/d/' + item.source.fileId + '/view' : null;
 }
-export type ReviewPackage = { opportunityId: string; url: string; documents: Partial<Record<'resume' | 'cover', ReviewDocument>> };
+export type ReviewPackage = { opportunityId: string; url: string; documents: Partial<Record<'resume' | 'cover' | 'case_study', ReviewDocument>> };
 type State = { package: ReviewPackage; requireReview: boolean };
 const API = '/__escapehatch/managed-assist/documents/';
 async function pdfPayload(file: File) {
@@ -43,29 +43,29 @@ export function useOpportunityDocuments(opportunityId: string, url: string) {
   useEffect(() => { setState(null); setIntakePending(false); if (opportunityId && url) void request('status').catch(() => {}); }, [request, opportunityId, url]);
   const bound = state?.package.opportunityId === opportunityId && sameApplicationUrl(state.package.url, url);
   const data = bound ? state : null;
-  const canUpload = Boolean(!intakePending && data && data.package.documents.resume && (!data.requireReview || Object.values(data.package.documents).every(item => item.reviewedAt)));
+  const canUpload = Boolean(!intakePending && data && Object.values(data.package.documents).length > 0 && (!data.requireReview || Object.values(data.package.documents).every(item => item.reviewedAt)));
   return { data, loading, error, canUpload, request, scopeKey, intakePending, setIntakePending };
 }
 export function OpportunityDocuments({ documents, disabled, onBypass }: { documents: ReturnType<typeof useOpportunityDocuments>; disabled: boolean; onBypass: () => void }) {
   const data = documents.data;
-  const [preview, setPreview] = useState<{ scope: string; kind: 'resume' | 'cover'; sha256: string } | null>(null);
+  const [preview, setPreview] = useState<{ scope: string; kind: 'resume' | 'cover' | 'case_study'; sha256: string } | null>(null);
   const [notice, setNotice] = useState<{ scope: string; text: string } | null>(null);
-  const [intakeMessages, setIntakeMessages] = useState({ resume: '', cover: '' });
+  const [intakeMessages, setIntakeMessages] = useState({ resume: '', cover: '', case_study: '' });
   const currentScope = useRef(documents.scopeKey); currentScope.current = documents.scopeKey;
-  const intakeGeneration = useRef({ resume: 0, cover: 0 });
-  const pendingIntakes = useRef<{ resume: number | null; cover: number | null }>({ resume: null, cover: null });
-  const failedIntakes = useRef({ resume: false, cover: false });
+  const intakeGeneration = useRef({ resume: 0, cover: 0, case_study: 0 });
+  const pendingIntakes = useRef<{ resume: number | null; cover: number | null; case_study: number | null }>({ resume: null, cover: null, case_study: null });
+  const failedIntakes = useRef({ resume: false, cover: false, case_study: false });
   const pendingBypassScope = useRef<string | null>(null);
   const onBypassRef = useRef(onBypass); onBypassRef.current = onBypass;
   const stagingQueue = useRef<Promise<unknown>>(Promise.resolve());
   useEffect(() => {
     const invalidate = () => {
-      intakeGeneration.current.resume += 1; intakeGeneration.current.cover += 1;
-      pendingIntakes.current = { resume: null, cover: null };
-      failedIntakes.current = { resume: false, cover: false };
+      intakeGeneration.current.resume += 1; intakeGeneration.current.cover += 1; intakeGeneration.current.case_study += 1;
+      pendingIntakes.current = { resume: null, cover: null, case_study: null };
+      failedIntakes.current = { resume: false, cover: false, case_study: false };
       pendingBypassScope.current = null;
     };
-    invalidate(); setIntakeMessages({ resume: '', cover: '' }); return invalidate;
+    invalidate(); setIntakeMessages({ resume: '', cover: '', case_study: '' }); return invalidate;
   }, [documents.scopeKey]);
   function updateIntakeGate() {
     const blocked = Object.values(pendingIntakes.current).some(value => value !== null) || Object.values(failedIntakes.current).some(Boolean);
@@ -76,19 +76,20 @@ export function OpportunityDocuments({ documents, disabled, onBypass }: { docume
     }
   }
   const [pendingPolicy, setPendingPolicy] = useState<{ scope: string; value: boolean } | null>(null);
-  const fileUrl = (kind: 'resume' | 'cover') => API + 'file?' + new URLSearchParams({ opportunityId: data?.package.opportunityId || '', url: data?.package.url || '', kind, sha256: data?.package.documents[kind]?.sha256 || '' });
+  const fileUrl = (kind: 'resume' | 'cover' | 'case_study') => API + 'file?' + new URLSearchParams({ opportunityId: data?.package.opportunityId || '', url: data?.package.url || '', kind, sha256: data?.package.documents[kind]?.sha256 || '' });
   return <section className="my-4 rounded-xl border border-border bg-card p-4" aria-label="Opportunity document review">
     <h3 className="font-display text-xl">Documents and review</h3>
+    <p className="mt-2 text-sm">A supporting-document field can accept a cover letter, a separately reviewed role résumé, or a relevant case study only when that exact employer form accepts it. No document is sent simply because it is saved here. A platform-wide résumé is never replaced by a role-specific file without separate approval.</p>
     <p className="mt-2 text-sm">Selected files are saved privately for this opportunity. Selecting a file does not upload it to the employer or mean you reviewed it.</p>
     <p className="mt-2 text-sm text-muted-foreground">Use a local PDF or ask your connected agent to import a selected Google Drive PDF. Review the saved PDF here before preparing the application. Drive access belongs to that connection; the file chooser browses this computer.</p>
     <button type="button" className="mt-2 min-h-11 rounded border border-primary px-3 py-2 text-sm" disabled={disabled || documents.loading || documents.intakePending || !data} onClick={() => { void documents.request('status').catch(() => {}); }}>Refresh saved documents</button>
     <label className="my-3 flex items-start gap-2 text-sm font-semibold"><input type="checkbox" aria-label="Require my review before document upload" checked={pendingPolicy?.scope === documents.scopeKey ? pendingPolicy.value : data?.requireReview !== false} disabled={disabled || documents.loading || documents.intakePending || !data}
       onChange={event => { const requireReview = event.target.checked; if (requireReview) pendingBypassScope.current = null; setPendingPolicy({ scope: documents.scopeKey, value: requireReview }); void documents.request('policy', { requireReview }).then(() => { if (!requireReview) { pendingBypassScope.current = documents.scopeKey; updateIntakeGate(); } }).catch(() => {}).finally(() => setPendingPolicy(null)); }} />Require my review before document upload</label>
     <details className="text-xs text-muted-foreground"><summary className="min-h-11 cursor-pointer py-3 font-bold">How document review works</summary><p className="leading-5">Review on: confirm each exact file before uploading. Review off: your explicit start/launch reuses saved documents and attempts preparation to final review. Turning review off never marks a file reviewed. Missing documents, unknown answers, failed uploads or missing trusted navigation evidence still stop preparation. Final Submit stays yours.</p></details>
-    <div className="mt-3 grid gap-3 sm:grid-cols-2">{(['resume', 'cover'] as const).map(kind => {
-      const item = data?.package.documents[kind], label = kind === 'resume' ? 'résumé' : 'cover letter';
+    <div className="mt-3 grid gap-3 sm:grid-cols-2">{(['resume', 'cover', 'case_study'] as const).map(kind => {
+      const item = data?.package.documents[kind], label = kind === 'resume' ? 'résumé' : kind === 'cover' ? 'cover letter' : 'case study';
       return <div key={kind} className="document-slot rounded-lg border border-border p-3">
-        <ArtifactDropzone label={kind === 'resume' ? 'Choose résumé PDF' : 'Choose cover PDF'} hint={`Drop this job’s ${label} here. PDF up to 5 MB; saved privately, then reviewed separately.`} accept=".pdf,application/pdf" disabled={disabled || documents.loading || !data} onFile={async file => {
+        <ArtifactDropzone label={kind === 'resume' ? 'Choose résumé PDF' : kind === 'cover' ? 'Choose cover PDF' : 'Choose case study PDF'} hint={`Drop this job’s ${label} here. PDF up to 5 MB; saved privately, then reviewed separately.`} accept=".pdf,application/pdf" disabled={disabled || documents.loading || !data} onFile={async file => {
           const scope = documents.scopeKey;
           const intake = ++intakeGeneration.current[kind];
           pendingIntakes.current[kind] = intake;

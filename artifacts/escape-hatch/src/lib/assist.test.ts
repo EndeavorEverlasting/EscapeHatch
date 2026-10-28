@@ -302,3 +302,32 @@ test('resume career drafts separate employer, degree, dates and software experie
   assert.equal(parsed.education[0].fieldOfStudy, 'Mathematics');
   assert.equal(parsed.education[0].dates, 'Dec 2016');
 });
+
+test('assist sync refuses another applicant even when user selected merge or replace', () => {
+  const alex = { ...emptyProfile, first_name: 'Alex', last_name: 'Example', email: 'alex@example.test' };
+  const brook = { ...emptyProfile, first_name: 'Brook', last_name: 'Example', email: 'brook@example.test' };
+  const current = JSON.parse(serializeSyncPayload(emptyAssistProfile(alex), [{
+    id: 'alex', title: 'Alex answer', category: 'Career story', content: 'Reviewed synthetic answer',
+    updatedAt: '2026-10-01T00:00:00.000Z', scope: 'reusable',
+  }], alex, 'cockpit'));
+  const incoming = JSON.parse(serializeSyncPayload(emptyAssistProfile(brook), [{
+    id: 'brook', title: 'Brook answer', category: 'Career story', content: 'Different synthetic answer',
+    updatedAt: '2026-10-01T00:00:00.000Z', scope: 'reusable',
+  }], brook, 'extension'));
+  assert.throws(() => mergeSyncPayload(current, incoming, 'merge'), /OWNER_CONTEXT_CONFLICT/);
+  assert.throws(() => mergeSyncPayload(current, incoming, 'use-incoming'), /OWNER_CONTEXT_CONFLICT/);
+  assert.deepEqual(mergeSyncPayload(current, incoming, 'keep-current'), current);
+  assert.equal(current.answers.length, 1);
+});
+test('assist sync rejects two populated contexts when matching owner is unverified', () => {
+  const nameOnly = { ...emptyProfile, first_name: 'Alex' };
+  const current = JSON.parse(serializeSyncPayload(emptyAssistProfile(nameOnly), [{
+    id: 'first', title: 'Reviewed', category: 'Career story', content: 'Source A',
+    updatedAt: '2026-10-01T00:00:00.000Z', scope: 'reusable',
+  }], nameOnly, 'cockpit'));
+  const incoming = JSON.parse(serializeSyncPayload(emptyAssistProfile(nameOnly), [{
+    id: 'second', title: 'Reviewed', category: 'Career story', content: 'Source B',
+    updatedAt: '2026-10-01T00:00:00.000Z', scope: 'reusable',
+  }], nameOnly, 'extension'));
+  assert.throws(() => mergeSyncPayload(current, incoming, 'merge'), /OWNER_CONTEXT_UNVERIFIED/);
+});

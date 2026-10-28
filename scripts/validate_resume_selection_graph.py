@@ -25,6 +25,8 @@ def main() -> None:
     assert "candidate_resume_id" in p["user_consent_must_name"]
     assert "content_digest" in p["user_consent_must_name"]
     assert contract["invariants"]["no_private_fixtures"] is True
+    assert contract["queue_effective_master"]["never_use_job_derivative_for_global"] is True
+    assert contract["queue_effective_master"]["stable_under_queue_order_permutation"] is True
     assert contract["implementation"]["runtime"] == source_path.relative_to(ROOT).as_posix()
     assert contract["implementation"]["runtime_tests"] == tests_path.relative_to(ROOT).as_posix()
     code = source_path.read_text(encoding="utf-8")
@@ -32,6 +34,8 @@ def main() -> None:
     required = [
         "export function validateResumeGraph(",
         "export function resolveResumeForPlatform(",
+        "export function resolveEffectiveMasterForQueue(",
+        "QUEUE_DOMAIN_CONFLICT_REVIEW_REQUIRED",
         "export function impactedResumeDescendants(",
         "PLATFORM_SLOT_SEMANTICS_UNVERIFIED",
         "UPLOAD_REQUIRES_CONSENT",

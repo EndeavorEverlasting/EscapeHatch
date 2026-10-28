@@ -55,6 +55,7 @@ export function authorizeAgentContext(
   envelope: AgentContextEnvelope,
   trustedProfileRevision: string,
   trustedSources: OwnedSource[],
+  trustedSelection: { voiceRevision?: string; opportunityId?: string } = {},
 ): AgentContextDecision {
   const binding = parseWorkspaceOwnerBinding(trustedBinding);
   if (!binding) return { ok: false, reason: 'OWNER_UNBOUND' };
@@ -62,7 +63,10 @@ export function authorizeAgentContext(
   if (envelope.workspaceId !== binding.workspaceId || envelope.installationId !== binding.installationId) return { ok: false, reason: 'WORKSPACE_MISMATCH' };
   if (!validRev(trustedProfileRevision) || envelope.profileRevision !== trustedProfileRevision ||
     !Array.isArray(envelope.sources) || envelope.sources.length > 100 ||
-    envelope.voiceRevision !== undefined && !validRev(envelope.voiceRevision)) return { ok: false, reason: 'REVISION_REQUIRED' };
+    (envelope.voiceRevision !== undefined && !validRev(envelope.voiceRevision)) ||
+    (trustedSelection.voiceRevision !== undefined && !validRev(trustedSelection.voiceRevision)) ||
+    envelope.voiceRevision !== trustedSelection.voiceRevision ||
+    envelope.opportunityId !== trustedSelection.opportunityId) return { ok: false, reason: 'REVISION_REQUIRED' };
   const bySource = new Map<string, OwnedSource>();
   for (const s of trustedSources) {
     if (!s.sourceId || !validRev(s.revision) || s.ownerId !== binding.ownerId || s.workspaceId !== binding.workspaceId ||

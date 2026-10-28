@@ -51,3 +51,7 @@ export function DiscoverJobs({applications,setApplications}:{applications:Applic
       </div></fieldset>
     </div>
 
+    <p role="status">{message}</p>
+    <p>{filtered.length} matching results</p>
+  </section>;
+}

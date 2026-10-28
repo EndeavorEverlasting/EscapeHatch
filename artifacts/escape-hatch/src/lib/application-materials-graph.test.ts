@@ -90,3 +90,12 @@ test('unapproved narrative answer not included even if cover letter approved',()
  const r=proposeApplicationMaterials(g,slot(1));
  assert.deepEqual(r.attachmentIds,['role-cover']);assert.deepEqual(r.answerIds,[]);
 });
+
+test('an approved cover or case study without verified claim evidence is rejected',()=>{
+ const a=fixture();
+ a.nodes.find(n=>n.id==='role-cover')!.sourceEvidenceIds=[];
+ assert.equal(proposeApplicationMaterials(a,slot(2)).blockers[0],'INVALID_MATERIALS_GRAPH');
+ const b=fixture();
+ b.nodes.find(n=>n.id==='role-case')!.sourceEvidenceIds=[];
+ assert.equal(proposeApplicationMaterials(b,slot(3)).blockers[0],'INVALID_MATERIALS_GRAPH');
+});

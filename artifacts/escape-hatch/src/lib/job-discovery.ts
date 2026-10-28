@@ -63,12 +63,12 @@ function inferSeniority(value: unknown, title: string): Seniority {
 }
 
 const occupationRules: Array<[RegExp, Domain, string]> = [
+  [/\b(project manager|program manager|project coordinator|pmo|delivery manager)\b/i, 'Business & Operations', 'Project & Program Management'],
   [/\b(cybersecurity|security engineer|soc analyst|infosec)\b/i, 'Technology', 'Cybersecurity'],
   [/\b(software|developer|frontend|backend|full.?stack|web engineer|programmer)\b/i, 'Technology', 'Software Engineering'],
   [/\b(data scientist|data engineer|machine learning|artificial intelligence|ai engineer)\b/i, 'Technology', 'Data & AI'],
   [/\b(it |information technology|systems administrator|sysadmin|network engineer|help desk|desktop support)\b/i, 'Technology', 'IT Operations'],
   [/\b(nurse|physician|clinical|healthcare|medical|patient)\b/i, 'Healthcare', 'Clinical & Healthcare'],
-  [/\b(project manager|program manager|project coordinator|pmo|delivery manager)\b/i, 'Business & Operations', 'Project & Program Management'],
   [/\b(product manager|product owner)\b/i, 'Business & Operations', 'Product Management'],
   [/\b(operations|business analyst|customer success|recruiter|human resources)\b/i, 'Business & Operations', 'Business Operations'],
   [/\b(accountant|financial analyst|controller|audit|investment)\b/i, 'Finance', 'Finance & Accounting'],

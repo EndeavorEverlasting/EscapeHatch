@@ -8,7 +8,7 @@ import { userDataRoot } from './user-data.ts';
 import { migrateLegacyPreferences } from './preference-file.ts';
 import { emptyPreferences } from './src/lib/application-preferences.ts';
 import { WORKSPACE_SCHEMA, parseSavedWorkspace, reconcileWorkspace, profileFromPreferences, applyBrowserWorkspace } from './src/lib/workspace-bootstrap.ts';
-import { PROFILE_KEY, emptyProfile, APPLICATIONS_KEY } from './src/lib/storage.ts';
+import { PROFILE_KEY, emptyProfile, APPLICATIONS_KEY, ANSWERS_KEY } from './src/lib/storage.ts';
 import { authorizedWorkspaceRequest, createWorkspaceControlPlugin } from './workspace-control.ts';
 import type { IncomingMessage } from 'node:http';
 import { importContext } from './import-context.ts';

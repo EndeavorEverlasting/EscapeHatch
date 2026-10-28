@@ -56,6 +56,18 @@ export function DiscoverJobs({applications,setApplications}:{applications:Applic
     <label>Domain <select value={domain} onChange={e=>setDomain(e.target.value as Domain)}><option value="all">All domains</option><option value="Technology">Technology</option><option value="Healthcare">Healthcare</option><option value="Finance">Finance</option><option value="Business & Operations">Business & Operations</option><option value="Education">Education</option><option value="Other">Other</option></select></label>
     <label className="block"><input type="checkbox" checked={salaryOnly} onChange={e=>setSalaryOnly(e.target.checked)}/> Pay disclosed only</label>
     <p role="status">{message}</p>
-    <p>{filtered.length} matching results</p>
+    <p className="mt-3 text-xs">Source: <a href="https://himalayas.app/" target="_blank" rel="noopener noreferrer" className="underline">Himalayas remote jobs</a>. Hybrid and on-site listings are not available in this source. Pay comparisons only include USD/year ranges.</p>
+    <p className="mt-3 font-bold">{filtered.length} matching results</p>
+    <div className="mt-3 grid gap-3">{filtered.map(job=>
+      <article key={job.id} className="rounded-xl border border-border bg-background p-4" data-testid="discovery-result">
+        <h3 className="text-lg font-bold">{job.title} · {job.company}</h3>
+        <p className="text-sm text-muted-foreground">{job.location} · {job.domain} / {job.occupation} · {job.seniority}</p>
+        <p className="text-sm font-bold">{payLabel(job)}</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <a href={job.applicationLink} target="_blank" rel="noopener noreferrer" className="rounded-lg border px-3 py-2 text-sm underline">View listing</a>
+          <button type="button" disabled={applications.some(a=>a.url===job.applicationLink)} onClick={()=>save(job)} className="rounded-lg bg-primary px-3 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50" data-testid="discovery-save">Save to queue</button>
+        </div>
+      </article>
+    )}</div>
   </section>;
 }

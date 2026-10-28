@@ -55,30 +55,24 @@ class CompanionActivity : AppCompatActivity() {
         }
         val handoff = HandoffIntents.fromIntent(intent)
         if (handoff != null) {
+            // External Android intents are untrusted selection hints, not session authority.
+            val url = HandoffAdmission.publicJobUrl(handoff.url) ?: return
             val existing = store.load()
+            val sameJob = existing?.origin == url
             val session = AssistSession(
-                sessionId = handoff.sessionId ?: existing?.sessionId ?: "sess-${UUID.randomUUID()}",
-                origin = handoff.url ?: existing?.origin ?: "unknown://",
-                status = existing?.status ?: "active",
-                company = handoff.company ?: existing?.company,
-                role = handoff.role ?: existing?.role,
-                unresolvedFieldCount = existing?.unresolvedFieldCount ?: 0,
-                questionText = handoff.questionText ?: existing?.questionText,
+                // Never accept an unverified external session ID or inherit a different job.
+                sessionId = if (sameJob) existing!!.sessionId else "sess-${UUID.randomUUID()}",
+                origin = url,
+                status = if (sameJob) existing!!.status else "active",
+                company = handoff.company?.take(160) ?: (if (sameJob) existing!!.company else null),
+                role = handoff.role?.take(160) ?: (if (sameJob) existing!!.role else null),
+                unresolvedFieldCount = if (sameJob) existing!!.unresolvedFieldCount else 0,
+                questionText = handoff.questionText?.take(2000) ?: (if (sameJob) existing!!.questionText else null),
             )
             store.save(session)
             return
         }
-        if (store.load() == null) {
-            store.save(
-                AssistSession(
-                    sessionId = "sess-${UUID.randomUUID()}",
-                    origin = "manual://companion",
-                    status = "active",
-                    company = "Example Co",
-                    role = "Automation Engineer",
-                ),
-            )
-        }
+        // Cold start is not a real employer session. Wait for an explicit Share or deep link.
     }
 
     private fun postQuietNotification() {
@@ -99,19 +93,19 @@ class CompanionActivity : AppCompatActivity() {
 
     private fun render() {
         val session = store.load()
+        // Notifications must never be offered for a nonexistent session.
+        findViewById<Button>(R.id.postNotification).isEnabled = session != null
         statusView.text = if (session == null) {
-            "No session"
+            getString(R.string.no_application_selected)
         } else {
+            val domain = runCatching { java.net.URI(session.origin).host }.getOrNull() ?: "Employer job link"
             buildString {
-                appendLine("storageKey=${AssistSessionStore.STORAGE_KEY}")
-                appendLine("sessionId=${session.sessionId}")
-                appendLine("origin=${session.origin}")
-                appendLine("status=${session.status}")
-                appendLine("company=${session.company}")
-                appendLine("role=${session.role}")
-                appendLine("question=${session.questionText}")
-                appendLine("fgs=not_enabled_pending_H6")
-                appendLine("overlay=not_requested")
+                appendLine(session.company?.takeIf { it.isNotBlank() } ?: "Job link saved")
+                session.role?.takeIf { it.isNotBlank() }?.let { appendLine(it) }
+                appendLine(domain)
+                appendLine()
+                appendLine("Saved for review. Open the employer form in your browser when ready.")
+                appendLine("EscapeHatch Assist has not filled or submitted this application.")
             }
         }
     }

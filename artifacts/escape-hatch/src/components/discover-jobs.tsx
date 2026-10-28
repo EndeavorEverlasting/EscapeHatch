@@ -51,6 +51,7 @@ export function DiscoverJobs({applications,setApplications}:{applications:Applic
       </div></fieldset>
     </div>
 
+    <p className="text-sm">Search filters are applied to results.</p>
     <p role="status">{message}</p>
     <p>{filtered.length} matching results</p>
   </section>;

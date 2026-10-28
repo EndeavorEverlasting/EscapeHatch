@@ -5,6 +5,21 @@ import { emptyPreferences, matchQuestion, acceptDiscoveredAnswer, discoveredValu
 import { installAnswerMemory, mergeCapturedAnswer, mergeQuestionCatalog, scanQuestionCatalog, type CapturedAnswer } from './managed-answer-memory.ts';
 import { fillSavedPreferences } from './managed-form.ts';
 
+test('recapturing an identical discovered answer preserves approval; changed or unapproved answers require review', () => {
+  const question = 'Favorite work environment';
+  const event: CapturedAnswer = { question, normalized_question: 'favorite work environment', question_id: null,
+    value: 'Remote', source: 'user', captured_at: '2026-01-01T00:00:00Z' };
+  const captured = mergeCapturedAnswer(emptyPreferences(), event);
+  assert.equal(discoveredValue(question, captured), null);
+  const approved = acceptDiscoveredAnswer(captured, event.normalized_question);
+  const repeated = mergeCapturedAnswer(approved, { ...event, value: ' Remote ', captured_at: '2026-01-02T00:00:00Z' });
+  assert.equal(discoveredValue(question, repeated), 'Remote');
+  assert.equal(repeated.discovered_answers![event.normalized_question].updated_at, '2026-01-02T00:00:00Z');
+  assert.equal(discoveredValue(question, mergeCapturedAnswer(repeated, { ...event, value: 'Hybrid' })), null);
+  assert.equal(discoveredValue(question, mergeCapturedAnswer(captured, event)), null);
+  assert.equal(discoveredValue('Preferred schedule', mergeCapturedAnswer(approved, { ...event, question: 'Preferred schedule' })), null);
+});
+
 test('canonical website, pronouns and interview accommodation are independent explicit preferences', async () => {
   assert.equal(matchQuestion('Website Link (LinkedIn, github, portfolio, etc...)'), 'identity.website');
   assert.equal(matchQuestion('Please indicate your pronouns and let us know how we should address you.'), 'identity.pronouns');

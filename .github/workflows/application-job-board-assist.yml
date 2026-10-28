@@ -1,0 +1,61 @@
+name: Job Board Application Assist Synthetic Validation
+on:
+  push:
+    paths:
+      - "browser/application-assist/**"
+      - "tests/test_job_board_adapter.mjs"
+      - "tests/test_extension_branding_and_board.py"
+      - "tests/test_extension_toolbar_icons.py"
+      - "tests/test_application_assist_package.py"
+      - "scripts/package_application_assist.py"
+      - "scripts/build_extension_icons.py"
+      - "tests/test_application_assist_modality.mjs"
+      - ".github/workflows/application-job-board-assist.yml"
+  pull_request:
+    paths:
+      - "browser/application-assist/**"
+      - "tests/test_job_board_adapter.mjs"
+      - "tests/test_extension_branding_and_board.py"
+      - "tests/test_extension_toolbar_icons.py"
+      - "tests/test_application_assist_package.py"
+      - "scripts/package_application_assist.py"
+      - "scripts/build_extension_icons.py"
+      - "tests/test_application_assist_modality.mjs"
+      - ".github/workflows/application-job-board-assist.yml"
+permissions:
+  contents: read
+jobs:
+  synthetic-job-board:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Safe provider origin and multi-step Indeed classification
+        run: node tests/test_job_board_adapter.mjs
+      - name: Preserve desktop popup vs phone modality
+        run: node tests/test_application_assist_modality.mjs
+      - name: First-party branded asset and wiring parity
+        run: python tests/test_extension_branding_and_board.py
+      - name: Bundled toolbar icons and approved-source provenance
+        run: python tests/test_extension_toolbar_icons.py
+      - name: Immutable committed extension package and tamper preservation
+        run: python tests/test_application_assist_package.py
+      - name: Parse extension code
+        run: |
+          node --check browser/application-assist/job-board-adapter.js
+          node --check browser/application-assist/worker.js
+          node --check browser/application-assist/popup.js
+          node --check browser/application-assist/modality.js
+      - name: Existing parent and application journey controls
+        run: |
+          python scripts/validate_application_autofill_parent.py
+          python scripts/validate_application_journey.py
+      - name: Check whitespace
+        run: git diff --check HEAD^ HEAD

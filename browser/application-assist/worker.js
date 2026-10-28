@@ -81,3 +81,41 @@ chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
 chrome.tabs.onRemoved.addListener(tabId => {
   void queued(async () => { const current = await read(); if (current?.tabId === tabId && current.state !== 'CONFIRMED') await save({ ...current, state: 'DISARMED', reason: 'Application tab closed.' }); }).catch(() => {});
 });
+
+/**
+ * Boot the shipped first-party bird into Chrome's toolbar automatically.
+ * MV3 service workers have OffscreenCanvas; the checked-in source is WebP.
+ * The native setIcon ImageData path avoids a user-supplied PNG, manual copy,
+ * external CDN or generated runtime file on fresh install and re-launch.
+ * Failure does not change submission observation or any assist state.
+ */
+async function installEscapeHatchActionIcon() {
+  if (!chrome.action?.setIcon || typeof OffscreenCanvas === 'undefined' ||
+      typeof createImageBitmap !== 'function') return false;
+  let bitmap;
+  try {
+    const response = await fetch(chrome.runtime.getURL('escapehatch-mascot.webp'));
+    if (!response.ok) return false;
+    bitmap = await createImageBitmap(await response.blob());
+    const variants = {};
+    for (const size of [16, 32]) {
+      const canvas = new OffscreenCanvas(size, size);
+      const context = canvas.getContext('2d');
+      if (!context) return false;
+      context.clearRect(0, 0, size, size);
+      const side = Math.min(bitmap.width, bitmap.height);
+      context.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2,
+        side, side, 0, 0, size, size);
+      variants[size] = context.getImageData(0, 0, size, size);
+    }
+    await chrome.action.setIcon({ imageData: variants });
+    return true;
+  } catch (_) {
+    return false; // appearance failure must not alter application or submission state
+  } finally {
+    bitmap?.close?.();
+  }
+}
+chrome.runtime.onInstalled.addListener(() => { void installEscapeHatchActionIcon(); });
+chrome.runtime.onStartup.addListener(() => { void installEscapeHatchActionIcon(); });
+void installEscapeHatchActionIcon();

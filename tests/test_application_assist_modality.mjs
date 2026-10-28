@@ -10,6 +10,19 @@ assert.equal(modality.detectMode({}), "mouse");
 assert.equal(modality.detectMode({ keyboardFirst: true }), "keyboard");
 assert.equal(modality.shouldAutofocusText("phone"), false);
 assert.equal(modality.shouldAutofocusText("mouse"), true);
+const fakeWindow = (protocol, pathname, fine, coarse, narrow) => ({
+  location: { protocol, pathname },
+  matchMedia: (query) => ({ matches: query === "(pointer: fine)" ? fine :
+    query === "(pointer: coarse)" ? coarse : query === "(max-width: 640px)" ? narrow : false })
+});
+assert.equal(modality.detectMode(modality.readEnvironment(
+  fakeWindow("chrome-extension:", "/popup.html", true, false, true))), "mouse");
+assert.equal(modality.detectMode(modality.readEnvironment(
+  fakeWindow("chrome-extension:", "/popup.html", false, true, true))), "phone");
+assert.equal(modality.detectMode(modality.readEnvironment(
+  fakeWindow("https:", "/app", true, false, true))), "phone");
+assert.equal(modality.detectMode(modality.readEnvironment(
+  fakeWindow("chrome-extension:", "/popup.html", true, false, false))), "mouse");
 
 const calls = [];
 for (const id of [

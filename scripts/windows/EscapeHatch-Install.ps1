@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('Inspect', 'Install', 'Bootstrap', 'Uninstall', 'Status', 'Stop')]
+    [ValidateSet('Inspect', 'Install', 'Bootstrap', 'Uninstall', 'Status', 'Stop', 'ReleaseVerify', 'ReleaseInstall')]
     [string]$Action = 'Inspect',
     [string]$SourceRoot = '',
     [string]$AppDataRoot = '',
@@ -36,6 +36,51 @@ function Require-Source([string]$Root) {
     if (-not (Test-Path -LiteralPath $manager -PathType Leaf) -or -not (Test-Path -LiteralPath $manifest -PathType Leaf)) {
         throw 'INSTALL_SOURCE_INVALID: selected EscapeHatch source is unavailable; existing installation was preserved.'
     }
+}
+function Assert-NoReleaseLinks([string]$Path) {
+    $cursor = Full-Path $Path
+    while ($cursor) {
+        if ((Test-Path -LiteralPath $cursor) -and ((Get-Item -LiteralPath $cursor -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'INSTALL_RELEASE_LINK_FORBIDDEN: package was preserved.' }
+        $parent = Split-Path -Parent $cursor
+        if (-not $parent -or $parent -eq $cursor) { break }
+        $cursor = $parent
+    }
+}
+function Verify-Release([string]$Root) {
+    Assert-NoReleaseLinks $Root
+    $manifestPath = Join-Path $Root 'windows-release.json'
+    Assert-NoReleaseLinks $manifestPath
+    $release = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($release.schema -cne 'escapehatch/windows-preview-package/v1' -or $release.sourceCommit -cnotmatch '^[a-f0-9]{40}$' -or $release.channel -cne 'UNSIGNED_DEVELOPER_PREVIEW') {
+        throw 'INSTALL_RELEASE_INVALID: unsupported preview manifest.'
+    }
+    $names = @($release.files.PSObject.Properties.Name)
+    $windowsNames = New-Object 'Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+    foreach ($name in $names) {
+        if (-not $windowsNames.Add($name) -or $name -match '(^|/)([^/]*[. ]|)(/|$)') { throw 'INSTALL_RELEASE_PATH_INVALID: ambiguous Windows filename.' }
+    }
+    foreach ($name in $names) {
+        $parts = $name.Split('/')
+        for ($index = 1; $index -lt $parts.Length; $index++) {
+            if ($windowsNames.Contains(($parts[0..($index - 1)] -join '/'))) { throw 'INSTALL_RELEASE_PATH_INVALID: file/directory collision.' }
+        }
+    }
+    foreach ($required in @('VERSION', 'Get-EscapeHatch.cmd', 'scripts/windows/EscapeHatch-Install.ps1', 'scripts/windows/EscapeHatch-Runtime.ps1', 'artifacts/escape-hatch/package.json')) {
+        if ($names -cnotcontains $required) { throw 'INSTALL_RELEASE_INCOMPLETE: required source is missing.' }
+    }
+    foreach ($entry in $release.files.PSObject.Properties) {
+        $name = [string]$entry.Name
+        if ($name -match '(^/|\\|:|(^|/)\.\.?(/|$))' -or [string]$entry.Value -cnotmatch '^[a-f0-9]{64}$') { throw 'INSTALL_RELEASE_PATH_INVALID: package was preserved.' }
+        $file = Join-Path $Root $name
+        $cursor = $file
+        while ($cursor -and -not (Same-Path $cursor $Root)) {
+            if ((Test-Path -LiteralPath $cursor) -and ((Get-Item -LiteralPath $cursor -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'INSTALL_RELEASE_LINK_FORBIDDEN: package was preserved.' }
+            $cursor = Split-Path -Parent $cursor
+        }
+        if (-not (Test-Path -LiteralPath $file -PathType Leaf) -or (File-Hash $file) -cne [string]$entry.Value) { throw 'INSTALL_RELEASE_INTEGRITY_FAILED: package was preserved.' }
+    }
+    Require-Source $Root
+    return $release
 }
 function Read-Receipt {
     if (-not (Test-Path -LiteralPath $receiptPath -PathType Leaf)) { return $null }
@@ -157,6 +202,12 @@ $locked = $false
 try {
     if (-not $SourceRoot) { $SourceRoot = Join-Path $PSScriptRoot '..\..' }
     $SourceRoot = Full-Path $SourceRoot
+    if ($Action -eq 'ReleaseVerify') {
+        $release = Verify-Release $SourceRoot
+        Write-Host ('WINDOWS_RELEASE_SOURCE_COMMIT=' + $release.sourceCommit)
+        Write-Host 'WINDOWS_RELEASE=PACKAGE_INTEGRITY_VERIFIED; SIGNATURE=UNSIGNED_DEVELOPER_PREVIEW'
+        exit 0
+    }
     if (-not $AppDataRoot) {
         if (-not $env:LOCALAPPDATA) { throw 'INSTALL_APPDATA_REQUIRED: LOCALAPPDATA is unavailable.' }
         $AppDataRoot = Join-Path $env:LOCALAPPDATA 'EscapeHatch'
@@ -187,6 +238,34 @@ try {
     try { $locked = $mutex.WaitOne([TimeSpan]::FromSeconds(20)) } catch [Threading.AbandonedMutexException] { $locked = $true }
     if (-not $locked) { throw 'INSTALL_LOCK_TIMEOUT: another installation action is active.' }
     $receipt = Read-Receipt
+    if ($Action -eq 'ReleaseInstall') {
+        $release = Verify-Release $SourceRoot
+        Write-Host 'SIGNATURE=UNSIGNED_DEVELOPER_PREVIEW; CONSUMER_INSTALL=UNPROVEN'
+        # A download may never switch an existing installation behind its owner's back.
+        if ($null -ne $receipt) {
+            $SourceRoot = [string]$receipt.sourceRoot
+        } else {
+            $destination = Join-Path $AppDataRoot ('releases\' + $release.sourceCommit)
+            Assert-NoReleaseLinks $destination
+            if (Test-Path -LiteralPath $destination) {
+                $existingRelease = Verify-Release $destination
+                if ($existingRelease.sourceCommit -cne $release.sourceCommit -or (File-Hash (Join-Path $destination 'windows-release.json')) -cne (File-Hash (Join-Path $SourceRoot 'windows-release.json'))) {
+                    throw 'INSTALL_RELEASE_DESTINATION_CONFLICT: existing release was preserved.'
+                }
+            }
+            else {
+                New-Item -ItemType Directory -Path $destination -Force | Out-Null
+                foreach ($name in @($release.files.PSObject.Properties.Name) + @('windows-release.json')) {
+                    $target = Join-Path $destination $name
+                    New-Item -ItemType Directory -Path (Split-Path -Parent $target) -Force | Out-Null
+                    [IO.File]::Copy((Join-Path $SourceRoot $name), $target, $false)
+                }
+                $null = Verify-Release $destination
+            }
+            $SourceRoot = $destination
+        }
+        $Action = 'Bootstrap'
+    }
     if ($Action -in @('Status', 'Stop')) {
         # Sibling adapters follow the same installation selection as Bootstrap.
         # These operations never install dependencies or repair shortcuts.
@@ -211,6 +290,9 @@ try {
     }
     $selected = if ($null -ne $receipt -and $Action -eq 'Bootstrap') { [string]$receipt.sourceRoot } else { $SourceRoot }
     Require-Source $selected
+    $selectedRelease = $null
+    $selectedManifestPath = Join-Path $selected 'windows-release.json'
+    if (Test-Path -LiteralPath $selectedManifestPath -PathType Leaf) { $selectedRelease = Verify-Release $selected }
     if ($Action -eq 'Bootstrap') {
         # Prove that startup is admissible before provisioning dependencies or
         # changing shortcuts. A foreign listener must remain a visible refusal,
@@ -240,6 +322,11 @@ try {
         if (-not (Test-Path -LiteralPath $shortcutPath)) { Make-Shortcut $selected; $owned = 'CREATED' }
         if (-not (Test-Path -LiteralPath $shortcutPath -PathType Leaf)) { throw 'INSTALL_SHORTCUT_INVALID: existing shortcut path is not a file.' }
         $receipt = [ordered]@{ schema = 'escapehatch-installation/v1'; sourceRoot = $selected; installedAtUtc = [DateTime]::UtcNow.ToString('o'); shortcuts = @([ordered]@{ path = $shortcutPath; sha256 = File-Hash $shortcutPath; ownership = $owned }) }
+        if ($null -ne $selectedRelease) {
+            $receipt.sourceCommit = [string]$selectedRelease.sourceCommit
+            $receipt.sourceManifestSha256 = File-Hash $selectedManifestPath
+            $receipt.releaseChannel = 'UNSIGNED_DEVELOPER_PREVIEW'
+        }
         Save-Receipt $receipt
     } else {
         Repair-OwnedShortcuts $receipt $selected

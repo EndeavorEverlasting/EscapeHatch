@@ -3,6 +3,7 @@
  * Never invents counts. Never treats Applied? checkbox alone as Submitted proof.
  */
 import type { Application, ApplicationStatus, Priority } from './storage';
+import { applicationEventUrl } from './application-events.ts';
 
 export const TRACKER_SNAPSHOT_SCHEMA = 'escapehatch/tracker-snapshot/v1';
 export const TRACKER_CONNECTION_KEY = 'escape-hatch-tracker-connection-v1';
@@ -178,15 +179,22 @@ export function mergeTrackerIntoApplications(
       byId.set(item.id, item);
       continue;
     }
-    // Preserve operator local edits when notes differ and prior was manually richer.
+    if (applicationEventUrl(prior.url) !== applicationEventUrl(item.url)) {
+      byId.set(item.id, { ...prior, reconciliationConflict: 'opportunity_url_changed' });
+      continue;
+    }
+    // Imports cannot erase later progress or the private evidence journal.
+    const rank = { saved: 0, preparing: 1, applied: 2, follow_up: 3, closed: 4 };
+    const preserveProgress = rank[prior.status] > rank[item.status];
     byId.set(item.id, {
       ...item,
-      ...(['applied', 'follow_up', 'closed'].includes(prior.status) && ['saved', 'preparing'].includes(item.status)
+      ...(preserveProgress
         ? { status: prior.status, updatedAt: prior.updatedAt } : {}),
       ...(prior.submissionEvidence ? { submissionEvidence: prior.submissionEvidence } : {}),
+      ...(prior.events ? { events: prior.events } : {}),
       ...(prior.jobDescription !== undefined ? { jobDescription: prior.jobDescription } : {}),
       notes: prior.notes.includes('local edit') ? prior.notes : item.notes,
-      nextAction: prior.nextAction && ((['applied', 'follow_up', 'closed'].includes(prior.status) && ['saved', 'preparing'].includes(item.status)) || prior.updatedAt > item.updatedAt) ? prior.nextAction : item.nextAction,
+      nextAction: prior.nextAction && (preserveProgress || prior.updatedAt > item.updatedAt) ? prior.nextAction : item.nextAction,
     });
   }
   return [...byId.values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));

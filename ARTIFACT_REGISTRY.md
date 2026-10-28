@@ -25,6 +25,10 @@ This file is the canonical registry for durable EscapeHatch artifacts. A plausib
 | Install adapter | `Install-EscapeHatch.cmd` | tracked thin entrypoint | installation owner changes | installer safety suite |
 | Uninstall adapter | `Uninstall-EscapeHatch.cmd` | tracked preservation-first entrypoint | installation owner changes | installer safety suite |
 | Installer safety regression | `tests/windows/Test-EscapeHatch-Install.ps1` | tracked synthetic Windows proof | ownership/idempotency changes | Windows PowerShell 5.1 |
+| Windows preview package builder | `scripts/package_windows_preview.py` | tracked; committed source only, unsigned preview, no private inputs | preview distribution changes | `python tests/test_windows_preview_package.py` |
+| Windows preview package regression | `tests/test_windows_preview_package.py` | tracked synthetic packaging and PS5.1 staging proof | preview package or installer changes | `python tests/test_windows_preview_package.py` |
+| Windows preview artifact workflow | `.github/workflows/windows-preview-package.yml` | tracked; uploads unsigned preview, never publishes signed consumer release | preview delivery changes | package regression and workflow artifact readback |
+| Runtime endpoint discovery regression | `tests/windows/Test-EscapeHatch-Runtime-PortDiscovery.ps1` | tracked disposable process/socket proof; never uses installed private state | receipt endpoint discovery changes | `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/windows/Test-EscapeHatch-Runtime-PortDiscovery.ps1` |
 | User-data root resolver | `artifacts/escape-hatch/user-data.ts` | tracked; no checkout identity in user state | private root policy changes | `npm --prefix artifacts/escape-hatch run test:bootstrap` |
 | Workspace schema and reconciliation | `artifacts/escape-hatch/src/lib/workspace-bootstrap.ts` | tracked projection; existing parsers own fields | recovered area changes | bootstrap regression |
 | Private workspace file owner | `artifacts/escape-hatch/workspace-file.ts` | tracked CAS/atomic/lock mechanics | persistence changes | bootstrap regression |
@@ -41,6 +45,8 @@ This file is the canonical registry for durable EscapeHatch artifacts. A plausib
 | Startup browser regression | `artifacts/escape-hatch/tests/workspace-startup.spec.ts` | tracked synthetic recovery/preservation controls | startup changes | bootstrap browser proof |
 
 Standalone preview configuration and controls: `artifacts/escape-hatch/playwright.preview.config.ts` and `artifacts/escape-hatch/tests/standalone-startup.spec.ts`; validate using `npm --prefix artifacts/escape-hatch run test:preview:browser`.
+
+Windows preview packages belong under ignored `Outputs/windows-preview/` (or an explicit external output root). `scripts/package_windows_preview.py --output-root Outputs/windows-preview` derives ZIP and SHA-256 sidecar from committed Git blobs; `windows-release.json` inside the ZIP binds every packaged file to that source commit. These are unsigned developer-preview outputs, not authenticated consumer releases or private workspace backups. The extracted canonical installer verifies them with `-Action ReleaseVerify -SourceRoot <extracted-package>`.
 
 Managed bootstrap private outputs: `%LOCALAPPDATA%/EscapeHatch/workspace.v1.json`, its prior/recovery copies,
 stable application preferences, remembered source manifest, cached résumé and tracker snapshot remain
@@ -197,3 +203,11 @@ The application harness does **not** own user answers or browser execution. `har
 Unknown application questions remain blank until mapped. Sensitive demographic/accommodation values require explicit user preference. Legal/compliance facts require current per-application confirmation. Certification/attestation remains manual-only. A companion may record a submission only from explicit user action, same-session page confirmation, or user-confirmed external evidence; it may not submit on the user's behalf under this contract.
 
 Live employer ATS behavior, recruiter preference, automatic submission/auto-apply, store packaging/publishing, live Google Drive OAuth/runtime behavior, and broad Lua runtime execution remain outside repository-contract proof until implemented and separately validated. A specific resume's visual conformance is proven only when its rendered DOCX/PDF artifacts are actually inspected against the presentation contract.
+
+
+## Domain résumé selection graph (versioned, synthetic-only)
+
+- Contract: `harness/contracts/resume-selection-graph.v1.json`; runtime resolver: `artifacts/escape-hatch/src/lib/resume-selection-graph.ts`.
+- Validator: `scripts/validate_resume_selection_graph.py`; synthetic tests: `artifacts/escape-hatch/src/lib/resume-selection-graph.test.ts`.
+- Private actual résumé documents, domain masters, job derivatives, platform account slots and upload receipts belong in the user's private local/connected storage, **not** in this public repository or tracked fixtures.
+- Graph enforces typed, versioned lineage, user-owner isolation, stale source detection, ambiguous-domain review, and consent required for all platform-global replacements. Actual browser-side enforcement remains an independent P04 integration gate.

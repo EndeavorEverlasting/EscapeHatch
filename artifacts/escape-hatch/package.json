@@ -8,7 +8,7 @@
     "build": "vite build --config vite.config.ts",
     "serve": "vite preview --config vite.config.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit && npm run typecheck:bootstrap",
-    "test:unit": "tsx --test src/lib/answer-recovery.test.ts src/lib/storage.test.ts src/lib/assist.test.ts src/lib/assist-session.test.ts src/lib/submission-reconciliation.test.ts workspace-bootstrap.test.ts tracker-refresh.test.ts src/lib/application-puzzle.test.ts src/lib/source-bridge.test.ts src/lib/application-journey-projection.test.ts browser-test-isolation.test.ts document-source-import.test.ts brand-identity.test.ts src/lib/mascot-guidance.test.ts",
+    "test:unit": "tsx --test src/lib/answer-recovery.test.ts src/lib/storage.test.ts src/lib/assist.test.ts src/lib/assist-session.test.ts src/lib/submission-reconciliation.test.ts src/lib/application-events.test.ts workspace-bootstrap.test.ts tracker-refresh.test.ts src/lib/application-puzzle.test.ts src/lib/source-bridge.test.ts src/lib/application-journey-projection.test.ts browser-test-isolation.test.ts document-source-import.test.ts brand-identity.test.ts src/lib/mascot-guidance.test.ts",
     "test:browser": "playwright test --config=playwright.config.ts",
     "test": "npm run test:unit && npm run test:browser",
     "test:workbench": "tsx --test src/lib/application-puzzle.test.ts src/lib/source-bridge.test.ts browser-assist-control.test.ts opportunity-documents.test.ts",

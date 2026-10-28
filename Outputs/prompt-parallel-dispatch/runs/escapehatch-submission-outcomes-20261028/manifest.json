@@ -1,0 +1,398 @@
+{
+  "schema_version": "prompt-parallel-dispatch/v1",
+  "run_id": "escapehatch-submission-outcomes-20261028",
+  "repository": "EndeavorEverlasting/EscapeHatch",
+  "plan_owner": "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md",
+  "handoff_owner": "docs/agent/P04_SUBMISSION_OUTCOME_LOOP_AND_EXTENSION_MODALITY_2026-10-28.md",
+  "parent_issue": "https://github.com/EndeavorEverlasting/EscapeHatch/issues/69",
+  "base_ref": {
+    "provider_default_branch": "main",
+    "provider_default_head_at_authorship": "4e05791f74cf088838310c641e0360f327478ec7",
+    "authored_at": "2026-10-28",
+    "freshness": "PROVIDER_READ_RECHECK_BEFORE_MUTATION"
+  },
+  "graph": {
+    "expression": "EH-O0 -> { EH-O1 || EH-O2 || EH-O3 || EH-O4 } -> EH-O5",
+    "initial_width": 1,
+    "max_width": 4,
+    "parallel_disposition": "REQUIRED_AFTER_CONTRACT_AND_REAL_ADAPTER_PROOF"
+  },
+  "convergence_owner": "EH-O5",
+  "status": "BOUNDED_EH_O0_AND_EH_O2_IMPLEMENTED_PROVIDER_CONVERGENCE_PENDING",
+  "autonomy_gap": "At local repo runtime, refresh exact main/PR/worktree truth, locate canonical manifest schema/runner and actual execution adapter, validate this run manifest, dispatch eligible lanes with isolated writers, rejoin validated receipts; record fallback if runner missing.",
+  "manifest_path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-submission-outcomes-20261028/manifest.json",
+  "canonical_target_disposition": "PRESERVE_EXISTING_GLOBAL_MANIFEST_RUN_SCOPED_ONLY",
+  "lanes": [
+    {
+      "lane_id": "EH-O0",
+      "wave": 0,
+      "mission": "Define existing-store versioned event/receipt contract and reducer; idempotent status projection, exact opportunity binding, private data boundaries and migration.",
+      "dependencies": [
+        "refresh remote provider truth"
+      ],
+      "owned_mutation_surfaces": [
+        "artifacts/escape-hatch/src/lib/submission-reconciliation.ts",
+        "artifacts/escape-hatch/src/lib/submission-reconciliation.test.ts",
+        "artifacts/escape-hatch/src/lib/storage.ts",
+        "new event fixture/test only if canonical owner requires"
+      ],
+      "forbidden_surfaces": [
+        "browser/application-assist runtime DOM",
+        "final employer Submit",
+        "raw private data",
+        "parallel consumer writes to shared reducer"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "github"
+      ],
+      "required_capabilities": [
+        "local git worktree",
+        "repo validators",
+        "Node runtime",
+        "synthetic browser tests"
+      ],
+      "posture": "isolated writer",
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "plan": "docs/agent/P04_SUBMISSION_OUTCOME_LOOP_AND_EXTENSION_MODALITY_2026-10-28.md",
+          "sprint": "EH-O0"
+        }
+      },
+      "convergence_owner": "EH-O5",
+      "validation": [
+        "npm run test:unit",
+        "npm run test:tracker",
+        "python scripts/validate_application_autofill_parent.py",
+        "git diff --check"
+      ],
+      "status": "WAITING_LOCAL_RUNTIME"
+    },
+    {
+      "lane_id": "EH-O1",
+      "wave": 1,
+      "mission": "Generalize evidence-bound, user-controlled submission observation and per-step form progress without expanding terminal authority.",
+      "dependencies": [
+        "EH-O0 contract verified"
+      ],
+      "owned_mutation_surfaces": [
+        "browser/application-assist/submission-observer.js",
+        "browser/application-assist/worker.js",
+        "browser/application-assist/content.js",
+        "focused synthetic ATS fixtures"
+      ],
+      "forbidden_surfaces": [
+        "shared local reducer",
+        "popup styling and logo",
+        "unapproved Submit/attestation",
+        "real employer submissions"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "github"
+      ],
+      "required_capabilities": [
+        "local git worktree",
+        "repo validators",
+        "Node runtime",
+        "synthetic browser tests"
+      ],
+      "posture": "isolated writer",
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "plan": "docs/agent/P04_SUBMISSION_OUTCOME_LOOP_AND_EXTENSION_MODALITY_2026-10-28.md",
+          "sprint": "EH-O1"
+        }
+      },
+      "convergence_owner": "EH-O5",
+      "validation": [
+        "focused observer/ATS tests",
+        "npm run test:managed-assist",
+        "git diff --check"
+      ],
+      "status": "WAITING_EH_O0"
+    },
+    {
+      "lane_id": "EH-O2",
+      "wave": 1,
+      "mission": "Repair desktop-popup mode classification and plan icon/branding surface parity; review two variants before any aesthetic UI change.",
+      "dependencies": [
+        "EH-O0 contract verified for status labels",
+        "operator visual approval for aesthetic mutation"
+      ],
+      "owned_mutation_surfaces": [
+        "browser/application-assist/manifest.json",
+        "browser/application-assist/modality.js",
+        "browser/application-assist/popup.html",
+        "browser/application-assist/popup.js",
+        "existing approved first-party brand asset projection and focused modality tests"
+      ],
+      "forbidden_surfaces": [
+        "observer worker",
+        "local store or reducer",
+        "new identity/mascot design",
+        "mobile extension assumption",
+        "UI aesthetic mutation before review"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "github"
+      ],
+      "required_capabilities": [
+        "local git worktree",
+        "Chrome extension developer/testing",
+        "desktop popup and mobile browser testing"
+      ],
+      "posture": "isolated writer",
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "plan": "docs/agent/P04_SUBMISSION_OUTCOME_LOOP_AND_EXTENSION_MODALITY_2026-10-28.md",
+          "sprint": "EH-O2"
+        }
+      },
+      "convergence_owner": "EH-O5",
+      "validation": [
+        "focused modality contract tests",
+        "desktop browser popup visual regression",
+        "mobile first-party overlay regression",
+        "git diff --check"
+      ],
+      "status": "DESIGN_REVIEW_BEFORE_AESTHETIC_MUTATION",
+      "read_first": [
+        "browser/application-assist/modality.js",
+        "browser/application-assist/popup.html",
+        "artifacts/escape-hatch/public/favicon.svg"
+      ]
+    },
+    {
+      "lane_id": "EH-O3",
+      "wave": 1,
+      "mission": "User-private application outcome timeline and truthful metrics/reconciliation sourced from the one canonical reducer.",
+      "dependencies": [
+        "EH-O0 contract verified"
+      ],
+      "owned_mutation_surfaces": [
+        "artifacts/escape-hatch/src/lib/application-journey-projection.ts",
+        "artifacts/escape-hatch/src/lib/tracker-bridge.ts",
+        "focused Application UI component after design-review gate",
+        "focused unit/integration tests"
+      ],
+      "forbidden_surfaces": [
+        "observer worker and extension popup",
+        "shared schema redesign",
+        "real user data",
+        "provider write without explicit access"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "github"
+      ],
+      "required_capabilities": [
+        "local git worktree",
+        "repo validators",
+        "Node runtime",
+        "synthetic browser tests"
+      ],
+      "posture": "isolated writer",
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "plan": "docs/agent/P04_SUBMISSION_OUTCOME_LOOP_AND_EXTENSION_MODALITY_2026-10-28.md",
+          "sprint": "EH-O3"
+        }
+      },
+      "convergence_owner": "EH-O5",
+      "validation": [
+        "npm run test:tracker",
+        "npm run test:unit",
+        "npm run build",
+        "git diff --check"
+      ],
+      "status": "WAITING_EH_O0"
+    },
+    {
+      "lane_id": "EH-O4",
+      "wave": 1,
+      "mission": "Versioned process/opportunity metadata sourced to verified listings, with default-private aggregation and no cross-user leaks.",
+      "dependencies": [
+        "EH-O0 contract verified"
+      ],
+      "owned_mutation_surfaces": [
+        "new scoped opportunity-process projection under existing application library",
+        "focused consent/privacy/publishability tests",
+        "source freshness adapters only with existing authority"
+      ],
+      "forbidden_surfaces": [
+        "personal outcome uploads",
+        "shared database or public telemetry by default",
+        "new external network service",
+        "existing discovery PR #125 scope"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "github"
+      ],
+      "required_capabilities": [
+        "local git worktree",
+        "repo validators",
+        "Node runtime",
+        "synthetic browser tests"
+      ],
+      "posture": "isolated writer",
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "plan": "docs/agent/P04_SUBMISSION_OUTCOME_LOOP_AND_EXTENSION_MODALITY_2026-10-28.md",
+          "sprint": "EH-O4"
+        }
+      },
+      "convergence_owner": "EH-O5",
+      "validation": [
+        "focused two-user isolation negatives",
+        "npm run test:unit",
+        "git diff --check"
+      ],
+      "status": "WAITING_EH_O0"
+    },
+    {
+      "lane_id": "EH-O5",
+      "wave": 2,
+      "mission": "Converge exact-head tests and approved PRs; P08 observe managed browser path and second ATS; record separate merged/deployed/live statuses.",
+      "dependencies": [
+        "EH-O1",
+        "EH-O2",
+        "EH-O3",
+        "EH-O4"
+      ],
+      "owned_mutation_surfaces": [
+        "targeted integration tests and redacted private runtime receipt",
+        "parent issue acceptance receipt"
+      ],
+      "forbidden_surfaces": [
+        "operator-only final Submit",
+        "credentials/PII in Git",
+        "unauthorized merge/deploy",
+        "force push"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "github",
+        "local managed browser (only with user-authenticated host)"
+      ],
+      "required_capabilities": [
+        "git isolated worktree",
+        "CI readback",
+        "managed browser",
+        "actual employer confirmation observation"
+      ],
+      "posture": "isolated writer",
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "plan": "docs/agent/P04_SUBMISSION_OUTCOME_LOOP_AND_EXTENSION_MODALITY_2026-10-28.md",
+          "sprint": "EH-O5"
+        }
+      },
+      "convergence_owner": "EH-O5",
+      "validation": [
+        "python scripts/validate_application_autofill_parent.py",
+        "python scripts/validate_application_journey.py",
+        "npm run typecheck",
+        "npm run test:managed-assist",
+        "npm run test:tracker",
+        "npm run test:unit",
+        "npm run build",
+        "Playwright interaction suites",
+        "git diff --check"
+      ],
+      "status": "WAITING_CONVERGENCE"
+    }
+  ],
+  "receipt_contract": {
+    "commit_sha_required": true,
+    "canonical_validation_status": "NOT_RUN_MISSING_SCHEMA_OR_RUNNER",
+    "observed_parallelism": false,
+    "product_code_changed": false,
+    "merged": false,
+    "deployed": false,
+    "employer_submission_executed": false,
+    "live_observed": false
+  },
+  "first_next_command": "gh pr checks 130",
+  "authorship_blockers": [
+    "No local Windows Chrome or active application session attached to CURRENT_CHAT_RUNTIME.",
+    "No verified direct local-agent spawn or parallel adapter from this conversation.",
+    "The linked current TokenCorridor catalog requires dispatch runner/schema, but the referenced schema path was not accessible from current default branch; EscapeHatch root manifest also declares missing runner/schema. Do not mark canonical validation passed.",
+    "UI branding/layout changes require an operator-approved design variant before aesthetic mutation."
+  ],
+  "blockers": [
+    "Canonical dispatch schema/runner absent; canonical receipt verification remains UNPROVEN.",
+    "Chrome installation and new real employer/second-ATS proof remain separate live gates."
+  ],
+  "execution": {
+    "adapter": "collaboration.followup_task",
+    "base_head": "1228d1051cf07e6fa4894d9f68c523a914b3eb67",
+    "code_commit": "db96620",
+    "graph_width": 2,
+    "graph": "EH-O0 coordinator || EH-O2 approved asset derivation; then EH-O2 packaging || EH-O0 review/validation",
+    "independence": "Asset-only repair consumes no event/status schema and does not redesign popup; shared reducer has one writer.",
+    "observed_native_parallelism": true,
+    "canonical_parallel_pass": false,
+    "canonical_validation": "FAILED_MISSING_SCHEMA_AND_RUNNER",
+    "lanes": [
+      {
+        "id": "EH-O0",
+        "owner": "/root",
+        "branch": "docs/p04-submission-outcomes-modality-20261028",
+        "return": "db96620"
+      },
+      {
+        "id": "EH-O2-assets",
+        "owner": "/root/answer_durability_review",
+        "branch": "codex/extension-toolbar-identity",
+        "return": "94432dca379e4310dd017e56d99ad7fd8d582aa3",
+        "rejoined": "95b6cf1"
+      },
+      {
+        "id": "EH-O2-package",
+        "owner": "/root/answer_durability_review",
+        "branch": "codex/extension-package",
+        "return": "25dfa7f88c9c917dbc85a790c1d0b6d0c74e3430",
+        "rejoined": "ea5b8d1"
+      },
+      {
+        "id": "EH-O0-review",
+        "owner": "/root/submission_review",
+        "mutation_surfaces": [],
+        "return": "Query identity, stale projection, URL transfer and parser consistency findings repaired and tested."
+      }
+    ],
+    "employer_submission_executed": false,
+    "private_provider_writes": false,
+    "installed_at_record_time": false,
+    "merge_state_at_record_time": "PENDING_PROVIDER_CI"
+  },
+  "authorship_authorization": {
+    "disposition": "DESIGN_HANDOFF_COMMITTED_ONLY",
+    "implementation_dispatch_performed": false,
+    "ui_design_approved": false,
+    "final_employer_submit": "USER_ONLY",
+    "reason": "Current chat wrote governed design and dispatch route; no local host/browser runner or product mutation is claimed."
+  },
+  "authorization": {
+    "disposition": "OPERATOR_TRIFECTA_IMPLEMENTATION_AND_EXTENSION_INSTALL",
+    "implementation_dispatch_performed": true,
+    "ui_design_approved": false,
+    "final_employer_submit": "USER_ONLY",
+    "reason": "Operator requested the existing approved logo and explicitly requested extension installation after removing its old copy. No broader aesthetic redesign is claimed."
+  }
+}

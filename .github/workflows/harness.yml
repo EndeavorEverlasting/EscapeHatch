@@ -142,3 +142,7 @@ jobs:
       - name: Test Windows runtime lifecycle
         shell: pwsh
         run: ./tests/windows/Test-EscapeHatch-Runtime.ps1
+
+      - name: Test receipt-selected runtime port and foreign listener preservation
+        shell: powershell
+        run: ./tests/windows/Test-EscapeHatch-Runtime-PortDiscovery.ps1

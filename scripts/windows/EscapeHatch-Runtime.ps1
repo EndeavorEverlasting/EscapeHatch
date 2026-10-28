@@ -95,6 +95,33 @@ function Read-RuntimeReceipt {
     }
 }
 
+function Select-RuntimeEndpoint {
+    param(
+        [Parameter(Mandatory)][string]$Fingerprint,
+        [Parameter(Mandatory)][string]$ReceiptPath
+    )
+    # A receipt locates a candidate endpoint; it never authorizes process control.
+    # The existing observer must still prove socket, process and runtime identity.
+    $receipt = Read-RuntimeReceipt -Path $ReceiptPath
+    if ($null -ne $receipt -and -not $receipt.malformed) {
+        $receiptPort = 0
+        if (
+            [string]$receipt.schema -eq 'escapehatch-local-runtime/v1' -and
+            [string]$receipt.repoFingerprint -eq $Fingerprint -and
+            [string]$receipt.host -eq $RuntimeHost -and
+            [string]$receipt.runtimeProtocol -eq [string]$RuntimeProtocol -and
+            [int]::TryParse([string]$receipt.port, [ref]$receiptPort) -and
+            $receiptPort -ge 1 -and $receiptPort -le 65535
+        ) {
+            # An existing installation takes precedence over a new PORT hint.
+            # This avoids spawning a second runtime when a launcher lost its env.
+            $script:Port = $receiptPort
+        }
+    }
+    $script:Url = 'http://{0}:{1}' -f $RuntimeHost, $Port
+    $script:AppUrl = $Url + $normalizedBasePath
+}
+
 function Write-RuntimeReceipt {
     param(
         [Parameter(Mandatory)][string]$Path,
@@ -239,6 +266,8 @@ function Test-ReceiptMatchesHealthyRuntime {
             [string]$Receipt.repoFingerprint -eq $Fingerprint -and
             [int]$Receipt.pid -eq [int](Get-ObjectPropertyValue -Object $Health -Name 'pid') -and
             [int]$Receipt.runtimeProtocol -eq $RuntimeProtocol -and
+            [string]$Receipt.host -eq $RuntimeHost -and
+            [int]$Receipt.port -eq $Port -and
             [string]$Receipt.processStartTimeUtc -eq [string]$Process.StartTimeUtc -and
             -not [string]::IsNullOrWhiteSpace([string]$Receipt.shutdownToken)
         )
@@ -624,15 +653,19 @@ function Invoke-HealthyGracefulStop {
         'x-escapehatch-shutdown-token' = [string]$Observation.Receipt.shutdownToken
     }
 
+    $stopMethod = 'EXIT_OBSERVED'
     try {
         Invoke-RestMethod -Method Post -Uri "$Url/__escapehatch/shutdown" -Headers $headers -TimeoutSec 3 -ErrorAction Stop | Out-Null
+        $stopMethod = 'GRACEFUL'
     } catch {
         Write-Host 'Graceful shutdown request failed; ownership will be re-proven before bounded fallback.' -ForegroundColor Yellow
     }
 
     if (-not (Wait-ForOwnedExit -ProcessId $Observation.Process.Pid -TimeoutSeconds $StopTimeoutSeconds)) {
         Stop-ProvenOwnedProcess -ProcessId $Observation.Process.Pid -ExpectedStartTimeUtc $Observation.Process.StartTimeUtc
+        $stopMethod = 'FORCED_OWNED'
     }
+    Write-Host "ESCAPEHATCH_STOP_METHOD=$stopMethod"
     Remove-RuntimeReceipt -Path $Paths.Receipt -ExpectedInstanceId ([string]$Observation.Receipt.instanceId)
 }
 
@@ -718,6 +751,8 @@ try {
         $lockTaken = $true
     }
     if (-not $lockTaken) { throw 'Timed out waiting for the EscapeHatch lifecycle lock.' }
+
+    Select-RuntimeEndpoint -Fingerprint $fingerprint -ReceiptPath $paths.Receipt
 
     switch ($Action) {
         'Start' { Invoke-StartAction -Fingerprint $fingerprint -Paths $paths }

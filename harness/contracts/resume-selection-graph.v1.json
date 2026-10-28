@@ -1,0 +1,105 @@
+{
+  "schema": "escapehatch/resume-selection-graph/v1",
+  "version": 1,
+  "owner": "career-state + opportunity-documents + application-assist; parent issue #69",
+  "purpose": "Versioned, applicant-isolated DAG for canonical career evidence, reusable domain resumes, job derivatives, platform-global/isolated resume slots and immutable application attachment lineage.",
+  "canonical_model": {
+    "canonical_source": "One approved canonical resume per owner graph snapshot, with stable source digest; source records may have independent richer provenance in career-state.",
+    "domain_master": "Reusable domain-specific approved resume derived from canonical. Many domains and overlapping tags permitted, no closed enum of categories.",
+    "job_derivative": "Optional opportunity-bound presentation derived from an approved domain or canonical resume. Never become a platform-global master by default.",
+    "platform_slot": "Observed account/platform resume persistence context. A provider surface or site hostname is not proof of the slot scope.",
+    "application_snapshot": "Application-to-resume edge binds the exact version used. Previously submitted applications cannot be silently rewritten.",
+    "node_types": [
+      "resume",
+      "opportunity",
+      "platform_slot",
+      "application"
+    ],
+    "edge_types": [
+      "derives_from",
+      "targets_opportunity",
+      "slot_points_to",
+      "application_uses"
+    ],
+    "allowed_resume_derivations": {
+      "canonical": [],
+      "domain": [
+        "canonical"
+      ],
+      "job": [
+        "canonical",
+        "domain"
+      ]
+    },
+    "per_owner_graph": "No shared applicant graph, no cross-owner nodes or edges; do not import developer or collaborator context."
+  },
+  "domain_weighting": {
+    "input": "Opportunity domainWeights tagged from reviewed job description. Never infer from platform URL, title alone or private other user's profile.",
+    "categories": "Open string tags (e.g., technology, management, construction, people_operations, healthcare_delivery); allow compound classification and future domains.",
+    "matching": "Candidate domain score = sum of opportunity domain weights whose tags belong to approved domain resume.",
+    "ties": "Equal top candidate score returns REVIEW_REQUIRED, not arbitrary lexical selection.",
+    "no_match": "Use canonical approved master if a domain has no evidence-grounded approved version.",
+    "evidence_variance": "Separately calculate V=1-sum(w_i*c_i)/sum(w_i) for complete job requirement coverage; V>=0.25 can request a new derivative, not change platform safety.",
+    "no_invented_claims": true
+  },
+  "platform_persistence": {
+    "initial_scope": "unknown",
+    "scopes": [
+      "unknown",
+      "persistent_global",
+      "isolated_application"
+    ],
+    "approve_scope_only_after": "Observed provider/browser persistence and exact account/session/opportunity binding, with operator-owned source authority.",
+    "default_when_unknown": "REVIEW_REQUIRED_NO_UPLOAD",
+    "persistent_global": "Only approved reusable domain master or canonical master may be proposed. A job derivative is NEVER selected for a persistent global slot.",
+    "isolated_application": "May propose an approved opportunity-matched derivative; upload still needs explicit candidate approval and exact document hash.",
+    "never_auto_replace_persistent_resume": true,
+    "never_auto_submit": true,
+    "user_consent_must_name": [
+      "platform",
+      "slot",
+      "candidate_resume_id",
+      "content_digest",
+      "opportunity_id",
+      "effect_of_overwrite"
+    ],
+    "preserve_existing_content": true,
+    "server_claims": "A private candidate document URL, file upload event, or ATS navigation does not prove platform persistence or employer acceptance."
+  },
+  "invariants": {
+    "graph_owner_required": true,
+    "unique_ids": true,
+    "sha256_digest_required": true,
+    "derivation_dag_acyclic": true,
+    "derivative_source_digest_required": true,
+    "submitted_applications_immutable": true,
+    "approved_documents_not_auto_rewritten": true,
+    "stale_descendants_mark_review": true,
+    "no_private_fixtures": true,
+    "acceptance_requires_real_browser_observation": true
+  },
+  "implementation": {
+    "runtime": "artifacts/escape-hatch/src/lib/resume-selection-graph.ts",
+    "runtime_tests": "artifacts/escape-hatch/src/lib/resume-selection-graph.test.ts",
+    "validation": "python scripts/validate_resume_selection_graph.py",
+    "parent_contracts": [
+      "AGENTS.md",
+      "harness/contracts/career-artifact-propagation.v1.json",
+      "contracts/resume-presentation.v1.json",
+      "contracts/career-claim-fidelity.v1.json",
+      "harness/contracts/application-autofill-parent.v1.json"
+    ],
+    "platform_adapter_integration": "Must invoke resolver before a persistent or unknown-scope employer/platform resume mutation; currently pending live wiring.",
+    "proof_ceiling": "Graph planning/validation and CI do not certify live Indeed persistence, attached PDF, account selection, browser action or application submission."
+  },
+  "queue_effective_master": {
+    "purpose": "Score all selected, reviewed queued job domains to select one reusable account-wide master; prevent upload thrash from per-job matching.",
+    "input": "Versioned list of explicit opportunity IDs scoped to the same applicant and one verified persistent_global platform slot.",
+    "aggregation": "For each candidate approved domain master, sum the reviewed domain weights matched across the whole selected queue; select the unique maximum.",
+    "ambiguity": "Equal maximum across domain masters returns REVIEW_REQUIRED.",
+    "no_match": "Use canonical approved master only.",
+    "output": "KEEP_CURRENT if the exact effective resume already occupies the observed platform slot, otherwise UPLOAD_REQUIRES_CONSENT. Never mutate/upload.",
+    "never_use_job_derivative_for_global": true,
+    "stable_under_queue_order_permutation": true
+  }
+}

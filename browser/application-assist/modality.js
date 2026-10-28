@@ -39,7 +39,13 @@
   function readEnvironment(win) {
     const w = win || root;
     const mq = w.matchMedia ? w.matchMedia("(pointer: coarse)").matches : false;
-    const narrow = !!(w.matchMedia && w.matchMedia("(max-width: 640px)").matches);
+    const rawNarrow = !!(w.matchMedia && w.matchMedia("(max-width: 640px)").matches);
+    const fine = !!(w.matchMedia && w.matchMedia("(pointer: fine)").matches);
+    // Chrome's popup is intrinsically narrow even when the operator uses a desktop.
+    // Device modality must not be inferred from the popup window's own 440px width.
+    const extensionPopup = !!(w.location && /^(chrome-extension:|moz-extension:)$/.test(w.location.protocol) &&
+      /\/popup\.html$/.test(w.location.pathname));
+    const narrow = rawNarrow && !(extensionPopup && fine && !mq);
     const standalone = !!(w.matchMedia && w.matchMedia("(display-mode: standalone)").matches);
     return { coarsePointer: mq, narrowViewport: narrow, standalone: standalone };
   }

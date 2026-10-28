@@ -78,10 +78,40 @@ Application Assist does **not**:
 
 ## Load locally in Chrome or Edge
 
+The canonical extension source is `browser/application-assist/`. Package its committed
+bytes before installation so an active checkout, untracked file or later source edit cannot
+silently change the installed extension:
+
+```powershell
+python scripts/package_application_assist.py
+python scripts/package_application_assist.py --verify
+```
+
+The default artifact is `Outputs/application-assist/<full-HEAD-commit>/`. For an installation
+that must survive developer-worktree cleanup, choose a stable user-local output root:
+
+```powershell
+python scripts/package_application_assist.py --output-root "$env:LOCALAPPDATA\EscapeHatch\extension-packages"
+```
+
+The command prints the exact directory to select in Chrome. It needs Python and Git only;
+it does not install the extension, alter browser settings, or copy private profiles. The
+deterministic `release.json` records the source commit, extension version, permissions and
+every committed extension file's SHA-256. It contains no user paths, credentials or answers.
+Only Git blobs under the canonical source prefix are packaged; working-tree changes and
+untracked files are excluded. Commit intended source changes before building their package.
+
+Commit-addressed package directories are immutable. A repeat build verifies the existing
+files instead of overwriting them. Missing, extra, linked or changed entries fail while
+preserving the package. An interrupted/inconsistent package requires investigation or a
+new explicit output root; this tool never deletes or repairs an installed directory.
+Upgrades use a new source-commit directory. Keep the previously loaded package intact
+until browser installation/reload and the new toolbar/popup have actually been verified.
+
 1. Open `chrome://extensions` or `edge://extensions`.
 2. Enable **Developer mode**.
 3. Choose **Load unpacked**.
-4. Select `browser/application-assist`.
+4. Select the exact commit-addressed directory printed by the packaging command.
 5. Open a real job application page.
 6. Open the popup, save/import a synthetic or private profile, choose **Start Assist**.
 7. Choose **Fill Allowed Fields**, then exercise Pause, Resume, Emergency Stop, and Undo Last Fill.
@@ -92,6 +122,7 @@ Application Assist does **not**:
 
 ```bash
 python tests/test_application_assist_session_contract.py
+python tests/test_application_assist_package.py
 python tests/test_application_assist_modality_contract.py
 node tests/test_application_assist_session.mjs
 node tests/test_application_assist_modality.mjs

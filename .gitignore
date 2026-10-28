@@ -3,6 +3,7 @@ Source Resumes Not to Mutate but to Generate/
 private/
 private/resume-visual/
 Outputs/resume-visual/
+Outputs/application-assist/
 
 # Dependencies and local build noise
 node_modules/

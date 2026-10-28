@@ -54,6 +54,7 @@ export function validateMaterialsGraph(graph: MaterialsGraph): void {
       !Array.isArray(node.parentIds) || !Array.isArray(node.sourceEvidenceIds) ||
       node.parentIds.some(x => !valid(x)) || node.sourceEvidenceIds.some(x => !evidences.has(x)) ||
       node.parentIds.length !== new Set(node.parentIds).size ||
+      (['job_resume','cover_letter','case_study'].includes(node.kind) && node.sourceEvidenceIds.length === 0) ||
       (node.opportunityId !== null && node.opportunityId !== graph.opportunityId) ||
       (['job_resume','cover_letter','case_study'].includes(node.kind) && node.opportunityId !== graph.opportunityId)) throw Error('MATERIALS_NODE_INVALID');
     ids.add(node.id); nodes.set(node.id,node);

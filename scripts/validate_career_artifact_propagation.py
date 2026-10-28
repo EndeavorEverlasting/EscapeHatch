@@ -32,6 +32,34 @@ def load_contract():
     if data.get("schema") != "escapehatch/career-artifact-propagation/v1" or data.get("version") != 1:
         raise PropagationError("contract identity/version drift")
     policy = data.get("policy", {})
+    composition = data.get("derivative_composition")
+    if not isinstance(composition, dict):
+        raise PropagationError("missing derivative-composition contract")
+    sources = composition.get("inputs", {})
+    if not isinstance(sources, dict) or set(sources) != {
+        "factual_claims", "author_voice", "employer_context", "optional_prior_derivatives"
+    }:
+        raise PropagationError("derivative source authority incomplete")
+    if any(not isinstance(value, str) or not value.strip() for value in sources.values()):
+        raise PropagationError("derivative source route missing")
+    if composition.get("outputs") != [
+        "role_resume", "role_cover_letter", "short_application_answer"
+    ]:
+        raise PropagationError("derivative output coverage missing")
+    scopes = composition.get("scope_policies", {})
+    if not isinstance(scopes, dict) or scopes.get("approved_cover_letters") != "protected_without_explicit_edit_approval" or scopes.get("submitted_applications") != "immutable_without_separate_operator_authority" or scopes.get("employer_facts") != "exact_opportunity_only":
+        raise PropagationError("derivative authority boundary missing")
+    if composition.get("private_content_prohibited_in_git") is not True:
+        raise PropagationError("private author language cannot enter tracked fixtures")
+    receipt = composition.get("required_derivative_receipt")
+    if not isinstance(receipt, list) or not {
+        "source_claim_revision", "author_voice_revision", "opportunity_fingerprint",
+        "claim_provenance_ids", "artifact_revision", "author_review_state",
+        "export_readback_state"
+    }.issubset(set(receipt)):
+        raise PropagationError("unversioned career derivative")
+    if composition.get("synthetic_validation_does_not_prove_live_private_source_hydration") is not True:
+        raise PropagationError("invalid derivative proof ceiling")
     mandatory = (
         "source_event_required", "source_revision_required",
         "claim_current_only_after_provider_readback",

@@ -10,6 +10,9 @@
     { "lane_id": "answer-review", "adapter": "collaboration.spawn_agent", "target": "/root/answer_durability_review", "mutation_surfaces": [], "mission": "Audit private answer reuse without disclosing values; identify canonical deterministic-reuse gaps." },
     { "lane_id": "answer-repair", "adapter": "collaboration.followup_task", "target": "/root/answer_durability_review", "branch": "codex/answer-reuse-numeric-20261028", "depends_on": ["answer-review"], "mutation_surfaces": ["artifacts/escape-hatch/managed-answer-memory.ts", "artifacts/escape-hatch/managed-answer-memory.test.ts", "artifacts/escape-hatch/managed-form.ts", "artifacts/escape-hatch/managed-preferences.test.ts"], "mission": "Preserve unchanged approval and validate native numeric writes in an isolated worktree; coordinator integrates." }
   ],
+  "successor_lanes": [
+    { "lane_id": "answer-process-durability", "adapter": "collaboration.followup_task", "target": "/root/answer_durability_review", "branch": "codex/answer-process-durability", "provider_default_head": "a103fa4f5a41e542810d7ee2fa9c48dfccf27bff", "revalidated_default_head": "1a880d6e43be263a55946c5699f399f73ace7547", "mutation_surfaces": ["artifacts/escape-hatch/preference-file.ts", "artifacts/escape-hatch/managed-preferences.test.ts"], "mission": "Reproduce and repair cross-process lost answer updates in isolated synthetic stores; coordinator reviews and integrates." }
+  ],
   "canonical_validation": "UNPROVEN_MISSING_SCHEMA_AND_RUNNER",
   "blockers": ["harness/contracts/prompt-parallel-dispatch.v1.json absent", "scripts/prompt_parallel_dispatch.py absent"],
   "provenance": "Post-dispatch audit record of actual native execution; not a claim of validated pre-dispatch manifest execution. Existing primary manifest preserved."

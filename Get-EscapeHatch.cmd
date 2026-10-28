@@ -77,7 +77,9 @@ if exist "%SOURCE%" (
     echo ERROR: Existing checkout has a different remote. Preserved unchanged.
     exit /b 4
   )
-  echo Existing EscapeHatch checkout adopted WITHOUT update, reset, pull, or cleanup.
+  echo Existing EscapeHatch checkout found. Checking whether a safe update is available...
+  call :safe_update_existing
+  if errorlevel 1 exit /b 8
 ) else (
   echo.
   echo Ready to clone the canonical EscapeHatch source into:
@@ -107,4 +109,43 @@ if errorlevel 1 (
 )
 echo.
 echo Setup handed off to the canonical owned runtime. No employer application was submitted.
+exit /b 0
+
+:safe_update_existing
+rem Work only on a clean, unmodified main checkout; never reset, rebase, or force-pull.
+git -C "%SOURCE%" symbolic-ref --quiet --short HEAD 2>nul | findstr /X /C:"main" >nul
+if errorlevel 1 (
+  echo Existing custom branch or detached checkout preserved. No automatic update.
+  exit /b 0
+)
+set "EH_DIRTY="
+for /f "delims=" %%L in ('git -C "%SOURCE%" status --porcelain 2^>nul') do set "EH_DIRTY=1"
+if defined EH_DIRTY (
+  echo Existing changes detected. No source update. Your files are preserved.
+  exit /b 0
+)
+if not exist "%SOURCE%\scripts\windows\EscapeHatch-Runtime.ps1" (
+  echo Runtime manager unavailable. Source update skipped to protect the installation.
+  exit /b 0
+)
+rem Stop state must be proven by the owned runtime manager. Never update a running app.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%SOURCE%\scripts\windows\EscapeHatch-Runtime.ps1" -Action Status 2>nul | findstr /X /C:"ESCAPEHATCH_STATE=STOPPED" >nul
+if errorlevel 1 (
+  echo Running or uncertain runtime preserved. No source update during an active session.
+  exit /b 0
+)
+echo A safe fast-forward can update the bundled chick, guide, and application UI.
+choice /C YN /N /M "Check for and install verified source updates? [Y/N] "
+if errorlevel 2 exit /b 0
+git -C "%SOURCE%" fetch --no-tags origin main
+if errorlevel 1 (
+  echo Could not fetch source updates. Existing checkout preserved.
+  exit /b 1
+)
+git -C "%SOURCE%" merge --ff-only FETCH_HEAD
+if errorlevel 1 (
+  echo Update could not fast-forward safely. Existing checkout preserved.
+  exit /b 1
+)
+echo Safe source update completed. Bundled assets will load with the refreshed app.
 exit /b 0

@@ -6,4 +6,5 @@
     <string name="action_resume">Resume</string>
     <string name="action_commands">Open commands</string>
     <string name="action_dismiss">Dismiss</string>
+    <string name="no_application_selected">No job selected yet.\n\nOpen a public employer job link in your mobile browser, tap Share, and choose EscapeHatch Assist.\n\nYour job link is saved for review. Final application submission remains with you.</string>
 </resources>

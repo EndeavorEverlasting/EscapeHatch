@@ -67,7 +67,9 @@ export function projectApplicationJourney(input: JourneyInput): JourneyProjectio
   };
   if (!input.browserOpen) return {
     current: scene('APPLICATION_ENTRY'), next: scene('AUTH_HANDOFF'),
-    blockers: input.documentsApproved ? [] : ['Review the role-specific résumé and cover-letter package.'],
+    // Before inspecting the employer form, absent documents are not a blocker.
+    // A cover letter can be optional or have no upload field at all.
+    blockers: [],
     mayAutoSubmit: false,
   };
   if (['AUTH_HANDOFF', 'SESSION_ORIGIN_CHANGED'].includes(input.authPhase || '')) return {
@@ -85,11 +87,9 @@ export function projectApplicationJourney(input: JourneyInput): JourneyProjectio
     blockers: ['Employer application form has not passed two stable same-session observations.'],
     mayAutoSubmit: false,
   };
-  if (!input.documentsApproved) return {
-    current: scene('PREREQUISITES'), next: scene('FORM_PREPARATION'),
-    blockers: ['Select and review this opportunity\'s exact documents before any upload.'],
-    mayAutoSubmit: false,
-  };
+  // Once the same-session form is recognized, the preparation controller
+  // inspects actual required file inputs. An absent optional cover letter
+  // cannot force a PREREQUISITES scene or suppress a valid REVIEW_READY receipt.
   if (input.preparationState === 'REVIEW_READY') return {
     current: scene('FINAL_REVIEW'), next: scene('FINAL_REVIEW'),
     blockers: ['Final Submit is always yours. Review the employer form personally.'],

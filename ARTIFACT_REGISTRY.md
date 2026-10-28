@@ -46,6 +46,8 @@ This file is the canonical registry for durable EscapeHatch artifacts. A plausib
 
 Standalone preview configuration and controls: `artifacts/escape-hatch/playwright.preview.config.ts` and `artifacts/escape-hatch/tests/standalone-startup.spec.ts`; validate using `npm --prefix artifacts/escape-hatch run test:preview:browser`.
 
+Windows preview packages belong under ignored `Outputs/windows-preview/` (or an explicit external output root). `scripts/package_windows_preview.py --output-root Outputs/windows-preview` derives ZIP and SHA-256 sidecar from committed Git blobs; `windows-release.json` inside the ZIP binds every packaged file to that source commit. These are unsigned developer-preview outputs, not authenticated consumer releases or private workspace backups. The extracted canonical installer verifies them with `-Action ReleaseVerify -SourceRoot <extracted-package>`.
+
 Managed bootstrap private outputs: `%LOCALAPPDATA%/EscapeHatch/workspace.v1.json`, its prior/recovery copies,
 stable application preferences, remembered source manifest, cached résumé and tracker snapshot remain
 user-owned and untracked. Installation receipt/shortcut removal never deletes these outputs.

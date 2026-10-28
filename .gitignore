@@ -4,6 +4,7 @@ private/
 private/resume-visual/
 Outputs/resume-visual/
 Outputs/application-assist/
+Outputs/windows-preview/
 
 # Dependencies and local build noise
 node_modules/

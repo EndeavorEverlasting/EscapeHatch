@@ -363,13 +363,15 @@ test('Prepare stays available without a résumé or when a cover draft has not b
     url: 'https://jobs.example.com/roles/no-attachment', status: 'saved',
     priority: 'normal', notes: '', nextAction: '', updatedAt: new Date().toISOString() };
   const actions: string[] = [];
+  let launched = false;
   await page.addInitScript((application) => {
     localStorage.setItem('escape-hatch-applications', JSON.stringify([application]));
   }, job);
   await page.route('**/__escapehatch/managed-assist/**', async route => {
     const action = new URL(route.request().url()).pathname.split('/').at(-1) || '';
     if (route.request().method() === 'POST') actions.push(action);
-    const response = action === 'status' ? { ok: true, state: 'idle', browserOpen: false } :
+    if (action === 'launch') launched = true;
+    const response = action === 'status' ? { ok: true, state: 'idle', browserOpen: launched } :
       action === 'launch' ? { ok: true, state: 'application_open_review_required' } :
       action === 'prepare' ? { ok: true, state: 'REVIEW_REQUIRED',
         preparation: { state: 'REVIEW_REQUIRED', code: 'trusted_navigation_evidence_missing',

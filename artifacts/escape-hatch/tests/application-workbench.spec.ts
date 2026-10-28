@@ -303,3 +303,62 @@ test('puzzle scopes artifacts without launching and refreshes after explicit for
   await expect(puzzle).toContainText('1 still empty or invalid');
   expect(actions).not.toContain('submit');
 });
+
+
+test('direct /assist refreshes an authorized bound tracker before selecting the next job', async ({ page }) => {
+  const current = new Date().toISOString();
+  const row = {
+    sheetRow: 7, company: 'Synthetic Current', role: 'Operations',
+    status: 'Ready to Apply', appliedCheckbox: false, priority: 'High',
+    applyUrl: 'https://jobs.example.test/new',
+  };
+  const makeSnapshot = (capturedAtUtc: string) => ({
+    schema: 'escapehatch/tracker-snapshot/v1', provider: 'synthetic',
+    spreadsheetId: 'fixture', sheetName: 'Applications', capturedAtUtc,
+    contentDigest: 'fixture', authPath: 'fixture', localGoogleAuthPresent: true,
+    metrics: {}, applications: [row],
+  });
+  let statusReads = 0;
+  let refreshes = 0;
+  await page.route('**/__escapehatch/tracker/status', async route => {
+    statusReads++;
+    const capturedAt = statusReads === 1
+      ? new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString() : current;
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      connection: 'CONNECTED', localGoogleAuthPresent: true,
+      snapshot: makeSnapshot(capturedAt),
+    }) });
+  });
+  await page.route('**/__escapehatch/tracker/refresh', async route => {
+    expect(route.request().method()).toBe('POST');
+    expect(route.request().headers()['x-escapehatch-tracker']).toBe('1');
+    refreshes++;
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, refreshed: true }) });
+  });
+  await page.route('**/__escapehatch/managed-assist/**', route =>
+    route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, state: 'idle', browserOpen: false }) }));
+  await page.goto('/assist');
+  await expect(page.getByTestId('managed-job-url')).toHaveValue(row.applyUrl);
+  await expect(page.getByLabel('Saved opportunity')).toContainText('Synthetic Current — Operations');
+  expect(statusReads).toBeGreaterThanOrEqual(2);
+  expect(refreshes).toBe(1);
+});
+
+test('direct /assist with no local authorization never refreshes or auto-selects a stale job', async ({ page }) => {
+  let refreshes = 0;
+  await page.route('**/__escapehatch/tracker/status', route => route.fulfill({
+    contentType: 'application/json', body: JSON.stringify({
+      connection: 'STALE', localGoogleAuthPresent: false,
+      snapshot: { schema: 'escapehatch/tracker-snapshot/v1', capturedAtUtc: '2025-01-01T00:00:00Z' },
+    }),
+  }));
+  await page.route('**/__escapehatch/tracker/refresh', route => {
+    refreshes++;
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: false }) });
+  });
+  await page.route('**/__escapehatch/managed-assist/**', route =>
+    route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, state: 'idle', browserOpen: false }) }));
+  await page.goto('/assist');
+  await expect(page.getByTestId('managed-job-url')).toHaveValue('');
+  expect(refreshes).toBe(0);
+});

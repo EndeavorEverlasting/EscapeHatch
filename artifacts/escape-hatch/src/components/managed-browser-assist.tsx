@@ -9,6 +9,7 @@ import { ArrowUpRight, CheckCircle2, FileUp, LoaderCircle, ShieldCheck } from 'l
 import { getLocalStorage, readStoredValue, writeStoredValue, type Application, type Profile } from '@/lib/storage';
 import { ApplicationPreferences } from './application-preferences';
 import { connectionFromSnapshot, isSubmittedLocked, mergeTrackerIntoApplications, parseTrackerSnapshot, selectNextActionableOpportunity, trackerOpportunityId } from '@/lib/tracker-bridge';
+import { refreshBoundTrackerOnStartup, type TrackerStatusEnvelope } from '@/lib/tracker-refresh-client';
 import { consumeManagedLaunchIntent } from '@/lib/managed-launch-intent';
 import { projectApplicationJourney, JOURNEY_RESUME_KEY, EMPTY_JOURNEY_RESUME, parseJourneyResume } from '@/lib/application-journey-projection';
 
@@ -151,24 +152,28 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
 
   useEffect(() => {
     let active = true;
-    // A direct visit to /assist must receive the same validated tracker state as Home.
-    fetch('/__escapehatch/tracker/status', { credentials: 'same-origin' })
-      .then((response) => response.ok ? response.json() as Promise<{ connection?: string; snapshot?: unknown }> : null)
-      .then((value) => {
-        if (!active) return;
-        if (value?.connection === 'CONNECTED') {
-          const snapshot = parseTrackerSnapshot(value.snapshot);
-          if (snapshot && connectionFromSnapshot(snapshot).status === 'CONNECTED') {
-            setApplications((current) => mergeTrackerIntoApplications(current, snapshot));
-            const next = selectNextActionableOpportunity(snapshot);
-            if (next?.applyUrl && !isSubmittedLocked(next)) setVerifiedNextReadyId(trackerOpportunityId(next));
-          }
-        }
-        setTrackerChecked(true);
-      }).catch(() => {
+    // Direct /assist shares Home's provider-bound read-only refresh; stale data never
+    // authorizes an automatic browser launch. Preserve the prior snapshot on failure.
+    async function hydrateTracker() {
+      try {
+        const response = await fetch('/__escapehatch/tracker/status', { credentials: 'same-origin' });
+        if (!response.ok) return;
+        const original = await response.json() as TrackerStatusEnvelope;
+        const current = await refreshBoundTrackerOnStartup(original) ?? original;
+        if (!active || current.connection !== 'CONNECTED') return;
+        const snapshot = parseTrackerSnapshot(current.snapshot);
+        if (!snapshot || connectionFromSnapshot(snapshot).status !== 'CONNECTED') return;
+        setApplications((existing) => mergeTrackerIntoApplications(existing, snapshot));
+        const next = selectNextActionableOpportunity(snapshot);
+        if (next?.applyUrl && !isSubmittedLocked(next)) setVerifiedNextReadyId(trackerOpportunityId(next));
+      } catch {
+        // Local selection remains available. Failed authorization/refresh never
+        // upgrades an unverified snapshot into an automatic-launch candidate.
+      } finally {
         if (active) setTrackerChecked(true);
-        // Local selection remains available; one-click automatic launch requires fresh source evidence.
-      });
+      }
+    }
+    void hydrateTracker();
     return () => { active = false; };
   }, [setApplications]);
 

@@ -51,6 +51,19 @@ export async function migrateSubmissionReceipts(destination = submissionReceiptF
 /** Exact hosted Lever scope; no arbitrary same-origin job or suffix matching. */
 export function submissionAdapter(applicationUrl: string) {
   const url = new URL(applicationUrl);
+  // HiringPlatform forms use a job/stage/locale path and native form submits.
+  // Posting UUID routes cannot grant this adapter; bind the observed form first.
+  if (url.protocol === 'https:' && /^[a-z0-9-]+\.hiringplatform\.com$/i.test(url.hostname) &&
+      (/^\/\d+-[a-z0-9-]+\/\d+\/[a-z]{2}(?:-[a-z]{2})?\/?$/i.test(url.pathname) ||
+       /^\/questionnaires\/\d+\/people\/[a-z0-9_-]+\/?$/i.test(url.pathname))) {
+    return {
+      submitSelector: '#question-page-form button[type="submit"], #question-page-form input[type="submit"]',
+      acceptAnySubmitLabel: true,
+      successSelector: '#tw-app [role="status"], #tw-app [role="alert"], #tw-app h1, #tw-app h2, #tw-app .alert-success',
+      confirmationPaths: [],
+      continuationPathPrefixes: [url.pathname.replace(/\/$/, '') + '/'],
+    };
+  }
   if (url.protocol === 'https:' && url.hostname === 'jobs.lever.co' && /^\/[^/]+\/[a-f0-9-]{36}\/apply\/?$/i.test(url.pathname)) {
     const base = url.pathname.replace(/\/apply\/?$/, '');
     return { submitSelector: '#btn-submit', successSelector: '.application-confirmation h1, .application-confirmation h2, .application-confirmation p, .application-confirmation, .content h1, .content h2', confirmationPaths: [base + '/thanks'] };
@@ -72,7 +85,7 @@ export function submissionAdapter(applicationUrl: string) {
 }
 
 export class ManagedListeners {
-  readonly implementationVersion = 2;
+  readonly implementationVersion = 4;
   private stopMemory: (() => Promise<void>) | null = null;
   private observer: Awaited<ReturnType<typeof installManagedSubmissionObserver>> | null = null;
   private serial: Promise<void> = Promise.resolve();

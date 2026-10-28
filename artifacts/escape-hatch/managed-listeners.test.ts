@@ -92,6 +92,44 @@ test('stable receipt recovery preserves legacy evidence and cannot overwrite new
   } finally { await fs.rm(root, { recursive: true, force: true }); }
 });
 
+test('HiringPlatform adapter requires an exact hosted job form and observes intermediate submits', () => {
+  const form = 'https://synthetic.hiringplatform.com/123-example-role/456/en';
+  const adapter = submissionAdapter(form);
+  assert.equal(adapter.acceptAnySubmitLabel, true);
+  assert.match(adapter.submitSelector, /question-page-form/);
+  assert.deepEqual(adapter.continuationPathPrefixes, ['/123-example-role/456/en/']);
+  const questionnaire = submissionAdapter('https://synthetic.hiringplatform.com/questionnaires/456/people/example');
+  assert.equal(questionnaire.acceptAnySubmitLabel, true);
+  assert.deepEqual(questionnaire.continuationPathPrefixes, ['/questionnaires/456/people/example/']);
+  for (const invalid of [form.replace('.com/', '.com.evil.test/'), form.replace('/123-example-role/456/en', '/processes/uuid'), form.replace('https:', 'http:')]) {
+    assert.equal(submissionAdapter(invalid).submitSelector, '#root button');
+  }
+});
+
+test('HiringPlatform final questionnaire arms without submitting and records only a fresh receipt', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-hosted-questionnaire-'));
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  const page = await browser.newPage();
+  const listeners = new ManagedListeners(path.join(root, 'receipts.json'), path.join(root, 'preferences.json'));
+  const applicationUrl = 'https://synthetic.hiringplatform.com/questionnaires/456/people/example';
+  try {
+    await page.route(applicationUrl, route => route.fulfill({ contentType: 'text/html', body:
+      '<div id="tw-app"><form id="question-page-form"><input value="operator answer"><button type="submit">Save and Complete</button></form></div><script>document.querySelector("form").onsubmit=e=>{e.preventDefault();document.querySelector("#tw-app").innerHTML="<h1>Thank you for applying.</h1>"}</script>' }));
+    await page.goto(applicationUrl);
+    await listeners.attach(page, { opportunityId: 'synthetic-questionnaire', applicationUrl, employerName: 'Synthetic' }, false);
+    assert.equal((await listeners.arm()).submission?.state, 'ARMED');
+    assert.equal(await page.locator('input').inputValue(), 'operator answer');
+    assert.equal((await listeners.status()).receipts.length, 0);
+    await page.getByRole('button', { name: 'Save and Complete', exact: true }).click();
+    let status = await listeners.status();
+    for (let i = 0; i < 80 && status.submission?.state !== 'CONFIRMED'; i++) {
+      await new Promise(resolve => setTimeout(resolve, 25)); status = await listeners.status();
+    }
+    assert.equal(status.submission?.state, 'CONFIRMED');
+    assert.equal(status.receipts.length, 1);
+  } finally { await listeners.dispose(); await browser.close(); await fs.rm(root, { recursive: true, force: true }); }
+});
+
 test('Lever adapter is exact hosted apply scope and never falls back to another job confirmation', () => {
   const url = 'https://jobs.lever.co/synthetic/11111111-1111-4111-8111-111111111111/apply';
   const adapter = submissionAdapter(url);

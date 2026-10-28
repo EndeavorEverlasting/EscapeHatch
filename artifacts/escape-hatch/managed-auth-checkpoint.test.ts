@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { chromium } from '@playwright/test';
 import { INITIAL_CHECKPOINT, advanceAuthCheckpoint, resumeAllowed, inspectAuthObservation } from './managed-auth-checkpoint.ts';
 
 const base = {
@@ -10,6 +11,23 @@ const base = {
   applicationFormRecognized: false,
   formSignature: '0:0:0:1',
 };
+
+test('hosted questionnaire requires observed provider form structure, not only a return URL', async () => {
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  const page = await browser.newPage();
+  const url = 'https://synthetic.hiringplatform.com/questionnaires/123/people/example';
+  try {
+    await page.route('**/*', route => route.fulfill({ contentType: 'text/html', body: '<div id="tw-app"><form id="question-page-form"><select><option>Choose</option></select><input type="number"><button type="submit">Save and Complete</button></form></div>' }));
+    await page.goto(url);
+    const observed = await inspectAuthObservation(page, new URL(url).origin);
+    assert.equal(observed.applicationFormRecognized, true);
+    assert.equal(advanceAuthCheckpoint(advanceAuthCheckpoint(INITIAL_CHECKPOINT, observed), observed).canResume, true);
+    await page.locator('form').evaluate(form => form.id = 'unrelated');
+    assert.equal((await inspectAuthObservation(page, new URL(url).origin)).applicationFormRecognized, false);
+    await page.goto(url.replace('hiringplatform.com', 'hiringplatform.com.evil.test'));
+    assert.equal((await inspectAuthObservation(page, new URL(page.url()).origin)).applicationFormRecognized, false);
+  } finally { await browser.close(); }
+});
 test('email-first checkpoint never claims form readiness', () => {
   const state = advanceAuthCheckpoint(INITIAL_CHECKPOINT, { ...base, emailFirstGate: true });
   assert.equal(state.phase, 'AUTH_HANDOFF'); assert.equal(state.canResume, false);

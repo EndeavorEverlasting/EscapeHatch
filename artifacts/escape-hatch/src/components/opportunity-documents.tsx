@@ -43,7 +43,7 @@ export function useOpportunityDocuments(opportunityId: string, url: string) {
   useEffect(() => { setState(null); setIntakePending(false); if (opportunityId && url) void request('status').catch(() => {}); }, [request, opportunityId, url]);
   const bound = state?.package.opportunityId === opportunityId && sameApplicationUrl(state.package.url, url);
   const data = bound ? state : null;
-  const canUpload = Boolean(!intakePending && data && data.package.documents.resume && (!data.requireReview || Object.values(data.package.documents).every(item => item.reviewedAt)));
+  const canUpload = Boolean(!intakePending && data && Object.values(data.package.documents).length > 0 && (!data.requireReview || Object.values(data.package.documents).every(item => item.reviewedAt)));
   return { data, loading, error, canUpload, request, scopeKey, intakePending, setIntakePending };
 }
 export function OpportunityDocuments({ documents, disabled, onBypass }: { documents: ReturnType<typeof useOpportunityDocuments>; disabled: boolean; onBypass: () => void }) {

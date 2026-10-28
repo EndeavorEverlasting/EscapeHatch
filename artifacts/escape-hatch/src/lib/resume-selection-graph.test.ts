@@ -12,24 +12,24 @@ function fixture(): ResumeGraph {
       { id: 'pm', type: 'resume', owner: 'synthetic-owner-a', tier: 'domain', domainTags: ['management'], revision: 'p1', digest: H('c'), review: 'approved' },
       { id: 'construction', type: 'resume', owner: 'synthetic-owner-a', tier: 'domain', domainTags: ['construction'], revision: 'c1', digest: H('d'), review: 'approved' },
       { id: 'job-specific', type: 'resume', owner: 'synthetic-owner-a', tier: 'job', revision: 'j1', digest: H('e'), review: 'approved' },
-      { id: 'siemens-like', type: 'opportunity', owner: 'synthetic-owner-a', postingDigest: H('f'), domainWeights: { management: 4, it: 2, construction: 1 } },
+      { id: 'example-role', type: 'opportunity', owner: 'synthetic-owner-a', postingDigest: H('f'), domainWeights: { management: 4, it: 2, construction: 1 } },
       { id: 'global', type: 'platform_slot', owner: 'synthetic-owner-a', platform: 'indeed', scope: 'persistent_global', observation: 'verified' },
       { id: 'perapp', type: 'platform_slot', owner: 'synthetic-owner-a', platform: 'employer-ats', scope: 'isolated_application', observation: 'verified' },
       { id: 'unknown', type: 'platform_slot', owner: 'synthetic-owner-a', platform: 'glassdoor', scope: 'unknown', observation: 'unverified' },
-      { id: 'draft-application', type: 'application', owner: 'synthetic-owner-a', opportunityId: 'siemens-like', state: 'in_progress' },
+      { id: 'draft-application', type: 'application', owner: 'synthetic-owner-a', opportunityId: 'example-role', state: 'in_progress' },
     ],
     edges: [
       {kind:'derives_from',from:'it',to:'base',parentDigest:H('a')},
       {kind:'derives_from',from:'pm',to:'base',parentDigest:H('a')},
       {kind:'derives_from',from:'construction',to:'base',parentDigest:H('a')},
       {kind:'derives_from',from:'job-specific',to:'pm',parentDigest:H('c')},
-      {kind:'targets_opportunity',from:'job-specific',to:'siemens-like'},
+      {kind:'targets_opportunity',from:'job-specific',to:'example-role'},
       {kind:'slot_points_to',from:'global',to:'it'},
       {kind:'application_uses',from:'draft-application',to:'job-specific'},
     ],
   };
 }
-const select = { opportunityId: 'siemens-like', platformSlotId: 'global' };
+const select = { opportunityId: 'example-role', platformSlotId: 'global' };
 test('provider-wide resume resolves domain management master and never returns job-specific derivative', () => {
   const r = resolveResumeForPlatform(fixture(), select);
   assert.deepEqual([r.action,r.reason,r.candidateId,r.mayAutoReplacePersistentResume,r.mayAutoSubmit],
@@ -40,7 +40,7 @@ test('stable existing domain slot becomes no-op; per application permits reviewe
   const keep = resolveResumeForPlatform(g,select);
   assert.equal(keep.action,'KEEP_CURRENT');
   assert.equal(keep.candidateId,'pm');
-  const separate = resolveResumeForPlatform(g,{opportunityId:'siemens-like',platformSlotId:'perapp'});
+  const separate = resolveResumeForPlatform(g,{opportunityId:'example-role',platformSlotId:'perapp'});
   assert.deepEqual([separate.action,separate.candidateId],['UPLOAD_REQUIRES_CONSENT','job-specific']);
 });
 test('unknown platform persistence is review, not an upload', () => {
@@ -69,7 +69,7 @@ test('stale upstream revision invalidates every derivative and never calls it cu
   assert.deepEqual(impactedResumeDescendants(g,'base'),['construction','it','job-specific','pm']);
 });
 test('a pair of equally matching domain masters requires an explicit choice',()=>{
-  const g=fixture();const opp=g.nodes.find(n=>n.id==='siemens-like');
+  const g=fixture();const opp=g.nodes.find(n=>n.id==='example-role');
   if(!opp || opp.type!=='opportunity')throw Error('fixture');
   opp.domainWeights={management:4,it:4,construction:1};
   assert.equal(resolveResumeForPlatform(g,select).reason,'AMBIGUOUS_DOMAIN_MASTERS');

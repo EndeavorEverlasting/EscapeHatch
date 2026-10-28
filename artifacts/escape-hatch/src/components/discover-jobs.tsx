@@ -42,3 +42,11 @@ export function DiscoverJobs({applications,setApplications}:{applications:Applic
       </label>
       <button type="submit" disabled={busy} data-testid="discovery-search" className="rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50">{busy?'Searching…':'Search jobs'}</button>
     </form>
+    <div className="mt-4 grid gap-4 sm:grid-cols-2">
+      <fieldset><legend>Work arrangement</legend><div className="mt-2 flex flex-wrap gap-2">
+        {([['remote','Remote'],['hybrid','Hybrid'],['on_site','On-site']] as [WorkMode,string][]).map(([v,label])=><button type="button" key={v} aria-pressed={modes.includes(v)} onClick={()=>toggle(v,modes,setModes)}>{label}</button>)}
+      </div></fieldset>
+      <fieldset><legend>Seniority</legend><div className="mt-2 flex flex-wrap gap-2">
+        {([['junior','Junior'],['mid','Mid-level'],['senior','Senior']] as [Seniority,string][]).map(([v,label])=><button type="button" key={v} aria-pressed={seniorities.includes(v)} onClick={()=>toggle(v,seniorities,setSeniorities)}>{label}</button>)}
+      </div></fieldset>
+    </div>

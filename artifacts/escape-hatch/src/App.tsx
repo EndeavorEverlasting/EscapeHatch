@@ -81,6 +81,7 @@ import { initialSession, parseAssistSessionStatus, type AssistSession } from '@/
 import { ManagedBrowserAssist } from '@/components/managed-browser-assist';
 import { RecoveredAnswers, useRecoveredAnswers } from '@/components/recovered-answers';
 import { GuidedStart } from '@/components/guided-start';
+import { BirdsongControl } from '@/components/birdsong-control';
 import { stageManagedLaunchIntent } from '@/lib/managed-launch-intent';
 import { SourcesPage, SourcePackageSummary } from '@/components/sources-page';
 import {
@@ -543,6 +544,7 @@ function AppShell({ children, profile }: { children: ReactNode; profile: Profile
           <div className="min-w-0"><p className="truncate text-xs font-bold">{displayName(profile)}</p><p className="font-mono-app text-[10px] text-muted-foreground">private workspace</p></div>
         </div>
       </aside>
+      <BirdsongControl />
       <main className="lg:pl-[244px]">
         <div className="mx-auto w-full max-w-[1230px] px-5 py-8 sm:px-8 lg:px-12 lg:py-12">{children}</div>
       </main>
@@ -635,7 +637,7 @@ function HomePage({ profile, answers, applications, setApplications }: { profile
         { label: 'Reusable answers', value: String(answers.length), caption: 'answers ready to borrow', href: '/answers', testId: 'link-stat-2' },
       ];
   return <div>
-    <GuidedStart profile={profile} applications={applications} />
+    <GuidedStart profile={profile} applications={applications} focusOpportunity={next?.status === 'applied' ? undefined : next} />
     <PageIntro eyebrow="Your cockpit" title={profile.first_name ? `Keep going, ${displayName(profile)}.` : 'Make room for momentum.'} description="A small, private place to move one good opportunity forward at a time." />
     <section className="mb-6 rounded-2xl border border-border bg-card p-5 shadow-sm" data-testid="tracker-connection-panel" data-tracker-status={tracker.status}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

@@ -131,8 +131,10 @@ test('assist-only context is recovered and blank legacy assist contact receives 
   assert.equal(hasContext({ [ASSIST_KEY]: assist }), true);
   const local = { schema: WORKSPACE_SCHEMA, values: { [ASSIST_KEY]: assist } };
   const merged = reconcileWorkspace(local, workspace());
-  assert.equal((merged.workspace.values[ASSIST_KEY] as typeof assist).contact.first_name, 'Synthetic');
-  assert.equal((merged.workspace.values[ASSIST_KEY] as typeof assist).summary, assist.summary);
+  // Under the owner gate this legacy assist summary remains in its own
+  // workspace until the applicant confirms that the saved contact is theirs.
+  assert.deepEqual(merged.conflicts, ['OWNER_CONTEXT_UNVERIFIED']);
+  assert.deepEqual(merged.workspace, local);
   const oldEmpty = emptyAssistProfile(emptyProfile);
   const populated = { ...emptyAssistProfile(workspace().values[PROFILE_KEY]), summary: 'Saved summary' };
   assert.deepEqual(reconcileWorkspace({ schema: WORKSPACE_SCHEMA, values: { [ASSIST_KEY]: oldEmpty } }, { schema: WORKSPACE_SCHEMA, values: { [ASSIST_KEY]: populated } }).conflicts, []);
@@ -179,7 +181,9 @@ test('timestamp-only imported progress does not become a false conflict; edited 
   const saved = { schema: WORKSPACE_SCHEMA, values: { [APPLICATIONS_KEY]: [{ ...application, updatedAt: '2026-10-24T00:00:00Z' }] } };
   assert.deepEqual(reconcileWorkspace(local, saved).conflicts, []);
   saved.values[APPLICATIONS_KEY][0].notes = 'A real user edit';
-  assert.deepEqual(reconcileWorkspace(local, saved).conflicts, [APPLICATIONS_KEY]);
+  // Without a bound owner even an actual source edit must not be assumed
+  // to belong to the same applicant merely because row IDs happen to match.
+  assert.deepEqual(reconcileWorkspace(local, saved).conflicts, ['OWNER_CONTEXT_UNVERIFIED']);
 });
 
 

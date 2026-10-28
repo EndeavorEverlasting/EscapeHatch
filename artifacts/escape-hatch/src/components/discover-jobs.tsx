@@ -53,6 +53,7 @@ export function DiscoverJobs({applications,setApplications}:{applications:Applic
 
     <p className="text-sm">Search filters are applied to results.</p>
     <label>Minimum USD annual pay <input type="number" value={floor} onChange={event=>setFloor(event.target.value)}/></label>
+    <label>Domain <select value={domain} onChange={e=>setDomain(e.target.value as Domain)}><option value="all">All domains</option><option value="Technology">Technology</option><option value="Healthcare">Healthcare</option><option value="Finance">Finance</option></select></label>
     <p role="status">{message}</p>
     <p>{filtered.length} matching results</p>
   </section>;

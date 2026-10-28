@@ -6,7 +6,8 @@ import path from 'node:path';
 import { chromium } from '@playwright/test';
 import { ManagedListeners, readSubmissionReceipts, migrateSubmissionReceipts, submissionAdapter, submissionReceiptFile } from './managed-listeners.ts';
 import { readPreferences, savePreferences, mergePreferenceEdits, updatePreferences, clearPreferences } from './preference-file.ts';
-import { emptyPreferences } from './src/lib/application-preferences.ts';
+import { emptyPreferences, matchQuestion, normalizeQuestion } from './src/lib/application-preferences.ts';
+import { fillSavedPreferences } from './managed-form.ts';
 
 test('preference transactions preserve concurrent updates and order clear after accepted writes', async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-preference-race-'));
@@ -127,4 +128,81 @@ for (const mode of ['success', 'reject', 'captcha', 'route-only']) test(`Lever $
     if (mode === 'success') assert.match(status.error, /saved; tracker synchronization is pending/);
     else assert.equal(status.submission?.receipt, null);
   } finally { await listeners.dispose(); await browser.close(); await fs.rm(root, { recursive: true, force: true }); }
+});
+
+test('Broadcastwell inline role adapter is exact-host and expected terminal text', () => {
+  const a = submissionAdapter('https://broadcastwell.com/careers/ai-automation-engineer');
+  assert.equal(a.expectedSubmitText, 'Submit');
+  assert.match(a.submitSelector, /type="submit"/);
+  assert.equal(submissionAdapter('https://broadcastwell.com/careers/another-role').expectedSubmitText, undefined);
+  assert.equal(submissionAdapter('https://broadcastwell.com.evil.test/careers/ai-automation-engineer').expectedSubmitText, undefined);
+  assert.equal(matchQuestion('LinkedIn or portfolio URL (optional)'), 'identity.website');
+  assert.equal(matchQuestion('Role'), 'identity.job_title');
+});
+
+test('Broadcastwell single-page flow: missing answer -> approved fill -> armed submit -> local receipt', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-broadcastwell-'));
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  const page = await browser.newPage();
+  const preferencesPath = path.join(root, 'preferences.json');
+  const receiptsPath = path.join(root, 'receipts.json');
+  const listeners = new ManagedListeners(receiptsPath, preferencesPath);
+  const applicationUrl = 'https://broadcastwell.com/careers/ai-automation-engineer';
+  try {
+    await page.route(applicationUrl, route => route.fulfill({ contentType: 'text/html',
+      body: `<main><form id="application">
+        <label>LinkedIn or portfolio URL (optional)<input type="url" /></label>
+        <label>Role<input /></label>
+        <label>Why this role, in five sentences or fewer<textarea></textarea></label>
+        <button type="submit">Submit</button></form></main>
+        <script>document.querySelector('form').onsubmit = e => {
+          e.preventDefault();
+          document.querySelector('main').innerHTML =
+            '<p role="status">We have received your application.</p>';
+        };</script>` }));
+    await page.goto(applicationUrl);
+    await listeners.attach(page, { opportunityId: 'synthetic-broadcastwell',
+      applicationUrl, employerName: 'Broadcastwell' });
+    await listeners.arm();
+    assert.equal((await listeners.status()).submission?.state, 'ARMED');
+    const labels = await listeners.catalog(page);
+    assert.ok(labels.some(item => /why this role/i.test(item.question)));
+    const fresh = await readPreferences(preferencesPath);
+    const key = normalizeQuestion('Why this role, in five sentences or fewer');
+    assert.equal(fresh.discovered_answers?.[key]?.source, 'observed_question');
+    assert.equal(fresh.discovered_answers?.[key]?.accepted, false);
+    assert.deepEqual(await readSubmissionReceipts(receiptsPath), []);
+    await updatePreferences(current => ({
+      ...current,
+      preferences: { ...current.preferences,
+        'identity.website': { scope: 'profile_preference', source: 'user', value: 'https://portfolio.example.test', updated_at: new Date().toISOString() },
+        'identity.job_title': { scope: 'profile_preference', source: 'user', value: 'AI Automation Engineer', updated_at: new Date().toISOString() },
+      },
+      discovered_answers: { ...current.discovered_answers, [key]: {
+        question: 'Why this role, in five sentences or fewer',
+        value: 'Because reproducible measurement and evidence-based automation are important to my work.',
+        source: 'user', accepted: true, updated_at: new Date().toISOString(),
+      } },
+    }), preferencesPath);
+    const filled = await fillSavedPreferences(page, await readPreferences(preferencesPath), 'Broadcastwell');
+    assert.ok(filled.filled.includes('identity.website'));
+    assert.ok(filled.filled.includes('identity.job_title'));
+    assert.ok(filled.filled.includes('discovered:' + key));
+    assert.equal(await page.getByLabel('LinkedIn or portfolio URL (optional)').inputValue(), 'https://portfolio.example.test');
+    assert.equal(await page.getByLabel('Role', { exact: true }).inputValue(), 'AI Automation Engineer');
+    assert.match(await page.getByLabel('Why this role, in five sentences or fewer').inputValue(), /reproducible measurement/);
+    assert.equal((await listeners.status()).submission?.state, 'ARMED');
+    await page.getByRole('button', { name: 'Submit', exact: true }).click();
+    let status = await listeners.status();
+    for (let i = 0; i < 80 && status.submission?.state !== 'CONFIRMED'; i++) {
+      await new Promise(resolve => setTimeout(resolve, 25));
+      status = await listeners.status();
+    }
+    assert.equal(status.submission?.state, 'CONFIRMED');
+    assert.equal((await readSubmissionReceipts(receiptsPath)).length, 1);
+    assert.equal((await readSubmissionReceipts(receiptsPath))[0].applicationPath, '/careers/ai-automation-engineer');
+  } finally {
+    await listeners.dispose(); await browser.close();
+    await fs.rm(root, { recursive: true, force: true });
+  }
 });

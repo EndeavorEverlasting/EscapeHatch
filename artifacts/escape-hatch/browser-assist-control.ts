@@ -480,10 +480,20 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               networkDiagnosis = diagnoseNavigationFailure(error, activeNames);
               state = 'browser_open_navigation_unverified';
             }
-            if (state === 'application_form_open_review_required' && opportunityId) {
+            // Inline applications have no separate "Apply" entry transition.
+            // Attach before the operator's Submit, then only report ARMED after
+            // the exact host/path adapter verifies one visible enabled terminal.
+            const inlineBroadcastwell = applicationOrigin === 'https://broadcastwell.com' ||
+              applicationOrigin === 'https://www.broadcastwell.com';
+            const exactInlineForm = inlineBroadcastwell &&
+              new URL(page.url()).pathname === '/careers/ai-automation-engineer';
+            if (opportunityId && (state === 'application_form_open_review_required' || exactInlineForm)) {
               await listeners.attach(page, { opportunityId, applicationUrl: page.url(),
                 employerName: typeof payload.employerName === 'string' ? payload.employerName.slice(0, 160) : '' });
               await listeners.arm();
+              // Seed missing-question discovery from the actual displayed form.
+              // The catalog contains labels only, never applicant answer values.
+              await listeners.catalog(page);
             }
             try {
               authCheckpoint = advanceAuthCheckpoint(authCheckpoint, await inspectAuthObservation(page, applicationOrigin));

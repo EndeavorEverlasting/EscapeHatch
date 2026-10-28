@@ -45,10 +45,18 @@ def safe_relative(value: str) -> str:
     return value
 
 
-def source_snapshot(repo: Path) -> tuple[str, dict[str, bytes], bytes]:
-    commit = git_bytes(repo, "rev-parse", "--verify", "HEAD^{commit}").decode("ascii").strip()
+def resolve_commit(repo: Path, source_commit: str | None = None) -> str:
+    if source_commit is not None and not re.fullmatch(r"[a-f0-9]{40,64}", source_commit):
+        raise PackageError("A pinned source commit must be a complete Git object ID.")
+    reference = source_commit if source_commit is not None else "HEAD"
+    commit = git_bytes(repo, "rev-parse", "--verify", f"{reference}^{{commit}}").decode("ascii").strip()
     if not re.fullmatch(r"[a-f0-9]{40,64}", commit):
         raise PackageError("Git did not return a complete source commit.")
+    return commit
+
+
+def source_snapshot(repo: Path, source_commit: str | None = None) -> tuple[str, dict[str, bytes], bytes]:
+    commit = resolve_commit(repo, source_commit)
     listing = git_bytes(repo, "ls-tree", "-rz", "--full-tree", commit, "--", SOURCE_PREFIX)
     files: dict[str, bytes] = {}
     folded: set[str] = set()
@@ -125,8 +133,8 @@ def verify_package(target: Path, files: dict[str, bytes], receipt: bytes) -> Non
             raise PackageError("Package content differs; existing bytes were preserved.")
 
 
-def package_extension(repo: Path = ROOT, output_root: Path | None = None, verify_only: bool = False) -> Path:
-    commit, files, receipt = source_snapshot(repo)
+def package_extension(repo: Path = ROOT, output_root: Path | None = None, verify_only: bool = False, source_commit: str | None = None) -> Path:
+    commit, files, receipt = source_snapshot(repo, source_commit)
     output_root = (output_root if output_root is not None else repo / "Outputs/application-assist").absolute()
     target = output_root / commit
     assert_no_links(target)
@@ -167,8 +175,8 @@ def store_archive_bytes(files: dict[str, bytes]) -> bytes:
     return buffer.getvalue()
 
 
-def package_store_archive(repo: Path = ROOT, output_root: Path | None = None, verify_only: bool = False) -> Path:
-    commit, files, receipt = source_snapshot(repo)
+def package_store_archive(repo: Path = ROOT, output_root: Path | None = None, verify_only: bool = False, source_commit: str | None = None) -> Path:
+    commit, files, receipt = source_snapshot(repo, source_commit)
     root = (output_root if output_root is not None else repo / "Outputs/application-assist").absolute()
     archive = root / f"{commit}.zip"
     metadata = root / f"{commit}.zip.release.json"
@@ -189,7 +197,7 @@ def package_store_archive(repo: Path = ROOT, output_root: Path | None = None, ve
     for path, data in ((archive, content), (metadata, encoded)):
         with path.open("xb") as stream:
             stream.write(data)
-    return package_store_archive(repo, root, verify_only=True)
+    return package_store_archive(repo, root, verify_only=True, source_commit=commit)
 
 
 def enrollment_diagnostics(package: Path, archive: Path | None = None) -> dict:
@@ -209,7 +217,7 @@ def enrollment_diagnostics(package: Path, archive: Path | None = None) -> dict:
     }
 
 
-def main() -> int:
+def main(repo: Path = ROOT) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-root", type=Path)
     parser.add_argument("--verify", action="store_true", help="Verify this commit's existing package; never create files.")
@@ -217,8 +225,10 @@ def main() -> int:
     parser.add_argument("--enrollment", action="store_true", help="Print JSON enrollment instructions after package verification; never claims Chrome installation.")
     args = parser.parse_args()
     try:
-        package = package_extension(output_root=args.output_root, verify_only=args.verify)
-        archive = package_store_archive(output_root=args.output_root, verify_only=args.verify) if args.store_zip else None
+        # Resolve once: a concurrent ref move must not pair different source heads.
+        commit = resolve_commit(repo)
+        package = package_extension(repo=repo, output_root=args.output_root, verify_only=args.verify, source_commit=commit)
+        archive = package_store_archive(repo=repo, output_root=args.output_root, verify_only=args.verify, source_commit=commit) if args.store_zip else None
         if args.enrollment:
             print(json.dumps(enrollment_diagnostics(package, archive), indent=2))
         else:

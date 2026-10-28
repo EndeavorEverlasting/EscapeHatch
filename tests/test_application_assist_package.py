@@ -2,12 +2,15 @@
 from __future__ import annotations
 
 import hashlib
+import contextlib
+import io
 import importlib.util
 import json
 import subprocess
 import tempfile
 import unittest
 import zipfile
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -149,6 +152,27 @@ class ApplicationAssistPackageTests(unittest.TestCase):
         with self.assertRaises(PACKAGE.PackageError):
             PACKAGE.package_store_archive(self.repo, self.output)
         self.assertFalse(archive.exists())
+
+    def test_cli_pins_unpacked_archive_and_diagnostics_when_head_moves(self):
+        original_package = PACKAGE.package_extension
+        def package_then_move_head(*args, **kwargs):
+            target = original_package(*args, **kwargs)
+            (self.source / "popup.html").write_bytes(b"New committed head during packaging")
+            self.git("add", "browser/application-assist/popup.html")
+            self.commit()
+            self.assertNotEqual(self.git("rev-parse", "HEAD").decode().strip(), self.head)
+            return target
+        output = io.StringIO()
+        arguments = ["package_application_assist.py", "--output-root", str(self.output), "--store-zip", "--enrollment"]
+        with mock.patch.object(PACKAGE, "package_extension", side_effect=package_then_move_head), mock.patch("sys.argv", arguments), contextlib.redirect_stdout(output):
+            self.assertEqual(PACKAGE.main(self.repo), 0)
+        diagnostics = json.loads(output.getvalue())
+        self.assertEqual(diagnostics["sourceCommit"], self.head)
+        archive = Path(diagnostics["storeUploadArchive"])
+        self.assertEqual(archive.name, self.head + ".zip")
+        with zipfile.ZipFile(archive) as zipped:
+            self.assertEqual(zipped.read("popup.html"), self.expected["popup.html"])
+        self.assertEqual((Path(diagnostics["unpackedDevelopmentPath"]) / "popup.html").read_bytes(), self.expected["popup.html"])
 
     def test_store_archive_changed_metadata_is_preserved_and_rejected(self):
         archive = PACKAGE.package_store_archive(self.repo, self.output)

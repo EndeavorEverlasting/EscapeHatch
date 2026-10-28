@@ -53,7 +53,7 @@ export function OpportunityDocuments({ documents, disabled, onBypass }: { docume
   const [intakeMessages, setIntakeMessages] = useState({ resume: '', cover: '', case_study: '' });
   const currentScope = useRef(documents.scopeKey); currentScope.current = documents.scopeKey;
   const intakeGeneration = useRef({ resume: 0, cover: 0, case_study: 0 });
-  const pendingIntakes = useRef<{ resume: number | null; cover: number | null }>({ resume: null, cover: null, case_study: null });
+  const pendingIntakes = useRef<{ resume: number | null; cover: number | null; case_study: number | null }>({ resume: null, cover: null, case_study: null });
   const failedIntakes = useRef({ resume: false, cover: false, case_study: false });
   const pendingBypassScope = useRef<string | null>(null);
   const onBypassRef = useRef(onBypass); onBypassRef.current = onBypass;

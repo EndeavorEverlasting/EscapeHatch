@@ -25,11 +25,11 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="Post quiet notification" />
+        android:text="Keep this job handy" />
 
     <Button
         android:id="@+id/dismissNotification"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Dismiss notification" />
+        android:text="Hide Assist notification" />
 </LinearLayout>

@@ -86,6 +86,7 @@ export type AssistAnswer = AnswerSnippet & {
 export type CanonicalQuestionId =
   | 'professional-summary'
   | 'why-this-role'
+  | 'why-me'
   | 'why-this-company'
   | 'strengths'
   | 'relevant-experience'

@@ -36,7 +36,7 @@
   },
   "convergence_owner": "EH-B5",
   "manifest_path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-one-download-profile-20261028/manifest.json",
-  "status": "COMMITTED_PROVIDER_HANDOFF_NOT_DISPATCHED_CANONICAL_VALIDATION_NOT_RUN",
+  "status": "NATIVE_AGENTS_DISPATCHED_CANONICAL_RECEIPT_VALIDATION_UNAVAILABLE",
   "blockers": [
     "Current chat has GitHub provider source access but no attached Windows host, Chrome profile or private workspace",
     "Current source packager depends on Python; ordinary installer does not establish a consumer Python dependency",
@@ -104,7 +104,7 @@
         "python scripts/validate_application_autofill_parent.py"
       ],
       "convergence_owner": "EH-B5",
-      "status": "WAITING_OWNER_BRANCH_RECONCILIATION"
+      "status": "EXTERNAL_AGENT_OWNED_DO_NOT_MUTATE"
     },
     {
       "lane_id": "EH-B1",
@@ -139,9 +139,9 @@
       ],
       "posture": "single branch writer / one-owned-path lane",
       "adapter": {
-        "kind": "local_repo_agent",
-        "rung": 2,
-        "verified": false
+        "kind": "native_child_agent",
+        "rung": 1,
+        "verified": true
       },
       "launch": {
         "mode": "runtime_tool",
@@ -163,7 +163,13 @@
         "python tests/test_escapehatch_installer_source_delivery.py"
       ],
       "convergence_owner": "EH-B5",
-      "status": "READY_FOR_LOCAL_SCOPED_SPRINT"
+      "status": "DISPATCHED_NATIVE_AGENT",
+      "local_launch": {
+        "tool": "collaboration.spawn_agent",
+        "agent_id": "/root/b1_installer",
+        "base_commit": "15b346ae",
+        "return_contract": "isolated branch commit SHA, changed files, actual checks, gaps; coordinator integrates"
+      }
     },
     {
       "lane_id": "EH-B2",
@@ -195,9 +201,9 @@
       ],
       "posture": "single branch writer / one-owned-path lane",
       "adapter": {
-        "kind": "local_repo_agent",
-        "rung": 2,
-        "verified": false
+        "kind": "native_child_agent",
+        "rung": 1,
+        "verified": true
       },
       "launch": {
         "mode": "runtime_tool",
@@ -218,7 +224,13 @@
         "actual Windows process endpoint readback"
       ],
       "convergence_owner": "EH-B5",
-      "status": "READY_FOR_LOCAL_SCOPED_SPRINT"
+      "status": "DISPATCHED_NATIVE_AGENT",
+      "local_launch": {
+        "tool": "collaboration.spawn_agent",
+        "agent_id": "/root/b2_runtime",
+        "base_commit": "15b346ae",
+        "return_contract": "isolated branch commit SHA, changed files, actual checks, gaps; coordinator integrates"
+      }
     },
     {
       "lane_id": "EH-B3",
@@ -250,9 +262,9 @@
       ],
       "posture": "single branch writer / one-owned-path lane",
       "adapter": {
-        "kind": "local_repo_agent",
-        "rung": 2,
-        "verified": false
+        "kind": "native_child_agent",
+        "rung": 1,
+        "verified": true
       },
       "launch": {
         "mode": "runtime_tool",
@@ -273,7 +285,13 @@
         "package integrity negative controls"
       ],
       "convergence_owner": "EH-B5",
-      "status": "READY_FOR_LOCAL_SCOPED_SPRINT"
+      "status": "DISPATCHED_NATIVE_AGENT",
+      "local_launch": {
+        "tool": "collaboration.spawn_agent",
+        "agent_id": "/root/b3_extension",
+        "base_commit": "15b346ae",
+        "return_contract": "isolated branch commit SHA, changed files, actual checks, gaps; coordinator integrates"
+      }
     },
     {
       "lane_id": "EH-B4",
@@ -406,5 +424,17 @@
     "deployed": false,
     "live_observed": false
   },
-  "exact_next_command": "python scripts/validate_application_autofill_parent.py && python scripts/validate_application_journey.py"
+  "exact_next_command": "python scripts/validate_application_autofill_parent.py && python scripts/validate_application_journey.py",
+  "local_execution": {
+    "base_commit": "15b346ae",
+    "default_commit": "6379c4d5904de9f44fc75fdb9d9ed07ab8b84021",
+    "coordinator_branch": "codex/bootstrap-queue-20261028",
+    "adapter": "collaboration.spawn_agent",
+    "graph_width": 3,
+    "canonical_validator": "UNAVAILABLE: scripts/prompt_parallel_dispatch.py and harness/contracts/prompt-parallel-dispatch.v1.json absent",
+    "observed_concurrent_agents": true,
+    "canonical_parallel_receipt_proof": "UNPROVEN",
+    "b0": "External user-owned agent; PRs #132/#134 reserved",
+    "proof_ceiling": "Native dispatch observed; implementation, integration and installed proof pending"
+  }
 }

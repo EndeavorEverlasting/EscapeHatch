@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { impactedResumeDescendants, resolveResumeForPlatform, validateResumeGraph,
+import { impactedResumeDescendants, resolveResumeForPlatform, resolveEffectiveMasterForQueue, validateResumeGraph,
   type ResumeGraph, type ResumeNode } from './resume-selection-graph.ts';
 const H = (c: string) => c.repeat(64);
 function fixture(): ResumeGraph {
@@ -136,4 +136,36 @@ test('large DAG of approved domain variants validates without recursive traversa
  }
  assert.equal(validateResumeGraph(g).size,10+count);
  assert.equal(resolveResumeForPlatform(g,select).candidateId,'pm');
+});
+
+test('queue-level effective master stays reusable across multiple jobs without upload thrash',()=>{
+ const g=fixture();
+ g.nodes.push({id:'another-management-role',type:'opportunity',owner:g.owner,postingDigest:H('a'),
+   domainWeights:{management:4,it:1}});
+ const input={opportunityIds:['example-role','another-management-role'],platformSlotId:'global'};
+ const result=resolveEffectiveMasterForQueue(g,input);
+ assert.equal(result.candidateId,'pm');
+ assert.equal(result.action,'UPLOAD_REQUIRES_CONSENT');
+ assert.equal(result.mayAutoReplacePersistentResume,false);
+ g.edges=g.edges.map(e=>e.kind==='slot_points_to'?{...e,to:'pm'}:e);
+ assert.deepEqual(resolveEffectiveMasterForQueue(g,input).action,'KEEP_CURRENT');
+ input.opportunityIds.reverse();
+ assert.equal(resolveEffectiveMasterForQueue(g,input).candidateId,'pm');
+});
+test('mixed domain queue tie demands review rather than churning platform master',()=>{
+ const g=fixture();
+ g.nodes.push({id:'it-job',type:'opportunity',owner:g.owner,postingDigest:H('a'),domainWeights:{it:4}});
+ const o=g.nodes.find(n=>n.id==='example-role');
+ if(!o||o.type!=='opportunity')throw Error('fixture');
+ o.domainWeights={management:4};
+ const r=resolveEffectiveMasterForQueue(g,{platformSlotId:'global',opportunityIds:['example-role','it-job']});
+ assert.equal(r.reason,'QUEUE_DOMAIN_CONFLICT_REVIEW_REQUIRED');
+ assert.equal(r.candidateId,null);
+});
+test('queue must be opportunity-bound and must target an observed global slot',()=>{
+ const g=fixture();
+ assert.equal(resolveEffectiveMasterForQueue(g,{platformSlotId:'unknown',opportunityIds:['example-role']}).action,'REVIEW_REQUIRED');
+ assert.equal(resolveEffectiveMasterForQueue(g,{platformSlotId:'global',opportunityIds:['unknown-role']}).reason,'QUEUE_HAS_UNKNOWN_OPPORTUNITY');
+ assert.equal(resolveEffectiveMasterForQueue(g,{platformSlotId:'global',opportunityIds:['example-role','example-role']}).reason,'MISSING_QUEUE_OPPORTUNITIES');
+ assert.equal(resolveEffectiveMasterForQueue(g,{platformSlotId:'perapp',opportunityIds:['example-role']}).reason,'PERSISTENT_PLATFORM_SCOPE_UNVERIFIED');
 });

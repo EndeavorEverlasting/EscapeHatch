@@ -458,6 +458,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               await fs.mkdir(folder, { recursive: true });
               context = await chromium.launchPersistentContext(folder, {
                 channel: 'chrome', headless: false, acceptDownloads: false, viewport: null,
+                chromiumSandbox: true,
               });
               context.on('close', () => {
                 context = null; page = null; state = 'browser_closed'; preparation = null; authCheckpoint = INITIAL_CHECKPOINT; trustedReturnPath = null;

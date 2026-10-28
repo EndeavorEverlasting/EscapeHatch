@@ -6,9 +6,11 @@ import test from 'node:test';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { spawn } from 'node:child_process';
+import { DatabaseSync } from 'node:sqlite';
 import { chromium } from '@playwright/test';
 import { emptyPreferences, parsePreferences, optionMatches, matchQuestion, normalizeQuestion, expandProfessionalTitles, suggestProfessionalTitles } from './src/lib/application-preferences.ts';
-import { savePreferences, readPreferences, clearPreferences } from './preference-file.ts';
+import { savePreferences, readPreferences, clearPreferences, updatePreferences } from './preference-file.ts';
 import { fillSavedPreferences, openApplicationForm, internationalPhone, captureMilitaryAnswers } from './managed-form.ts';
 import { attachPdfs, parsePrivatePdf } from './browser-assist-control.ts';
 
@@ -19,6 +21,78 @@ function syntheticPreferences() {
   }
   return data;
 }
+
+test('separate processes merge independent answers instead of losing a concurrent update', async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-preferences-process-'));
+  const file = path.join(directory, 'preferences.json');
+  const owner = new URL('./preference-file.ts', import.meta.url).href;
+  const script = `import { updatePreferences } from ${JSON.stringify(owner)};
+    const [file, id, pause] = process.argv.slice(1);
+    await updatePreferences(current => {
+      process.send?.('read');
+      if (pause === 'hold') Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1000);
+      return {...current, preferences:{...current.preferences,[id]:{scope:'profile_preference',source:'user',value:'Synthetic',updated_at:new Date().toISOString()}}};
+    },file);`;
+  const launch = (id: string, pause = '') => {
+    const child = spawn(process.execPath, ['--experimental-strip-types', '--input-type=module', '-e', script, file, id, pause], { stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });
+    let error = ''; child.stderr!.on('data', chunk => { error += chunk; });
+    const done = new Promise<void>((resolve, reject) => { child.once('error', reject); child.once('exit', code => code === 0 ? resolve() : reject(new Error('Synthetic preference worker failed: ' + error))); });
+    return { child, done };
+  };
+  let first: ReturnType<typeof launch> | undefined, second: ReturnType<typeof launch> | undefined;
+  try {
+    await savePreferences(emptyPreferences(), file);
+    first = launch('identity.first_name', 'hold');
+    await new Promise<void>((resolve, reject) => { const timer = setTimeout(() => reject(new Error('Worker did not read preferences')), 10000); first!.child.once('message', () => { clearTimeout(timer); resolve(); }); });
+    second = launch('identity.last_name');
+    await Promise.all([first.done, second.done]);
+    const saved = await readPreferences(file);
+    assert.equal(saved.preferences['identity.first_name']?.value, 'Synthetic');
+    assert.equal(saved.preferences['identity.last_name']?.value, 'Synthetic');
+  } finally { first?.child.kill(); second?.child.kill(); await Promise.allSettled([first?.done, second?.done]); await fs.rm(directory, { recursive: true, force: true }); }
+});
+
+test('busy OS locks bound retries for reads, replacement, updates and clear without changing answers', { timeout: 15000 }, async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-preferences-busy-'));
+  const locks: DatabaseSync[] = [];
+  const operations = ['read', 'save', 'update', 'clear'] as const;
+  try {
+    const files = operations.map(name => path.join(directory, name + '.json'));
+    for (const file of files) {
+      await savePreferences(syntheticPreferences(), file);
+      const lock = new DatabaseSync(file + '.lock.sqlite'); lock.exec('BEGIN IMMEDIATE'); locks.push(lock);
+    }
+    const bytes = await Promise.all(files.map(file => fs.readFile(file, 'utf8')));
+    let updateInvoked = false;
+    await Promise.all(operations.map((name, index) => assert.rejects(
+      name === 'read' ? readPreferences(files[index]) :
+      name === 'save' ? savePreferences(emptyPreferences(), files[index]) :
+      name === 'update' ? updatePreferences(current => { updateInvoked = true; return current; }, files[index]) :
+      clearPreferences(files[index]), /Saved preferences are busy/)));
+    assert.equal(updateInvoked, false);
+    assert.deepEqual(await Promise.all(files.map(file => fs.readFile(file, 'utf8'))), bytes);
+    for (const lock of locks.splice(0)) { lock.exec('ROLLBACK'); lock.close(); }
+    assert.deepEqual(await readPreferences(files[0]), JSON.parse(bytes[0]));
+  } finally { for (const lock of locks) { try { lock.exec('ROLLBACK'); } finally { lock.close(); } } await fs.rm(directory, { recursive: true, force: true }); }
+});
+
+test('process termination releases the preference lock and pending writes retry without deleting lock files', async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-preferences-crash-'));
+  const file = path.join(directory, 'preferences.json');
+  const script = `import { DatabaseSync } from 'node:sqlite';
+    const lock = new DatabaseSync(process.argv[1] + '.lock.sqlite'); lock.exec('BEGIN IMMEDIATE');
+    process.send?.('locked'); setInterval(()=>{},1000);`;
+  const child = spawn(process.execPath, ['--input-type=module', '-e', script, file], { stdio: ['ignore', 'ignore', 'ignore', 'ipc'] });
+  const exited = new Promise<void>((resolve, reject) => { child.once('exit', () => resolve()); child.once('error', reject); });
+  try {
+    await new Promise<void>((resolve, reject) => { const timer = setTimeout(() => reject(new Error('Synthetic lock owner did not start')), 10000); child.once('message', () => { clearTimeout(timer); resolve(); }); child.once('error', reject); });
+    const update = updatePreferences(current => ({ ...current, require_document_review: false }), file);
+    setTimeout(() => child.kill(), 100);
+    await Promise.all([exited, update]);
+    assert.equal((await readPreferences(file)).require_document_review, false);
+    assert.ok((await fs.stat(file + '.lock.sqlite')).isFile());
+  } finally { child.kill(); await exited; await fs.rm(directory, { recursive: true, force: true }); }
+});
 
 test('accepted numeric answers obey native finite/range/step rules and preserve operator edits', async () => {
   const browser = await chromium.launch({ channel: 'chrome', headless: true });

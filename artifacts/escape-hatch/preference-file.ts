@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { DatabaseSync } from 'node:sqlite';
 import { userDataRoot, legacyPrivateRoots } from './user-data.ts';
 import { emptyPreferences, parsePreferences, type Preferences } from './src/lib/application-preferences.ts';
 
@@ -14,7 +15,7 @@ export function legacyPreferenceFile() {
   return root ? path.join(root, 'application-question-preferences.json') : null;
 }
 
-export async function migrateLegacyPreferences(destination = preferenceFile(), legacy?: string | null) {
+async function migrateLegacyPreferencesUnlocked(destination: string, legacy?: string | null) {
   try { await fs.access(destination); return; } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
   if (legacy === undefined) legacy = legacyPreferenceFile();
   if (!legacy || path.resolve(destination) === path.resolve(legacy)) return;
@@ -26,9 +27,13 @@ export async function migrateLegacyPreferences(destination = preferenceFile(), l
   catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error; }
 }
 
-export async function readPreferences(file = preferenceFile()): Promise<Preferences> {
+export function migrateLegacyPreferences(destination = preferenceFile(), legacy?: string | null) {
+  return transaction(destination, () => migrateLegacyPreferencesUnlocked(destination, legacy));
+}
+
+async function readPreferencesUnlocked(file: string): Promise<Preferences> {
   try {
-    if (file === preferenceFile() && !process.env.ESCAPEHATCH_PREFERENCES_FILE) await migrateLegacyPreferences(file);
+    if (file === preferenceFile() && !process.env.ESCAPEHATCH_PREFERENCES_FILE) await migrateLegacyPreferencesUnlocked(file);
     const bytes = await fs.readFile(file);
     if (bytes.length > 65536) throw new Error('Invalid saved preferences; restore a valid preference export.');
     const data = parsePreferences(JSON.parse(bytes.toString('utf8').replace(/^\uFEFF/, '')));
@@ -40,15 +45,38 @@ export async function readPreferences(file = preferenceFile()): Promise<Preferen
   }
 }
 
+export function readPreferences(file = preferenceFile()): Promise<Preferences> {
+  return transaction(file, () => readPreferencesUnlocked(file));
+}
+
 const queueKey = Symbol.for('escapehatch.preference-transactions');
 const queueHost = globalThis as typeof globalThis & { [queueKey]?: Map<string, Promise<unknown>> };
 const queues = queueHost[queueKey] ||= new Map<string, Promise<unknown>>();
 function transaction<T>(file: string, operation: () => Promise<T>): Promise<T> {
   const key = path.resolve(file);
-  const result = (queues.get(key) || Promise.resolve()).catch(() => {}).then(operation);
+  const result = (queues.get(key) || Promise.resolve()).catch(() => {}).then(() => withPreferenceLock(key, operation));
   queues.set(key, result);
   void result.finally(() => { if (queues.get(key) === result) queues.delete(key); }).catch(() => {});
   return result;
+}
+
+async function withPreferenceLock<T>(file: string, operation: () => Promise<T>): Promise<T> {
+  await fs.mkdir(path.dirname(file), { recursive: true });
+  // Same OS-backed transaction pattern as workspace-file.ts. The database is
+  // only a lock, not another answer store; process exit releases ownership.
+  const lock = new DatabaseSync(file + '.lock.sqlite');
+  let acquired = false;
+  try {
+    for (let attempt = 0; attempt < 20; attempt++) {
+      try { lock.exec('PRAGMA busy_timeout=0; BEGIN IMMEDIATE'); acquired = true; break; }
+      catch (error) {
+        if (!/busy|locked/i.test(String(error))) throw new Error('Saved preference lock unavailable. Existing data was preserved.');
+        if (attempt === 19) throw new Error('Saved preferences are busy. Retry after the other operation finishes.');
+        await new Promise(resolve => setTimeout(resolve, 30 * (attempt + 1)));
+      }
+    }
+    return await operation();
+  } finally { try { if (acquired) lock.exec('ROLLBACK'); } finally { lock.close(); } }
 }
 
 async function writePreferences(input: unknown, file: string) {
@@ -65,12 +93,13 @@ async function writePreferences(input: unknown, file: string) {
   return data;
 }
 
+/** Explicit validated replacement. Concurrent answer edits use updatePreferences. */
 export function savePreferences(input: unknown, file = preferenceFile()) {
   return transaction(file, () => writePreferences(input, file));
 }
 
 export function updatePreferences(update: (current: Preferences) => Preferences, file = preferenceFile()) {
-  return transaction(file, async () => writePreferences(update(await readPreferences(file)), file));
+  return transaction(file, async () => writePreferences(update(await readPreferencesUnlocked(file)), file));
 }
 
 /** Merge cockpit edits with answers captured since that cockpit loaded. */

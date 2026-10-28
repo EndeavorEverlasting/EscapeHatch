@@ -75,5 +75,68 @@
     return { attached: true, state: "OBSERVE_ONLY", reason: "bound_for_inspection_not_navigation" };
   }
 
-  return Object.freeze({ classify, canAttachToOpportunity, INDEED_STAGES });
+
+  // Typed, read-only plan: a caller must supply the selected applicant, reviewed
+  // opportunity-specific paragraphs and a live form inventory. This module never
+  // accesses private profile storage or writes to employer form controls.
+  function coverLetterParagraphText(paragraphs) {
+    if (!Array.isArray(paragraphs) || paragraphs.length === 0 ||
+        paragraphs.some(part => typeof part !== "string")) return null;
+    const clean = paragraphs.map(part => part.replace(/\r\n?/g, "\n")
+      .replace(/[^\S\n]*\n[^\S\n]*/g, " ").replace(/[\t ]+/g, " ").trim())
+      .filter(Boolean);
+    return clean.length ? clean.join("\n\n") : null;
+  }
+
+  function coverLetterReview(reason) {
+    return { state: "REVIEW_REQUIRED", mode: "text", reason, maySubmit: false };
+  }
+
+  function planIndeedCoverLetterText(classification, selected, artifact, form) {
+    if (classification?.provider !== "indeed") return coverLetterReview("unsupported_provider");
+    const bound = canAttachToOpportunity(classification, selected);
+    if (!bound.attached) return coverLetterReview(bound.reason);
+    if (!selected?.workspaceOwnerId || !artifact?.ownerId ||
+        selected.workspaceOwnerId !== artifact.ownerId) return coverLetterReview("applicant_owner_unverified");
+    if (artifact.kind !== "cover_letter" || artifact.reviewed !== true ||
+        artifact.opportunityKey !== selected.opportunityKey) return coverLetterReview("reviewed_role_letter_required");
+    const heading = String(form?.heading || "").trim().toLowerCase().replace(/\s+/g, " ");
+    if (!/^(supporting documents|want to include any supporting documents\??|this employer requests a cover letter for this application|cover letter)$/.test(heading)) {
+      return coverLetterReview("supporting_document_section_unverified");
+    }
+    const fields = Array.isArray(form?.fields) ? form.fields : [];
+    const matches = fields.map((field, index) => ({ field, index })).filter(({ field }) => {
+      const label = String(field?.label || "").toLowerCase().replace(/[*:]/g, "").replace(/\s+/g, " ").trim();
+      return field?.tag === "textarea" && /^cover letter(?: \((?:required|optional)\))?$/.test(label) &&
+        field.visible === true && field.disabled !== true && field.readOnly !== true;
+    });
+    if (matches.length !== 1) return coverLetterReview("unique_editable_cover_letter_textarea_required");
+    const { field, index } = matches[0];
+    // Preserve content already entered by the applicant, even if whitespace only.
+    if (String(field.value ?? "").length > 0) return coverLetterReview("preserve_existing_applicant_edit");
+    const text = coverLetterParagraphText(artifact.paragraphs);
+    if (!text) return coverLetterReview("approved_paragraphs_missing");
+    const max = Math.min(4000, Number.isInteger(field.maxLength) && field.maxLength > 0 ? field.maxLength : 4000);
+    if (text.length > max) return { ...coverLetterReview("text_exceeds_observed_limit"), characters: text.length, limit: max };
+    return {
+      state: "TEXT_PLAN_READY", mode: "text", maySubmit: false,
+      opportunityKey: selected.opportunityKey,
+      ownerId: selected.workspaceOwnerId,
+      sessionNonce: selected.formSessionNonce,
+      origin: classification.origin,
+      textareaIndex: index, text, characters: text.length, limit: max,
+      expectedExistingValue: "", requiresDomReadback: true,
+      employerAcceptance: "UNVERIFIED", userFinalSubmit: "OPERATOR_ONLY"
+    };
+  }
+
+  function indeedResumeUploadImpact(classification, kind) {
+    if (classification?.provider === "indeed" && kind === "resume") {
+      return { effect: "REPLACES_ONE_GLOBAL_INDEED_RESUME", state: "OPERATOR_APPROVAL_REQUIRED",
+        localMasterMutation: "FORBIDDEN", employerAcceptance: "UNVERIFIED" };
+    }
+    return { effect: "UNKNOWN", state: "REVIEW_REQUIRED", employerAcceptance: "UNVERIFIED" };
+  }
+
+  return Object.freeze({ classify, canAttachToOpportunity, INDEED_STAGES, coverLetterParagraphText, planIndeedCoverLetterText, indeedResumeUploadImpact });
 });

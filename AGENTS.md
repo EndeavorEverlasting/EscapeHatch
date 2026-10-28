@@ -168,4 +168,4 @@ Resume an existing real application and hydrate previously approved answers from
 
 
 ### Domain résumé graph (P00/P01/P04)
-Never use job derivatives as persistent platform masters. Unknown slot scope requires review. Enforce `harness/contracts/resume-selection-graph.v1.json`; operator controls uploads and final Submit. Parent #69 OPEN.
+No job derivative may replace a persistent platform master. Unknown slot => review. Contract: `harness/contracts/resume-selection-graph.v1.json`. Upload/Submit stay manual; #69 OPEN.

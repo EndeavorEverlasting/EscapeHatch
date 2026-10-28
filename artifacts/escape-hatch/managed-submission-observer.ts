@@ -232,7 +232,6 @@ export async function installManagedSubmissionObserver(page: Page, options: Subm
       const baseline = await page.evaluate(name => (window as unknown as Record<string, any>)[`${name}Inspect`](), name);
       if (baseline.receiptText) throw new Error('Preexisting confirmation cannot prove this submission.');
       if (baseline.terminalCount !== 1 || !baseline.terminalEnabled) throw new Error('A unique enabled application form transition control is required before arming.');
-      attemptObserved = false;
       attemptStageKey = '';
       publish({ state: 'ARMED', reason: 'Listening for form transitions on this application.', receipt: null });
       return copy();

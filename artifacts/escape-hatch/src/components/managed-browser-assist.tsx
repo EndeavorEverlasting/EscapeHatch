@@ -405,7 +405,6 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         // Prepare uses a trusted adapter registry supplied by the operator/runtime host.
         // Without registry evidence the control plane fails closed — never invent consequences.
         const registryRaw = window.localStorage.getItem('escapehatch.trustedAdapterRegistry.v1');
-        if (!documents.canUpload) throw new Error('Save opportunity documents and complete required review before preparing.');
         const opportunity = applications.find((item) => item.id === selectedOpportunityId && item.url === url &&
           item.status !== 'applied' && item.status !== 'closed');
         if (!opportunity) throw new Error('Select an active saved opportunity before preparing this application.');
@@ -625,7 +624,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           </div>
         )}
         {!!url.trim() && !selectedOpportunityId && <p className="mt-3 text-xs text-muted-foreground">This pasted URL is not yet bound to a saved opportunity. Save it to retain role-specific documents and answers across sessions.</p>}
-        {!!selectedOpportunityId && !documents.canUpload && <p className="mt-3 text-xs text-muted-foreground">Next prerequisite: stage and review this opportunity's résumé and cover-letter files below. Upload is not confirmed.</p>}
+        {!!selectedOpportunityId && !documents.canUpload && <p className="mt-3 text-xs text-muted-foreground">You may prepare this application without a cover letter. EscapeHatch checks the live employer form and asks for documents only when required. File uploads still require review.</p>}
       </section>
       <ApplicationPuzzle opportunity={applications.find(item => item.id === selectedOpportunityId)} url={url} documents={documents} disabled={busy || autoPrepareRequested} refresh={formObservation} currentPage={currentPage} onBypass={() => { if (browserOpen) setAutoPrepareRequested(true); }} />
       <div className="mt-5 rounded-xl bg-secondary/55 p-4">
@@ -688,7 +687,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
             onClick={() => void run('attach')} data-testid="button-managed-attach">
             Attach selected PDFs
           </button>
-          <button type="button" className={button} disabled={busy || documents.loading || !browserOpen || !documents.canUpload}
+          <button type="button" className={button} disabled={busy || documents.loading || documents.intakePending || !browserOpen}
             onClick={() => void run('prepare')} data-testid="button-managed-prepare">
             Prepare to final review
           </button>

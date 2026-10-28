@@ -40,7 +40,26 @@
     "log_location": "%LOCALAPPDATA%\\EscapeHatch\\logs\\<repoFingerprint>\\",
     "lifecycle_lock": "Local\\EscapeHatch.Runtime.<repoFingerprint>",
     "lock_scope": "start_stop_restart_status_mutation",
-    "receipt_reconstruction_without_shutdown_token": "forbidden"
+    "receipt_reconstruction_without_shutdown_token": "forbidden",
+    "endpoint_discovery": {
+      "order": [
+        "bound_loopback_receipt_port",
+        "explicit_PORT",
+        "default_21031"
+      ],
+      "receipt_is_location_hint_only": true,
+      "receipt_requires": [
+        "schema",
+        "repoFingerprint",
+        "host_127.0.0.1",
+        "runtimeProtocol",
+        "integer_port_1_to_65535"
+      ],
+      "selection_under_lifecycle_lock": true,
+      "ownership_proof": "socket_owner_process_start_command_line_and_runtime_identity_remain_required",
+      "invalid_receipt": "ignore_endpoint_hint_then_classify_without_trusting_receipt_pid",
+      "occupied_receipt_port": "classify_and_fail_closed_if_foreign_never_fallback_or_kill"
+    }
   },
   "control_plane": {
     "identity_endpoint": "GET /__escapehatch/runtime",

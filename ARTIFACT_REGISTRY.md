@@ -25,6 +25,10 @@ This file is the canonical registry for durable EscapeHatch artifacts. A plausib
 | Install adapter | `Install-EscapeHatch.cmd` | tracked thin entrypoint | installation owner changes | installer safety suite |
 | Uninstall adapter | `Uninstall-EscapeHatch.cmd` | tracked preservation-first entrypoint | installation owner changes | installer safety suite |
 | Installer safety regression | `tests/windows/Test-EscapeHatch-Install.ps1` | tracked synthetic Windows proof | ownership/idempotency changes | Windows PowerShell 5.1 |
+| Windows preview package builder | `scripts/package_windows_preview.py` | tracked; committed source only, unsigned preview, no private inputs | preview distribution changes | `python tests/test_windows_preview_package.py` |
+| Windows preview package regression | `tests/test_windows_preview_package.py` | tracked synthetic packaging and PS5.1 staging proof | preview package or installer changes | `python tests/test_windows_preview_package.py` |
+| Windows preview artifact workflow | `.github/workflows/windows-preview-package.yml` | tracked; uploads unsigned preview, never publishes signed consumer release | preview delivery changes | package regression and workflow artifact readback |
+| Runtime endpoint discovery regression | `tests/windows/Test-EscapeHatch-Runtime-PortDiscovery.ps1` | tracked disposable process/socket proof; never uses installed private state | receipt endpoint discovery changes | `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/windows/Test-EscapeHatch-Runtime-PortDiscovery.ps1` |
 | User-data root resolver | `artifacts/escape-hatch/user-data.ts` | tracked; no checkout identity in user state | private root policy changes | `npm --prefix artifacts/escape-hatch run test:bootstrap` |
 | Workspace schema and reconciliation | `artifacts/escape-hatch/src/lib/workspace-bootstrap.ts` | tracked projection; existing parsers own fields | recovered area changes | bootstrap regression |
 | Private workspace file owner | `artifacts/escape-hatch/workspace-file.ts` | tracked CAS/atomic/lock mechanics | persistence changes | bootstrap regression |
@@ -41,6 +45,8 @@ This file is the canonical registry for durable EscapeHatch artifacts. A plausib
 | Startup browser regression | `artifacts/escape-hatch/tests/workspace-startup.spec.ts` | tracked synthetic recovery/preservation controls | startup changes | bootstrap browser proof |
 
 Standalone preview configuration and controls: `artifacts/escape-hatch/playwright.preview.config.ts` and `artifacts/escape-hatch/tests/standalone-startup.spec.ts`; validate using `npm --prefix artifacts/escape-hatch run test:preview:browser`.
+
+Windows preview packages belong under ignored `Outputs/windows-preview/` (or an explicit external output root). `scripts/package_windows_preview.py --output-root Outputs/windows-preview` derives ZIP and SHA-256 sidecar from committed Git blobs; `windows-release.json` inside the ZIP binds every packaged file to that source commit. These are unsigned developer-preview outputs, not authenticated consumer releases or private workspace backups. The extracted canonical installer verifies them with `-Action ReleaseVerify -SourceRoot <extracted-package>`.
 
 Managed bootstrap private outputs: `%LOCALAPPDATA%/EscapeHatch/workspace.v1.json`, its prior/recovery copies,
 stable application preferences, remembered source manifest, cached résumé and tracker snapshot remain

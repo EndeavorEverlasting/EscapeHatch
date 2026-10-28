@@ -130,12 +130,13 @@ for (const mode of ['success', 'reject', 'captcha', 'route-only']) test(`Lever $
   } finally { await listeners.dispose(); await browser.close(); await fs.rm(root, { recursive: true, force: true }); }
 });
 
-test('Broadcastwell inline role adapter is exact-host and expected terminal text', () => {
+test('Broadcastwell inline role adapter treats button labels as candidate steps, not finality', () => {
   const a = submissionAdapter('https://broadcastwell.com/careers/ai-automation-engineer');
-  assert.equal(a.expectedSubmitText, 'Submit');
+  assert.equal(a.acceptAnySubmitLabel, true);
+  assert.deepEqual(a.continuationPathPrefixes, ['/careers/ai-automation-engineer/']);
   assert.match(a.submitSelector, /type="submit"/);
-  assert.equal(submissionAdapter('https://broadcastwell.com/careers/another-role').expectedSubmitText, undefined);
-  assert.equal(submissionAdapter('https://broadcastwell.com.evil.test/careers/ai-automation-engineer').expectedSubmitText, undefined);
+  assert.notEqual(submissionAdapter('https://broadcastwell.com/careers/another-role').acceptAnySubmitLabel, true);
+  assert.notEqual(submissionAdapter('https://broadcastwell.com.evil.test/careers/ai-automation-engineer').acceptAnySubmitLabel, true);
   assert.equal(matchQuestion('LinkedIn or portfolio URL (optional)'), 'identity.website');
   assert.equal(matchQuestion('Role'), 'identity.job_title');
 });
@@ -201,6 +202,54 @@ test('Broadcastwell single-page flow: missing answer -> approved fill -> armed s
     assert.equal(status.submission?.state, 'CONFIRMED');
     assert.equal((await readSubmissionReceipts(receiptsPath)).length, 1);
     assert.equal((await readSubmissionReceipts(receiptsPath))[0].applicationPath, '/careers/ai-automation-engineer');
+  } finally {
+    await listeners.dispose(); await browser.close();
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test('managed Broadcastwell receipt is withheld through extra questions and employer processing', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-broadcastwell-steps-'));
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  const page = await browser.newPage();
+  const listeners = new ManagedListeners(path.join(root, 'receipts.json'), path.join(root, 'preferences.json'));
+  const applicationUrl = 'https://broadcastwell.com/careers/ai-automation-engineer';
+  try {
+    await page.route(applicationUrl, route => route.fulfill({ contentType: 'text/html', body:
+      `<main><form><label>Part one<input /></label><button type="submit">Submit</button></form></main>
+      <script>let step = 0; document.querySelector('form').onsubmit = event => {
+        event.preventDefault(); step++;
+        if (step === 1) {
+          history.pushState({}, '', '/careers/ai-automation-engineer/second');
+          document.querySelector('form').innerHTML =
+            '<label>Part two<textarea></textarea></label><button type="submit">Next</button>';
+        } else {
+          document.querySelector('main').innerHTML =
+            '<p role="status">Your application is being processed.</p>';
+        }
+      };</script>` }));
+    await page.goto(applicationUrl);
+    await listeners.attach(page, { opportunityId: 'synthetic-broadcastwell-multi', applicationUrl, employerName: 'Broadcastwell' }, false);
+    assert.equal((await listeners.arm()).submission?.state, 'ARMED');
+    await page.getByRole('button', { name: 'Submit' }).click();
+    let state = (await listeners.status()).submission?.state;
+    for (let i=0; i<80 && state!=='IN_PROGRESS'; i++) {
+      await new Promise(resolve => setTimeout(resolve, 25)); state=(await listeners.status()).submission?.state;
+    }
+    assert.equal(state, 'IN_PROGRESS');
+    assert.equal((await listeners.status()).receipts.length, 0);
+    await page.getByRole('button', { name: 'Next' }).click();
+    for (let i=0; i<80 && state!=='PROCESSING'; i++) {
+      await new Promise(resolve => setTimeout(resolve, 25)); state=(await listeners.status()).submission?.state;
+    }
+    assert.equal(state, 'PROCESSING');
+    assert.equal((await listeners.status()).receipts.length, 0);
+    await page.getByRole('status').evaluate(node => node.textContent = 'Application submitted successfully.');
+    for (let i=0; i<80 && state!=='CONFIRMED'; i++) {
+      await new Promise(resolve => setTimeout(resolve, 25)); state=(await listeners.status()).submission?.state;
+    }
+    assert.equal(state, 'CONFIRMED');
+    assert.equal((await listeners.status()).receipts.length, 1);
   } finally {
     await listeners.dispose(); await browser.close();
     await fs.rm(root, { recursive: true, force: true });

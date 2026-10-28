@@ -7,10 +7,10 @@ from pathlib import Path
 import json
 import os
 import socket
+import shutil
 import subprocess
 import sys
 import tempfile
-import textwrap
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -38,16 +38,16 @@ HTTPServer(('127.0.0.1',int(os.environ['PORT'])),Handler).serve_forever()
 '''
 
 class LinuxMintBootstrapTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.root = ROOT
-        (ROOT / 'artifacts/escape-hatch/node_modules').mkdir(parents=True,exist_ok=True)
-
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         folder=Path(self.tmp.name)
         (folder/'bin').mkdir()
+        sandbox=folder/'checkout'
+        (sandbox/'scripts/linux').mkdir(parents=True)
+        (sandbox/'artifacts/escape-hatch/node_modules').mkdir(parents=True)
+        self.runtime=sandbox/'scripts/linux/escapehatch_runtime.py'
+        shutil.copyfile(RUNTIME,self.runtime)
         server=folder/'fake_server.py';server.write_text(FAKE_SERVER)
         npm=folder/'bin/npm'
         npm.write_text('#!/usr/bin/env bash\npython3 "$FAKE_SERVER" &\nwait $!\n')
@@ -61,7 +61,7 @@ class LinuxMintBootstrapTests(unittest.TestCase):
                          'ESCAPEHATCH_NO_OPEN':'1','HOST':'0.0.0.0'})
 
     def command(self,action):
-        return subprocess.run([sys.executable,str(RUNTIME),action],env=self.env,capture_output=True,text=True,timeout=25)
+        return subprocess.run([sys.executable,str(self.runtime),action],env=self.env,capture_output=True,text=True,timeout=25)
 
     def test_managed_start_status_stop_and_loopback(self):
         start=self.command('start');self.assertEqual(0,start.returncode, start.stderr)
@@ -90,6 +90,14 @@ class LinuxMintBootstrapTests(unittest.TestCase):
             c.request('GET','/__escapehatch/runtime');identity=json.loads(c.getresponse().read());c.close()
             state['instance_id']=identity['instanceId'];state_path.write_text(json.dumps(state))
             self.command('stop')
+
+    def test_bootstrap_check_is_nonmutating(self):
+        source=Path(self.tmp.name)/'fresh_source'
+        env=self.env|{'ESCAPEHATCH_HOME':str(source)}
+        result=subprocess.run(['bash',str(BOOTSTRAP),'--check'],env=env,capture_output=True,text=True,timeout=15)
+        self.assertEqual(0,result.returncode,result.stderr)
+        self.assertIn('No installed source yet',result.stdout)
+        self.assertFalse(source.exists())
 
     def test_shell_syntax_and_no_exposed_host(self):
         s=subprocess.run(['bash','-n',str(BOOTSTRAP)],capture_output=True,text=True)

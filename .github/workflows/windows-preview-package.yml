@@ -1,6 +1,13 @@
 name: Windows preview package
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'Get-EscapeHatch.cmd'
+      - 'scripts/windows/EscapeHatch-Install.ps1'
+      - 'scripts/package_windows_preview.py'
+      - 'tests/test_windows_preview_package.py'
+      - '.github/workflows/windows-preview-package.yml'
 permissions:
   contents: read
 jobs:

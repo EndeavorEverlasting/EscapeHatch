@@ -10,6 +10,16 @@ The script guides installation: choose an empty source folder; approve installat
 
 **Current distribution gate:** Until the installer branch and this scene branch are integrated and Windows tested, the `main` download link may not exist or the bootstrap may report that its installer is missing. Treat a successful download as neither a tested installation nor a running application; use the PR and validation receipts to check release readiness.
 
+## Linux Mint: inspect, install, and launch
+
+A Linux-native, user-scoped [bootstrap](Get-EscapeHatch.sh) is now under review. Download and inspect `Get-EscapeHatch.sh`, then use `bash Get-EscapeHatch.sh --check` to verify Git, Python 3, npm and Node.js 22.16+ without changing files. Use `bash Get-EscapeHatch.sh --install` to approve clone/dependency installation and launch. After installation: `--start`, `--status`, `--stop`, and explicit clean-checkout `--update` are available.
+
+The Mint launcher retains local-only `127.0.0.1` binding and an identity-verified graceful shutdown; it does not use sudo, reset existing work, or auto-update. **This is feature-branch groundwork, not yet an approved Linux Mint release**. Linux process tests are not proof of the physical Mint desktop/browser journey. See the [Linux and mobile platform gates](docs/LINUX_MINT_AND_MOBILE_ENTRYPOINTS.md).
+
+## Phones and Android
+
+The repository contains an Android Application Assist companion project, but phone installation and cross-device cockpit access remain separately gated. Android's Share/deep-link handoff is not desktop Chrome managed-automation parity. **Do not expose the local cockpit to phones by changing `HOST` to `0.0.0.0` or publishing an unauthenticated tunnel.** Private career state requires consented synchronization and an authenticated, scoped mobile access path. Follow the [mobile architecture and release criteria](docs/LINUX_MINT_AND_MOBILE_ENTRYPOINTS.md).
+
 ## Use EscapeHatch
 
 1. Launch the local cockpit and paste a public HTTPS employer job URL.

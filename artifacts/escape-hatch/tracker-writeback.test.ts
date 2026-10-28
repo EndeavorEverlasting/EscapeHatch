@@ -17,6 +17,17 @@ const snapshot = () => createTrackerSnapshotFromValues(values(), { spreadsheetId
 const receipt = () => ({ opportunityId: trackerOpportunityId(snapshot().applications[0]), sessionId: 'synthetic-session', attemptId: 'synthetic-attempt',
   applicationOrigin: 'https://jobs.lever.co', applicationPath: '/synthetic/00000000-0000-0000-0000-000000000000/apply', observedAt: '2026-01-02T12:00:00Z', source: 'same_session_page_confirmation' as const, evidenceCode: 'APPLICATION_RECEIVED_AFTER_USER_SUBMIT' as const });
 
+test('hosted posting to questionnaire binding reaches the same unique tracker row', () => {
+  const cells = values();
+  cells[1][4] = 'https://synthetic.hiringplatform.com/processes/example';
+  const current = createTrackerSnapshotFromValues(cells, { spreadsheetId: 'synthetic_sheet_id', sheetName: 'Applications' }, 'synthetic', new Date('2026-01-01'));
+  const evidence = { ...receipt(), opportunityId: trackerOpportunityId(current.applications[0]),
+    applicationOrigin: 'https://synthetic.hiringplatform.com', applicationPath: '/questionnaires/456/people/example', opportunityPath: '/processes/example' };
+  assert.equal(planSubmissionWrite(current, evidence, cells).row.sheetRow, 2);
+  assert.throws(() => planSubmissionWrite(current, { ...evidence, opportunityPath: '/processes/other' }, cells), /CONFLICT/);
+  assert.throws(() => planSubmissionWrite(current, { ...evidence, opportunityPath: undefined }, cells), /CONFLICT/);
+});
+
 test('plan uses exact receipt, fresh headers and unique opportunity; row moves remap and unrelated cells stay untouched', () => {
   const r = receipt(), s = snapshot();
   const reordered = [values()[0], ['Other', 'Other', 'Saved', 'Normal', 'https://example.test/other', false], values()[1]];

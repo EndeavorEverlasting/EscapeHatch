@@ -114,9 +114,9 @@ test('HiringPlatform final questionnaire arms without submitting and records onl
   const applicationUrl = 'https://synthetic.hiringplatform.com/questionnaires/456/people/example';
   try {
     await page.route(applicationUrl, route => route.fulfill({ contentType: 'text/html', body:
-      '<div id="tw-app"><form id="question-page-form"><input value="operator answer"><button type="submit">Save and Complete</button></form></div><script>document.querySelector("form").onsubmit=e=>{e.preventDefault();document.querySelector("#tw-app").innerHTML="<h1>Thank you for applying.</h1>"}</script>' }));
+      '<div id="tw-app"><form id="question-page-form"><input value="operator answer"><button type="submit">Save and Complete</button></form></div><script>document.querySelector("form").onsubmit=e=>{e.preventDefault();document.querySelector("form").innerHTML="<h3>Thank you for submitting your application for the Example Coordinator with Example Company!</h3>"}</script>' }));
     await page.goto(applicationUrl);
-    await listeners.attach(page, { opportunityId: 'synthetic-questionnaire', applicationUrl, employerName: 'Synthetic' }, false);
+    await listeners.attach(page, { opportunityId: 'synthetic-questionnaire', applicationUrl, opportunityUrl: 'https://synthetic.hiringplatform.com/processes/example', employerName: 'Synthetic' }, false);
     assert.equal((await listeners.arm()).submission?.state, 'ARMED');
     assert.equal(await page.locator('input').inputValue(), 'operator answer');
     assert.equal((await listeners.status()).receipts.length, 0);
@@ -127,6 +127,8 @@ test('HiringPlatform final questionnaire arms without submitting and records onl
     }
     assert.equal(status.submission?.state, 'CONFIRMED');
     assert.equal(status.receipts.length, 1);
+    assert.equal(status.receipts[0].opportunityPath, '/processes/example');
+    assert.equal((await listeners.refresh()).receipts.length, 1);
   } finally { await listeners.dispose(); await browser.close(); await fs.rm(root, { recursive: true, force: true }); }
 });
 

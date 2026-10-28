@@ -9,7 +9,7 @@ import { installManagedSubmissionObserver, type ManagedSubmissionReceipt } from 
 import { parseSubmissionEvidence } from './src/lib/submission-reconciliation.ts';
 import { userDataRoot, legacyPrivateRoots } from './user-data.ts';
 
-export type ListenerScope = { opportunityId: string; applicationUrl: string; employerName: string };
+export type ListenerScope = { opportunityId: string; applicationUrl: string; opportunityUrl?: string; employerName: string };
 export const submissionReceiptFile = () => path.join(userDataRoot(), 'managed-submission-receipts.json');
 
 export async function readSubmissionReceipts(file = submissionReceiptFile()): Promise<ManagedSubmissionReceipt[]> {
@@ -59,7 +59,7 @@ export function submissionAdapter(applicationUrl: string) {
     return {
       submitSelector: '#question-page-form button[type="submit"], #question-page-form input[type="submit"]',
       acceptAnySubmitLabel: true,
-      successSelector: '#tw-app [role="status"], #tw-app [role="alert"], #tw-app h1, #tw-app h2, #tw-app .alert-success',
+      successSelector: '#tw-app [role="status"], #tw-app [role="alert"], #tw-app h1, #tw-app h2, #tw-app #question-page-form :is(h3,h4,h5,h6), #tw-app .alert-success',
       confirmationPaths: [],
       continuationPathPrefixes: [url.pathname.replace(/\/$/, '') + '/'],
     };
@@ -121,6 +121,7 @@ export class ManagedListeners {
       opportunityId: scope.opportunityId,
       sessionId: 'managed-' + randomUUID(),
       applicationUrl: scope.applicationUrl,
+      opportunityUrl: scope.opportunityUrl,
       ...submissionAdapter(scope.applicationUrl),
       onChange: snapshot => {
         if (!snapshot.receipt || generation !== this.generation) return;
@@ -167,6 +168,13 @@ export class ManagedListeners {
     return this.status();
   }
   async disarm() { await this.observer?.disarm(); return this.status(); }
+  async refresh() {
+    if (!this.observer || typeof this.observer.refresh !== 'function') {
+      throw new Error('This legacy observer cannot replay its confirmation scan. Preserve evidence; do not resubmit.');
+    }
+    await this.observer.refresh();
+    return this.status();
+  }
   async setRecording(enabled: boolean) { this.recording = enabled; return this.status(); }
   async catalog(page: Page) {
     const catalog = await scanQuestionCatalog(page);

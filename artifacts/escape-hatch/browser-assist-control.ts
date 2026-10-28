@@ -415,7 +415,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               new URL(page.url()).pathname === trustedReturnPath &&
               (payload.livePageUrl === saved.url || payload.livePageUrl === page.url());
             const selected = confirmedReturn ? page! : selectExistingApplicationPage(context, saved.url, payload.livePageUrl);
-            await listeners.attach(selected, { opportunityId: saved.id, applicationUrl: selected.url(), employerName: saved.company }, false);
+            await listeners.attach(selected, { opportunityId: saved.id, applicationUrl: selected.url(), opportunityUrl: saved.url, employerName: saved.company }, false);
             const status = await listeners.arm();
             if (status.submission?.state !== 'ARMED') return respond(res, 409, { ok: false, error: status.error || 'submission_tracking_not_armed', listeners: status });
             page = selected;
@@ -496,7 +496,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             const exactInlineForm = inlineBroadcastwell &&
               new URL(page.url()).pathname === '/careers/ai-automation-engineer';
             if (opportunityId && (state === 'application_form_open_review_required' || exactInlineForm)) {
-              await listeners.attach(page, { opportunityId, applicationUrl: page.url(),
+              await listeners.attach(page, { opportunityId, applicationUrl: page.url(), opportunityUrl: jobUrl,
                 employerName: typeof payload.employerName === 'string' ? payload.employerName.slice(0, 160) : '' });
               await listeners.arm();
               // Seed missing-question discovery from the actual displayed form.
@@ -533,6 +533,10 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             if (payload.trackSubmission === true) await listeners.arm();
             if (payload.trackSubmission === false) await listeners.disarm();
             return respond(res, 200, { ok: true, listeners: await listeners.status() });
+          }
+          if (url.pathname === PREFIX + '/listeners/refresh') {
+            if (payload.opportunityId !== opportunityId || payload.url !== applicationUrl) throw new Error('Select the application bound to this browser.');
+            return respond(res, 200, { ok: true, listeners: await ManagedListeners.prototype.refresh.call(listeners) });
           }
           if (url.pathname === PREFIX + '/questions') return respond(res, 200, { ok: true, questions: await listeners.catalog(page) });
           if ([PREFIX + '/attach', PREFIX + '/prepare'].includes(url.pathname)) {

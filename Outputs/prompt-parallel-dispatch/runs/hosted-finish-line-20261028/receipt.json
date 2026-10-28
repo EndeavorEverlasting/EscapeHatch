@@ -1,0 +1,13 @@
+{
+  "run_id": "hosted-finish-line-20261028",
+  "native_concurrent_review": true,
+  "canonical_parallel_pass": false,
+  "canonical_receipt_validation": "UNPROVEN_MISSING_SCHEMA_AND_RUNNER",
+  "returns": [
+    { "lane_id": "submission-review", "result": "Detected qualified receipt wording mismatch, posting/questionnaire reconciliation gap and legacy replay limitation. No writes." },
+    { "lane_id": "answer-review", "result": "Confirmed persisted approved answers; identified numeric reuse, approval revocation, custom-select, date and cross-process durability gaps. No writes." },
+    { "lane_id": "answer-repair", "return_commit": "2ccfa024291753e49796f5854937ec99b96027d3", "rejoined_commit": "0144890", "tests": "19 focused tests passed; typecheck and diff checks passed; final authored-step-base regression passed." }
+  ],
+  "integration_owner": "primary agent",
+  "private_data": "omitted"
+}

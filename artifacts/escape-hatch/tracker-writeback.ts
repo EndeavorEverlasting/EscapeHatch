@@ -8,7 +8,7 @@ import { trackerPaths } from './tracker-control.ts';
 import { acquireToken, boundedJson, createTrackerSnapshotFromValues } from './tracker-refresh.ts';
 import { parseSubmissionEvidence, type SubmissionEvidence } from './src/lib/submission-reconciliation.ts';
 import { parseTrackerSnapshot, trackerOpportunityId, type TrackerSnapshot } from './src/lib/tracker-bridge.ts';
-import { reconcileSubmissionReceipts } from './src/lib/submission-reconciliation.ts';
+import { reconcileSubmissionReceipts, submissionMatchesApplication } from './src/lib/submission-reconciliation.ts';
 import { readWorkspace, saveWorkspace } from './workspace-file.ts';
 import { APPLICATIONS_KEY, parseApplicationsStorage } from './src/lib/storage.ts';
 
@@ -51,12 +51,7 @@ async function locked<T>(root: string, action: () => Promise<T>) {
   finally { try { lock.exec('ROLLBACK'); } finally { lock.close(); } }
 }
 function receiptMatches(receipt: SubmissionEvidence, url: string) {
-  try {
-    const parsed = new URL(url);
-    return parsed.origin === receipt.applicationOrigin && (parsed.pathname === receipt.applicationPath ||
-      parsed.hostname === 'jobs.lever.co' && /^\/[^/]+\/[^/]+\/?$/.test(parsed.pathname) && receipt.applicationPath === parsed.pathname.replace(/\/$/, '') + '/apply' ||
-      parsed.hostname === 'jobs.ashbyhq.com' && receipt.applicationPath === parsed.pathname.replace(/\/$/, '') + '/application');
-  } catch { return false; }
+  return submissionMatchesApplication(receipt, url);
 }
 function validTarget(target: Target | null) {
   return target === null || target && /^[A-Za-z0-9_-]{10,200}$/.test(target.spreadsheetId) && typeof target.sheetName === 'string' && target.sheetName.trim().length > 0 && target.sheetName.length <= 100;

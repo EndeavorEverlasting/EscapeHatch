@@ -64,6 +64,14 @@
     if (selected.expectedFormOrigin !== classification.origin) {
       return { attached: false, state: "REVIEW_REQUIRED", reason: "unverified_form_origin" };
     }
+    // Reusing an Indeed origin does not link two distinct applicant sessions.
+    // Only the managed browser's observed, opportunity-bound transition may
+    // supply this evidence; a tab URL, job title or referrer is insufficient.
+    if (selected.trustedTransitionObserved !== true ||
+        !Number.isInteger(selected.formTabId) || selected.formTabId < 0 ||
+        !selected.formSessionNonce || selected.formSessionNonce !== selected.expectedSessionNonce) {
+      return { attached: false, state: "REVIEW_REQUIRED", reason: "unverified_form_session" };
+    }
     return { attached: true, state: "OBSERVE_ONLY", reason: "bound_for_inspection_not_navigation" };
   }
 

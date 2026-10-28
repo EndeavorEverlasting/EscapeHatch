@@ -11,8 +11,20 @@
   "background": {
     "service_worker": "worker.js"
   },
+  "icons": {
+    "16": "icons/mascot-16.png",
+    "32": "icons/mascot-32.png",
+    "48": "icons/mascot-48.png",
+    "128": "icons/mascot-128.png"
+  },
   "action": {
     "default_title": "EscapeHatch Application Assist",
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/mascot-16.png",
+      "32": "icons/mascot-32.png",
+      "48": "icons/mascot-48.png",
+      "128": "icons/mascot-128.png"
+    }
   }
 }

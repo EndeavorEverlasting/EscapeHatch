@@ -8,6 +8,9 @@
     { "lane_id": "answer-review", "result": "Confirmed persisted approved answers; identified numeric reuse, approval revocation, custom-select, date and cross-process durability gaps. No writes." },
     { "lane_id": "answer-repair", "return_commit": "2ccfa024291753e49796f5854937ec99b96027d3", "rejoined_commit": "0144890", "tests": "19 focused tests passed; typecheck and diff checks passed; final authored-step-base regression passed." }
   ],
+  "successor_returns": [
+    { "lane_id": "answer-process-durability", "return_commit": "d9cd9d3d66907e04c749ab80d426af614252ecac", "rejoined_commit": "2a8d601ab6fd659ab05157dee5cbbf178b25e944", "tests": "Old owner lost an independent child-process answer update; repaired owner passed 22 focused tests, bounded busy preservation and crash release. Coordinator integrated on main 1a880d6 and passed managed-assist: 130 pass, 1 symlink-journal test skipped because this host disallows test symlinks, 0 failures; typecheck/build passed.", "proof_ceiling": "Synthetic local cooperating-process persistence; legacy unlocked writers and live/cloud convergence remain unproven." }
+  ],
   "integration_owner": "primary agent",
   "private_data": "omitted"
 }

@@ -1,0 +1,42 @@
+name: Opportunity Discovery — Safe Provider & Facet Tests
+
+on:
+  push:
+    paths:
+      - "artifacts/escape-hatch/src/lib/job-discovery*"
+      - "artifacts/escape-hatch/src/components/discover-jobs.tsx"
+      - "artifacts/escape-hatch/job-discovery-control*"
+      - "artifacts/escape-hatch/vite.config.ts"
+      - "artifacts/escape-hatch/src/App.tsx"
+      - "artifacts/escape-hatch/package.json"
+      - ".github/workflows/opportunity-discovery.yml"
+  pull_request:
+    paths:
+      - "artifacts/escape-hatch/src/lib/job-discovery*"
+      - "artifacts/escape-hatch/src/components/discover-jobs.tsx"
+      - "artifacts/escape-hatch/job-discovery-control*"
+      - "artifacts/escape-hatch/vite.config.ts"
+      - "artifacts/escape-hatch/src/App.tsx"
+      - "artifacts/escape-hatch/package.json"
+      - ".github/workflows/opportunity-discovery.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  discovery-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate provider security and facet tests
+        working-directory: artifacts/escape-hatch
+        run: node --experimental-strip-types --test src/lib/job-discovery.test.ts job-discovery-control.test.ts
+      - name: Preserve existing application journey and operator-only submit
+        run: |
+          python3 scripts/validate_application_autofill_parent.py
+          python3 scripts/validate_application_journey.py
+      - name: No whitespace errors
+        run: git diff --check HEAD^ HEAD

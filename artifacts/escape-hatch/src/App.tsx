@@ -79,6 +79,7 @@ import {
 import { applyAcceptedResumeImport, extractResumeText, getAcceptedResumeContactPatch, parseResumeText, type ResumeImport } from '@/lib/resume-import';
 import { initialSession, parseAssistSessionStatus, type AssistSession } from '@/lib/assist-session';
 import { ManagedBrowserAssist } from '@/components/managed-browser-assist';
+import { DiscoverJobs } from '@/components/discover-jobs';
 import { RecoveredAnswers, useRecoveredAnswers } from '@/components/recovered-answers';
 import { GuidedStart } from '@/components/guided-start';
 import { BirdsongControl } from '@/components/birdsong-control';
@@ -1127,6 +1128,7 @@ function ApplicationsPage({
   };
   return <div>
     <PageIntro eyebrow="Application queue" title="Keep the queue small." description="A short list you can actually move through is more useful than a perfect list you never open." action={<Button ref={pageAddButtonRef} onClick={() => openForm(null)} data-testid="button-add-application"><Plus size={16} /> Add opportunity</Button>} />
+    <DiscoverJobs applications={applications} setApplications={setApplications} />
     {trackerBanner && <div role="status" data-testid="applications-tracker-banner" data-tracker-status={trackerBanner.status} className="mb-6 rounded-xl border border-border bg-card px-4 py-3 text-sm"><span className="font-bold">{trackerBanner.status}</span><span className="mt-1 block text-xs text-muted-foreground">{trackerBanner.detail}</span></div>}
     <div role="status" aria-live="polite" aria-atomic="true" data-testid="application-form-announcement" className="sr-only">{formAnnouncement}</div>
     {dismissedDraft && dismissedDraft.expiresAt > Date.now() && <div role="status" aria-live="polite" data-testid="application-draft-notice" className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent/35 bg-accent/10 px-4 py-3 text-sm"><span className="flex flex-wrap items-center gap-x-3 gap-y-1"><span>You have an unsaved opportunity draft.</span><span data-testid="application-draft-recovery-time">Recovery available for {formatRecoveryDuration(draftRecoverySeconds)}</span></span><span className="flex items-center gap-2"><Button type="button" onClick={recoverDraft} data-testid="button-recover-application-draft">Recover draft</Button><Button type="button" variant="quiet" onClick={discardDraft} data-testid="button-discard-application-draft">Discard</Button></span></div>}

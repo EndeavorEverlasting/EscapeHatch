@@ -5,6 +5,7 @@ import { defineConfig } from 'vite';
 import { createRuntimeControlPlugin } from './runtime-control';
 import { createManagedBrowserAssistPlugin } from './browser-assist-control';
 import { createTrackerControlPlugin } from './tracker-control';
+import { createJobDiscoveryPlugin } from './job-discovery-control';
 import { createWorkspaceControlPlugin } from './workspace-control';
 
 const port = Number(process.env.PORT ?? '5173');
@@ -14,7 +15,7 @@ const host = process.env.HOST ?? '127.0.0.1';
 
 export default defineConfig({
   base: basePath,
-  plugins: [createRuntimeControlPlugin(), createWorkspaceControlPlugin(), createManagedBrowserAssistPlugin(), createTrackerControlPlugin(), react(), tailwindcss()],
+  plugins: [createRuntimeControlPlugin(), createWorkspaceControlPlugin(), createManagedBrowserAssistPlugin(), createTrackerControlPlugin(), createJobDiscoveryPlugin(), react(), tailwindcss()],
   resolve: {
     alias: { '@': path.resolve(import.meta.dirname, 'src') },
     dedupe: ['react', 'react-dom'],

@@ -71,3 +71,42 @@ test('legacy document recovery preserves exact bytes, opportunity scope and revi
     await assert.rejects(migrateLegacyDocumentPackage(path.join(root, 'third'), [legacy, other], id, url), /need review/);
   } finally { await fs.rm(root, { recursive: true, force: true }); }
 });
+
+
+test('current employer form can require no uploads; optional cover drafts never block', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-optional-cover-'));
+  const store = new OpportunityDocumentStore(root);
+  const id = 'synthetic-no-cover', url = 'https://jobs.example.test/no-cover';
+  try {
+    // Even an entirely empty local package is valid when the employer offers no file controls.
+    const none = await store.forCurrentEmployerForm(id, url, [], true);
+    assert.equal(none.resume, null);
+    assert.equal(none.cover, null);
+
+    const staged = await store.stage(id, url, 'cover', pdf('optional-cover.pdf', 'draft not approved'));
+    const absent = await store.forCurrentEmployerForm(id, url, [], true);
+    assert.equal(absent.cover, null);
+
+    // The employer offers an optional cover field; unreviewed drafts remain private.
+    const optional = await store.forCurrentEmployerForm(id, url, ['cover'], true);
+    assert.equal(optional.cover, null);
+    await store.review(id, url, 'cover', staged.documents.cover!.sha256);
+    const accepted = await store.forCurrentEmployerForm(id, url, ['cover'], true);
+    assert.equal(accepted.cover?.name, 'optional-cover.pdf');
+
+    // A reviewed cover cannot leak into a form that only requests a résumé.
+    const resumeOnly = await store.forCurrentEmployerForm(id, url, ['resume'], true);
+    assert.equal(resumeOnly.cover, null);
+    assert.equal(resumeOnly.resume, null);
+
+    await store.stage(id, url, 'resume', pdf('resume.pdf', 'new unreviewed'));
+    const requiredResume = await store.forCurrentEmployerForm(id, url, ['resume'], true);
+    assert.equal(requiredResume.resume, null);
+    const current = await store.read(id, url);
+    await store.review(id, url, 'resume', current.documents.resume!.sha256);
+    const ready = await store.forCurrentEmployerForm(id, url, ['resume'], true);
+    assert.equal(ready.resume?.name, 'resume.pdf');
+    assert.equal(ready.cover, null);
+    await assert.rejects(store.forCurrentEmployerForm(id, url, ['unknown' as 'resume'], true), /Unrecognized/);
+  } finally { await fs.rm(root, { recursive: true, force: true }); }
+});

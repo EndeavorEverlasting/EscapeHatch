@@ -358,6 +358,46 @@ async function mockDocuments(page: import('@playwright/test').Page) {
   });
 }
 
+test('Prepare stays available without a résumé or when a cover draft has not been reviewed', async ({ page }) => {
+  const job = { id: 'no-attachment-role', company: 'Synthetic', role: 'No-upload role',
+    url: 'https://jobs.example.com/roles/no-attachment', status: 'saved',
+    priority: 'normal', notes: '', nextAction: '', updatedAt: new Date().toISOString() };
+  const actions: string[] = [];
+  let launched = false;
+  await page.addInitScript((application) => {
+    localStorage.setItem('escape-hatch-applications', JSON.stringify([application]));
+  }, job);
+  await page.route('**/__escapehatch/managed-assist/**', async route => {
+    const action = new URL(route.request().url()).pathname.split('/').at(-1) || '';
+    if (route.request().method() === 'POST') actions.push(action);
+    if (action === 'launch') launched = true;
+    const response = action === 'status' ? { ok: true, state: 'idle', browserOpen: launched } :
+      action === 'launch' ? { ok: true, state: 'application_open_review_required' } :
+      action === 'prepare' ? { ok: true, state: 'REVIEW_REQUIRED',
+        preparation: { state: 'REVIEW_REQUIRED', code: 'trusted_navigation_evidence_missing',
+          pagesPrepared: 1, intermediateSteps: 0, finalActionActivated: false,
+          evidenceRefs: [], pendingManual: ['trusted_navigation_evidence_unavailable'] } } :
+      { ok: true, state: 'idle' };
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(response) });
+  });
+  await mockDocuments(page);
+  await page.goto('/assist?opportunityId=' + job.id);
+  await page.getByTestId('button-managed-launch').click();
+  await expect(page.getByTestId('button-managed-prepare')).toBeEnabled();
+  await expect(page.getByTestId('button-managed-attach')).toBeDisabled();
+
+  await page.getByLabel('Choose cover PDF', { exact: true }).setInputFiles({
+    name: 'unreviewed-cover.pdf', mimeType: 'application/pdf',
+    buffer: Buffer.from('%PDF-1.4\nprivate draft'),
+  });
+  await expect(page.getByText('unreviewed-cover.pdf', { exact: true })).toBeVisible();
+  await expect(page.getByTestId('button-managed-prepare')).toBeEnabled();
+  await page.getByTestId('button-managed-prepare').click();
+  await expect(page.getByTestId('managed-preparation-state')).toHaveAttribute('data-preparation-state', 'REVIEW_REQUIRED');
+  expect(actions).toContain('prepare');
+  expect(actions).not.toContain('submit');
+});
+
 test('document review binds both files, persists, invalidates replacements, and review-off automatically requests safe preparation', async ({ page }) => {
   const actions: string[] = [];
   await page.route('**/__escapehatch/managed-assist/**', async route => {

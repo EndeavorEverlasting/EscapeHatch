@@ -82,6 +82,31 @@ export class OpportunityDocumentStore {
     value.documents[kind] = { name: file.name, sha256, size: file.buffer.length, source: verifiedSource, ...(prior?.sha256 === sha256 && prior.reviewedAt ? { reviewedAt: prior.reviewedAt } : {}) };
     await this.write(value); return value;
   }
+  /**
+   * Select only documents requested by the CURRENT employer page. A missing or
+   * unreviewed OPTIONAL cover letter is never a preparation prerequisite.
+   * The page inventory and required-field gate remain the caller's authority:
+   * this method cannot certify employer acceptance or final-review readiness.
+   */
+  async forCurrentEmployerForm(
+    id: string, url: string, requestedKinds: readonly DocumentKind[], requireReview = true,
+  ): Promise<{ resume: PrivatePdf | null; cover: PrivatePdf | null; reviewPolicy: string }> {
+    const manifest = await this.read(id, url);
+    const selected: Partial<Record<DocumentKind, PrivatePdf>> = {};
+    for (const kind of new Set(requestedKinds)) {
+      if (kind !== 'resume' && kind !== 'cover') throw new Error('Unrecognized employer document kind.');
+      const record = manifest.documents[kind];
+      if (!record || (requireReview && !record.reviewedAt)) continue;
+      const file = await this.file(id, url, kind, record.sha256);
+      if (file) selected[kind] = file;
+    }
+    return {
+      resume: selected.resume ?? null,
+      cover: selected.cover ?? null,
+      reviewPolicy: requireReview ? 'operator_confirmed_review' : 'review_disabled_by_operator',
+    };
+  }
+
   async file(id: string, url: string, kind: DocumentKind, expectedSha256?: string): Promise<PrivatePdf | null> {
     const value = await this.read(id, url), record = value.documents[kind];
     if (!record) return null;

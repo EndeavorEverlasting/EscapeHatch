@@ -42,3 +42,19 @@ test('a failed fill does not attempt attachments or suggest progress', async () 
   }), /page_binding_changed/);
   assert.equal(attached, false);
 });
+
+
+test('a no-upload employer form does not invent missing cover or résumé blockers', async () => {
+  let attached = 0;
+  const result = await prepareWithoutTrustedNavigation({
+    fill: async () => ({ filled: ['approved_name'], skipped: [] }),
+    attach: async () => { attached += 1; return {}; },
+    expectedUploads: [],
+  });
+  assert.equal(attached, 1);
+  assert.deepEqual(result.filled, ['approved_name']);
+  assert.deepEqual(result.attachments, {});
+  assert.deepEqual(result.preparation.pendingManual, ['trusted_navigation_evidence_unavailable']);
+  assert.equal(result.preparation.state, 'REVIEW_REQUIRED');
+  assert.equal(result.preparation.finalActionActivated, false);
+});

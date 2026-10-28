@@ -24,10 +24,17 @@ test('SSO origin and unconfirmed page path block auto-progression', () => {
   assert.equal(projectApplicationJourney({ ...base, authPhase: 'SESSION_ORIGIN_CHANGED' }).current.id, 'AUTH_HANDOFF');
   assert.equal(projectApplicationJourney({ ...base, needsOpportunityConfirmation: true }).current.id, 'AUTH_RECHECK');
 });
-test('approved files are separately required after login', () => {
-  const state = projectApplicationJourney({ ...base, documentsApproved: false });
-  assert.equal(state.current.id, 'PREREQUISITES');
-  assert.match(state.blockers[0], /exact documents/);
+test('no cover-letter package does not block a valid employer form or final review', () => {
+  const withoutPackage = projectApplicationJourney({ ...base, documentsApproved: false });
+  assert.equal(withoutPackage.current.id, 'FORM_PREPARATION');
+  assert.deepEqual(withoutPackage.blockers, []);
+  const finalReview = projectApplicationJourney({
+    ...base, documentsApproved: false, preparationState: 'REVIEW_READY',
+  });
+  assert.equal(finalReview.current.id, 'FINAL_REVIEW');
+  assert.equal(finalReview.mayAutoSubmit, false);
+  const prelaunch = projectApplicationJourney({ ...base, browserOpen: false, documentsApproved: false });
+  assert.deepEqual(prelaunch.blockers, []);
 });
 test('review ready is not automatic submit', () => {
   const state = projectApplicationJourney({ ...base, preparationState: 'REVIEW_READY' });

@@ -266,3 +266,25 @@ test('matching verified contact fields allow an ordinary same-owner recovery', (
   const saved = { schema: WORKSPACE_SCHEMA, values: { [PROFILE_KEY]: { ...alice, email: 'alex@example.test' } } };
   assert.equal(reconcileWorkspace(local, saved).conflicts.includes('OWNER_CONTEXT_CONFLICT'), false);
 });
+
+test('a reviewed display-name change does not orphan an unchanged same-email assist projection', () => {
+  const profile = { ...emptyProfile, first_name: 'Updated', last_name: 'Recovery', email: 'synthetic@example.test' };
+  const oldContact = { ...profile, first_name: 'Synthetic' };
+  const saved = { schema: WORKSPACE_SCHEMA, values: {
+    [PROFILE_KEY]: profile,
+    [ASSIST_KEY]: emptyAssistProfile(oldContact),
+    [ANSWERS_KEY]: [],
+  } };
+  const emptyBrowser = { schema: WORKSPACE_SCHEMA, values: {} };
+  const merged = reconcileWorkspace(emptyBrowser, saved);
+  assert.deepEqual(merged.conflicts, []);
+  assert.equal((merged.workspace.values[PROFILE_KEY] as typeof profile).first_name, 'Updated');
+  // The old assist projection is preserved, not silently rewritten as a fact.
+  assert.equal((merged.workspace.values[ASSIST_KEY] as typeof saved.values[typeof ASSIST_KEY]).contact.first_name, 'Synthetic');
+});
+test('different emails remain a hard context conflict despite matching names', () => {
+  const alice = { ...emptyProfile, first_name: 'Alex', last_name: 'Example', email: 'alex@example.test' };
+  const bob = { ...alice, email: 'bob@example.test' };
+  const saved = { schema: WORKSPACE_SCHEMA, values: { [PROFILE_KEY]: alice, [ASSIST_KEY]: emptyAssistProfile(bob) } };
+  assert.deepEqual(reconcileWorkspace({ schema: WORKSPACE_SCHEMA, values: {} }, saved).conflicts, ['OWNER_CONTEXT_CONFLICT']);
+});

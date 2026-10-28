@@ -1309,13 +1309,17 @@ function AssistPage({
   const applySync = (choice: 'keep-current' | 'use-incoming' | 'merge') => {
     if (!pendingSync) return;
     const currentPayload = JSON.parse(serializeSyncPayload(assistProfile, currentAnswers, profile, 'cockpit')) as Parameters<typeof mergeSyncPayload>[0];
-    const next = mergeSyncPayload(currentPayload, { ...pendingSync, schema: 'escape-hatch-assist-sync', version: 1, exportedAt: new Date().toISOString(), source: 'recovery-import' }, choice);
-    setAssistProfile(next.profile);
-    if (next.baseProfile) setProfile(next.baseProfile);
-    setAnswers(next.answers.map(({ scope: _scope, canonicalId: _canonicalId, opportunityId: _opportunityId, provenance: _provenance, ...answer }) => answer));
-    setAssistAnswers(next.answers);
-    setPendingSync(null);
-    setFeedback(choice === 'keep-current' ? 'Current work kept. Incoming sync was not applied.' : 'Sync applied after your explicit choice.');
+    try {
+      const next = mergeSyncPayload(currentPayload, { ...pendingSync, schema: 'escape-hatch-assist-sync', version: 1, exportedAt: new Date().toISOString(), source: 'recovery-import' }, choice);
+      setAssistProfile(next.profile);
+      if (next.baseProfile) setProfile(next.baseProfile);
+      setAnswers(next.answers.map(({ scope: _scope, canonicalId: _canonicalId, opportunityId: _opportunityId, provenance: _provenance, ...answer }) => answer));
+      setAssistAnswers(next.answers);
+      setPendingSync(null);
+      setFeedback(choice === 'keep-current' ? 'Current work kept. Incoming sync was not applied.' : 'Sync applied after your explicit choice.');
+    } catch {
+      setFeedback('These personal profiles cannot be verified as the same workspace owner. No records were changed. Keep each person in a separate workspace and review the incoming file before switching.');
+    }
   };
   const recordMilestone = () => {
     if (!milestone) return;

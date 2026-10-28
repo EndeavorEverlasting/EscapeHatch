@@ -595,3 +595,26 @@ Promise.all([loadStoredProfile(), loadStoredSession()])
     }
   })
   .catch((error) => setStatus(error.message));
+
+
+async function showJobBoardPageState() {
+  const status = document.getElementById("jobBoardState");
+  if (!status || !globalThis.EscapeHatchJobBoard) return;
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const result = globalThis.EscapeHatchJobBoard.classify(tab?.url);
+    if (result.surface === "job_board_form") {
+      status.textContent = "Detected: " + result.provider + " / " + result.stage +
+        ". Inspection supported; review required before fields, navigation or final submission.";
+    } else if (result.surface === "job_listing") {
+      status.textContent = "Detected: " + result.provider + " listing. Select the exact opportunity in EscapeHatch to bind an application.";
+    } else if (result.provider !== "unknown") {
+      status.textContent = "Detected: " + result.provider + ". Form adapter not yet verified; manual review required.";
+    } else {
+      status.textContent = "Application page: no verified job-board adapter. Existing safe assist controls remain available.";
+    }
+  } catch (_) {
+    status.textContent = "Application page: unavailable. No application state was changed.";
+  }
+}
+void showJobBoardPageState();

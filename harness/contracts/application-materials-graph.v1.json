@@ -1,0 +1,85 @@
+{
+  "schema": "escapehatch/application-materials-graph/v1",
+  "version": 1,
+  "owner": "EscapeHatch Application Assist parent issue #69",
+  "canonical_dependencies": [
+    "AGENTS.md",
+    "harness/contracts/application-autofill-parent.v1.json",
+    "harness/contracts/resume-selection-graph.v1.json",
+    "harness/contracts/career-artifact-propagation.v1.json",
+    "contracts/career-claim-fidelity.v1.json",
+    "artifacts/escape-hatch/opportunity-documents.ts",
+    "artifacts/escape-hatch/src/lib/answer-recovery.ts"
+  ],
+  "purpose": "Preserve supporting documents and role-specific narrative answers as versioned, evidence-grounded nodes of the applicant's application graph; capacity and slot effect are observed per employer form.",
+  "node_types": [
+    "canonical_resume",
+    "domain_resume",
+    "job_resume",
+    "cover_letter",
+    "case_study",
+    "narrative_answer",
+    "opportunity",
+    "upload_slot"
+  ],
+  "graph_edges": [
+    "derives_from",
+    "grounded_in_evidence",
+    "targets_opportunity",
+    "answers_question",
+    "offered_for_slot",
+    "included_in_application"
+  ],
+  "capacity_policy": {
+    "zero_or_absent": "Do not attach supporting documents and do not block when the employer has no file section.",
+    "one_observed_supporting_slot": "Prioritize reviewed cover letter; do not silently replace account-wide resume.",
+    "two_observed_supporting_slots": "Propose cover letter and job-specific resume only if both are accepted by the exact form and per-application isolation is verified.",
+    "three_or_more_observed_supporting_slots": "May add reviewed relevant case study after cover and job-specific resume, subject to actual accepted type and slot constraints.",
+    "unknown_capacity": "REVIEW_REQUIRED; Add button/screenshot alone is insufficient to prove number or accepted type.",
+    "named_resume_slot": "Delegate to canonical resume-selection-graph resolver; unknown/persistent platform slot never auto-overwritten.",
+    "named_case_study_slot": "Only propose a current, approved case study with verified accepted file type.",
+    "accepted_mime_and_bytes": "Match each live form's observed MIME/size limits and private PDF store constraints; no assumption based on file-picker icon.",
+    "never_overwrite_shared_resume": true,
+    "never_auto_attach": true,
+    "never_submit": true
+  },
+  "narrative_answer_policy": {
+    "questions": [
+      "why-this-role",
+      "why-this-company",
+      "why-me",
+      "relevant-experience",
+      "other"
+    ],
+    "same_claims_as_cover": "All paragraphs derived from the same reviewed applicant evidence registry; tailored voice is a view, not new factual history.",
+    "review_requirement": "Each answer and cover letter revision requires its own review/approval and source provenance; changing evidence stales descendants.",
+    "text_field_vs_attachment": "Narrative answers fill semantically matched text fields only after exact approved preference; do not turn answer text into an attachment or vice versa automatically.",
+    "applicant_isolation": "No cross-user, developer or collaborator answer/career context; no private text in public fixtures.",
+    "no_invented_qualifications": true
+  },
+  "implementation": {
+    "planner": "artifacts/escape-hatch/src/lib/application-materials-graph.ts",
+    "tests": "artifacts/escape-hatch/src/lib/application-materials-graph.test.ts",
+    "validator": "scripts/validate_application_materials_graph.py",
+    "private_documents": "artifacts/escape-hatch/opportunity-documents.ts",
+    "review_ui": "artifacts/escape-hatch/src/components/opportunity-documents.tsx",
+    "inspection": "artifacts/escape-hatch/application-requirements.ts",
+    "attachment_controller": "artifacts/escape-hatch/browser-assist-control.ts",
+    "canonical_answer_owner": "artifacts/escape-hatch/src/lib/answer-recovery.ts",
+    "proof_ceiling": "Synthetic graph, private-store and named-control tests do not establish actual Indeed Add-widget capacity, successful employer acceptance, or live runtime behavior."
+  },
+  "regressions": [
+    "ONE_SLOT_COVER_ONLY",
+    "TWO_SLOTS_COVER_PLUS_ROLE_RESUME_ISOLATED",
+    "THREE_SLOTS_CASE_STUDY_ALLOWED",
+    "UNKNOWN_CAPACITY_FAIL_CLOSED",
+    "GLOBAL_PLATFORM_RESUME_PRESERVED",
+    "WRONG_JOB_OR_OWNER_REJECTED",
+    "UNREVIEWED_CONTENT_NOT_USED",
+    "UNKNOWN_GENERIC_ADD_NO_GUESS",
+    "CASE_STUDY_PRIVATE_VERSIONED_READBACK",
+    "MISSING_OPTIONAL_DOC_NOT_A_BLOCKER",
+    "NO_AUTO_CONSENT_OR_SUBMIT"
+  ],
+  "handoff": "docs/agent/P04_APPLICATION_MATERIALS_GRAPH_2026-10-28.md"
+}

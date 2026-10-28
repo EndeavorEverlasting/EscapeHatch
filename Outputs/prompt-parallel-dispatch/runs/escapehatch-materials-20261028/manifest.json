@@ -1,0 +1,141 @@
+{
+  "schema_version": "prompt-parallel-dispatch/v1",
+  "run_id": "escapehatch-materials-20261028",
+  "repository": "EndeavorEverlasting/EscapeHatch",
+  "parent_issue": "https://github.com/EndeavorEverlasting/EscapeHatch/issues/69",
+  "branch": "feat/p04-application-materials-graph-20261028",
+  "canonical_contract": "harness/contracts/application-materials-graph.v1.json",
+  "handoff": "docs/agent/P04_APPLICATION_MATERIALS_GRAPH_2026-10-28.md",
+  "status": "PROVIDER_CODE_WRITTEN__CI_PENDING__REAL_FORM_UNOBSERVED",
+  "runtime_partition": {
+    "host": "CURRENT_CHAT_RUNTIME",
+    "providers": [
+      "GitHub"
+    ],
+    "local": "LOCAL_AGENT_RUNTIME",
+    "operator": "OPERATOR_OR_PHYSICAL_RUNTIME"
+  },
+  "parallelism": {
+    "graph_width": 2,
+    "independent_jobs_launched": false,
+    "observed_parallelism": false,
+    "reason": "GitHub single-author commits; local Windows workers not dispatched; CI parallel tests pending"
+  },
+  "lanes": [
+    {
+      "id": "MAT0",
+      "order": 0,
+      "mission": "Provider preflight and source/collision proof",
+      "host": "CURRENT_CHAT_RUNTIME",
+      "dependencies": [],
+      "owned": [],
+      "forbidden": [
+        "agent-2 PR #115",
+        "private ATS",
+        "personal resume bytes"
+      ],
+      "status": "DONE_PROVIDER_READBACK"
+    },
+    {
+      "id": "MAT1",
+      "order": 1,
+      "mission": "Typed graph/narrative answer source consistency and validators",
+      "host": "CURRENT_CHAT_RUNTIME",
+      "dependencies": [
+        "MAT0"
+      ],
+      "owned": [
+        "artifacts/escape-hatch/src/lib/application-materials-graph.ts",
+        "harness/contracts/application-materials-graph.v1.json",
+        "scripts/validate_application_materials_graph.py",
+        "synthetic tests"
+      ],
+      "forbidden": [
+        "private answers",
+        "other applicant state"
+      ],
+      "status": "COMMITTED_CI_PENDING"
+    },
+    {
+      "id": "MAT2",
+      "order": 1,
+      "mission": "Existing document store and explicit named slots",
+      "host": "CURRENT_CHAT_RUNTIME",
+      "dependencies": [
+        "MAT0"
+      ],
+      "owned": [
+        "artifacts/escape-hatch/opportunity-documents.ts",
+        "artifacts/escape-hatch/browser-assist-control.ts",
+        "artifacts/escape-hatch/src/components/opportunity-documents.tsx",
+        "case-study tests"
+      ],
+      "forbidden": [
+        "active browser form",
+        "global resume replacement"
+      ],
+      "status": "COMMITTED_CI_PENDING"
+    },
+    {
+      "id": "MAT3",
+      "order": 2,
+      "mission": "Bind generic Add/Supporting Documents observed slot capacity to planner in local browser and narrative answers",
+      "host": "LOCAL_AGENT_RUNTIME",
+      "dependencies": [
+        "MAT1",
+        "MAT2"
+      ],
+      "owned": [
+        "application requirements inspector",
+        "managed attachment call site",
+        "existing answer resolver"
+      ],
+      "forbidden": [
+        "terminal Submit",
+        "unsanctioned uploaded materials"
+      ],
+      "status": "NOT_YET_IMPLEMENTED"
+    },
+    {
+      "id": "MAT4",
+      "order": 3,
+      "mission": "P08 observe Indeed, one alternate job board and custom ATS with approved applicant review",
+      "host": "LOCAL_AGENT_RUNTIME",
+      "dependencies": [
+        "MAT3"
+      ],
+      "owned": [
+        "sanitized runtime receipts"
+      ],
+      "forbidden": [
+        "public private profile",
+        "unapproved form changes"
+      ],
+      "status": "NOT_OBSERVED"
+    },
+    {
+      "id": "MAT5",
+      "order": 4,
+      "mission": "P07 converge exact-head CI, safe integration, installed browser readback, parent #69 gates",
+      "host": "CI_OR_REMOTE_RUNNER",
+      "dependencies": [
+        "MAT4"
+      ],
+      "owned": [
+        "reviewed integration receipts"
+      ],
+      "forbidden": [
+        "other agent branches"
+      ],
+      "status": "WAITING"
+    }
+  ],
+  "evidence_limits": {
+    "synthetic": true,
+    "actual_indeed_form_capacity_observed": false,
+    "employer_acceptance_observed": false,
+    "operator_submission_observed": false
+  },
+  "validator": "python scripts/validate_application_materials_graph.py",
+  "first_unproven_gate": "Exact-head CI; then actual managed-browser generic Add slot mapping and employer readback"
+}

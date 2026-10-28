@@ -132,7 +132,6 @@ export async function installManagedSubmissionObserver(page: Page, options: Subm
     if (event.kind === 'attempt') {
       attemptId = randomUUID();
       attemptStageKey = event.documentId + ':' + (event.stageKey || '');
-      attemptObserved = true;
     }
     publish(reduceSubmissionObservation(current, event, {
       origin: application.origin, applicationPath: application.pathname,

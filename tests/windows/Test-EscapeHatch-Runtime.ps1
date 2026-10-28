@@ -86,7 +86,9 @@ function Invoke-PowerShellEntryPoint {
     $stderr = Join-Path $env:TEMP "eh-entry-$stamp.err.log"
     $script:tempLogPaths += @($stdout, $stderr)
     $processArgs = @('-NoProfile','-ExecutionPolicy','Bypass','-File',('"' + $Path + '"')) + $Arguments
-    $process = Start-Process powershell.exe -ArgumentList $processArgs -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+    $process = Start-Process powershell.exe -ArgumentList $processArgs -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+    # Retain the process handle so Windows PowerShell 5.1 can read ExitCode after exit.
+    $null = $process.Handle
     if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
         try { Stop-Process -Id $process.Id -Force -ErrorAction Stop } catch {}
         $partial = @(
@@ -95,7 +97,6 @@ function Invoke-PowerShellEntryPoint {
         ) -join [Environment]::NewLine
         throw ("PowerShell entry point {0} exceeded {1}s. Partial output: {2}" -f $Path, $TimeoutSeconds, $partial)
     }
-    $process.Refresh()
     $output = @(
         if (Test-Path -LiteralPath $stdout) { Get-Content -LiteralPath $stdout -Raw -ErrorAction SilentlyContinue }
         if (Test-Path -LiteralPath $stderr) { Get-Content -LiteralPath $stderr -Raw -ErrorAction SilentlyContinue }
@@ -237,8 +238,10 @@ function Invoke-ConcurrentStarts {
     $out2 = Join-Path $env:TEMP "eh-concurrent-$stamp-2.out.log"
     $err2 = Join-Path $env:TEMP "eh-concurrent-$stamp-2.err.log"
     $args = @('-NoProfile','-ExecutionPolicy','Bypass','-File',('"' + $Manager + '"'),'-Action','Start')
-    $p1 = Start-Process powershell.exe -ArgumentList $args -PassThru -RedirectStandardOutput $out1 -RedirectStandardError $err1
-    $p2 = Start-Process powershell.exe -ArgumentList $args -PassThru -RedirectStandardOutput $out2 -RedirectStandardError $err2
+    $p1 = Start-Process powershell.exe -ArgumentList $args -WindowStyle Hidden -PassThru -RedirectStandardOutput $out1 -RedirectStandardError $err1
+    $p2 = Start-Process powershell.exe -ArgumentList $args -WindowStyle Hidden -PassThru -RedirectStandardOutput $out2 -RedirectStandardError $err2
+    $null = $p1.Handle
+    $null = $p2.Handle
     $script:tempLogPaths += @($out1, $err1, $out2, $err2)
     $p1Done = $p1.WaitForExit(45000)
     $p2Done = $p2.WaitForExit(45000)

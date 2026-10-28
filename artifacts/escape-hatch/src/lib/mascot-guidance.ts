@@ -36,7 +36,7 @@ export function projectMascotGuidance(profile: Profile, applications: readonly A
   if (focusOpportunity && focusOpportunity.url && !['applied', 'closed'].includes(focusOpportunity.status)) {
     const contactReminder = essentialMissing.length
       ? ` Your local profile still needs ${essentialMissing.map(piece => piece.label.toLowerCase()).join(', ')}; review those details before filling.`
-      : ' Inspect the employer form to verify its actual required fields.';
+      : missing.length ? ' Optional profile details do not block preparing this job. Inspect the employer form to verify its required fields.' : ' Inspect the employer form to verify its actual required fields.';
     return {
       profileCount, profileTotal: REUSABLE_PROFILE_PIECES.length, missing, essentialMissing, hasOpportunity,
       nextStep: 2, eyebrow: 'Your selected application',

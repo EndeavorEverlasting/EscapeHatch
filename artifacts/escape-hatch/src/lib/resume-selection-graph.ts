@@ -158,7 +158,7 @@ function fresh(n: ResumeNode, nodes: Map<string, Node>,
   return good;
 }
 function domainScore(n: ResumeNode, weights: Record<string, number>): number {
-  return (n.domainTags ?? []).reduce((score, tag) => score + (weights[tag] ?? 0), 0);
+  return (n.domainTags ?? []).reduce((score, tag) => score + (Object.hasOwn(weights, tag) ? weights[tag] : 0), 0);
 }
 /**
  * The planner never uploads. An unverified/unknown platform slot fails closed.
@@ -216,7 +216,7 @@ export function resolveEffectiveMasterForQueue(
   if (slot?.type !== 'platform_slot' || slot.scope !== 'persistent_global' ||
       slot.observation !== 'verified') return fail(input.platformSlotId, 'PERSISTENT_PLATFORM_SCOPE_UNVERIFIED');
   if (!uniqueStrings(input.opportunityIds) || input.opportunityIds.length === 0) return fail(slot.id, 'MISSING_QUEUE_OPPORTUNITIES');
-  const weights: Record<string, number> = {};
+  const weights: Record<string, number> = Object.create(null) as Record<string, number>;
   for (const id of input.opportunityIds) {
     const job = nodes.get(id);
     if (job?.type !== 'opportunity') return fail(slot.id, 'QUEUE_HAS_UNKNOWN_OPPORTUNITY');

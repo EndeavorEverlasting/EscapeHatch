@@ -55,6 +55,18 @@ export function submissionAdapter(applicationUrl: string) {
     const base = url.pathname.replace(/\/apply\/?$/, '');
     return { submitSelector: '#btn-submit', successSelector: '.application-confirmation h1, .application-confirmation h2, .application-confirmation p, .application-confirmation, .content h1, .content h2', confirmationPaths: [base + '/thanks'] };
   }
+  // Broadcastwell hosts an inline, single-page career form. Its terminal label is
+  // "Submit", not "Submit Application". Restrict this observer to the exact role
+  // path; other Broadcastwell pages retain the fail-closed generic adapter.
+  if (url.protocol === 'https:' && ['broadcastwell.com', 'www.broadcastwell.com'].includes(url.hostname) &&
+      url.pathname === '/careers/ai-automation-engineer') {
+    return {
+      submitSelector: 'form button[type="submit"], form input[type="submit"]',
+      expectedSubmitText: 'Submit',
+      successSelector: '[role="status"], [role="alert"], .application-success, .form-success, [data-submission-success]',
+      confirmationPaths: [],
+    };
+  }
   return { submitSelector: '#root button', successSelector: '#root h1, #root h2, #root [role="status"], #root [role="alert"], #root div', confirmationPaths: [] };
 }
 

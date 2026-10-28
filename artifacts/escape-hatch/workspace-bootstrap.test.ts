@@ -319,6 +319,17 @@ test('versioned applicant binding admits only the selected owner and exact revie
     { ok: false, reason: 'WORKSPACE_MISMATCH' });
   assert.deepEqual(authorizeAgentContext(active, request(alice, workspaceA), 'c'.repeat(64), [sourceA]),
     { ok: false, reason: 'REVISION_REQUIRED' });
+  assert.deepEqual(authorizeAgentContext(active,
+    { ...request(alice, workspaceA), voiceRevision: 'd'.repeat(64) }, profileRevision, [sourceA],
+    { voiceRevision: 'e'.repeat(64) }),
+    { ok: false, reason: 'REVISION_REQUIRED' });
+  assert.deepEqual(authorizeAgentContext(active,
+    { ...request(alice, workspaceA), opportunityId: 'job-from-other-session' }, profileRevision, [sourceA],
+    { opportunityId: 'current-job' }),
+    { ok: false, reason: 'REVISION_REQUIRED' });
+  assert.equal(authorizeAgentContext(active,
+    { ...request(alice, workspaceA), voiceRevision: 'd'.repeat(64), opportunityId: 'current-job' },
+    profileRevision, [sourceA], { voiceRevision: 'd'.repeat(64), opportunityId: 'current-job' }).ok, true);
   assert.deepEqual(authorizeAgentContext(active, request(alice, workspaceA), profileRevision, [{ ...sourceA, ownerId: bob }]),
     { ok: false, reason: 'SOURCE_SCOPE_MISMATCH' });
   assert.deepEqual(authorizeAgentContext(bind(bob, workspaceB), request(alice, workspaceA), profileRevision, [sourceA]),

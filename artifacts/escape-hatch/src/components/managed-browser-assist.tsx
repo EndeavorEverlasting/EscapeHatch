@@ -177,8 +177,11 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     const requestedId = new URLSearchParams(window.location.search).get('opportunityId');
     const permitted = (item: Application) => !!item.url && item.status !== 'applied' && item.status !== 'closed';
     const requested = applications.find((item) => item.id === requestedId && permitted(item));
+    // Align the default selection to Home's fresh, validated tracker candidate.
+    // Do not silently choose the first stale Ready entry when order changes.
     const ready = applications.find((item) => permitted(item) &&
-      item.id.startsWith('tracker-') && /provider status:\s*ready to apply/i.test(item.notes) &&
+      item.id === verifiedNextReadyId &&
+      /provider status:\s*ready to apply/i.test(item.notes) &&
       /Applied\? unchecked/i.test(item.notes));
     const remembered = applications.find(item => item.id === savedJourney.opportunityId &&
       item.url === savedJourney.applicationUrl && permitted(item));
@@ -192,7 +195,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       setSelectedOpportunityId(next.id);
       setUrl(next.url);
     }
-  }, [applications, browserOpen, savedJourney]);
+  }, [applications, browserOpen, savedJourney, verifiedNextReadyId]);
 
   useEffect(() => {
     let active = true;

@@ -159,7 +159,7 @@ Canonical ownership target:
 
 - Extension source: `browser/application-assist/`
 - Cockpit source/runtime: `artifacts/escape-hatch/`
-- Generated distributable extension/package artifacts: one registered output root, proposed `Outputs/application-assist/`
+- Generated distributable extension/package artifacts: `Outputs/application-assist/<commit>/`, owned by `scripts/package_application_assist.py`. It reads committed Git blobs and emits immutable, hash-verified packages plus `release.json`; dirty/untracked files are excluded. `--output-root` may place the same derived package in a stable user-local installation cache. Generated copies never become source authorities.
 - Machine-readable parallel dispatch: `Outputs/prompt-parallel-dispatch/`
 - User profile / preferences / credentials: browser-local or approved user-local state; never repository source/output
 - Recovery exports: user-visible export flow with deterministic EscapeHatch filename prefix and documented default destination; not treated as build artifacts

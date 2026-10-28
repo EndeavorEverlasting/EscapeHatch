@@ -494,7 +494,7 @@ export function createRuntimeControlPlugin(): Plugin {
         'x-escapehatch-instance-id' = [string]$secretReceipt.instanceId
         'x-escapehatch-shutdown-token' = $token
     }
-    $shutdownResponse = Invoke-WebRequest -Method Post -Uri "$Origin/__escapehatch/shutdown" -Headers $headers -TimeoutSec 3 -ErrorAction Stop
+    $shutdownResponse = Invoke-WebRequest -UseBasicParsing -Method Post -Uri "$Origin/__escapehatch/shutdown" -Headers $headers -TimeoutSec 3 -ErrorAction Stop
     Assert-Equal ([int]$shutdownResponse.StatusCode) 202 'authorized shutdown HTTP status'
     Assert-True (-not ([string]$shutdownResponse.Content).Contains($token)) 'shutdown response must not expose shutdown token'
     Wait-ForNoListener
@@ -509,7 +509,14 @@ export function createRuntimeControlPlugin(): Plugin {
     Write-Host "WINDOWS_RUNTIME_LIFECYCLE_TESTS: PASS ($caseCount cases)" -ForegroundColor Green
 } catch {
     Write-Host "WINDOWS_RUNTIME_LIFECYCLE_TESTS: FAIL" -ForegroundColor Red
-    Write-Host $_.Exception.Message -ForegroundColor Red
+    Write-Host ("FAILURE_TYPE={0}" -f $_.Exception.GetType().Name) -ForegroundColor Red
+    # Emit location only, never source text, request headers, or evaluated values.
+    Write-Host ("FAILURE_LOCATION={0}:{1}:{2}" -f [IO.Path]::GetFileName($_.InvocationInfo.ScriptName), $_.InvocationInfo.ScriptLineNumber, $_.InvocationInfo.OffsetInLine) -ForegroundColor Red
+    foreach ($frame in ([string]$_.ScriptStackTrace -split "`r?`n")) {
+        if ($frame -match '^at ([A-Za-z0-9_-]+), .*: line ([0-9]+)$') {
+            Write-Host ("FAILURE_FRAME={0}:line{1}" -f $Matches[1], $Matches[2]) -ForegroundColor Red
+        }
+    }
     exit 1
 } finally {
     if ($runtimeControlMutated -and $null -ne $runtimeControlBackup) {

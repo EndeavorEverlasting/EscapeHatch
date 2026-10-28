@@ -224,3 +224,41 @@ test('resume pointer survives revision-checked save and independent process rest
     assert.deepEqual((await readWorkspace(file + '.previous'))?.workspace.values[JOURNEY_RESUME_KEY], pointer);
   } finally { await fs.rm(directory, { recursive: true, force: true }); }
 });
+
+test('owner mismatch blocks automatic startup hydration without changing either copy', () => {
+  const alice = { ...emptyProfile, first_name: 'Alex', last_name: 'Example', email: 'alex@example.test' };
+  const brook = { ...emptyProfile, first_name: 'Brook', last_name: 'Example', email: 'brook@example.test' };
+  const local = { schema: WORKSPACE_SCHEMA, values: { [PROFILE_KEY]: alice, [APPLICATIONS_KEY]: [] } };
+  const saved = { schema: WORKSPACE_SCHEMA, values: { [PROFILE_KEY]: brook, [APPLICATIONS_KEY]: [] } };
+  const result = reconcileWorkspace(local, saved);
+  assert.deepEqual(result.conflicts, ['OWNER_CONTEXT_CONFLICT']);
+  assert.deepEqual(result.workspace, local);
+});
+test('unidentified browser applications never inherit another owner profile silently', () => {
+  const local = { schema: WORKSPACE_SCHEMA, values: { [APPLICATIONS_KEY]: [{
+    id: 'local-application', company: 'Synthetic Company', role: 'Test role', url: 'https://example.test/jobs',
+    status: 'saved', priority: 'normal', notes: '', nextAction: '',
+    updatedAt: '2026-10-01T00:00:00.000Z',
+  }] } };
+  const saved = { schema: WORKSPACE_SCHEMA, values: { [PROFILE_KEY]: { ...emptyProfile, first_name: 'Brook', last_name: 'Example', email: 'brook@example.test' } } };
+  const result = reconcileWorkspace(local, saved);
+  assert.deepEqual(result.conflicts, ['OWNER_CONTEXT_UNVERIFIED']);
+  assert.deepEqual(result.workspace, local);
+});
+test('inconsistent profile and assist contact cannot be treated as one resolved owner', () => {
+  const alice = { ...emptyProfile, first_name: 'Alex', last_name: 'Example', email: 'alex@example.test' };
+  const brook = { ...emptyProfile, first_name: 'Brook', last_name: 'Example', email: 'brook@example.test' };
+  const local = { schema: WORKSPACE_SCHEMA, values: {
+    [PROFILE_KEY]: alice, [ASSIST_KEY]: emptyAssistProfile(brook),
+  } };
+  const saved = { schema: WORKSPACE_SCHEMA, values: {} };
+  const result = reconcileWorkspace(local, saved);
+  assert.deepEqual(result.conflicts, ['OWNER_CONTEXT_CONFLICT']);
+  assert.deepEqual(result.workspace, local);
+});
+test('matching verified contact fields allow an ordinary same-owner recovery', () => {
+  const alice = { ...emptyProfile, first_name: 'Alex', last_name: 'Example', email: 'ALEX@Example.Test' };
+  const local = { schema: WORKSPACE_SCHEMA, values: { [PROFILE_KEY]: alice } };
+  const saved = { schema: WORKSPACE_SCHEMA, values: { [PROFILE_KEY]: { ...alice, email: 'alex@example.test' } } };
+  assert.equal(reconcileWorkspace(local, saved).conflicts.includes('OWNER_CONTEXT_CONFLICT'), false);
+});

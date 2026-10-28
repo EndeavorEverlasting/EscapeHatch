@@ -653,15 +653,19 @@ function Invoke-HealthyGracefulStop {
         'x-escapehatch-shutdown-token' = [string]$Observation.Receipt.shutdownToken
     }
 
+    $stopMethod = 'EXIT_OBSERVED'
     try {
         Invoke-RestMethod -Method Post -Uri "$Url/__escapehatch/shutdown" -Headers $headers -TimeoutSec 3 -ErrorAction Stop | Out-Null
+        $stopMethod = 'GRACEFUL'
     } catch {
         Write-Host 'Graceful shutdown request failed; ownership will be re-proven before bounded fallback.' -ForegroundColor Yellow
     }
 
     if (-not (Wait-ForOwnedExit -ProcessId $Observation.Process.Pid -TimeoutSeconds $StopTimeoutSeconds)) {
         Stop-ProvenOwnedProcess -ProcessId $Observation.Process.Pid -ExpectedStartTimeUtc $Observation.Process.StartTimeUtc
+        $stopMethod = 'FORCED_OWNED'
     }
+    Write-Host "ESCAPEHATCH_STOP_METHOD=$stopMethod"
     Remove-RuntimeReceipt -Path $Paths.Receipt -ExpectedInstanceId ([string]$Observation.Receipt.instanceId)
 }
 

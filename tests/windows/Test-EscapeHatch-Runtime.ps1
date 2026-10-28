@@ -351,7 +351,8 @@ try {
     $gracefulStop = Invoke-PowerShellEntryPoint -Path $CloseAdapter
     $gracefulElapsed = ((Get-Date) - $gracefulStarted).TotalSeconds
     Assert-True ($gracefulStop.Output -notmatch 'Graceful shutdown request failed') 'healthy Stop must not report graceful shutdown request failure'
-    Assert-True ($gracefulElapsed -lt ([int]$env:ESCAPEHATCH_STOP_TIMEOUT_SECONDS)) 'healthy Stop must complete before the forced-fallback timeout'
+    Assert-True ($gracefulStop.Output -match '(?m)^ESCAPEHATCH_STOP_METHOD=GRACEFUL\s*$') 'healthy Stop must prove graceful exit without forced termination'
+    Write-Host ('GRACEFUL_STOP_ADAPTER_ELAPSED_SECONDS={0:F3}' -f $gracefulElapsed)
     Wait-ForNoListener
     Assert-True (-not (Test-ProcessAlive -ProcessId $gracefulPid)) 'gracefully stopped PID must exit'
 

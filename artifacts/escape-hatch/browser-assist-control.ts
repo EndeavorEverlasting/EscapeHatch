@@ -310,7 +310,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
   // An installed upgrade may retain an old listener object in Vite's cache.
   // Replace observation handles only; never close or navigate employer tabs.
   const previousListeners = cache.listeners;
-  const listeners = previousListeners.implementationVersion === 2 ? previousListeners : new ManagedListeners(undefined, undefined, enqueueSubmissionSync);
+  const listeners = previousListeners.implementationVersion === 4 ? previousListeners : new ManagedListeners(undefined, undefined, enqueueSubmissionSync);
   // Older cached listeners and synthetic middleware fixtures may predate dispose().
   // Preserve the employer tab; replace obsolete handles without invoking an absent method.
   // A new listener starts unarmed and requires exact-application binding before Submit.
@@ -407,8 +407,15 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             const applications = workspace?.workspace.values[APPLICATIONS_KEY];
             const saved = Array.isArray(applications) ? applications.find(item => item.id === payload.opportunityId && item.url === payload.url && !['applied', 'closed'].includes(item.status)) : null;
             if (!saved) throw new Error('Saved opportunity changed or is unavailable.');
-            const selected = selectExistingApplicationPage(context, saved.url, payload.livePageUrl);
-            await listeners.attach(selected, { opportunityId: saved.id, applicationUrl: selected.url(), employerName: saved.company }, false);
+            // Reuse only the active opportunity's explicitly confirmed return path.
+            // Never infer that an arbitrary same-origin tab belongs to this job.
+            const confirmedReturn = page && !page.isClosed() && opportunityId === saved.id &&
+              applicationUrl === saved.url && trustedReturnPath !== null &&
+              new URL(page.url()).origin === new URL(saved.url).origin &&
+              new URL(page.url()).pathname === trustedReturnPath &&
+              (payload.livePageUrl === saved.url || payload.livePageUrl === page.url());
+            const selected = confirmedReturn ? page! : selectExistingApplicationPage(context, saved.url, payload.livePageUrl);
+            await listeners.attach(selected, { opportunityId: saved.id, applicationUrl: selected.url(), opportunityUrl: saved.url, employerName: saved.company }, false);
             const status = await listeners.arm();
             if (status.submission?.state !== 'ARMED') return respond(res, 409, { ok: false, error: status.error || 'submission_tracking_not_armed', listeners: status });
             page = selected;
@@ -419,7 +426,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             authCheckpoint = INITIAL_CHECKPOINT; networkDiagnosis = null;
             state = 'submission_tracking_armed_existing_tab';
             await selected.bringToFront();
-            return respond(res, 200, { ok: true, state, requiresOperatorSubmission: true, listeners: status });
+            return respond(res, 200, { ok: true, state, currentPage: { opportunityId, applicationUrl, pageUrl: selected.url() }, requiresOperatorSubmission: true, listeners: status });
           }
           if (url.pathname === PREFIX + '/preferences') return respond(res, 200, { ok: true,
             preferences: await updatePreferences(current => mergePreferenceEdits(current, payload.preferences, payload.removedQuestions)) });
@@ -489,7 +496,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             const exactInlineForm = inlineBroadcastwell &&
               new URL(page.url()).pathname === '/careers/ai-automation-engineer';
             if (opportunityId && (state === 'application_form_open_review_required' || exactInlineForm)) {
-              await listeners.attach(page, { opportunityId, applicationUrl: page.url(),
+              await listeners.attach(page, { opportunityId, applicationUrl: page.url(), opportunityUrl: jobUrl,
                 employerName: typeof payload.employerName === 'string' ? payload.employerName.slice(0, 160) : '' });
               await listeners.arm();
               // Seed missing-question discovery from the actual displayed form.
@@ -526,6 +533,10 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             if (payload.trackSubmission === true) await listeners.arm();
             if (payload.trackSubmission === false) await listeners.disarm();
             return respond(res, 200, { ok: true, listeners: await listeners.status() });
+          }
+          if (url.pathname === PREFIX + '/listeners/refresh') {
+            if (payload.opportunityId !== opportunityId || payload.url !== applicationUrl) throw new Error('Select the application bound to this browser.');
+            return respond(res, 200, { ok: true, listeners: await ManagedListeners.prototype.refresh.call(listeners) });
           }
           if (url.pathname === PREFIX + '/questions') return respond(res, 200, { ok: true, questions: await listeners.catalog(page) });
           if ([PREFIX + '/attach', PREFIX + '/prepare'].includes(url.pathname)) {

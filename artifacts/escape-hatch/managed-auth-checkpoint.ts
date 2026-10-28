@@ -69,15 +69,19 @@ export async function inspectAuthObservation(page: Page, expectedOrigin: string)
       const fromLabel = Array.from(input.labels || []).map(x => x.textContent || '').join(' ');
       const labelledBy = (el.getAttribute('aria-labelledby') || '').split(/\s+/)
         .map(id => document.getElementById(id)?.textContent || '').join(' ');
-      return [input.name, input.id, el.getAttribute('aria-label'), fromLabel, labelledBy, el.getAttribute('placeholder')].join(' ').toLowerCase().slice(0, 180);
+      // Long provider-generated names must not truncate the meaningful question.
+      return [fromLabel, labelledBy, el.getAttribute('aria-label'), el.getAttribute('placeholder'), input.name, input.id].join(' ').toLowerCase().slice(0, 180);
     });
     const credentialGate = inputs.some(el => el instanceof HTMLInputElement && el.type === 'password');
     const emailCount = inputs.filter(el => el instanceof HTMLInputElement && el.type === 'email').length;
     const identity = labels.filter(label => /(?:first.?name|last.?name|given.?name|phone|telephone|address|linkedin|portfolio)/i.test(label)).length;
     const uploads = inputs.filter(el => el instanceof HTMLInputElement && el.type === 'file').length;
     const employment = labels.filter(label => /(?:employment|experience|education|resume|r[ée]sum[ée]|cv|cover.?letter|work.?history)/i.test(label)).length;
+    const hostedQuestionnaire = /^[a-z0-9-]+\.hiringplatform\.com$/i.test(location.hostname) &&
+      /^\/questionnaires\/\d+\/people\/[a-z0-9_-]+\/?$/i.test(location.pathname) &&
+      document.querySelector('#tw-app form#question-page-form') !== null && inputs.length >= 2;
     const applicationFormRecognized = inputs.length <= 256 && !credentialGate &&
-      (uploads > 0 || employment > 0 || identity >= 2);
+      (uploads > 0 || employment > 0 || identity >= 2 || hostedQuestionnaire);
     const emailFirstGate = !credentialGate && !applicationFormRecognized && emailCount > 0 &&
       inputs.filter(el => el instanceof HTMLInputElement && !['hidden','checkbox','radio'].includes(el.type)).length <= 2;
     // Counts alone cannot distinguish different forms with equal field totals.

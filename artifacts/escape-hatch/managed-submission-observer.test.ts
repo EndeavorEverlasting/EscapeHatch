@@ -276,3 +276,18 @@ test('continuation path configuration must be narrower than the selected applica
     }), /strict descendants/);
   } finally { await page.close(); }
 });
+
+test('role-and-employer receipt is acknowledged by a read-only refresh without another attempt', async () => {
+  const { page, observer } = await fixture('pending');
+  try {
+    await observer.arm(); await click(page);
+    await until(() => observer.snapshot().state === 'PENDING');
+    await page.locator('#root').evaluate(root => { root.innerHTML = '<h1>Thank you for submitting your application for the Example Coordinator with Example Company!</h1>'; });
+    const result = await observer.refresh();
+    assert.equal(result.state, 'CONFIRMED');
+    const attempt = result.receipt?.attemptId;
+    assert.ok(attempt);
+    assert.equal((await observer.refresh()).receipt?.attemptId, attempt);
+    assert.equal(await page.locator('button').count(), 0);
+  } finally { await observer.dispose(); await page.close(); }
+});

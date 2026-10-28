@@ -82,6 +82,51 @@ test('bind-existing endpoint recovers exact saved Lever tab, preserves entries a
   }
 });
 
+test('bind-existing reuses only the active explicitly confirmed questionnaire without navigation', async () => {
+  const root = await fs.mkdtemp(path.join(tmpdir(), 'eh-bind-existing-'));
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  const context = await browser.newContext();
+  const before = { ...process.env };
+  const instanceId = 'existing-tab-' + Date.now();
+  const symbol = Symbol.for('escapehatch.managed-browser.' + instanceId);
+  const listeners = new ManagedListeners(path.join(root, 'receipts.json'), path.join(root, 'preferences.json'));
+  const job = { id: 'synthetic-questionnaire', company: 'Synthetic', role: 'Engineer', url: 'https://synthetic.hiringplatform.com/processes/example', status: 'preparing' as const, priority: 'normal' as const, notes: '', nextAction: 'Review', updatedAt: new Date().toISOString() };
+  try {
+    Object.assign(process.env, { ESCAPEHATCH_DATA_HOME: root, ESCAPEHATCH_REPO_FINGERPRINT: 'a'.repeat(64), ESCAPEHATCH_SHUTDOWN_TOKEN: 'synthetic-only', ESCAPEHATCH_STARTED_AT_UTC: new Date().toISOString(), PORT: '21041', ESCAPEHATCH_INSTANCE_ID: instanceId });
+    await saveWorkspace({ schema: WORKSPACE_SCHEMA, values: { [APPLICATIONS_KEY]: [job] } }, null);
+    await context.route('https://synthetic.hiringplatform.com/**', route => route.fulfill({ contentType: 'text/html', body: '<div id="tw-app"><form id="question-page-form"><input value="operator entry"><button type="submit">Save and Complete</button></form></div>' }));
+    const unrelated = await context.newPage(); await unrelated.goto(job.url.replace('11111111-', '22222222-') + '/apply');
+    const target = await context.newPage(); await target.goto('https://synthetic.hiringplatform.com/questionnaires/456/people/example');
+    (globalThis as Record<symbol, unknown>)[symbol] = { context, page: target, state: 'browser_open', applicationOrigin: new URL(target.url()).origin, applicationUrl: job.url, opportunityId: job.id, preparation: null, networkDiagnosis: null, authCheckpoint: null, trustedReturnPath: new URL(target.url()).pathname, listeners, busy: false };
+    let middleware: Function = () => {};
+    const plugin = createManagedBrowserAssistPlugin();
+    (plugin.configureServer as Function)({ config: { server: { port: 21041 } }, middlewares: { use: (handler: Function) => { middleware = handler; } } });
+    const request = async (payload: object, origin = 'http://127.0.0.1:21041') => {
+      let code = 0, body = '';
+      await middleware({ url: '/__escapehatch/managed-assist/listeners/bind-existing', method: 'POST', headers: { host: '127.0.0.1:21041', origin, 'content-type': 'application/json', 'x-escapehatch-operator-action': 'confirmed' }, socket: { remoteAddress: '127.0.0.1' }, async *[Symbol.asyncIterator]() { yield Buffer.from(JSON.stringify(payload)); } }, { set statusCode(value: number) { code = value; }, setHeader() {}, end(value: string) { body = value; } }, () => assert.fail('bind route missed'));
+      return { code, body: JSON.parse(body) };
+    };
+    const payload = { opportunityId: job.id, url: job.url, livePageUrl: target.url() };
+    assert.equal((await request(payload, 'https://foreign.example.com')).code, 403);
+    assert.equal((await request({ ...payload, opportunityId: 'wrong-job' })).code, 422);
+    assert.equal((await request({ ...payload, livePageUrl: 'https://synthetic.hiringplatform.com/questionnaires/999/people/other' })).code, 422);
+    const result = await request(payload);
+    assert.equal(result.code, 200, JSON.stringify(result.body));
+    assert.equal(result.body.listeners.submission.state, 'ARMED');
+    assert.equal(result.body.listeners.recordingAnswers, false);
+    assert.equal(result.body.currentPage.pageUrl, target.url());
+    assert.equal(await target.locator('input').inputValue(), 'operator entry');
+    assert.equal(unrelated.url(), job.url.replace('11111111-', '22222222-') + '/apply');
+    assert.deepEqual(await fs.readdir(root).then(files => files.filter(file => file === 'receipts.json')), []);
+  } finally {
+    await listeners.dispose(); await browser.close();
+    delete (globalThis as Record<symbol, unknown>)[symbol];
+    for (const key of Object.keys(process.env)) if (!(key in before)) delete process.env[key];
+    Object.assign(process.env, before);
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
 test('managed Chrome sessions persist per app origin and cannot collide across runtime ports', () => {
   const env = { LOCALAPPDATA: path.resolve('synthetic-user-data') };
   const production = managedBrowserProfileDirectory('http://127.0.0.1:21031', env);

@@ -87,7 +87,7 @@ async function inspectPreferenceFields(page: Page, employerName = '') {
       selectedText: selectWidget?.querySelector('[role="option"][aria-selected="true"]')?.textContent?.trim() || '' };
   })));
   const available = await Promise.all(controls.map(async (control, i) =>
-    !descriptors[i].readonly && ['text', 'email', 'tel', 'url', 'textarea', 'select', 'radio', 'toggle'].includes(descriptors[i].type) &&
+    !descriptors[i].readonly && ['text', 'email', 'tel', 'url', 'textarea', 'number', 'select', 'radio', 'toggle'].includes(descriptors[i].type) &&
     await control.isVisible() && await control.isEnabled()));
   const ids = descriptors.map(d => [...new Set(d.prompts.map(prompt => matchQuestion(prompt, employerName)).filter((id): id is string => id !== null))]);
   return { controls, descriptors, available, ids };
@@ -205,6 +205,29 @@ export async function fillSavedPreferences(page: Page, preferences: Preferences,
           if (matches.length !== 1) { result.skipped.push(id + ':option_mismatch'); continue; }
           await control.selectOption(matches[0].value, { timeout: 2500 });
           if (await control.inputValue() !== matches[0].value) throw new Error('not retained');
+        } else if (descriptor.type === 'number') {
+          const numeric = value.trim();
+          if (!/^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i.test(numeric) || !Number.isFinite(Number(numeric))) {
+            result.skipped.push(id + ':invalid_number'); continue;
+          }
+          // Let native HTML number validity own min/max/step semantics before
+          // changing the real field. Detached controls cannot trigger form events.
+          const permitted = await control.evaluate((element, candidate) => {
+            const probe = document.createElement('input'); probe.type = 'number';
+            for (const attribute of ['min', 'max', 'step', 'value']) {
+              const setting = element.getAttribute(attribute);
+              if (setting !== null) probe.setAttribute(attribute, setting);
+            }
+            probe.value = candidate;
+            return probe.validity.valid && Number.isFinite(probe.valueAsNumber) && probe.valueAsNumber === Number(candidate);
+          }, numeric);
+          if (!permitted) { result.skipped.push(id + ':number_constraint_mismatch'); continue; }
+          await control.fill(numeric, { timeout: 2500 });
+          const retained = await control.evaluate((element, expected) => {
+            const field = element as HTMLInputElement;
+            return field.validity.valid && Number.isFinite(field.valueAsNumber) && field.valueAsNumber === expected;
+          }, Number(numeric));
+          if (!retained) { await control.fill(existing, { timeout: 2500 }); throw new Error('number not retained'); }
         } else if (['text', 'email', 'tel', 'url', 'textarea'].includes(descriptor.type)) {
           await control.fill(value, { timeout: 2500 });
           const actual = await control.inputValue();

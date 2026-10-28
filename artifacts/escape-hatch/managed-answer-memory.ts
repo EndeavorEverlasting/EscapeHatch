@@ -18,7 +18,11 @@ export function mergeCapturedAnswer(data: Preferences, event: CapturedAnswer): P
   } else {
     if (!safeDiscoveredQuestion(prompt)) return data;
     const key = normalizeQuestion(prompt);
-    candidate = { ...data, discovered_answers: { ...data.discovered_answers, [key]: { question: prompt, value: event.value.trim(), source: 'user', updated_at: event.captured_at, accepted: false } } };
+    const prior = data.discovered_answers?.[key];
+    // Re-observing an approved value does not revoke the user's reuse choice.
+    // A changed value still needs an explicit new approval.
+    const accepted = prior?.source === 'user' && prior.accepted === true && prior.value === event.value.trim();
+    candidate = { ...data, discovered_answers: { ...data.discovered_answers, [key]: { question: prompt, value: event.value.trim(), source: 'user', updated_at: event.captured_at, accepted } } };
   }
   return parsePreferences(candidate) || data;
 }

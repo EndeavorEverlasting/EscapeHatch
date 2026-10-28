@@ -47,6 +47,22 @@ test('Lever listing receipts accept only that exact job apply path', () => {
   assert.equal(reconcileSubmissionReceipts(original, [{ ...evidence, applicationPath: '/synthetic/other/apply' }]), original);
 });
 
+test('hosted questionnaire receipt retains an explicit posting binding through storage', () => {
+  const job = { ...application, url: 'https://synthetic.hiringplatform.com/processes/example' };
+  const evidence = { ...receipt, applicationOrigin: 'https://synthetic.hiringplatform.com',
+    applicationPath: '/questionnaires/456/people/example', opportunityPath: '/processes/example' };
+  assert.equal(parseSubmissionEvidence(evidence)?.opportunityPath, evidence.opportunityPath);
+  const result = reconcileSubmissionReceipts([job], [evidence]);
+  assert.equal(result[0].status, 'applied');
+  assert.ok(parseApplicationsStorage(result));
+  for (const patch of [{ opportunityPath: '/processes/other' }, { opportunityPath: undefined },
+    { opportunityId: 'other' }, { applicationOrigin: 'https://other.hiringplatform.com' },
+    { opportunityPath: '//evil.test/path' }, { opportunityPath: '/a/../processes/example' }]) {
+    const original = [job];
+    assert.equal(reconcileSubmissionReceipts(original, [{ ...evidence, ...patch }]), original);
+  }
+});
+
 test('stale imported Ready snapshot cannot erase a local confirmed submission', () => {
   const row = { sheetRow: 2, appliedCheckbox: false, priority: 'normal', status: 'Ready to Apply', company: 'Synthetic', role: 'Role', applyUrl: url };
   const id = trackerOpportunityId(row);

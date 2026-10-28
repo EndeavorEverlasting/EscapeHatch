@@ -7,7 +7,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { chromium } from '@playwright/test';
-import { emptyPreferences, parsePreferences, optionMatches, matchQuestion, expandProfessionalTitles, suggestProfessionalTitles } from './src/lib/application-preferences.ts';
+import { emptyPreferences, parsePreferences, optionMatches, matchQuestion, normalizeQuestion, expandProfessionalTitles, suggestProfessionalTitles } from './src/lib/application-preferences.ts';
 import { savePreferences, readPreferences, clearPreferences } from './preference-file.ts';
 import { fillSavedPreferences, openApplicationForm, internationalPhone, captureMilitaryAnswers } from './managed-form.ts';
 import { attachPdfs, parsePrivatePdf } from './browser-assist-control.ts';
@@ -19,6 +19,53 @@ function syntheticPreferences() {
   }
   return data;
 }
+
+test('accepted numeric answers obey native finite/range/step rules and preserve operator edits', async () => {
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  const page = await browser.newPage();
+  const question = 'Rate spreadsheet proficiency';
+  const key = normalizeQuestion(question);
+  const answer = (value: string, accepted = true) => ({ ...emptyPreferences(), discovered_answers: {
+    [key]: { question, value, source: 'user' as const, accepted, updated_at: new Date().toISOString() },
+  } });
+  const render = (attributes = 'min="1" max="5" step="1"', existing = '') => page.setContent(
+    `<form onsubmit="event.preventDefault();window.submitted=true"><label>${question}<input type="number" ${attributes} value="${existing}"></label><label>Start availability<input type="date"></label><label><input type="checkbox">I agree</label><button type="submit">Submit</button></form>`);
+  try {
+    await render();
+    assert.ok((await fillSavedPreferences(page, answer('5'))).filled.includes('discovered:' + key));
+    assert.equal(await page.getByLabel(question).inputValue(), '5');
+    await page.getByLabel(question).fill('3');
+    assert.ok((await fillSavedPreferences(page, answer('5'))).skipped.includes('discovered:' + key + ':preserved'));
+    assert.equal(await page.getByLabel(question).inputValue(), '3');
+    for (const invalid of ['Infinity', 'NaN', '0x5', '5 points', '1e999', '0', '6', '2.5']) {
+      await render();
+      assert.equal((await fillSavedPreferences(page, answer(invalid))).filled.length, 0, invalid);
+      assert.equal(await page.getByLabel(question).inputValue(), '', invalid);
+    }
+    await render('min="0.5" max="2" step="0.5"');
+    assert.ok((await fillSavedPreferences(page, answer('1.5'))).filled.includes('discovered:' + key));
+    assert.equal(await page.getByLabel(question).inputValue(), '1.5');
+    // Without min, the authored value attribute defines the native step base.
+    await render('step="1"', '0.5');
+    await page.getByLabel(question).fill('');
+    assert.ok((await fillSavedPreferences(page, answer('1.5'))).filled.includes('discovered:' + key));
+    await page.getByLabel(question).fill('');
+    assert.equal((await fillSavedPreferences(page, answer('1'))).filled.length, 0);
+    assert.equal(await page.getByLabel(question).inputValue(), '');
+    await render();
+    assert.equal((await fillSavedPreferences(page, answer('5', false))).filled.length, 0);
+    const withDate = answer('5');
+    withDate.discovered_answers[normalizeQuestion('Start availability')] = { question: 'Start availability', value: 'Immediately or two weeks out', source: 'user', accepted: true, updated_at: new Date().toISOString() };
+    await fillSavedPreferences(page, withDate);
+    assert.equal(await page.getByLabel('Start availability').inputValue(), '');
+    assert.equal(await page.getByLabel('I agree').isChecked(), false);
+    assert.equal(await page.evaluate(() => Boolean((window as unknown as { submitted?: boolean }).submitted)), false);
+    await render();
+    await page.getByLabel(question).evaluate(field => field.addEventListener('input', () => { if ((field as HTMLInputElement).value === '5') (field as HTMLInputElement).value = '2'; }));
+    assert.ok((await fillSavedPreferences(page, answer('5'))).skipped.includes('discovered:' + key + ':not_verified'));
+    assert.equal(await page.getByLabel(question).inputValue(), '');
+  } finally { await browser.close(); }
+});
 
 test('explicit preferences survive process-independent disk reads; invalid imports preserve data; clear removes file', async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-preferences-'));

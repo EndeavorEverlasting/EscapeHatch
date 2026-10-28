@@ -1,0 +1,16 @@
+{
+  "schema_version": "prompt-parallel-dispatch/v1",
+  "run_id": "hosted-finish-line-20261028",
+  "repository": "EndeavorEverlasting/EscapeHatch",
+  "base_ref": { "provider_default_head": "366e0f7ebdef57b5cdafc67aa41f490486de444b" },
+  "graph": { "max_width": 2, "parallel_disposition": "REQUIRED" },
+  "convergence_owner": "primary agent",
+  "lanes": [
+    { "lane_id": "submission-review", "adapter": "collaboration.spawn_agent", "target": "/root/submission_review", "mutation_surfaces": [], "mission": "Independent exact-head submission observer and reconciliation review; no browser or provider mutations." },
+    { "lane_id": "answer-review", "adapter": "collaboration.spawn_agent", "target": "/root/answer_durability_review", "mutation_surfaces": [], "mission": "Audit private answer reuse without disclosing values; identify canonical deterministic-reuse gaps." },
+    { "lane_id": "answer-repair", "adapter": "collaboration.followup_task", "target": "/root/answer_durability_review", "branch": "codex/answer-reuse-numeric-20261028", "depends_on": ["answer-review"], "mutation_surfaces": ["artifacts/escape-hatch/managed-answer-memory.ts", "artifacts/escape-hatch/managed-answer-memory.test.ts", "artifacts/escape-hatch/managed-form.ts", "artifacts/escape-hatch/managed-preferences.test.ts"], "mission": "Preserve unchanged approval and validate native numeric writes in an isolated worktree; coordinator integrates." }
+  ],
+  "canonical_validation": "UNPROVEN_MISSING_SCHEMA_AND_RUNNER",
+  "blockers": ["harness/contracts/prompt-parallel-dispatch.v1.json absent", "scripts/prompt_parallel_dispatch.py absent"],
+  "provenance": "Post-dispatch audit record of actual native execution; not a claim of validated pre-dispatch manifest execution. Existing primary manifest preserved."
+}

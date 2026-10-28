@@ -92,7 +92,7 @@ export function validateResumeGraph(g: ResumeGraph): Map<string, Node> {
   const derivation = new Map<string, string>();
   const slotEdges = new Map<string, string>();
   const jobTargets = new Map<string, string>();
-  const applicationAttachments = new Set<string>();
+  const applicationAttachments = new Map<string, string>();
   const edges = new Set<string>();
   for (const e of g.edges) {
     const a = nodes.get(e?.from), b = nodes.get(e?.to);
@@ -114,7 +114,7 @@ export function validateResumeGraph(g: ResumeGraph): Map<string, Node> {
       slotEdges.set(a.id, b.id);
     } else if (e.kind === 'application_uses') {
       if (a.type !== 'application' || b.type !== 'resume' || applicationAttachments.has(a.id)) die('invalid application attachment');
-      applicationAttachments.add(a.id);
+      applicationAttachments.set(a.id, b.id);
     } else die('unknown edge kind');
   }
   for (const n of g.nodes) {
@@ -122,8 +122,8 @@ export function validateResumeGraph(g: ResumeGraph): Map<string, Node> {
     if (n.type === 'application' && nodes.get(n.opportunityId)?.type !== 'opportunity') die('application lacks opportunity');
     if (n.type === 'resume' && n.tier === 'job' && !jobTargets.has(n.id)) die('job derivative lacks unique opportunity');
     if (n.type === 'application') {
-      const uses = g.edges.find(e => e.kind === 'application_uses' && e.from === n.id);
-      if (uses && jobTargets.has(uses.to) && jobTargets.get(uses.to) !== n.opportunityId) die('application crossed opportunity');
+      const usedResume = applicationAttachments.get(n.id);
+      if (usedResume && jobTargets.has(usedResume) && jobTargets.get(usedResume) !== n.opportunityId) die('application crossed opportunity');
     }
   }
   // Globally memoized iterative walk: O(V + E), not a separate traversal per node.
@@ -193,8 +193,9 @@ export function resolveResumeForPlatform(g: ResumeGraph, selection: Selection): 
     return decision(slot.id, 'UPLOAD_REQUIRES_CONSENT', current?.type === 'resume' && current.tier === 'job' ?
       'PERSISTENT_SLOT_HAS_JOB_DERIVATIVE' : 'PERSISTENT_RESUME_REPLACEMENT_NEEDS_CONSENT', domain.id);
   }
-  const jobs = match.filter(x => x.tier === 'job' && g.edges.some(e => e.kind === 'targets_opportunity' &&
-    e.from === x.id && e.to === opportunity.id)) .sort((a,b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  const targeted = new Set(g.edges.filter(e => e.kind === 'targets_opportunity' && e.to === opportunity.id).map(e => e.from));
+  const jobs = match.filter(x => x.tier === 'job' && targeted.has(x.id))
+    .sort((a,b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   if (jobs.length > 1) return fail(slot.id, 'AMBIGUOUS_JOB_DERIVATIVES');
   const selected = jobs[0] ?? domain;
   if (parentsCurrent && current?.id === selected.id) return decision(slot.id, 'KEEP_CURRENT', 'ISOLATED_ATTACHMENT_CURRENT', selected.id);

@@ -88,7 +88,6 @@ export function reconcileWorkspace(local: SavedWorkspace, saved: SavedWorkspace)
     };
   };
   const ownerBoundary = checkOwnerBoundary(ownerContext(local), ownerContext(saved));
-  if (ownerBoundary) return { workspace: local, conflicts: [ownerBoundary] };
   const values = { ...local.values };
   const conflicts: string[] = [];
   const empty = (key: string, value: unknown) => value === undefined ||
@@ -112,6 +111,16 @@ export function reconcileWorkspace(local: SavedWorkspace, saved: SavedWorkspace)
     }
     return JSON.stringify(left) === JSON.stringify(right);
   };
+  // Metadata-only snapshots carry no new applicant assertions. Preserve the
+  // prior timestamp-tolerant no-op behavior, but never excuse contradictory
+  // profile/assist identities, even when both copies have identical bytes.
+  const keys = new Set([...Object.keys(local.values), ...Object.keys(saved.values)]);
+  const contentEquivalent = [...keys].every(key =>
+    Object.hasOwn(local.values, key) && Object.hasOwn(saved.values, key) &&
+    same(key, local.values[key], saved.values[key]));
+  if (ownerBoundary && !(ownerBoundary === 'OWNER_CONTEXT_UNVERIFIED' && contentEquivalent)) {
+    return { workspace: local, conflicts: [ownerBoundary] };
+  }
   for (const [key, value] of Object.entries(saved.values)) {
     if (empty(key, values[key])) values[key] = value;
     else if (!empty(key, value) && !same(key, values[key], value)) conflicts.push(key);

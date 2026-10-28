@@ -14,7 +14,7 @@ import subprocess
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-PREFIXES = ('artifacts/escape-hatch/', 'browser/', 'contracts/', 'scripts/', 'templates/', 'fixtures/')
+PREFIXES = ('artifacts/escape-hatch/', 'browser/', 'contracts/', 'harness/contracts/', 'scripts/', 'templates/', 'fixtures/')
 ROOT_FILES = {'VERSION', 'LICENSE', 'package.json', 'Get-EscapeHatch.cmd', 'Install-EscapeHatch.cmd', 'Uninstall-EscapeHatch.cmd', 'Launch-EscapeHatch.cmd', 'Launch-EscapeHatch.ps1', 'Close-EscapeHatch.cmd', 'Close-EscapeHatch.ps1', 'Status-EscapeHatch.cmd', 'Status-EscapeHatch.ps1'}
 SCHEMA = 'escapehatch/windows-preview-package/v1'
 

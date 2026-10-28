@@ -3,6 +3,8 @@ from pathlib import Path
 import importlib.util
 import hashlib
 import json
+import posixpath
+import re
 import shutil
 import subprocess
 import tempfile
@@ -59,6 +61,19 @@ class WindowsPreviewPackage(unittest.TestCase):
                 self.assertEqual(set(archive.namelist()), set(manifest['files']) | {'windows-release.json'})
                 for name, digest in manifest['files'].items():
                     self.assertEqual(hashlib.sha256(archive.read(name)).hexdigest(), digest)
+                self.assertIn('harness/contracts/application-form-taxonomy.v1.json', manifest['files'])
+                # Runtime source imports must resolve inside the shipped bundle;
+                # checking the checkout alone hides omitted repository contracts.
+                for name in manifest['files']:
+                    if not name.startswith('artifacts/escape-hatch/') or not name.endswith(('.ts', '.tsx')) or '.test.' in name or '/tests/' in name:
+                        continue
+                    source = archive.read(name).decode('utf-8-sig')
+                    for relative in re.findall(r'''(?:from\s*|import\s*\()\s*['"](\.[^'"]+)['"]''', source):
+                        target = posixpath.normpath(posixpath.join(posixpath.dirname(name), relative))
+                        candidates = {target, *(target + suffix for suffix in ('.ts', '.tsx', '.js', '.json', '/index.ts', '/index.tsx'))}
+                        if target.endswith('.js'):
+                            candidates.add(target[:-3] + '.ts')
+                        self.assertTrue(candidates & manifest['files'].keys(), f'{name} imports missing packaged source {relative}')
                 self.assertNotIn('.git', archive.namelist())
             first.write_bytes(b'changed')
             with self.assertRaisesRegex(ValueError, 'Immutable'):

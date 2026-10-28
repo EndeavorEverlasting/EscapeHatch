@@ -1,0 +1,410 @@
+{
+  "schema_version": "prompt-parallel-dispatch/v1",
+  "run_id": "escapehatch-one-download-profile-20261028",
+  "repository": "EndeavorEverlasting/EscapeHatch",
+  "parent_issue": "https://github.com/EndeavorEverlasting/EscapeHatch/issues/69",
+  "plan_owner": "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md",
+  "handoff_owner": "docs/agent/P04_ONE_DOWNLOAD_EXTENSION_AND_PRIVATE_PROFILE_BOOTSTRAP_2026-10-28.md",
+  "base_ref": {
+    "observed_default_branch": "main",
+    "observed_default_sha_at_authorship": "6379c4d5904de9f44fc75fdb9d9ed07ab8b84021",
+    "observed_merged_pr_130": "6379c4d5904de9f44fc75fdb9d9ed07ab8b84021",
+    "refresh_before_mutation": true
+  },
+  "authorization": {
+    "disposition": "PROVIDER_HANDOFF_ONLY",
+    "product_code_write_attempt": "BLOCKED_BY_TOOL_SAFETY_CHECKS",
+    "product_code_committed": false,
+    "local_runtime_access": false,
+    "operator_only": [
+      "Chrome Web Store developer enrollment / final publish where needed",
+      "standard OS/browser install approvals",
+      "real employer final Submit and legal attestations"
+    ],
+    "private_profile_access": "NOT_GRANTED_OR_OBSERVED"
+  },
+  "graph": {
+    "expression": "EH-B0 read-owner-contract; {EH-B1 || EH-B2 || EH-B3} independent after scoped inventory; EH-B4 after EH-B0 + EH-B2; EH-B5 after EH-B1 + EH-B2 + EH-B3 + EH-B4",
+    "max_width": 3,
+    "parallel_disposition": "REQUIRED_WHEN_REAL_SAFE_ADAPTER_EXISTS",
+    "ownership_collisions": [
+      "#132/#134 own applicant owner binding and workspace-startup; B4 cannot write those paths before reconciliation",
+      "B1/B3 coordinate package/release artifact paths",
+      "B1/B2 coordinate Install/Runtime but write disjoint owned files",
+      "active 1.3.0 in user Chrome and loopback port must not be restarted without owned-process readback"
+    ]
+  },
+  "convergence_owner": "EH-B5",
+  "manifest_path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-one-download-profile-20261028/manifest.json",
+  "status": "COMMITTED_PROVIDER_HANDOFF_NOT_DISPATCHED_CANONICAL_VALIDATION_NOT_RUN",
+  "blockers": [
+    "Current chat has GitHub provider source access but no attached Windows host, Chrome profile or private workspace",
+    "Current source packager depends on Python; ordinary installer does not establish a consumer Python dependency",
+    "Normal unmanaged consumer Chrome extension installation needs Chrome Web Store/user approval; cannot be silently forced by installer",
+    "PRs #132/#134 owner binding pending integrated provider proof; no profile hydration without verified owner identity",
+    "Current connected tools blocked provider-side PowerShell script write; no workaround attempted"
+  ],
+  "autonomy_gap": "On installed Windows host, resolve actual original checkout and current open PR ownership, run canonical provider/runtime checks, validate run-scoped manifest with available dispatcher; if schema/runner remains missing, record DEGRADED and still execute independently safe isolated B1/B2/B3 work.",
+  "protected_behavior": [
+    "existing merged PR #130 app receipt/event model",
+    "enabled and pinned Chrome extension 1.3.0 in operator-reported host state",
+    "approved bird icon, mouse popup",
+    "existing private workspace and user application history",
+    "no final Submit or protected attestation automation"
+  ],
+  "lanes": [
+    {
+      "lane_id": "EH-B0",
+      "wave": 0,
+      "mission": "Recover owner-binding authority from PR #132/#134 and certify same-owner, missing-owner and cross-user rejects; no duplicate owner schema",
+      "dependencies": [
+        "current GitHub/installed host preflight"
+      ],
+      "owned_mutation_surfaces": [
+        "existing PR #134 owner-binding branch only when its writer relinquishes ownership",
+        "owner tests and reviewed migration adapter"
+      ],
+      "forbidden_surfaces": [
+        "blind edits to #132/#134 active writer files",
+        "any personal profile in public Git",
+        "silent adoption of email/name as authentication"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "github",
+        "local installed Windows host when authorized"
+      ],
+      "required_capabilities": [
+        "isolated git worktree",
+        "Node and Python repo test runners",
+        "existing Windows PowerShell runtime when needed"
+      ],
+      "posture": "single branch writer / one-owned-path lane",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2,
+        "verified": false
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-B0",
+          "plan": "docs/agent/P04_ONE_DOWNLOAD_EXTENSION_AND_PRIVATE_PROFILE_BOOTSTRAP_2026-10-28.md"
+        }
+      },
+      "expected_artifacts": [
+        "bounded source changes",
+        "focused adversarial tests",
+        "exact-head commit/PR/proof receipt"
+      ],
+      "validation": [
+        "two applicant and two developer synthetic tests",
+        "owner migration negative cases",
+        "python scripts/validate_application_autofill_parent.py"
+      ],
+      "convergence_owner": "EH-B5",
+      "status": "WAITING_OWNER_BRANCH_RECONCILIATION"
+    },
+    {
+      "lane_id": "EH-B1",
+      "wave": 1,
+      "mission": "Build actual downloadable signed installer/release and remove end-user source folder/prerequisite navigation",
+      "dependencies": [
+        "read-only path/PR inventory"
+      ],
+      "owned_mutation_surfaces": [
+        "Get-EscapeHatch.cmd",
+        "scripts/windows/EscapeHatch-Install.ps1",
+        "release installer workflow",
+        "product page download component",
+        "existing installer tests"
+      ],
+      "forbidden_surfaces": [
+        "runtime manager source B2",
+        "owner binding source B0",
+        "Chrome policy modifications",
+        "private user data",
+        "unverified remote-script execution"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "github",
+        "local installed Windows host when authorized"
+      ],
+      "required_capabilities": [
+        "isolated git worktree",
+        "Node and Python repo test runners",
+        "existing Windows PowerShell runtime when needed"
+      ],
+      "posture": "single branch writer / one-owned-path lane",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2,
+        "verified": false
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-B1",
+          "plan": "docs/agent/P04_ONE_DOWNLOAD_EXTENSION_AND_PRIVATE_PROFILE_BOOTSTRAP_2026-10-28.md"
+        }
+      },
+      "expected_artifacts": [
+        "bounded source changes",
+        "focused adversarial tests",
+        "exact-head commit/PR/proof receipt"
+      ],
+      "validation": [
+        "Windows clean standard-user download/install",
+        "Windows repeat install",
+        "authentic package hash readback",
+        "python tests/test_escapehatch_installer_source_delivery.py"
+      ],
+      "convergence_owner": "EH-B5",
+      "status": "READY_FOR_LOCAL_SCOPED_SPRINT"
+    },
+    {
+      "lane_id": "EH-B2",
+      "wave": 1,
+      "mission": "Reconcile effective owned loopback port and safe start/status/stop without rewriting or killing unknown process",
+      "dependencies": [
+        "read-only runtime receipt and port preflight"
+      ],
+      "owned_mutation_surfaces": [
+        "scripts/windows/EscapeHatch-Runtime.ps1",
+        "contracts/local-runtime-lifecycle.v1.json",
+        "runtime lifecycle tests"
+      ],
+      "forbidden_surfaces": [
+        "installer entrypoint B1",
+        "extension worker",
+        "foreign port/PID",
+        "user career data"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "github",
+        "local installed Windows host when authorized"
+      ],
+      "required_capabilities": [
+        "isolated git worktree",
+        "Node and Python repo test runners",
+        "existing Windows PowerShell runtime when needed"
+      ],
+      "posture": "single branch writer / one-owned-path lane",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2,
+        "verified": false
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-B2",
+          "plan": "docs/agent/P04_ONE_DOWNLOAD_EXTENSION_AND_PRIVATE_PROFILE_BOOTSTRAP_2026-10-28.md"
+        }
+      },
+      "expected_artifacts": [
+        "bounded source changes",
+        "focused adversarial tests",
+        "exact-head commit/PR/proof receipt"
+      ],
+      "validation": [
+        "python scripts/validate_local_runtime_lifecycle.py",
+        "owned healthy/stale/foreign port synthetic tests",
+        "actual Windows process endpoint readback"
+      ],
+      "convergence_owner": "EH-B5",
+      "status": "READY_FOR_LOCAL_SCOPED_SPRINT"
+    },
+    {
+      "lane_id": "EH-B3",
+      "wave": 1,
+      "mission": "Distribute immutable mascot extension through supported Chrome Store/user-consent route, add development-only zero-folder onboarding helper",
+      "dependencies": [
+        "read-only extension version/package/PR inventory"
+      ],
+      "owned_mutation_surfaces": [
+        "scripts/package_application_assist.py",
+        "extension release workflow and package tests",
+        "extension enrollment diagnostics"
+      ],
+      "forbidden_surfaces": [
+        "profile hydration B4",
+        "Chrome registry/profile mutation",
+        "force-install on unmanaged host",
+        "overwrite existing extension identity"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "github",
+        "local installed Windows host when authorized"
+      ],
+      "required_capabilities": [
+        "isolated git worktree",
+        "Node and Python repo test runners",
+        "existing Windows PowerShell runtime when needed"
+      ],
+      "posture": "single branch writer / one-owned-path lane",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2,
+        "verified": false
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-B3",
+          "plan": "docs/agent/P04_ONE_DOWNLOAD_EXTENSION_AND_PRIVATE_PROFILE_BOOTSTRAP_2026-10-28.md"
+        }
+      },
+      "expected_artifacts": [
+        "bounded source changes",
+        "focused adversarial tests",
+        "exact-head commit/PR/proof receipt"
+      ],
+      "validation": [
+        "python tests/test_application_assist_package.py",
+        "Chrome install version/ID/permission readback",
+        "package integrity negative controls"
+      ],
+      "convergence_owner": "EH-B5",
+      "status": "READY_FOR_LOCAL_SCOPED_SPRINT"
+    },
+    {
+      "lane_id": "EH-B4",
+      "wave": 2,
+      "mission": "Hydrate approved local profile into extension only through verified owner-scoped first-party pairing, preserve divergent nonempty values",
+      "dependencies": [
+        "EH-B0",
+        "EH-B2"
+      ],
+      "owned_mutation_surfaces": [
+        "new owner-scoped profile projection adapter",
+        "browser/application-assist/popup.js only after owner collision clearance",
+        "browser/application-assist/assist-core.js extension preference projection tests"
+      ],
+      "forbidden_surfaces": [
+        "PR #134 owner schema until integrated",
+        "opportunity answers or secrets in extension",
+        "unverified arbitrary origin",
+        "silent cross-user overwrite"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "github",
+        "local installed Windows host when authorized"
+      ],
+      "required_capabilities": [
+        "isolated git worktree",
+        "Node and Python repo test runners",
+        "existing Windows PowerShell runtime when needed"
+      ],
+      "posture": "single branch writer / one-owned-path lane",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2,
+        "verified": false
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-B4",
+          "plan": "docs/agent/P04_ONE_DOWNLOAD_EXTENSION_AND_PRIVATE_PROFILE_BOOTSTRAP_2026-10-28.md"
+        }
+      },
+      "expected_artifacts": [
+        "bounded source changes",
+        "focused adversarial tests",
+        "exact-head commit/PR/proof receipt"
+      ],
+      "validation": [
+        "two applicant and two developer isolation tests",
+        "same owner reload and update",
+        "wrong Chrome profile rejection",
+        "actual extension chrome.storage.local readback"
+      ],
+      "convergence_owner": "EH-B5",
+      "status": "WAITING_OWNER_BINDING_AND_RUNTIME"
+    },
+    {
+      "lane_id": "EH-B5",
+      "wave": 3,
+      "mission": "Exact-head review, CI, install proof, protected Chrome and application regressions; converge without false success claims",
+      "dependencies": [
+        "EH-B1",
+        "EH-B2",
+        "EH-B3",
+        "EH-B4"
+      ],
+      "owned_mutation_surfaces": [
+        "integration/evidence receipts",
+        "existing parent/scene validators",
+        "existing release proof owner"
+      ],
+      "forbidden_surfaces": [
+        "unapproved main merge",
+        "real employer Submit",
+        "unknown process termination",
+        "private proof into public artifacts"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "github",
+        "local installed Windows host when authorized"
+      ],
+      "required_capabilities": [
+        "isolated git worktree",
+        "Node and Python repo test runners",
+        "existing Windows PowerShell runtime when needed"
+      ],
+      "posture": "single branch writer / one-owned-path lane",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2,
+        "verified": false
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "execute_bounded_repo_sprint",
+        "arguments": {
+          "sprint": "EH-B5",
+          "plan": "docs/agent/P04_ONE_DOWNLOAD_EXTENSION_AND_PRIVATE_PROFILE_BOOTSTRAP_2026-10-28.md"
+        }
+      },
+      "expected_artifacts": [
+        "bounded source changes",
+        "focused adversarial tests",
+        "exact-head commit/PR/proof receipt"
+      ],
+      "validation": [
+        "python scripts/validate_application_autofill_parent.py",
+        "python scripts/validate_application_journey.py",
+        "npm --prefix artifacts/escape-hatch run test:unit",
+        "npm --prefix artifacts/escape-hatch run test:managed-assist",
+        "npm --prefix artifacts/escape-hatch run build",
+        "two-user installed Windows Chrome pre-submit observations"
+      ],
+      "convergence_owner": "EH-B5",
+      "status": "WAITING_DEPENDENCIES"
+    }
+  ],
+  "receipt_contract": {
+    "json_roundtrip_checked_at_authoring": true,
+    "actual_dispatch": false,
+    "canonical_dispatch_validator": "NOT_RUN",
+    "observed_parallelism": false,
+    "app_code_changed": false,
+    "chrome_installed_this_chat": false,
+    "profile_hydrated_this_chat": false,
+    "merged": false,
+    "deployed": false,
+    "live_observed": false
+  },
+  "exact_next_command": "python scripts/validate_application_autofill_parent.py && python scripts/validate_application_journey.py"
+}

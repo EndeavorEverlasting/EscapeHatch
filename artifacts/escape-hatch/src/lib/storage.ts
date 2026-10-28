@@ -1,4 +1,5 @@
 import { parseSubmissionEvidence, type SubmissionEvidence } from './submission-reconciliation.ts';
+import { parseApplicationEvents, type ApplicationEvent } from './application-events.ts';
 
 export type Profile = {
   name_prefix: string;
@@ -38,6 +39,8 @@ export type Application = {
   nextAction: string;
   jobDescription?: string;
   submissionEvidence?: SubmissionEvidence;
+  events?: ApplicationEvent[];
+  reconciliationConflict?: 'opportunity_url_changed';
   updatedAt: string;
 };
 
@@ -130,15 +133,19 @@ export function parseAnswersStorage(value: unknown): AnswerSnippet[] | null {
 export function parseApplicationsStorage(value: unknown): Application[] | null {
   if (!Array.isArray(value)) return null;
   const applications = value.map((item) => {
-    if (!isRecord(item) || !hasOnlyKeys(item, ['id', 'company', 'role', 'url', 'status', 'priority', 'notes', 'nextAction', 'updatedAt', 'jobDescription', 'submissionEvidence'])) return null;
-    if (item.submissionEvidence !== undefined && !parseSubmissionEvidence(item.submissionEvidence)) return null;
+    if (!isRecord(item) || !hasOnlyKeys(item, ['id', 'company', 'role', 'url', 'status', 'priority', 'notes', 'nextAction', 'updatedAt', 'jobDescription', 'submissionEvidence', 'events', 'reconciliationConflict'])) return null;
+    if (item.reconciliationConflict !== undefined && item.reconciliationConflict !== 'opportunity_url_changed') return null;
+    const submissionEvidence = item.submissionEvidence === undefined ? undefined : parseSubmissionEvidence(item.submissionEvidence);
+    if (submissionEvidence === null) return null;
     if (!isText(item.id) || !item.id.trim() || !isText(item.company) || !item.company.trim()) return null;
     if (!isText(item.role) || !item.role.trim() || !isText(item.url)) return null;
+    const events = item.events === undefined ? undefined : parseApplicationEvents(item.events, item.id, item.url);
+    if (events === null) return null;
     if (!isText(item.status) || !applicationStatuses.includes(item.status as ApplicationStatus)) return null;
     if (!isText(item.priority) || !priorities.includes(item.priority as Priority)) return null;
     if (!isText(item.notes) || !isText(item.nextAction) || !isDateString(item.updatedAt)) return null;
     if (item.jobDescription !== undefined && (typeof item.jobDescription !== 'string' || item.jobDescription.length > 30000)) return null;
-    return item as Application;
+    return { ...item, ...(submissionEvidence ? { submissionEvidence } : {}), ...(events ? { events } : {}) } as Application;
   });
   return applications.every((application): application is Application => application !== null) ? applications : null;
 }

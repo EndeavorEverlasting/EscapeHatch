@@ -686,7 +686,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             return respond(res, 200, { ok: true, state, ...outcome, authCheckpoint, evidenceSummary: evidenceDescription(state), requiresOperatorSubmission: true });
           }
           if (url.pathname === PREFIX + '/attach') {
-            if (payload.resume || payload.cover) throw new Error('Save the selected documents to this opportunity before attaching.');
+            if (payload.resume || payload.cover || payload.case_study) throw new Error('Save the selected documents to this opportunity before attaching.');
             const packageFiles = await documentStore.forUpload(opportunityId, applicationUrl, (await readPreferences()).require_document_review !== false);
             const outcome = await attachPdfs(page, packageFiles.resume, packageFiles.cover, packageFiles.case_study);
             state = attachmentProgressState(outcome);

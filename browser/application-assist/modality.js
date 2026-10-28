@@ -44,7 +44,7 @@
     // Chrome's popup is intrinsically narrow even when the operator uses a desktop.
     // Device modality must not be inferred from the popup window's own 440px width.
     const extensionPopup = !!(w.location && /^(chrome-extension:|moz-extension:)$/.test(w.location.protocol) &&
-      /\\/popup\\.html$/.test(w.location.pathname));
+      /\/popup\.html$/.test(w.location.pathname));
     const narrow = rawNarrow && !(extensionPopup && fine && !mq);
     const standalone = !!(w.matchMedia && w.matchMedia("(display-mode: standalone)").matches);
     return { coarsePointer: mq, narrowViewport: narrow, standalone: standalone };

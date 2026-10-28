@@ -1,6 +1,8 @@
 import { forwardRef, type ChangeEvent, type FormEvent, type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/error-boundary';
+import { ApplicationIdentityWarning } from '@/components/application-identity-warning';
+import { applicationUrlEditConflicts, applyApplicationDetails } from '@/lib/application-events';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import {
@@ -994,7 +996,7 @@ function statusTone(status: ApplicationStatus) {
 
 function ApplicationRow({ application, onEdit, onDelete }: { application: Application; onEdit: () => void; onDelete: () => void }) {
   const [expanded, setExpanded] = useState(false);
-  return <article className={`rounded-2xl border border-border bg-card shadow-sm transition hover:shadow-md ${application.status === 'closed' ? 'opacity-70' : ''}`}><div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"><div className="flex min-w-0 items-start gap-3"><span className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${application.priority === 'high' ? 'bg-accent/20 text-accent-foreground' : 'bg-secondary text-primary'}`}><BriefcaseBusiness size={18} /></span><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="truncate font-display text-2xl">{application.company}</h3><span className={`rounded-full px-2.5 py-1 font-mono-app text-[10px] uppercase tracking-wide ${statusTone(application.status)}`}>{statusLabels[application.status]}</span></div><p className="mt-1 truncate text-sm text-muted-foreground">{application.role}</p>{application.nextAction && <p className="mt-3 text-xs font-bold text-foreground"><span className="mr-1.5 text-primary">Next:</span>{application.nextAction}</p>}</div></div><div className="flex items-center gap-2 sm:shrink-0"><button type="button" onClick={() => setExpanded(!expanded)} data-testid={`button-expand-application-${application.id}`} className="rounded-lg px-3 py-2 text-xs font-bold text-muted-foreground hover:bg-secondary hover:text-foreground">{expanded ? 'Hide details' : 'Details'}</button><Button type="button" variant="outline" onClick={onEdit} data-testid={`button-edit-application-${application.id}`}><Pencil size={14} /> Edit</Button></div></div>{expanded && <div className="border-t border-border bg-secondary/35 px-5 py-5 sm:px-6"><div className="grid gap-5 sm:grid-cols-2"><div><p className="font-mono-app text-[10px] uppercase tracking-[.14em] text-muted-foreground">Notes</p><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{application.notes || 'No notes yet.'}</p></div><div><p className="font-mono-app text-[10px] uppercase tracking-[.14em] text-muted-foreground">Opportunity link</p>{application.url ? <a href={application.url} target="_blank" rel="noreferrer" data-testid={`link-application-url-${application.id}`} className="mt-2 inline-flex items-center gap-1.5 break-all text-sm font-bold text-primary hover:underline">{application.url}<ExternalLink size={13} /></a> : <p className="mt-2 text-sm text-muted-foreground">No link added.</p>}<p className="mt-5 font-mono-app text-[10px] text-muted-foreground">updated {formatUpdated(application.updatedAt)}</p></div></div><div className="mt-5 flex justify-end"><Button type="button" variant="danger" onClick={onDelete} data-testid={`button-delete-application-${application.id}`}><Trash2 size={14} /> Delete opportunity</Button></div></div>}</article>;
+  return <article className={`rounded-2xl border border-border bg-card shadow-sm transition hover:shadow-md ${application.status === 'closed' ? 'opacity-70' : ''}`}><ApplicationIdentityWarning application={application} /><div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"><div className="flex min-w-0 items-start gap-3"><span className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${application.priority === 'high' ? 'bg-accent/20 text-accent-foreground' : 'bg-secondary text-primary'}`}><BriefcaseBusiness size={18} /></span><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="truncate font-display text-2xl">{application.company}</h3><span className={`rounded-full px-2.5 py-1 font-mono-app text-[10px] uppercase tracking-wide ${statusTone(application.status)}`}>{statusLabels[application.status]}</span></div><p className="mt-1 truncate text-sm text-muted-foreground">{application.role}</p>{application.nextAction && <p className="mt-3 text-xs font-bold text-foreground"><span className="mr-1.5 text-primary">Next:</span>{application.nextAction}</p>}</div></div><div className="flex items-center gap-2 sm:shrink-0"><button type="button" onClick={() => setExpanded(!expanded)} data-testid={`button-expand-application-${application.id}`} className="rounded-lg px-3 py-2 text-xs font-bold text-muted-foreground hover:bg-secondary hover:text-foreground">{expanded ? 'Hide details' : 'Details'}</button><Button type="button" variant="outline" onClick={onEdit} data-testid={`button-edit-application-${application.id}`}><Pencil size={14} /> Edit</Button></div></div>{expanded && <div className="border-t border-border bg-secondary/35 px-5 py-5 sm:px-6"><div className="grid gap-5 sm:grid-cols-2"><div><p className="font-mono-app text-[10px] uppercase tracking-[.14em] text-muted-foreground">Notes</p><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{application.notes || 'No notes yet.'}</p></div><div><p className="font-mono-app text-[10px] uppercase tracking-[.14em] text-muted-foreground">Opportunity link</p>{application.url ? <a href={application.url} target="_blank" rel="noreferrer" data-testid={`link-application-url-${application.id}`} className="mt-2 inline-flex items-center gap-1.5 break-all text-sm font-bold text-primary hover:underline">{application.url}<ExternalLink size={13} /></a> : <p className="mt-2 text-sm text-muted-foreground">No link added.</p>}<p className="mt-5 font-mono-app text-[10px] text-muted-foreground">updated {formatUpdated(application.updatedAt)}</p></div></div><div className="mt-5 flex justify-end"><Button type="button" variant="danger" onClick={onDelete} data-testid={`button-delete-application-${application.id}`}><Trash2 size={14} /> Delete opportunity</Button></div></div>}</article>;
 }
 
 function ApplicationsPage({
@@ -1104,7 +1106,7 @@ function ApplicationsPage({
     setDismissedDraft(changed ? { value: draft, application: editing, expiresAt: getDraftRecoveryDeadline(draftRecoveryWindowSeconds) } : null);
   };
   const saveApplication = (value: Omit<Application, 'id' | 'updatedAt'>) => {
-    setApplications((items) => editing ? items.map((item) => item.id === editing.id ? { ...item, ...value, updatedAt: now() } : item) : [{ ...value, id: uid(), updatedAt: now() }, ...items]);
+    setApplications((items) => editing ? items.map((item) => item.id === editing.id ? applyApplicationDetails(item, value, now()) : item) : [{ ...value, id: uid(), updatedAt: now() }, ...items]);
     setFormAnnouncement('Opportunity saved.');
     setShowForm(false);
     setRecoveredDraft(undefined);
@@ -1139,11 +1141,12 @@ function ApplicationsPage({
 
 function ApplicationForm({ application, initialDraft, returnFocusRef, fallbackFocusRef, onClose, onSave }: { application: Application | null; initialDraft?: ApplicationDraft; returnFocusRef: React.RefObject<HTMLElement | null>; fallbackFocusRef: React.RefObject<HTMLElement | null>; onClose: (draft: ApplicationDraft) => void; onSave: (value: ApplicationDraft) => void }) {
   const [form, setForm] = useState<ApplicationDraft>({ company: initialDraft?.company ?? application?.company ?? '', role: initialDraft?.role ?? application?.role ?? '', url: initialDraft?.url ?? application?.url ?? '', status: initialDraft?.status ?? application?.status ?? 'saved', priority: initialDraft?.priority ?? application?.priority ?? 'normal', notes: initialDraft?.notes ?? application?.notes ?? '', nextAction: initialDraft?.nextAction ?? application?.nextAction ?? '' });
-  const [errors, setErrors] = useState<{ company?: string; role?: string }>({});
+  const [errors, setErrors] = useState<{ company?: string; role?: string; url?: string }>({});
   const companyRef = useRef<HTMLInputElement>(null);
   const roleRef = useRef<HTMLInputElement>(null);
-  const requiredDraft = useRef({ company: form.company, role: form.role });
-  const clearError = (key: 'company' | 'role') => setErrors((current) => {
+  const urlRef = useRef<HTMLInputElement>(null);
+  const requiredDraft = useRef({ company: form.company, role: form.role, url: form.url });
+  const clearError = (key: 'company' | 'role' | 'url') => setErrors((current) => {
     if (!current[key]) return current;
     const next = { ...current };
     delete next[key];
@@ -1151,9 +1154,9 @@ function ApplicationForm({ application, initialDraft, returnFocusRef, fallbackFo
   });
   const update = (key: keyof typeof form) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const value = event.target.value;
-    if (key === 'company' || key === 'role') requiredDraft.current[key] = value;
+    if (key === 'company' || key === 'role' || key === 'url') requiredDraft.current[key] = value;
     setForm((current) => ({ ...current, [key]: value }));
-    if ((key === 'company' || key === 'role') && value.trim()) clearError(key);
+    if ((key === 'company' || key === 'role' || key === 'url') && value.trim()) clearError(key);
   };
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -1164,17 +1167,19 @@ function ApplicationForm({ application, initialDraft, returnFocusRef, fallbackFo
     const nextErrors = {
       ...(submittedCompany.trim() ? {} : { company: 'Add a company before saving.' }),
       ...(submittedRole.trim() ? {} : { role: 'Add a role before saving.' }),
+      ...(application && applicationUrlEditConflicts(application, requiredDraft.current.url) ? { url: 'This record has application evidence. Add a separate opportunity for a different job link.' } : {}),
     };
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
       if (!submittedCompany.trim()) companyRef.current?.focus();
-      else roleRef.current?.focus();
+      else if (!submittedRole.trim()) roleRef.current?.focus();
+      else urlRef.current?.focus();
       return;
     }
-    onSave({ ...form, company: submittedCompany.trim(), role: submittedRole.trim() });
+    onSave({ ...form, url: requiredDraft.current.url, company: submittedCompany.trim(), role: submittedRole.trim() });
   };
   const dismiss = () => onClose(form);
-  return <Modal title={application ? 'Edit opportunity' : 'Add opportunity'} eyebrow="Application queue" onClose={dismiss} returnFocusRef={returnFocusRef} fallbackFocusRef={fallbackFocusRef}><form onSubmit={submit} className="space-y-5"><div className="grid gap-4 sm:grid-cols-2"><Field label="Company" name="company" value={form.company} onChange={update('company')} placeholder="Company name" required inputRef={companyRef} error={errors.company} data-testid="input-application-company" /><Field label="Role" name="role" value={form.role} onChange={update('role')} placeholder="Role or title" required inputRef={roleRef} error={errors.role} data-testid="input-application-role" /></div><Field label="Job link" name="url" type="url" value={form.url} onChange={update('url')} placeholder="https://..." data-testid="input-application-url" /><div className="grid gap-4 sm:grid-cols-2"><SelectField label="Status" value={form.status} onChange={update('status')} options={(Object.keys(statusLabels) as ApplicationStatus[]).map((key) => ({ value: key, label: statusLabels[key] }))} testId="select-application-status" /><SelectField label="Priority" value={form.priority} onChange={update('priority')} options={[{ value: 'high', label: 'High' }, { value: 'normal', label: 'Normal' }, { value: 'low', label: 'Low' }]} testId="select-application-priority" /></div><Field label="Next action" name="nextAction" value={form.nextAction} onChange={update('nextAction')} placeholder="Read the role brief, ask for a referral..." data-testid="input-application-next-action" /><TextArea label="Notes" name="notes" value={form.notes} onChange={update('notes')} placeholder="What stood out? What do you want to remember?" data-testid="textarea-application-notes" /><div className="flex justify-end gap-2 pt-2"><Button type="button" variant="outline" onClick={dismiss} data-testid="button-cancel-application">Cancel</Button><Button type="submit" data-testid="button-save-application"><Check size={16} /> Save opportunity</Button></div></form></Modal>;
+  return <Modal title={application ? 'Edit opportunity' : 'Add opportunity'} eyebrow="Application queue" onClose={dismiss} returnFocusRef={returnFocusRef} fallbackFocusRef={fallbackFocusRef}><form onSubmit={submit} className="space-y-5"><div className="grid gap-4 sm:grid-cols-2"><Field label="Company" name="company" value={form.company} onChange={update('company')} placeholder="Company name" required inputRef={companyRef} error={errors.company} data-testid="input-application-company" /><Field label="Role" name="role" value={form.role} onChange={update('role')} placeholder="Role or title" required inputRef={roleRef} error={errors.role} data-testid="input-application-role" /></div><Field label="Job link" name="url" type="url" value={form.url} onChange={update('url')} placeholder="https://..." inputRef={urlRef} error={errors.url} data-testid="input-application-url" /><div className="grid gap-4 sm:grid-cols-2"><SelectField label="Status" value={form.status} onChange={update('status')} options={(Object.keys(statusLabels) as ApplicationStatus[]).map((key) => ({ value: key, label: statusLabels[key] }))} testId="select-application-status" /><SelectField label="Priority" value={form.priority} onChange={update('priority')} options={[{ value: 'high', label: 'High' }, { value: 'normal', label: 'Normal' }, { value: 'low', label: 'Low' }]} testId="select-application-priority" /></div><Field label="Next action" name="nextAction" value={form.nextAction} onChange={update('nextAction')} placeholder="Read the role brief, ask for a referral..." data-testid="input-application-next-action" /><TextArea label="Notes" name="notes" value={form.notes} onChange={update('notes')} placeholder="What stood out? What do you want to remember?" data-testid="textarea-application-notes" /><div className="flex justify-end gap-2 pt-2"><Button type="button" variant="outline" onClick={dismiss} data-testid="button-cancel-application">Cancel</Button><Button type="submit" data-testid="button-save-application"><Check size={16} /> Save opportunity</Button></div></form></Modal>;
 }
 
 function AssistProgress({ session }: { session: AssistSession }) {

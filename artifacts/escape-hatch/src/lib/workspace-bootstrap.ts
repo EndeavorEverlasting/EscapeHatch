@@ -26,8 +26,9 @@ export function parseSavedWorkspace(value: unknown): SavedWorkspace | null {
   for (const [key, raw] of Object.entries(item.values)) {
     if (!Object.hasOwn(workspaceParsers, key)) return null;
     const parser = workspaceParsers[key as keyof typeof workspaceParsers];
-    if (!parser || parser(raw) === null) return null;
-    values[key] = raw;
+    const parsed = parser?.(raw);
+    if (parsed === null || parsed === undefined) return null;
+    values[key] = parsed;
   }
   return { schema: WORKSPACE_SCHEMA, values };
 }
@@ -60,8 +61,9 @@ export function readBrowserWorkspace(storage: Pick<Storage, 'getItem'>): SavedWo
     const raw = storage.getItem(key);
     if (raw === null) continue;
     const value: unknown = JSON.parse(raw);
-    if (parser(value) === null) throw new Error('Existing browser data needs recovery. Nothing has been replaced.');
-    values[key] = value;
+    const parsed = parser(value);
+    if (parsed === null) throw new Error('Existing browser data needs recovery. Nothing has been replaced.');
+    values[key] = parsed;
   }
   return { schema: WORKSPACE_SCHEMA, values };
 }

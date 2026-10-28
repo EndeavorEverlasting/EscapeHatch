@@ -78,6 +78,13 @@ Application Assist does **not**:
 
 ## Load locally in Chrome or Edge
 
+The unpacked release uses the pinned public `manifest.key` to retain ID
+`okjcckicklgdjgfaobipmnojleaeepbg` across commit-addressed package directories.
+This is a public development identity, not an OAuth credential or private signing key.
+Do not rotate it without an extension-local data migration. Chrome documents this
+identity behavior in [Manifest key](https://developer.chrome.com/docs/extensions/reference/manifest/key).
+The package remains an unpacked installation; Web Store signing/migration is not proven.
+
 The canonical extension source is `browser/application-assist/`. Package its committed
 bytes before installation so an active checkout, untracked file or later source edit cannot
 silently change the installed extension:

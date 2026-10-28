@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import base64
 import json
 import struct
 import unittest
@@ -16,6 +17,15 @@ SIZES = (16, 32, 48, 128)
 
 
 class ExtensionToolbarIconTests(unittest.TestCase):
+    def test_unpacked_identity_is_stable_across_versioned_package_paths(self):
+        manifest = json.loads((EXTENSION / "manifest.json").read_text(encoding="utf-8"))
+        public_key = base64.b64decode(manifest["key"], validate=True)
+        digest = hashlib.sha256(public_key).hexdigest()[:32]
+        extension_id = "".join(chr(ord("a") + int(nibble, 16)) for nibble in digest)
+        self.assertEqual(extension_id, "okjcckicklgdjgfaobipmnojleaeepbg")
+        self.assertEqual(set(manifest["permissions"]), {"activeTab", "scripting", "storage"})
+        self.assertNotIn("host_permissions", manifest)
+
     def test_manifest_has_bundled_extension_and_action_icons(self):
         manifest = json.loads((EXTENSION / "manifest.json").read_text(encoding="utf-8"))
         expected = {str(size): f"icons/mascot-{size}.png" for size in SIZES}

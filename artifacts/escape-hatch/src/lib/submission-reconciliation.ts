@@ -1,4 +1,5 @@
 import type { Application } from './storage';
+import { appendApplicationEvent, applicationEventUrl, eventFromSubmissionReceipt } from './application-events.ts';
 
 export type SubmissionEvidence = {
   opportunityId: string; sessionId: string; attemptId: string;
@@ -32,6 +33,12 @@ export function parseSubmissionEvidence(value: unknown): SubmissionEvidence | nu
 /** Only a controller-proven posting binding may bridge a hosted questionnaire path. */
 export function submissionMatchesApplication(receipt: SubmissionEvidence, applicationUrl: string): boolean {
   try {
+    const identity = applicationEventUrl(applicationUrl);
+    if (!identity) return false;
+    // Legacy receipts prove paths, not query/hash requisitions. Unknown identity
+    // parameters require a future controller-proven binding, never a guess.
+    const bound = new URL(identity);
+    if (bound.search || bound.hash) return false;
     const url = new URL(applicationUrl);
     return receipt.applicationOrigin === url.origin && (receipt.applicationPath === url.pathname ||
       url.hostname === 'jobs.ashbyhq.com' && receipt.applicationPath === url.pathname.replace(/\/$/, '') + '/application' ||
@@ -44,19 +51,23 @@ export function submissionMatchesApplication(receipt: SubmissionEvidence, applic
 
 export function reconcileSubmissionReceipts(applications: Application[], values: unknown[]): Application[] {
   const receipts = values.map(parseSubmissionEvidence).filter((value): value is SubmissionEvidence => !!value);
-  let changed = false;
   const next = applications.map(application => {
-    const receipt = receipts.filter(item => {
+    const bound = [...receipts, ...(application.submissionEvidence ? [application.submissionEvidence] : [])].filter(item => {
       if (item.opportunityId !== application.id) return false;
       return submissionMatchesApplication(item, application.url);
-    }).sort((left, right) => Date.parse(right.observedAt) - Date.parse(left.observedAt))[0];
-    if (!receipt || application.submissionEvidence?.attemptId === receipt.attemptId ||
-      application.submissionEvidence && Date.parse(application.submissionEvidence.observedAt) >= Date.parse(receipt.observedAt)) return application;
-    changed = true;
+    }).sort((left, right) => Date.parse(left.observedAt) - Date.parse(right.observedAt));
+    let recorded = application;
+    for (const receipt of bound) {
+      const event = eventFromSubmissionReceipt(receipt, application.url);
+      if (event) recorded = appendApplicationEvent(recorded, event);
+    }
+    const receipt = bound.at(-1);
+    if (!receipt || application.submissionEvidence && Date.parse(application.submissionEvidence.observedAt) >= Date.parse(receipt.observedAt)) return recorded;
     const canAdvance = application.status === 'saved' || application.status === 'preparing';
-    return { ...application, status: canAdvance ? 'applied' as const : application.status, submissionEvidence: receipt,
-      nextAction: canAdvance ? 'Application received by employer — follow up when appropriate' : application.nextAction,
-      updatedAt: canAdvance ? receipt.observedAt : application.updatedAt };
+    const newer = Date.parse(receipt.observedAt) >= Date.parse(application.updatedAt);
+    return { ...recorded, status: canAdvance ? 'applied' as const : application.status, submissionEvidence: receipt,
+      nextAction: canAdvance && newer ? 'Application received by employer — follow up when appropriate' : application.nextAction,
+      updatedAt: canAdvance && newer ? receipt.observedAt : application.updatedAt };
   });
-  return changed ? next : applications;
+  return next.some((item, index) => item !== applications[index]) ? next : applications;
 }

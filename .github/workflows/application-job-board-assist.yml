@@ -5,6 +5,10 @@ on:
       - "browser/application-assist/**"
       - "tests/test_job_board_adapter.mjs"
       - "tests/test_extension_branding_and_board.py"
+      - "tests/test_extension_toolbar_icons.py"
+      - "tests/test_application_assist_package.py"
+      - "scripts/package_application_assist.py"
+      - "scripts/build_extension_icons.py"
       - "tests/test_application_assist_modality.mjs"
       - ".github/workflows/application-job-board-assist.yml"
   pull_request:
@@ -12,6 +16,10 @@ on:
       - "browser/application-assist/**"
       - "tests/test_job_board_adapter.mjs"
       - "tests/test_extension_branding_and_board.py"
+      - "tests/test_extension_toolbar_icons.py"
+      - "tests/test_application_assist_package.py"
+      - "scripts/package_application_assist.py"
+      - "scripts/build_extension_icons.py"
       - "tests/test_application_assist_modality.mjs"
       - ".github/workflows/application-job-board-assist.yml"
 permissions:
@@ -35,6 +43,10 @@ jobs:
         run: node tests/test_application_assist_modality.mjs
       - name: First-party branded asset and wiring parity
         run: python tests/test_extension_branding_and_board.py
+      - name: Bundled toolbar icons and approved-source provenance
+        run: python tests/test_extension_toolbar_icons.py
+      - name: Immutable committed extension package and tamper preservation
+        run: python tests/test_application_assist_package.py
       - name: Parse extension code
         run: |
           node --check browser/application-assist/job-board-adapter.js

@@ -62,8 +62,10 @@ test('only persisted bound submission evidence advances the queue and survives r
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('escape-hatch-applications')!)[0].status)).toBe('saved');
   confirmed = true;
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('escape-hatch-applications')!)[0].status)).toBe('applied');
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('escape-hatch-applications')!)[0].events?.length)).toBe(1);
   await page.reload();
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('escape-hatch-applications')!)[0].submissionEvidence.attemptId)).toBe('attempt');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('escape-hatch-applications')!)[0].events.length)).toBe(1);
 });
 
 test('cockpit owns Launch, Fill and Attach without a Chrome extension', async ({ page }) => {

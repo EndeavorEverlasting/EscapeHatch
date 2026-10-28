@@ -16,6 +16,7 @@ EscapeHatch on Linux Mint
   bash Get-EscapeHatch.sh --status  # verified running status
   bash Get-EscapeHatch.sh --stop    # identity-bound graceful stop
   bash Get-EscapeHatch.sh --update  # explicitly fast-forward a clean main checkout
+  bash Get-EscapeHatch.sh --shortcut  # register user-only Linux Mint app menu entry
 
 Installation uses your account only. It runs git clone and npm install after your
 confirmation. No sudo/apt, force-reset, background auto-update, or phone/LAN bind.
@@ -85,8 +86,12 @@ case "$mode" in
     fi
     install_dependencies
     runtime start
+    if ! python3 "$SOURCE/scripts/linux/install_shortcut.py"; then
+      echo 'The app is running, but its Mint application-menu shortcut could not be installed.' >&2
+    fi
     ;;
   --start) prerequisites; verify_source; runtime start ;;
+  --shortcut) verify_source; python3 "$SOURCE/scripts/linux/install_shortcut.py" ;;
   --status) verify_source; runtime status ;;
   --stop) verify_source; runtime stop ;;
   --update)

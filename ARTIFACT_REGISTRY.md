@@ -197,3 +197,11 @@ The application harness does **not** own user answers or browser execution. `har
 Unknown application questions remain blank until mapped. Sensitive demographic/accommodation values require explicit user preference. Legal/compliance facts require current per-application confirmation. Certification/attestation remains manual-only. A companion may record a submission only from explicit user action, same-session page confirmation, or user-confirmed external evidence; it may not submit on the user's behalf under this contract.
 
 Live employer ATS behavior, recruiter preference, automatic submission/auto-apply, store packaging/publishing, live Google Drive OAuth/runtime behavior, and broad Lua runtime execution remain outside repository-contract proof until implemented and separately validated. A specific resume's visual conformance is proven only when its rendered DOCX/PDF artifacts are actually inspected against the presentation contract.
+
+
+## Domain résumé selection graph (versioned, synthetic-only)
+
+- Contract: `harness/contracts/resume-selection-graph.v1.json`; runtime resolver: `artifacts/escape-hatch/src/lib/resume-selection-graph.ts`.
+- Validator: `scripts/validate_resume_selection_graph.py`; synthetic tests: `artifacts/escape-hatch/src/lib/resume-selection-graph.test.ts`.
+- Private actual résumé documents, domain masters, job derivatives, platform account slots and upload receipts belong in the user's private local/connected storage, **not** in this public repository or tracked fixtures.
+- Graph enforces typed, versioned lineage, user-owner isolation, stale source detection, ambiguous-domain review, and consent required for all platform-global replacements. Actual browser-side enforcement remains an independent P04 integration gate.

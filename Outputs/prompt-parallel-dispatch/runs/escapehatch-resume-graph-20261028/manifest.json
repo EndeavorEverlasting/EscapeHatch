@@ -1,0 +1,173 @@
+{
+  "schema_version": "prompt-parallel-dispatch/v1",
+  "run_id": "escapehatch-resume-graph-20261028",
+  "repository": "EndeavorEverlasting/EscapeHatch",
+  "primary_owner": "EscapeHatch Issue #69",
+  "base_ref": {
+    "observed_main_head": "6379c4d5904de9f44fc75fdb9d9ed07ab8b84021",
+    "branch": "feat/resume-domain-graph-platform-slots-20261028"
+  },
+  "parent_objective": "Deterministic resume selection and approved application preparation across job boards and custom ATS, protecting account-wide resume defaults and final Submit",
+  "graph": {
+    "expression": "RG0 -> {RG1 || RG2-readonly} -> RG2-write -> RG3 -> RG4",
+    "width_after_RG0": 2,
+    "parallel_disposition": "REQUIRED_BUT_NOT_OBSERVED"
+  },
+  "canonical_locations": {
+    "contract": "harness/contracts/resume-selection-graph.v1.json",
+    "resolver": "artifacts/escape-hatch/src/lib/resume-selection-graph.ts",
+    "handoff": "docs/agent/P04_DOMAIN_RESUME_GRAPH_PLATFORM_POLICY_2026-10-28.md",
+    "parent_ledger": "harness/contracts/career-artifact-propagation.v1.json"
+  },
+  "runtime_partition": {
+    "current_chat": "CURRENT_CHAT_RUNTIME via GitHub provider",
+    "local_runtime": "LOCAL_AGENT_RUNTIME Windows + managed Chrome",
+    "operator": "OPERATOR_OR_PHYSICAL_RUNTIME for consent/upload effects/final submission"
+  },
+  "lanes": [
+    {
+      "lane_id": "RG0",
+      "wave": 0,
+      "execution_environment": "CURRENT_CHAT_RUNTIME",
+      "provider_access": [
+        "GitHub"
+      ],
+      "dependency": [],
+      "mutation_surfaces": [
+        "AGENTS.md",
+        "harness/WORKFLOWS.md",
+        "harness/contracts/resume-selection-graph.v1.json",
+        "artifacts/escape-hatch/src/lib/resume-selection-graph.ts",
+        "tests and CI"
+      ],
+      "forbidden_surfaces": [
+        "personal resumes",
+        "private provider credentials",
+        "actual ATS forms"
+      ],
+      "mission": "Implement and validate owner-isolated DAG, domain selection and platform-safe decision gate",
+      "status": "PROVIDER_COMMITTED_CI_PENDING"
+    },
+    {
+      "lane_id": "RG1",
+      "wave": 1,
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "private local datastore",
+        "authorized Drive"
+      ],
+      "dependency": [
+        "RG0"
+      ],
+      "mutation_surfaces": [
+        "canonical career-state and OpportunityDocumentStore revision persistence",
+        "existing cockpit UI owners"
+      ],
+      "forbidden_surfaces": [
+        "other applicants",
+        "browser final submission",
+        "public Git fixtures with private data"
+      ],
+      "mission": "Persist per-applicant DAG CAS, approved domain masters, platform scope evidence and exact PDFs",
+      "status": "NOT_LAUNCHED_DEPENDENT_ON_VERIFIED_HOST"
+    },
+    {
+      "lane_id": "RG2-readonly",
+      "wave": 1,
+      "execution_environment": "CURRENT_CHAT_RUNTIME",
+      "provider_access": [
+        "GitHub"
+      ],
+      "dependency": [
+        "RG0"
+      ],
+      "mutation_surfaces": [],
+      "forbidden_surfaces": [
+        "RG1 owned files",
+        "browser live accounts"
+      ],
+      "mission": "Review managed browser upload/attachment paths and vendor persistence risks; produce safe regression selection",
+      "status": "PROVIDER_READ_REVIEWED"
+    },
+    {
+      "lane_id": "RG2-write",
+      "wave": 2,
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "local host and managed Chrome"
+      ],
+      "dependency": [
+        "RG1",
+        "RG2-readonly"
+      ],
+      "mutation_surfaces": [
+        "existing Application Assist attachment planner",
+        "provider-specific safe adapters",
+        "cross-vendor synthetic tests"
+      ],
+      "forbidden_surfaces": [
+        "profile and ATS state without consent",
+        "applicant final Submit",
+        "unknown slot resume replacement"
+      ],
+      "mission": "Wire selected graph decision as a mandatory real upload call-site gate",
+      "status": "NOT_LAUNCHED_HOST_AND_API_GATE"
+    },
+    {
+      "lane_id": "RG3",
+      "wave": 3,
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "verified Windows Chrome"
+      ],
+      "dependency": [
+        "RG2-write"
+      ],
+      "mutation_surfaces": [
+        "sanitized P08 runtime receipts"
+      ],
+      "forbidden_surfaces": [
+        "irreversible user choices",
+        "private account content in public Git"
+      ],
+      "mission": "Prove default retained across unrelated Indeed applications; test one non-Indeed ATS and another job board",
+      "status": "P08_NOT_OBSERVED"
+    },
+    {
+      "lane_id": "RG4",
+      "wave": 4,
+      "execution_environment": "CI_OR_REMOTE_RUNNER",
+      "provider_access": [
+        "GitHub"
+      ],
+      "dependency": [
+        "RG3"
+      ],
+      "mutation_surfaces": [
+        "reviewed integration receipts and code"
+      ],
+      "forbidden_surfaces": [
+        "unrelated PRs",
+        "hidden production mutation"
+      ],
+      "mission": "Converge exact-head tests, merge through required checks, verify installed version and host-observed behavior",
+      "status": "WAITING"
+    }
+  ],
+  "canonical_dispatch_validation": "BLOCKED_NO_SCHEMA_OR_RUNNER_IN_ESCAPEHATCH",
+  "observed_parallelism": false,
+  "safety": {
+    "one_writer_per_branch": true,
+    "never_auto_replace_platform_resume": true,
+    "never_auto_submit": true,
+    "private_data_out_of_public_repo": true
+  },
+  "execution_receipts": {
+    "provider_commits": true,
+    "unit_tests_pending_ci": true,
+    "agents_dispatched": false,
+    "host_observed": false,
+    "platform_upload_observed": false
+  },
+  "next": "Run PR CI on the exact latest head; repair failures; merge safely; local host wires guarded private store and browser upload then P08 observes."
+}

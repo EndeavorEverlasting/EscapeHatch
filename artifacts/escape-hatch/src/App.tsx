@@ -82,6 +82,7 @@ import { ManagedBrowserAssist } from '@/components/managed-browser-assist';
 import { RecoveredAnswers, useRecoveredAnswers } from '@/components/recovered-answers';
 import { GuidedStart } from '@/components/guided-start';
 import { BirdsongControl } from '@/components/birdsong-control';
+import { refreshBoundTrackerOnStartup, type TrackerStatusEnvelope } from '@/lib/tracker-refresh-client';
 import { stageManagedLaunchIntent } from '@/lib/managed-launch-intent';
 import { SourcesPage, SourcePackageSummary } from '@/components/sources-page';
 import {
@@ -565,19 +566,27 @@ function HomePage({ profile, answers, applications, setApplications }: { profile
   const [trackerBusy, setTrackerBusy] = useState(false);
   useEffect(() => {
     let activeFetch = true;
-    fetch('/__escapehatch/tracker/status', { credentials: 'same-origin' })
-      .then(async (response) => {
-        const json = await response.json() as { connection?: string; reason?: string; snapshot?: TrackerSnapshot | null };
-        if (!activeFetch) return;
-        if (json.snapshot) {
-          const connected = connectionFromSnapshot(json.snapshot);
-          setTracker(connected);
-          if (connected.status === 'CONNECTED') {
-            setApplications((current) => mergeTrackerIntoApplications(current, connected.snapshot));
-          }
-        } else {
-          setTracker({ status: 'NOT_CONNECTED', reason: json.reason || 'NOT CONNECTED' });
+    const applySnapshot = (json: TrackerStatusEnvelope) => {
+      if (!activeFetch) return;
+      if (json.snapshot) {
+        const connected = connectionFromSnapshot(json.snapshot as TrackerSnapshot);
+        setTracker(connected);
+        if (connected.status === 'CONNECTED') {
+          setApplications(current => mergeTrackerIntoApplications(current, connected.snapshot));
         }
+      } else {
+        setTracker({ status: 'NOT_CONNECTED', reason: json.reason || 'NOT CONNECTED' });
+      }
+    };
+    fetch('/__escapehatch/tracker/status', { credentials: 'same-origin' })
+      .then(async response => {
+        if (!response.ok) throw new Error('Tracker endpoint unavailable');
+        const json = await response.json() as TrackerStatusEnvelope;
+        applySnapshot(json);
+        // Refresh a verified existing binding when local Google auth is present.
+        // Do not erase the last known-good snapshot if the refresh is unavailable.
+        const refreshed = await refreshBoundTrackerOnStartup(json);
+        if (refreshed) applySnapshot(refreshed);
       })
       .catch(() => {
         if (activeFetch) setTracker({ status: 'NOT_CONNECTED', reason: 'Managed runtime tracker endpoint unavailable.' });

@@ -50,3 +50,4 @@ export function DiscoverJobs({applications,setApplications}:{applications:Applic
         {([['junior','Junior'],['mid','Mid-level'],['senior','Senior']] as [Seniority,string][]).map(([v,label])=><button type="button" key={v} aria-pressed={seniorities.includes(v)} onClick={()=>toggle(v,seniorities,setSeniorities)}>{label}</button>)}
       </div></fieldset>
     </div>
+

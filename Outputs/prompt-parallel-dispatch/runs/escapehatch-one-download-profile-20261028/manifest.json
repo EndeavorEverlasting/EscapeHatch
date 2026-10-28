@@ -36,15 +36,15 @@
   },
   "convergence_owner": "EH-B5",
   "manifest_path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-one-download-profile-20261028/manifest.json",
-  "status": "NATIVE_AGENTS_DISPATCHED_CANONICAL_RECEIPT_VALIDATION_UNAVAILABLE",
+  "status": "BOUNDED_IMPLEMENTATION_VALIDATED_RELEASE_AND_HYDRATION_GATES_OPEN",
   "blockers": [
-    "Current chat has GitHub provider source access but no attached Windows host, Chrome profile or private workspace",
-    "Current source packager depends on Python; ordinary installer does not establish a consumer Python dependency",
-    "Normal unmanaged consumer Chrome extension installation needs Chrome Web Store/user approval; cannot be silently forced by installer",
-    "PRs #132/#134 owner binding pending integrated provider proof; no profile hydration without verified owner identity",
-    "Current connected tools blocked provider-side PowerShell script write; no workaround attempted"
+    "B0 is externally owned; opaque owner/workspace admission not integrated into this branch; B4 gated",
+    "Windows preview is unsigned; trusted signing/publisher identity and bundled Node/npm prerequisites absent",
+    "Chrome Store publisher access/publication and intended-profile user approval/readback not exercised",
+    "Runtime identity protocol does not expose source/version provenance; wrong-installed-version rejection unproved",
+    "Canonical dispatch CLI/schema absent; canonical parallel receipt validation unavailable"
   ],
-  "autonomy_gap": "On installed Windows host, resolve actual original checkout and current open PR ownership, run canonical provider/runtime checks, validate run-scoped manifest with available dispatcher; if schema/runner remains missing, record DEGRADED and still execute independently safe isolated B1/B2/B3 work.",
+  "autonomy_gap": "Native agent execution available and used; canonical receipt verifier absent. B4 requires external B0 integration. Consumer release requires publisher signing and Chrome Store approval; preview is not a release substitute.",
   "protected_behavior": [
     "existing merged PR #130 app receipt/event model",
     "enabled and pinned Chrome extension 1.3.0 in operator-reported host state",
@@ -163,13 +163,17 @@
         "python tests/test_escapehatch_installer_source_delivery.py"
       ],
       "convergence_owner": "EH-B5",
-      "status": "DISPATCHED_NATIVE_AGENT",
+      "status": "PREVIEW_IMPLEMENTED_SIGNED_CONSUMER_RELEASE_UNPROVEN",
       "local_launch": {
         "tool": "collaboration.spawn_agent",
         "agent_id": "/root/b1_installer",
         "base_commit": "15b346ae",
         "return_contract": "isolated branch commit SHA, changed files, actual checks, gaps; coordinator integrates"
-      }
+      },
+      "implementation_commits": [
+        "e3b8b67",
+        "08e1fd8"
+      ]
     },
     {
       "lane_id": "EH-B2",
@@ -224,13 +228,17 @@
         "actual Windows process endpoint readback"
       ],
       "convergence_owner": "EH-B5",
-      "status": "DISPATCHED_NATIVE_AGENT",
+      "status": "IMPLEMENTED_CONTROLLED_WINDOWS_PROCESS_PROOF",
       "local_launch": {
         "tool": "collaboration.spawn_agent",
         "agent_id": "/root/b2_runtime",
         "base_commit": "15b346ae",
         "return_contract": "isolated branch commit SHA, changed files, actual checks, gaps; coordinator integrates"
-      }
+      },
+      "implementation_commits": [
+        "7c668c8",
+        "bdacdf2"
+      ]
     },
     {
       "lane_id": "EH-B3",
@@ -285,13 +293,17 @@
         "package integrity negative controls"
       ],
       "convergence_owner": "EH-B5",
-      "status": "DISPATCHED_NATIVE_AGENT",
+      "status": "PACKAGE_VERIFIED_BROWSER_ENROLLMENT_UNPROVEN",
       "local_launch": {
         "tool": "collaboration.spawn_agent",
         "agent_id": "/root/b3_extension",
         "base_commit": "15b346ae",
         "return_contract": "isolated branch commit SHA, changed files, actual checks, gaps; coordinator integrates"
-      }
+      },
+      "implementation_commits": [
+        "fc28c46",
+        "1bf4a41"
+      ]
     },
     {
       "lane_id": "EH-B4",
@@ -348,7 +360,7 @@
         "actual extension chrome.storage.local readback"
       ],
       "convergence_owner": "EH-B5",
-      "status": "WAITING_OWNER_BINDING_AND_RUNTIME"
+      "status": "BLOCKED_ON_EXTERNAL_B0_OWNER_ADMISSION"
     },
     {
       "lane_id": "EH-B5",
@@ -409,15 +421,15 @@
         "two-user installed Windows Chrome pre-submit observations"
       ],
       "convergence_owner": "EH-B5",
-      "status": "WAITING_DEPENDENCIES"
+      "status": "LOCAL_REGRESSION_IN_PROGRESS_INSTALLED_USER_PROOF_GATED"
     }
   ],
   "receipt_contract": {
     "json_roundtrip_checked_at_authoring": true,
-    "actual_dispatch": false,
-    "canonical_dispatch_validator": "NOT_RUN",
-    "observed_parallelism": false,
-    "app_code_changed": false,
+    "actual_dispatch": true,
+    "canonical_dispatch_validator": "UNAVAILABLE",
+    "observed_parallelism": true,
+    "app_code_changed": true,
     "chrome_installed_this_chat": false,
     "profile_hydrated_this_chat": false,
     "merged": false,
@@ -435,6 +447,20 @@
     "observed_concurrent_agents": true,
     "canonical_parallel_receipt_proof": "UNPROVEN",
     "b0": "External user-owned agent; PRs #132/#134 reserved",
-    "proof_ceiling": "Native dispatch observed; implementation, integration and installed proof pending"
+    "proof_ceiling": "Committed-byte package integrity and disposable Windows process proof; installed consumer owner/profile journey unproved",
+    "parallel_execution_disposition": "NATIVE_CONCURRENCY_OBSERVED_CANONICAL_RECEIPT_UNVERIFIED",
+    "validation": {
+      "app_unit": "PASS 130",
+      "managed_assist": "PASS 130; skipped 1 host symlink permission case",
+      "typecheck": "PASS",
+      "build": "PASS; existing chunk-size warning",
+      "windows_installer": "PASS 18 preservation cases on pre-integration baseline; final rerun required",
+      "windows_port_discovery": "PASS combined implementation",
+      "windows_preview_package": "PASS 4 tests including PS5.1 integrity/staging and junction cases",
+      "extension_package": "PASS 10 tests including HEAD-movement regression",
+      "harness": "PASS 134 registered artifacts",
+      "parent_journey": "PASS source-level only",
+      "full_vite_lifecycle": "RUNNER_ISOLATION_REPAIR_IN_PROGRESS"
+    }
   }
 }

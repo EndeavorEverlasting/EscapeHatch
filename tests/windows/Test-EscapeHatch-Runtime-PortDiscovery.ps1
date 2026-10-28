@@ -114,4 +114,3 @@ server.listen(Number(process.env.PORT), '127.0.0.1');
     $tempRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
     if ($resolved.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase) -and [IO.Path]::GetFileName($resolved).StartsWith('eh-port-proof-')) { Remove-Item -LiteralPath $resolved -Recurse -Force -ErrorAction SilentlyContinue }
 }
-

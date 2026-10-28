@@ -29,7 +29,7 @@ test('existing-tab tracking and external sync status stay explicit without launc
   await page.goto('/assist?opportunityId=' + job.id);
   await page.getByRole('button', { name: 'Track existing application tab' }).click();
   await expect(page.getByTestId('submission-listener-status')).toContainText('Listening for user submit');
-  await expect(page.getByTestId('submission-listener-state')).toContainText('ARMED — listening for your Submit on this job');
+  await expect(page.getByTestId('submission-listener-state')).toContainText('ARMED — observing form transitions for this job');
   await expect(page.getByText(/Tracker synchronization: AUTH_REQUIRED/)).toBeVisible();
   await page.getByRole('button', { name: 'Retry tracker synchronization' }).click();
   expect(actions).toContain('retry');

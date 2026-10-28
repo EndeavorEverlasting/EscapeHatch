@@ -187,3 +187,92 @@ test('receipt text with a visible submit control or quoted extra instructions is
     assert.equal(observer.snapshot().receipt, null);
   } finally { await page.close(); }
 });
+
+test('multi-page Submit is a transition: first page advances, processing holds, receipt confirms', async () => {
+  const page = await browser.newPage();
+  await page.goto(`${origin}/job?mode=pending`);
+  await page.evaluate(() => {
+    const form = document.querySelector('form')!;
+    form.innerHTML = '<label>First page<input id="first"></label><button type="submit">Submit</button>';
+    let step = 0;
+    form.onsubmit = event => {
+      event.preventDefault();
+      step++;
+      if (step === 1) {
+        history.pushState({}, '', '/job/questions/second');
+        form.innerHTML = '<label>Another question<textarea id="second"></textarea></label><button type="submit">Continue</button>';
+      } else if (step === 2) {
+        document.querySelector('#root')!.innerHTML = '<p role="status">Your application is being processed.</p>';
+      }
+    };
+  });
+  const changes: string[] = [];
+  const observer = await installManagedSubmissionObserver(page, {
+    opportunityId: 'synthetic-one-job', sessionId: 'same-browser-session',
+    applicationUrl: `${origin}/job`,
+    submitSelector: 'form button[type="submit"]', acceptAnySubmitLabel: true,
+    continuationPathPrefixes: ['/job/'], successSelector: '#root [role="status"], #root h1',
+    confirmationPaths: ['/job/confirmation'], onChange: value => changes.push(value.state),
+  });
+  try {
+    assert.equal((await observer.arm()).state, 'ARMED');
+    await page.getByRole('button', { name: 'Submit' }).click();
+    await until(() => observer.snapshot().state === 'IN_PROGRESS');
+    assert.equal(new URL(page.url()).pathname, '/job/questions/second');
+    assert.equal(observer.snapshot().receipt, null);
+    await page.locator('#second').fill('Synthetic answer');
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await until(() => observer.snapshot().state === 'PROCESSING');
+    assert.equal(observer.snapshot().receipt, null);
+    assert.equal(changes.filter(value => value === 'CONFIRMED').length, 0);
+    await page.locator('[role="status"]').evaluate(element => { element.textContent = 'Your application has been successfully submitted.'; });
+    await until(() => observer.snapshot().state === 'CONFIRMED');
+    assert.equal(observer.snapshot().receipt?.opportunityId, 'synthetic-one-job');
+    assert.equal(changes.filter(value => value === 'CONFIRMED').length, 1);
+  } finally { await observer.dispose(); await page.close(); }
+});
+
+test('processing claim is not a receipt and visible questions preclude success', async () => {
+  const { page, observer } = await fixture('pending');
+  try {
+    await observer.arm();
+    await click(page);
+    await page.locator('#root').evaluate(element =>
+      element.insertAdjacentHTML('beforeend', '<h2>Application submitted.</h2><p role="status">Your application is being processed.</p>'));
+    assert.equal(observer.snapshot().receipt, null);
+    assert.equal(observer.snapshot().state, 'PENDING');
+    await page.locator('form').evaluate(element => element.remove());
+    await until(() => observer.snapshot().state === 'CONFIRMED');
+  } finally { await observer.dispose(); await page.close(); }
+});
+
+test('an unrelated same-origin job route is blocked even after a valid earlier step', async () => {
+  const page = await browser.newPage();
+  await page.goto(`${origin}/job?mode=pending`);
+  const observer = await installManagedSubmissionObserver(page, {
+    opportunityId: 'synthetic-bound', sessionId: 'synthetic-session',
+    applicationUrl: `${origin}/job`, submitSelector: '#submit', successSelector: '#root h1',
+    continuationPathPrefixes: ['/job/'],
+  });
+  try {
+    await observer.arm(); await click(page);
+    await page.evaluate(() => { history.pushState({}, '', '/another-job/questions'); document.querySelector('#root')!.insertAdjacentHTML('beforeend', '<input>'); });
+    await until(() => observer.snapshot().state === 'BLOCKED');
+    assert.equal(observer.snapshot().receipt, null);
+  } finally { await observer.dispose(); await page.close(); }
+});
+
+test('continuation path configuration must be narrower than the selected application', async () => {
+  const page = await browser.newPage();
+  await page.goto(`${origin}/job?mode=pending`);
+  try {
+    await assert.rejects(installManagedSubmissionObserver(page, {
+      opportunityId: 'synthetic', sessionId: 'synthetic', applicationUrl: `${origin}/job`,
+      submitSelector: '#submit', successSelector: '#root h1', continuationPathPrefixes: ['/careers/'],
+    }), /strict descendants/);
+    await assert.rejects(installManagedSubmissionObserver(page, {
+      opportunityId: 'synthetic', sessionId: 'synthetic', applicationUrl: `${origin}/job`,
+      submitSelector: '#submit', successSelector: '#root h1', continuationPathPrefixes: ['/job/../other/'],
+    }), /strict descendants/);
+  } finally { await page.close(); }
+});

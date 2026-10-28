@@ -172,7 +172,8 @@
       },
       "implementation_commits": [
         "e3b8b67",
-        "08e1fd8"
+        "08e1fd8",
+        "700d712"
       ]
     },
     {
@@ -237,7 +238,10 @@
       },
       "implementation_commits": [
         "7c668c8",
-        "bdacdf2"
+        "bdacdf2",
+        "892fc96",
+        "e6c72ed",
+        "33ca60c"
       ]
     },
     {
@@ -421,7 +425,7 @@
         "two-user installed Windows Chrome pre-submit observations"
       ],
       "convergence_owner": "EH-B5",
-      "status": "LOCAL_REGRESSION_IN_PROGRESS_INSTALLED_USER_PROOF_GATED"
+      "status": "BOUNDED_LOCAL_REGRESSION_PASSED_INSTALLED_USER_PROOF_GATED"
     }
   ],
   "receipt_contract": {
@@ -436,7 +440,7 @@
     "deployed": false,
     "live_observed": false
   },
-  "exact_next_command": "python scripts/validate_application_autofill_parent.py && python scripts/validate_application_journey.py",
+  "exact_next_command": "npm --prefix artifacts/escape-hatch run test:bootstrap",
   "local_execution": {
     "base_commit": "15b346ae",
     "default_commit": "6379c4d5904de9f44fc75fdb9d9ed07ab8b84021",
@@ -447,20 +451,38 @@
     "observed_concurrent_agents": true,
     "canonical_parallel_receipt_proof": "UNPROVEN",
     "b0": "External user-owned agent; PRs #132/#134 reserved",
-    "proof_ceiling": "Committed-byte package integrity and disposable Windows process proof; installed consumer owner/profile journey unproved",
+    "proof_ceiling": "Committed-byte package integrity, actual disposable Windows Vite/process/socket/HTTP effects, extracted-app browser mounting; signed standard-user owner/profile journey unproved",
     "parallel_execution_disposition": "NATIVE_CONCURRENCY_OBSERVED_CANONICAL_RECEIPT_UNVERIFIED",
     "validation": {
       "app_unit": "PASS 130",
       "managed_assist": "PASS 130; skipped 1 host symlink permission case",
       "typecheck": "PASS",
       "build": "PASS; existing chunk-size warning",
-      "windows_installer": "PASS 18 preservation cases on pre-integration baseline; final rerun required",
+      "windows_installer": "PASS 18 preservation cases on combined implementation",
       "windows_port_discovery": "PASS combined implementation",
       "windows_preview_package": "PASS 4 tests including PS5.1 integrity/staging and junction cases",
       "extension_package": "PASS 10 tests including HEAD-movement regression",
       "harness": "PASS 134 registered artifacts",
       "parent_journey": "PASS source-level only",
-      "full_vite_lifecycle": "RUNNER_ISOLATION_REPAIR_IN_PROGRESS"
+      "full_vite_lifecycle": "PASS 14 cases under Windows PowerShell 5.1; actual process/socket/HTTP, controlled state",
+      "runtime_control": "PASS 6 tests",
+      "extracted_windows_preview": "PASS PS5.1 ReleaseVerify, npm dependencies, production build, 2 standalone browser tests at source 84901ee1ac343900b7dd0ee8a3928f7adc062f8e"
+    },
+    "iteration_evidence": {
+      "passes": 4,
+      "closed_gaps": [
+        "package integrity and immutable staging",
+        "negative and cross-lane review: linked paths, aliases, destination conflict, mixed source HEAD",
+        "Windows proof: isolated installation state, process handle retention, observed shutdown, PS5.1 HTTP parsing",
+        "extracted artifact runtime contract closure and build/browser proof"
+      ],
+      "fixed_point": "No known failing bounded package/runtime check; exact-head CI/integration remains coordinator gate. B4 blocked on external B0; consumer release gates remain open."
     }
+  },
+  "next_gate": {
+    "owner": "external B0 agent, then B4 coordinator",
+    "dependency": "integrated opaque owner/workspace authority at the installed runtime boundary; browser email/name is not proof",
+    "expected_proof": "same-owner admission, missing/wrong-owner rejection and owner-confirmation migration before any extension hydration",
+    "command_context": "B0 owning worktree after its binding implementation; current B1-B3 branch cannot establish this authority"
   }
 }

@@ -91,5 +91,15 @@
     ],
     "platform_adapter_integration": "Must invoke resolver before a persistent or unknown-scope employer/platform resume mutation; currently pending live wiring.",
     "proof_ceiling": "Graph planning/validation and CI do not certify live Indeed persistence, attached PDF, account selection, browser action or application submission."
+  },
+  "queue_effective_master": {
+    "purpose": "Score all selected, reviewed queued job domains to select one reusable account-wide master; prevent upload thrash from per-job matching.",
+    "input": "Versioned list of explicit opportunity IDs scoped to the same applicant and one verified persistent_global platform slot.",
+    "aggregation": "For each candidate approved domain master, sum the reviewed domain weights matched across the whole selected queue; select the unique maximum.",
+    "ambiguity": "Equal maximum across domain masters returns REVIEW_REQUIRED.",
+    "no_match": "Use canonical approved master only.",
+    "output": "KEEP_CURRENT if the exact effective resume already occupies the observed platform slot, otherwise UPLOAD_REQUIRES_CONSENT. Never mutate/upload.",
+    "never_use_job_derivative_for_global": true,
+    "stable_under_queue_order_permutation": true
   }
 }

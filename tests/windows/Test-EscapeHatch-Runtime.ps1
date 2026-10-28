@@ -16,16 +16,24 @@ $ViteJs = Join-Path $ViteRoot 'node_modules\vite\bin\vite.js'
 $ViteConfig = Join-Path $ViteRoot 'vite.config.ts'
 $RuntimeControl = Join-Path $ViteRoot 'runtime-control.ts'
 $ForeignFixture = Join-Path $PSScriptRoot 'fixtures\foreign-listener.mjs'
-$Port = 21031
+# Reserve a candidate only; the preflight below refuses any listener that wins the race.
+$portProbe = New-Object Net.Sockets.TcpListener([Net.IPAddress]::Loopback, 0)
+$portProbe.Start()
+$Port = $portProbe.LocalEndpoint.Port
+$portProbe.Stop()
 $Origin = "http://127.0.0.1:$Port"
 
 $previousEnv = @{
+    LOCALAPPDATA = $env:LOCALAPPDATA
     PORT = $env:PORT
     BASE_PATH = $env:BASE_PATH
     ESCAPEHATCH_NO_BROWSER = $env:ESCAPEHATCH_NO_BROWSER
     ESCAPEHATCH_START_TIMEOUT_SECONDS = $env:ESCAPEHATCH_START_TIMEOUT_SECONDS
     ESCAPEHATCH_STOP_TIMEOUT_SECONDS = $env:ESCAPEHATCH_STOP_TIMEOUT_SECONDS
 }
+# All adapters must resolve fixture installation state, never the user's selected checkout.
+$FixtureAppDataRoot = Join-Path ([IO.Path]::GetTempPath()) ('eh-runtime-state-' + [Guid]::NewGuid().ToString('N'))
+$env:LOCALAPPDATA = $FixtureAppDataRoot
 $env:PORT = [string]$Port
 $env:BASE_PATH = '/'
 $env:ESCAPEHATCH_NO_BROWSER = '1'
@@ -271,7 +279,7 @@ function Stop-TestOwnedProcess {
         $Process.Refresh()
         if (-not $Process.HasExited) {
             Stop-Process -Id $Process.Id -Force -ErrorAction Stop
-            $Process.WaitForExit()
+            if (-not $Process.WaitForExit(10000)) { Write-Warning "Test child PID $($Process.Id) did not exit within 10s; fixture state will be preserved." }
         }
     } catch {}
 }
@@ -310,9 +318,8 @@ try {
     Assert-True ($statusCmdText -match 'pause >nul') 'Status CMD must keep the one-click window readable'
     Assert-True ($statusCmdText -match 'exit /b %STATUS_EXIT%') 'Status CMD must return the preserved exit code'
 
-    Invoke-Manager -Action Stop | Out-Null
     $initialPids = @(Get-ListenerPids)
-    Assert-Equal $initialPids.Count 0 "test runner port $Port must be free after safe managed-runtime cleanup"
+    Assert-Equal $initialPids.Count 0 "test runner port $Port must be free; existing listeners are never stopped by preflight"
 
     Write-Case 'cold start creates one healthy instance'
     Invoke-Manager -Action Start | Out-Null
@@ -338,7 +345,7 @@ try {
     Assert-Equal @(Get-ListenerPids).Count 1 'concurrent Start listener count'
     Assert-True ([int]$concurrentIdentity.pid -gt 0) 'concurrent Start identity PID'
 
-    Write-Case 'graceful stop frees port 21031'
+    Write-Case "graceful stop frees fixture port $Port"
     $gracefulPid = [int]$concurrentIdentity.pid
     $gracefulStarted = Get-Date
     $gracefulStop = Invoke-PowerShellEntryPoint -Path $CloseAdapter
@@ -512,9 +519,23 @@ export function createRuntimeControlPlugin(): Plugin {
     Stop-TestOwnedProcess -Process $foreignProcess
     Stop-TestOwnedProcess -Process $unmanagedProcess
     Stop-TestOwnedProcess -Process $unrelatedProcess
-    try { Invoke-Manager -Action Stop -ExpectedExitCodes @(0,1) | Out-Null } catch {}
+    $fixtureStopped = $false
+    try {
+        Invoke-Manager -Action Stop -ExpectedExitCodes @(0,1) | Out-Null
+        $afterCleanup = Invoke-Manager -Action Status -ExpectedExitCodes @(0,2)
+        $fixtureStopped = $afterCleanup.Output -match '(?m)^ESCAPEHATCH_STATE=STOPPED\s*$'
+    } catch {}
     if ($tempLogPaths.Count -gt 0) {
         Remove-Item -LiteralPath $tempLogPaths -Force -ErrorAction SilentlyContinue
+    }
+    # Preserve fixture evidence if the canonical manager cannot prove shutdown.
+    $resolvedFixture = [IO.Path]::GetFullPath($FixtureAppDataRoot)
+    $resolvedTemp = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\') + '\'
+    if ($fixtureStopped -and $resolvedFixture.StartsWith($resolvedTemp, [StringComparison]::OrdinalIgnoreCase) -and
+        [IO.Path]::GetFileName($resolvedFixture) -match '^eh-runtime-state-[a-f0-9]{32}$') {
+        Remove-Item -LiteralPath $resolvedFixture -Recurse -Force -ErrorAction SilentlyContinue
+    } elseif (Test-Path -LiteralPath $resolvedFixture) {
+        Write-Host "FIXTURE_STATE_PRESERVED=$resolvedFixture" -ForegroundColor Yellow
     }
     foreach ($name in $previousEnv.Keys) {
         [Environment]::SetEnvironmentVariable($name, $previousEnv[$name], 'Process')

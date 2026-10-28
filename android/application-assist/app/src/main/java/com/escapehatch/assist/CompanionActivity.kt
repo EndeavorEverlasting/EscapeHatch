@@ -93,19 +93,19 @@ class CompanionActivity : AppCompatActivity() {
 
     private fun render() {
         val session = store.load()
+        // Notifications must never be offered for a nonexistent session.
+        findViewById<Button>(R.id.postNotification).isEnabled = session != null
         statusView.text = if (session == null) {
-            "Ready to help. Share an employer job link from your phone browser to EscapeHatch."
+            getString(R.string.no_application_selected)
         } else {
+            val domain = runCatching { java.net.URI(session.origin).host }.getOrNull() ?: "Employer job link"
             buildString {
-                appendLine("storageKey=${AssistSessionStore.STORAGE_KEY}")
-                appendLine("sessionId=${session.sessionId}")
-                appendLine("origin=${session.origin}")
-                appendLine("status=${session.status}")
-                appendLine("company=${session.company}")
-                appendLine("role=${session.role}")
-                appendLine("question=${session.questionText}")
-                appendLine("fgs=not_enabled_pending_H6")
-                appendLine("overlay=not_requested")
+                appendLine(session.company?.takeIf { it.isNotBlank() } ?: "Job link saved")
+                session.role?.takeIf { it.isNotBlank() }?.let { appendLine(it) }
+                appendLine(domain)
+                appendLine()
+                appendLine("Saved for review. Open the employer form in your browser when ready.")
+                appendLine("EscapeHatch Assist has not filled or submitted this application.")
             }
         }
     }

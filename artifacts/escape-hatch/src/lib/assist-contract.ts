@@ -1,4 +1,5 @@
 import type { AnswerSnippet, Profile } from './storage';
+import { checkOwnerBoundary } from './context-owner-boundary.ts';
 
 export const ASSIST_SCHEMA = 'escape-hatch-assist';
 export const ASSIST_VERSION = 1;
@@ -196,6 +197,21 @@ export function serializeSyncPayload(profile: AssistProfile, answers: AssistAnsw
 
 export function mergeSyncPayload(current: SyncPayload, incoming: SyncPayload, choice: 'keep-current' | 'use-incoming' | 'merge') {
   if (choice === 'keep-current') return current;
+  const asContext = (payload: SyncPayload) => {
+    const profile = payload.profile;
+    const contact = profile.contact;
+    const base = payload.baseProfile;
+    const hasIdentity = (item: Partial<Profile> | undefined) => Boolean(item &&
+      (item.email?.trim() || item.first_name?.trim() || item.last_name?.trim()));
+    const hasDependentData = Boolean(payload.answers.length || profile.summary.trim() ||
+      profile.links.length || profile.skills.length || profile.projects.length ||
+      profile.experience.length || profile.education.length || profile.proposals.length);
+    return { profile: base, assistContact: contact,
+      hasContext: Boolean(hasIdentity(base) || hasIdentity(contact) || hasDependentData),
+      hasDependentData };
+  };
+  const ownerBoundary = checkOwnerBoundary(asContext(current), asContext(incoming));
+  if (ownerBoundary) throw new Error(ownerBoundary);
   if (choice === 'use-incoming') return incoming;
   const mergedProfile: AssistProfile = {
     ...current.profile,

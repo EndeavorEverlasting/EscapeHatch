@@ -167,5 +167,5 @@ For any application-form fill, verification, browser agent, or prompt handoff, i
 Resume an existing real application and hydrate previously approved answers from the user's PRIVATE canonical workspace and current opportunity overlay before asking or guessing. A recent explicit user correction outranks older derivatives or defaults; persist future corrections through existing answer-memory owner (not a second store). Do not hardcode private applicant values or link private answer documents into public repository history. After each fill and every conditional reveal, re-inspect required fields; report exact unresolved field names and `REVIEW_REQUIRED` until safe checks and protected handoff are complete. Execute `node --experimental-strip-types --test application-requirements.test.ts` from `artifacts/escape-hatch` and the existing managed-assist/full parent validators as relevant; static/synthetic PASS alone does not prove a live ATS or installed build.
 
 
-### Domain résumé graph (P00/P01/P04)
-No job derivative may replace a persistent platform master. Unknown slot => review. Contract: `harness/contracts/resume-selection-graph.v1.json`. Upload/Submit stay manual; #69 OPEN.
+### Résumé graph (P00/P01/P04)
+Never replace a persistent platform resume with a job derivative. Unknown slot => review. See `harness/contracts/resume-selection-graph.v1.json`. Operator controls Submit.

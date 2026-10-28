@@ -22,10 +22,15 @@ const fullName = (contact: Partial<OwnerContact>) => {
   const first = norm(contact.first_name), last = norm(contact.last_name);
   return first && last ? first + ' ' + last : '';
 };
-const differs = (a: Partial<OwnerContact>, b: Partial<OwnerContact>, dependents: boolean) =>
-  Boolean(norm(a.email) && norm(b.email) && norm(a.email) !== norm(b.email)) ||
-  Boolean(fullName(a) && fullName(b) && fullName(a) !== fullName(b)) ||
-  Boolean(dependents && norm(a.first_name) && norm(b.first_name) && norm(a.first_name) !== norm(b.first_name));
+const differs = (a: Partial<OwnerContact>, b: Partial<OwnerContact>, dependents: boolean) => {
+  const emailA = norm(a.email), emailB = norm(b.email);
+  // An editable name can change before a projection's copied contact details.
+  // A shared, nonempty legacy email may prevent a *false conflict*, but is
+  // never proof of authenticated ownership or permission to cross tenants.
+  if (emailA && emailB) return emailA !== emailB;
+  return Boolean(fullName(a) && fullName(b) && fullName(a) !== fullName(b)) ||
+    Boolean(dependents && norm(a.first_name) && norm(b.first_name) && norm(a.first_name) !== norm(b.first_name));
+};
 const matches = (a: Partial<OwnerContact>, b: Partial<OwnerContact>) =>
   Boolean(norm(a.email) && norm(a.email) === norm(b.email)) ||
   Boolean(fullName(a) && fullName(a) === fullName(b));

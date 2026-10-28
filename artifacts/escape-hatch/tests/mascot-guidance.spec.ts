@@ -68,3 +68,41 @@ test('mobile tutorial remains available and chick sound never auto-plays', async
   await page.getByTestId('button-mascot-chirp').click();
   await expect.poll(() => page.evaluate(() => (window as typeof window & { __chirpCreated?: number }).__chirpCreated ?? 0)).toBe(1);
 });
+
+test('birdsong stays opted in across cockpit navigation and can be stopped', async ({ page }) => {
+  await page.goto('/');
+  const sound = page.getByTestId('button-birdsong-control');
+  await expect(sound).toHaveAttribute('aria-pressed', 'false');
+  await expect(sound).toHaveAccessibleName('Turn birdsong on');
+  await sound.click();
+  await expect(sound).toHaveAttribute('aria-pressed', 'true');
+  await page.getByTestId('link-sidebar-browser-assist').click();
+  await expect(sound).toHaveAttribute('aria-pressed', 'true');
+  await sound.click();
+  await expect(sound).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('live tracker selection makes current employer the first puzzle, without fixture identity defaults', async ({ page }) => {
+  await page.route('**/__escapehatch/tracker/status', async route => {
+    const applications = [
+      { sheetRow: 30, company: 'Old Employer', role: 'Coordinator', priority: 'Medium',
+        status: 'Ready to Apply', appliedCheckbox: false, applyUrl: 'https://example.com/old' },
+      { sheetRow: 38, company: 'Current Employer', role: 'Operations PM', priority: 'High',
+        status: 'Ready to Apply', appliedCheckbox: false, applyUrl: 'https://example.com/new' },
+    ];
+    const metrics = { trackedRoles: 2, appliedOrSubmittedCheckbox: 0, readyToApply: 2,
+      inProcess: 0, submittedStatus: 0, highPriority: 1 };
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      connection: 'CONNECTED',
+      snapshot: { schema: 'escapehatch/tracker-snapshot/v1', provider: 'synthetic',
+        spreadsheetId: 'synthetic-sheet', sheetName: 'Applications',
+        capturedAtUtc: new Date().toISOString(), contentDigest: 'synthetic-digest',
+        authPath: 'synthetic', localGoogleAuthPresent: false, metrics, applications },
+    }) });
+  });
+  await page.goto('/');
+  await expect(page.getByTestId('home-next-company-role')).toContainText('Current Employer');
+  await expect(page.getByTestId('mascot-chirp-message')).toContainText('Current Employer');
+  await expect(page.getByTestId('mascot-next-action')).toHaveAttribute('href', /\/assist\?opportunityId=tracker-/);
+  await expect(page.getByTestId('button-birdsong-control')).toHaveAttribute('aria-pressed', 'false');
+});

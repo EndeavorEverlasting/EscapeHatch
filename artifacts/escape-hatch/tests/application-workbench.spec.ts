@@ -97,7 +97,9 @@ test('independent document reads preserve both slots and serialize private stagi
     releaseCover();
     await expect(documents).toContainText('cover.pdf');
     await expect(documents).toContainText('slow-resume.pdf');
-    expect(staged).toEqual(['cover', 'resume']);
+    // The local file labels can update before the queued stage request reaches the server.
+    // Wait for the exact request order rather than asserting on a scheduling tick.
+    await expect.poll(() => staged).toEqual(['cover', 'resume']);
     expect(maxActiveStages).toBe(1);
     await expect(documents.getByText('Not confirmed reviewed', { exact: false })).toHaveCount(2);
   } finally { releaseCover(); }

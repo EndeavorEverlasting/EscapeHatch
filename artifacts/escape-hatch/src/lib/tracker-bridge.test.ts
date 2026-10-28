@@ -74,19 +74,37 @@ test('Submitted Google/Mandiant is locked against reapply invitation', () => {
   assert.match(mapped.nextAction, /Do not reapply/i);
 });
 
-test('Thyme Care Ready row is selected as next actionable opportunity', () => {
+test('latest high-priority Ready row wins over old favorites and insertion order', () => {
   const snap = snapshot([
-    row({ sheetRow: 31, company: 'Google (Mandiant Consulting)', role: 'PMO', status: 'Submitted', appliedCheckbox: true }),
-    row({
-      sheetRow: 32, company: 'Thyme Care', role: 'Product Operations Lead', status: 'Ready to Apply',
-      priority: 'Medium', applyUrl: 'https://jobs.ashbyhq.com/thyme-care/example',
-    }),
-    row({ sheetRow: 10, company: 'Other Ready', role: 'Ops', status: 'Ready to Apply', priority: 'High' }),
+    row({ sheetRow: 31, company: 'Past Employer', role: 'PMO', status: 'Submitted', appliedCheckbox: true,
+      priority: 'High', applyUrl: 'https://jobs.example.test/past' }),
+    row({ sheetRow: 32, company: 'Old Favorite', role: 'Lead', status: 'Ready to Apply',
+      priority: 'Medium', applyUrl: 'https://jobs.example.test/old' }),
+    row({ sheetRow: 38, company: 'Current Employer', role: 'Operations PM', status: 'Ready to Apply',
+      priority: 'High', applyUrl: 'https://jobs.example.test/new' }),
+    row({ sheetRow: 12, company: 'Older High', role: 'Lead', status: 'Ready to Apply',
+      priority: 'High', applyUrl: 'https://jobs.example.test/old-high' }),
   ]);
   const next = selectNextActionableOpportunity(snap);
-  assert.equal(next?.company, 'Thyme Care');
-  assert.equal(next?.priority, 'Medium');
-  assert.equal(trackerOpportunityId(next!).includes('thyme'), true);
+  assert.equal(next?.company, 'Current Employer');
+  assert.equal(next?.sheetRow, 38);
+  assert.equal(trackerOpportunityId(next!).includes('current'), true);
+});
+
+test('suggestion fails closed for missing, insecure, applied, and submitted entries', () => {
+  const rows = [
+    row({ sheetRow: 40, company: 'No URL', role: 'PM', status: 'Ready to Apply', priority: 'High' }),
+    row({ sheetRow: 39, company: 'Plain HTTP', role: 'PM', status: 'Ready to Apply', priority: 'High',
+      applyUrl: 'http://example.com/apply' }),
+    row({ sheetRow: 38, company: 'Already Applied', role: 'PM', status: 'Ready to Apply',
+      priority: 'High', appliedCheckbox: true, applyUrl: 'https://example.com/applied' }),
+    row({ sheetRow: 37, company: 'Submitted', role: 'PM', status: 'Submitted',
+      priority: 'High', applyUrl: 'https://example.com/submitted' }),
+    row({ sheetRow: 36, company: 'Safe Ready', role: 'PM', status: 'Ready to Apply',
+      priority: 'Medium', applyUrl: 'https://example.com/ready' }),
+  ];
+  assert.equal(selectNextActionableOpportunity(snapshot(rows))?.company, 'Safe Ready');
+  assert.equal(selectNextActionableOpportunity(snapshot(rows.slice(0, 4))), null);
 });
 
 test('dedupe uses stable tracker ids; merge preserves prior local edit marker', () => {

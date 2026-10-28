@@ -32,9 +32,9 @@ function playChirp() {
   }
 }
 
-export function GuidedStart({ profile, applications }: { profile: Profile; applications: Application[] }) {
+export function GuidedStart({ profile, applications, focusOpportunity }: { profile: Profile; applications: Application[]; focusOpportunity?: Application }) {
   const [tutorialOpen, setTutorialOpen] = useState(false);
-  const guidance = projectMascotGuidance(profile, applications);
+  const guidance = projectMascotGuidance(profile, applications, focusOpportunity);
   const steps = [
     { title: 'Bring your career sources', description: 'Drop a résumé into Sources. Review the facts you want to reuse.', href: '/sources', icon: FolderInput },
     { title: 'Choose an opportunity', description: 'Save the employer and application link you want to work on.', href: '/applications', icon: Layers },

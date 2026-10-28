@@ -44,3 +44,16 @@ test('closed/applied opportunities do not masquerade as active; filled profile n
   assert.match(current.message, /employer form/);
   assert.doesNotMatch(current.message, /ready to submit/i);
 });
+
+test('focused current employer opens matching puzzle even when profile gaps remain', () => {
+  const focused = { ...job, company: 'Current Employer', role: 'Operations Lead', id: 'tracker-38' };
+  const guidance = projectMascotGuidance(emptyProfile, [focused], focused);
+  assert.match(guidance.message, /Current Employer/);
+  assert.match(guidance.message, /review those details before filling/);
+  assert.equal(guidance.href, '/assist?opportunityId=tracker-38');
+  assert.equal(guidance.action, 'Assemble this application');
+  assert.equal(guidance.nextStep, 2);
+  assert.doesNotMatch(guidance.message, /submitted|ready to submit/i);
+  const submitted = projectMascotGuidance(emptyProfile, [focused], { ...focused, status: 'applied' });
+  assert.equal(submitted.href, '/profile');
+});

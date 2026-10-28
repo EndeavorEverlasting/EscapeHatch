@@ -193,10 +193,20 @@ export function mergeTrackerIntoApplications(
 }
 
 export function selectNextActionableOpportunity(snapshot: TrackerSnapshot): TrackerRow | null {
-  const ready = snapshot.applications.filter((row) =>
-    row.status.toLowerCase().includes('ready') && !row.appliedCheckbox && !row.status.toLowerCase().startsWith('submit'));
-  // Prefer Thyme Care when Ready; otherwise first Ready row.
-  return ready.find((row) => /thyme\s*care/i.test(row.company)) || ready[0] || null;
+  // Prefer the latest high-priority Ready entry, not a hard-coded old employer.
+  // This is a suggestion only; user selection and existing sessions remain authoritative.
+  const ready = snapshot.applications.filter((row) => {
+    if (!/^ready to apply$/i.test(row.status.trim()) || row.appliedCheckbox) return false;
+    try {
+      const url = new URL(row.applyUrl);
+      return url.protocol === 'https:' && url.hostname.includes('.') &&
+        !url.username && !url.password && !url.port;
+    } catch { return false; }
+  });
+  const rank = (priority: string) => /^high$/i.test(priority.trim()) ? 0 :
+    /^medium$/i.test(priority.trim()) ? 1 : 2;
+  ready.sort((a, b) => rank(a.priority) - rank(b.priority) || b.sheetRow - a.sheetRow);
+  return ready[0] || null;
 }
 
 export function isSubmittedLocked(row: TrackerRow): boolean {

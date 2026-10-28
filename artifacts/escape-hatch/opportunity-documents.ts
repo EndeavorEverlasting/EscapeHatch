@@ -4,7 +4,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { userDataRoot, legacyPrivateRoots } from './user-data.ts';
 
-export type DocumentKind = 'resume' | 'cover';
+export type DocumentKind = 'resume' | 'cover' | 'case_study';
 export type PrivatePdf = { name: string; mimeType: 'application/pdf'; buffer: Buffer };
 export type DocumentSource = { provider: 'local' } | { provider: 'google_drive'; fileId: string; modifiedTime: string };
 export type DocumentRecord = { name: string; sha256: string; size: number; reviewedAt?: string; source?: DocumentSource };
@@ -50,7 +50,7 @@ export class OpportunityDocumentStore {
     try {
       const raw = JSON.parse(await fs.readFile(path.join(this.directory(id, url), 'manifest.json'), 'utf8')) as DocumentPackage;
       if (raw.schema !== 'escapehatch/opportunity-documents/v1' || raw.opportunityId !== scope.opportunityId || raw.url !== scope.url || !raw.documents) throw new Error();
-      for (const kind of ['resume', 'cover'] as const) {
+      for (const kind of ['resume', 'cover', 'case_study'] as const) {
         const item = raw.documents[kind];
         if (item && (!/^[a-f0-9]{64}$/.test(item.sha256) || typeof item.name !== 'string' || !Number.isInteger(item.size) || item.size <= 0 || item.size > 5 * 1024 * 1024 || (item.reviewedAt !== undefined && Number.isNaN(Date.parse(item.reviewedAt))))) throw new Error();
         if (item?.source) parseDocumentSource(item.source);
@@ -73,7 +73,7 @@ export class OpportunityDocumentStore {
   }
   private async stageUnlocked(id: string, url: string, kind: DocumentKind, file: PrivatePdf, source: DocumentSource, expectedPreviousSha256?: string | null) {
     const verifiedSource = parseDocumentSource(source);
-    if (!['resume', 'cover'].includes(kind) || file.buffer.subarray(0, 5).toString('ascii') !== '%PDF-' || file.buffer.length > 5 * 1024 * 1024 || !/^[A-Za-z0-9_. -]{1,120}\.pdf$/i.test(file.name)) throw new Error('Invalid document.');
+    if (!['resume', 'cover', 'case_study'].includes(kind) || file.buffer.subarray(0, 5).toString('ascii') !== '%PDF-' || file.buffer.length > 5 * 1024 * 1024 || !/^[A-Za-z0-9_. -]{1,120}\.pdf$/i.test(file.name)) throw new Error('Invalid document.');
     const value = await this.read(id, url), sha256 = createHash('sha256').update(file.buffer).digest('hex');
     const prior = value.documents[kind];
     if (expectedPreviousSha256 !== undefined && (prior?.sha256 ?? null) !== expectedPreviousSha256 && prior?.sha256 !== sha256) throw new Error('Document package changed. Review the current selection before replacing it.');
@@ -90,11 +90,11 @@ export class OpportunityDocumentStore {
    */
   async forCurrentEmployerForm(
     id: string, url: string, requestedKinds: readonly DocumentKind[], requireReview = true,
-  ): Promise<{ resume: PrivatePdf | null; cover: PrivatePdf | null; reviewPolicy: string }> {
+  ): Promise<{ resume: PrivatePdf | null; cover: PrivatePdf | null; case_study: PrivatePdf | null; reviewPolicy: string }> {
     const manifest = await this.read(id, url);
     const selected: Partial<Record<DocumentKind, PrivatePdf>> = {};
     for (const kind of new Set(requestedKinds)) {
-      if (kind !== 'resume' && kind !== 'cover') throw new Error('Unrecognized employer document kind.');
+      if (kind !== 'resume' && kind !== 'cover' && kind !== 'case_study') throw new Error('Unrecognized employer document kind.');
       const record = manifest.documents[kind];
       if (!record || (requireReview && !record.reviewedAt)) continue;
       const file = await this.file(id, url, kind, record.sha256);
@@ -103,6 +103,7 @@ export class OpportunityDocumentStore {
     return {
       resume: selected.resume ?? null,
       cover: selected.cover ?? null,
+      case_study: selected.case_study ?? null,
       reviewPolicy: requireReview ? 'operator_confirmed_review' : 'review_disabled_by_operator',
     };
   }
@@ -131,9 +132,9 @@ export class OpportunityDocumentStore {
   }
   private async forUploadUnlocked(id: string, url: string, requireReview: boolean) {
     const value = await this.read(id, url);
-    if (!value.documents.resume && !value.documents.cover) throw new Error('Save documents for this opportunity first.');
+    if (!value.documents.resume && !value.documents.cover && !value.documents.case_study) throw new Error('Save documents for this opportunity first.');
     if (requireReview && Object.values(value.documents).some(item => !item.reviewedAt)) throw new Error('Document review required before upload.');
-    return { resume: await this.file(id, url, 'resume'), cover: await this.file(id, url, 'cover'), reviewPolicy: requireReview ? 'operator_confirmed_review' : 'review_disabled_by_operator' };
+    return { resume: await this.file(id, url, 'resume'), cover: await this.file(id, url, 'cover'), case_study: await this.file(id, url, 'case_study'), reviewPolicy: requireReview ? 'operator_confirmed_review' : 'review_disabled_by_operator' };
   }
 }
 
@@ -150,7 +151,7 @@ export async function migrateLegacyDocumentPackage(destination: string, legacyRo
     const manifest = await old.read(id, url);
     if (!Object.keys(manifest.documents).length) continue;
     const files: PrivatePdf[] = [];
-    for (const kind of ['resume', 'cover'] as const) {
+    for (const kind of ['resume', 'cover', 'case_study'] as const) {
       const file = await old.file(id, url, kind);
       if (file) files.push(file);
     }

@@ -115,26 +115,36 @@ export function validateResumeGraph(g: ResumeGraph): Map<string, Node> {
     if (n.type === 'resume' && n.tier !== 'canonical' && !derivation.has(n.id)) die('derivative has no source master');
     if (n.type === 'application' && nodes.get(n.opportunityId)?.type !== 'opportunity') die('application lacks opportunity');
   }
-  // Iterative walk avoids unbounded recursion even if an imported graph is hostile.
+  // Globally memoized iterative walk: O(V + E), not a separate traversal per node.
+  const resolved = new Set<string>();
   for (const id of derivation.keys()) {
-    const seen = new Set<string>(); let p: string | undefined = id;
-    while (p) { if (seen.has(p)) die('derivation cycle'); seen.add(p); p = derivation.get(p); }
+    const visiting = new Set<string>(); let p: string | undefined = id;
+    while (p && !resolved.has(p)) {
+      if (visiting.has(p)) die('derivation cycle');
+      visiting.add(p);
+      p = derivation.get(p);
+    }
+    for (const seen of visiting) resolved.add(seen);
   }
   return nodes;
 }
-function fresh(n: ResumeNode, nodes: Map<string, Node>, graph: ResumeGraph): boolean {
+function fresh(n: ResumeNode, nodes: Map<string, Node>,
+  parentEdges: Map<string, Edge>, cache: Map<string, boolean>): boolean {
+  if (cache.has(n.id)) return cache.get(n.id)!;
   let cur = n;
-  const seen = new Set<string>();
-  while (cur.tier !== 'canonical') {
-    if (seen.has(cur.id)) return false;
-    seen.add(cur.id);
-    const edge = graph.edges.find(e => e.kind === 'derives_from' && e.from === cur.id);
-    const parent = edge ? nodes.get(edge.to) : null;
-    if (!edge || parent?.type !== 'resume' || edge.parentDigest !== parent.digest ||
-        parent.review !== 'approved') return false;
+  const path: string[] = [];
+  let good = true;
+  while (true) {
+    if (cache.has(cur.id)) { good = cache.get(cur.id)!; break; }
+    path.push(cur.id);
+    if (cur.review !== 'approved') { good = false; break; }
+    if (cur.tier === 'canonical') break;
+    const edge = parentEdges.get(cur.id), parent = edge && nodes.get(edge.to);
+    if (!edge || parent?.type !== 'resume' || edge.parentDigest !== parent.digest) { good = false; break; }
     cur = parent;
   }
-  return cur.review === 'approved';
+  for (const id of path) cache.set(id, good);
+  return good;
 }
 function domainScore(n: ResumeNode, weights: Record<string, number>): number {
   return Object.entries(weights).reduce((v, [tag, w]) => v + (n.domainTags?.includes(tag) ? w : 0), 0);
@@ -152,14 +162,16 @@ export function resolveResumeForPlatform(g: ResumeGraph, selection: Selection): 
   if (opportunity?.type !== 'opportunity' || slot?.type !== 'platform_slot') return fail(slotId, 'MISSING_BOUND_OPPORTUNITY_OR_SLOT');
   if (slot.scope === 'unknown' || slot.observation !== 'verified') return fail(slotId, 'PLATFORM_SLOT_SEMANTICS_UNVERIFIED');
   const all = g.nodes.filter((x): x is ResumeNode => x.type === 'resume');
-  const match = all.filter(x => x.review === 'approved' && fresh(x, nodes, g));
+  const parentEdges = new Map(g.edges.filter(e => e.kind === 'derives_from').map(e => [e.from, e]));
+  const cache = new Map<string, boolean>();
+  const match = all.filter(x => x.review === 'approved' && fresh(x, nodes, parentEdges, cache));
   const previous = g.edges.find(e => e.kind === 'slot_points_to' && e.from === slot.id);
   const current = previous && nodes.get(previous.to);
   const parentsCurrent = current?.type === 'resume' && match.some(x => x.id === current.id);
   const opportunityWeights = opportunity.domainWeights;
   // Matching a domain is independent of job board; never derive a domain from title alone.
   const domains = match.filter(x => x.tier === 'domain').map(node => ({ node, score: domainScore(node, opportunityWeights) }))
-    .filter(x => x.score > 0).sort((a, b) => b.score - a.score || a.node.id.localeCompare(b.node.id));
+    .filter(x => x.score > 0) .sort((a, b) => b.score - a.score || (a.node.id < b.node.id ? -1 : a.node.id > b.node.id ? 1 : 0));
   if (domains.length > 1 && domains[0].score === domains[1].score) return fail(slot.id, 'AMBIGUOUS_DOMAIN_MASTERS');
   const master = match.find(x => x.tier === 'canonical');
   if (!master) return fail(slot.id, 'CANONICAL_MASTER_NOT_APPROVED_OR_STALE');
@@ -171,7 +183,7 @@ export function resolveResumeForPlatform(g: ResumeGraph, selection: Selection): 
       'PERSISTENT_SLOT_HAS_JOB_DERIVATIVE' : 'PERSISTENT_RESUME_REPLACEMENT_NEEDS_CONSENT', domain.id);
   }
   const jobs = match.filter(x => x.tier === 'job' && g.edges.some(e => e.kind === 'targets_opportunity' &&
-    e.from === x.id && e.to === opportunity.id)).sort((a,b) => a.id.localeCompare(b.id));
+    e.from === x.id && e.to === opportunity.id)) .sort((a,b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   if (jobs.length > 1) return fail(slot.id, 'AMBIGUOUS_JOB_DERIVATIVES');
   const selected = jobs[0] ?? domain;
   if (parentsCurrent && current?.id === selected.id) return decision(slot.id, 'KEEP_CURRENT', 'ISOLATED_ATTACHMENT_CURRENT', selected.id);

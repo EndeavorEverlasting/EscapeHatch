@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { spawnSync } from 'node:child_process';
+import { mkdtempSync, openSync, closeSync, readFileSync, unlinkSync, rmdirSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { emptyProfile, PROFILE_KEY } from '../artifacts/escape-hatch/src/lib/storage.ts';
 
@@ -19,7 +20,20 @@ const syncKey = 'escapeHatch.workspaceProfileSync.v1';
 // a PATH without developer tools. The normal source-checkout route is unchanged.
 const releaseRoot = process.env.ESCAPEHATCH_TEST_RELEASE_ROOT ? path.resolve(process.env.ESCAPEHATCH_TEST_RELEASE_ROOT) : null;
 function powershell(args, env = process.env, timeout = 90000) {
-  return spawnSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', ...args], { encoding: 'utf8', env, windowsHide: true, timeout });
+  // Background Windows descendants may retain inherited pipe handles after the
+  // launcher exits. Regular files let us observe the actual command exit, while
+  // runtime identity, process and Chrome assertions prove the side effects.
+  const directory = mkdtempSync(path.join(tmpdir(), 'eh-native-command-'));
+  const output = path.join(directory, 'stdout.txt'), errors = path.join(directory, 'stderr.txt');
+  const out = openSync(output, 'wx'), err = openSync(errors, 'wx');
+  try {
+    const result = spawnSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', ...args],
+      { env, windowsHide: true, timeout, stdio: ['ignore', out, err] });
+    return { ...result, stdout: readFileSync(output, 'utf8'), stderr: readFileSync(errors, 'utf8') };
+  } finally {
+    closeSync(out); closeSync(err);
+    unlinkSync(output); unlinkSync(errors); rmdirSync(directory);
+  }
 }
 async function extensionContext(directory, sourceRoot = root, env) {
   const extension = path.join(sourceRoot, 'browser/application-assist');
@@ -86,6 +100,7 @@ test('real Chrome native host hydrates the extension module and survives reopen 
   try {
     const bootstrap = install(releaseRoot ? 'ReleaseInstall' : 'Bootstrap');
     registered = true;
+    assert.equal(bootstrap.error, undefined, `Canonical Bootstrap must finish within its bound: ${bootstrap.error?.message}`);
     assert.equal(bootstrap.status, 0, `Canonical Bootstrap failed: ${bootstrap.stdout} ${bootstrap.stderr}`);
     assert.match(bootstrap.stdout, /ESCAPEHATCH_STATE=OWNED_HEALTHY/);
     if (releaseRoot) {

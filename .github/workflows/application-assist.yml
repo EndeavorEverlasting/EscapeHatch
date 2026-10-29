@@ -120,6 +120,8 @@ jobs:
       - run: npx --prefix artifacts/escape-hatch playwright install chromium
       - name: Verify native source admission and framed transport
         run: npm --prefix artifacts/escape-hatch run test:native-profile
+      - name: Verify dependency lifecycle selection and source preservation
+        run: python tests/test_escapehatch_installer_source_delivery.py
       - name: Verify registration ownership and preservation
         run: python tests/test_native_host_registration.py
       - name: Observe native hydration inside Chrome and isolated browser profiles

@@ -687,4 +687,6 @@ async function initializeWorkspace() {
   await Promise.all([loadStoredProfile(), renderWorkspace()]);
   if (blocked) workspaceStatus.textContent = blocked + '. Existing extension information was preserved.';
 }
-void initializeWorkspace().catch(error => { workspaceStatus.textContent = error.message; });
+void initializeWorkspace()
+  .catch(error => { workspaceStatus.textContent = error.message; })
+  .finally(() => { document.getElementById('connectWorkspace').disabled = false; });

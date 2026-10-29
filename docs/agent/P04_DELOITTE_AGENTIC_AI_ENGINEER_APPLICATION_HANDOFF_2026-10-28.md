@@ -1,5 +1,7 @@
 # P04 + P08/P82/P07 — Deloitte Agentic AI Engineer application: operator review → managed browser
 
+> **LIVE FORM ADDENDUM (2026-10-29):** The applicant is actively in Deloitte's Education History screen; the résumé is operator-reviewed but **not approved**, and cover letter remains pending review. The role posting **does not require CPA**. The authoritative next Cursor run contract is [P04 Deloitte live form CPA and strict NO-SUBMIT handoff](P04_DELOITTE_LIVE_FORM_CPA_AND_CURSOR_NO_SUBMIT_2026-10-29.md). Read it first; never invent an accounting-eligibility date or click final Submit. Older flags and generic planned handoffs below are historical where inconsistent.
+
 **Status:** EXECUTION-READY AFTER OPERATOR ARTIFACT REVIEW, **NOT submitted**. **Priority:** immediate. **Evidence cut:** 2026-10-28. **Public role identity:** Indeed job key `f7cda3c372bdd67f`; [Deloitte Agentic AI Engineer – Anthropic/Claude](https://www.indeed.com/viewjob?jk=f7cda3c372bdd67f). Indeed currently lists Stamford, CT, full-time, base $91,100–$179,500, employer-site application, average travel up to 50%, and a **recruiting close of October 30, 2026**. Verify live employer availability again before opening or advancing the form. Work arrangement is **UNKNOWN**, not inferred as remote or hybrid.
 
 ## 1. Immediate objective and ownership

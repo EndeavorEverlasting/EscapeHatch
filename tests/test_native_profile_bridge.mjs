@@ -9,9 +9,12 @@ const ids = { ownerId: '11111111-1111-4111-8111-111111111111', workspaceId: '222
 const browser = '44444444-4444-4444-8444-444444444444';
 const revisions = { workspaceRevision: 'a'.repeat(64), preferenceRevision: 'b'.repeat(64), profileRevision: 'c'.repeat(64) };
 const projection = { ok: true, status: 'PROJECTED', ...ids, ...revisions, profile: { first_name: 'Synthetic', email: 'fixture@example.test', phone_authority: 'unconfirmed' }, answers: [{ id: 'work.remote', label: 'Work preference', value: 'Remote' }] };
-function fixture(initial = {}, responder = () => projection) {
-  const data = structuredClone(initial), calls = [];
-  const storage = { async get(keys) { return Object.fromEntries((Array.isArray(keys) ? keys : [keys]).filter(k => Object.hasOwn(data,k)).map(k => [k, structuredClone(data[k])])); }, async set(values) { Object.assign(data, structuredClone(values)); }, async remove(keys) { for (const k of keys) delete data[k]; } };
+const sortedDictionaries = value => Array.isArray(value) ? value.map(sortedDictionaries) :
+  value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(key => [key, sortedDictionaries(value[key])])) : value;
+function fixture(initial = {}, responder = () => projection, sortedRoundtrip = false) {
+  const clone = value => sortedRoundtrip ? sortedDictionaries(structuredClone(value)) : structuredClone(value);
+  const data = clone(initial), calls = [];
+  const storage = { async get(keys) { return Object.fromEntries((Array.isArray(keys) ? keys : [keys]).filter(k => Object.hasOwn(data,k)).map(k => [k, clone(data[k])])); }, async set(values) { Object.assign(data, clone(values)); }, async remove(keys) { for (const k of keys) delete data[k]; } };
   const native = async (host, request) => { calls.push({ host, request }); return responder(request, data); };
   return { data, calls, storage, app: bridge.create({ storage, native, api, randomUUID: () => browser }) };
 }
@@ -129,6 +132,28 @@ for (const changed of [
   await assert.rejects(() => f.app.refresh(), /Simulated final metadata write failure/);
   assert.equal(f.data[bridge.PROFILE], undefined);
   assert.equal(f.data[bridge.SYNC].status, 'BLOCKED');
+}
+{
+  // Match real Chrome storage, which may return dictionaries in a different
+  // key order from the values supplied to storage.local.set.
+  const f = fixture(paired, () => projection, true);
+  assert.equal((await f.app.refresh()).status, 'PROJECTED');
+  assert.equal(f.data[bridge.PROFILE].first_name, 'Synthetic');
+  assert.equal(f.data[bridge.SYNC].status, 'PROJECTED');
+  assert.equal(f.calls.length, 2);
+  assert.equal((await f.app.refresh()).status, 'PROJECTED');
+}
+{
+  const f = fixture({ ...paired, [bridge.PROFILE]: { phone_authority: 'unconfirmed', first_name: 'Actual conflict' } }, () => projection, true);
+  await assert.rejects(() => f.app.refresh(), /EXISTING_PROFILE_REVIEW_REQUIRED/);
+  assert.equal(f.data[bridge.PROFILE].first_name, 'Actual conflict');
+}
+{
+  let call = 0;
+  const ordered = { ...projection, answers: [...projection.answers, { id: 'education.field', label: 'Field', value: 'Synthetic' }] };
+  const f = fixture(paired, () => ++call === 1 ? ordered : { ...ordered, answers: [...ordered.answers].reverse() }, true);
+  await assert.rejects(() => f.app.refresh(), /SOURCE_VERIFICATION_FAILED/);
+  assert.equal(f.data[bridge.PROFILE], undefined);
 }
 // Worker boundary: webpage wake responses contain counts only; page/internal
 // messages cannot impersonate the popup or supply profile fields.

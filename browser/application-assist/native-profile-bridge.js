@@ -37,7 +37,11 @@
     for (const key of ['ownerId','workspaceId','installationId']) if (!uuid(response[key])) throw new Error('INVALID_NATIVE_BINDING');
     return { ownerId: response.ownerId, workspaceId: response.workspaceId, installationId: response.installationId };
   }
-  const same = (a,b) => JSON.stringify(a) === JSON.stringify(b);
+  // Chrome may reorder stored dictionary keys. Compare values, not the
+  // insertion order of objects; arrays retain their meaningful element order.
+  const canonical = value => Array.isArray(value) ? value.map(canonical) :
+    value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])])) : value;
+  const same = (a,b) => JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
   const sourceState = stored => [stored[PROFILE], stored[LEGACY], stored[ANSWERS], stored[SYNC], stored[BROWSER]];
   function create({ storage, native, api, randomUUID = () => crypto.randomUUID() }) {
     const PREF = api.PREFERENCE_STORAGE_KEY;

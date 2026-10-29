@@ -162,9 +162,7 @@ state and external artifacts; erasure requires a separate explicit user request.
 
 ### Applicant context ownership is a release-blocking boundary (P04, 2026-10-28)
 
-Every consumer-facing agent turn, resume/letter generator, answer lookup, browser assist call, source refresh, and profile import must use the **active applicant's verified local workspace**, not the repository developer's profile, another contributor's chat, fixture content, or the last agent's remembered user. No user profile, résumé, private writing sample or answer bank may be embedded in a public default or build fixture. A contributor's authority to modify code never grants authority to load an applicant workspace. Treat identity as opaque owner/workspace binding; names and emails are only legacy conflict indicators, not authorization.
-
-Until the immutable owner-binding and per-turn context envelope in `docs/plans/P04-CONTEXT-OWNER-ISOLATION-20261028.md` are implemented and independently verified, do not describe the app as multi-user safe. Mismatched or missing owner evidence must stop cross-workspace import, merge, retrieval, generation, and automatic writes with review/recovery rather than silently selecting a developer or synthetic fallback. Keep legacy files untouched on refusal. Never transfer an agent's personal context to a user merely because both share the product repository. Run the existing bootstrap/assist tests and the parent application validators for owner-related changes.
+Applicant work requires verified active owner/workspace IDs, never code access or contact matches. Never mix developer/agent/applicant/fixture context or publish private inputs. Unknown/mismatched owners block import/merge/retrieval/generation/refresh/writes; preserve data for review. Multi-user claims require independent proof. Run bootstrap/assist/parent validators.
 
 ### Application-required-field and answer-memory regression guard (2026-10-27)
 

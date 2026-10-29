@@ -134,7 +134,7 @@ for (const changed of [
 // messages cannot impersonate the popup or supply profile fields.
 {
   const listeners = {}, registrations = name => ({ addListener(fn) { (listeners[name] ||= []).push(fn); } });
-  const native = { async refresh() { return { status: 'PROJECTED', profileFieldCount: 2, answerCount: 1, profile: { first_name: 'Must not leak' }, answers: ['Must not leak'] }; } };
+  const native = { async review() { return { status: 'REVIEW_REQUIRED' }; }, async refresh() { return { status: 'PROJECTED', profileFieldCount: 2, answerCount: 1, profile: { first_name: 'Must not leak' }, answers: ['Must not leak'] }; } };
   const chrome = { runtime: { id: 'fixture-extension', getURL: path => 'chrome-extension://fixture-extension/' + path, onMessage: registrations('message'), onMessageExternal: registrations('external'), onStartup: registrations('startup'), onInstalled: registrations('installed') }, storage: { local: {}, onChanged: registrations('changed') }, tabs: { onUpdated: registrations('updated'), onRemoved: registrations('removed') } };
   const context = { chrome, console, URL, setTimeout, clearTimeout, globalThis: { EscapeHatchSubmission: {}, EscapeHatchNativeProfile: { create: () => native } }, importScripts() {} };
   const workerSource = fs.readFileSync(new URL('../browser/application-assist/worker.js', import.meta.url),'utf8');
@@ -149,5 +149,16 @@ for (const changed of [
   const internal = listeners.message[1];
   const denied = await new Promise(resolve => internal({ type: 'workspace-confirm' }, { id: chrome.runtime.id, tab: { id: 1 }, url: 'https://example.test/' },resolve));
   assert.equal(denied.reason, 'POPUP_REQUIRED');
+  const popupUrl = chrome.runtime.getURL('popup.html');
+  const ownModule = { id: chrome.runtime.id, url: popupUrl, frameId: 0, tab: { id: 2, url: popupUrl } };
+  const internalSend = sender => new Promise(resolve => internal({ type: 'workspace-review' },sender,resolve));
+  assert.equal((await internalSend(ownModule)).ok, true);
+  assert.equal((await internalSend({ id: chrome.runtime.id, url: popupUrl })).ok, true);
+  for (const bad of [
+    { ...ownModule, frameId: 1 },
+    { ...ownModule, tab: { id: 2, url: 'https://employer.example.test/' } },
+    { ...ownModule, url: 'https://employer.example.test/' },
+    { ...ownModule, id: 'another-extension' }
+  ]) assert.equal((await internalSend(bad)).reason, 'POPUP_REQUIRED');
 }
 console.log('NATIVE_PROFILE_BRIDGE_TESTS: PASS');

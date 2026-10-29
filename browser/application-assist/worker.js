@@ -141,7 +141,9 @@ function profileFailure(error) {
 }
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
   if (!message || !['workspace-view','workspace-review','workspace-confirm','workspace-refresh','workspace-edit','workspace-clear'].includes(message.type)) return;
-  const popup = sender.id === chrome.runtime.id && sender.url === chrome.runtime.getURL('popup.html') && !sender.tab;
+  const popupUrl = chrome.runtime.getURL('popup.html');
+  const popup = sender.id === chrome.runtime.id && sender.url === popupUrl &&
+    (!sender.tab || sender.frameId === 0 && sender.tab.url === popupUrl);
   if (!popup) { respond({ ok: false, reason: 'POPUP_REQUIRED' }); return; }
   queued(async () => {
     if (message.type === 'workspace-view') return nativeProfile.view();

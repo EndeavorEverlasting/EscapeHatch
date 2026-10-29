@@ -7,6 +7,10 @@ on:
       - "browser/application-assist/**"
       - "scripts/package_application_assist.py"
       - "tests/test_application_assist_package.py"
+      - "artifacts/escape-hatch/*native*"
+      - "artifacts/escape-hatch/extension-profile-host*"
+      - "scripts/windows/EscapeHatch-NativeHost.ps1"
+      - "tests/test_native*"
       - "contracts/application-assist-session.v1.json"
       - "contracts/application-assist-modality.v1.json"
       - "docs/APPLICATION_ASSIST_SESSION.md"
@@ -20,6 +24,10 @@ on:
       - "browser/application-assist/**"
       - "scripts/package_application_assist.py"
       - "tests/test_application_assist_package.py"
+      - "artifacts/escape-hatch/*native*"
+      - "artifacts/escape-hatch/extension-profile-host*"
+      - "scripts/windows/EscapeHatch-NativeHost.ps1"
+      - "tests/test_native*"
       - "contracts/application-assist-session.v1.json"
       - "contracts/application-assist-modality.v1.json"
       - "docs/APPLICATION_ASSIST_SESSION.md"
@@ -67,6 +75,8 @@ jobs:
         run: node tests/test_application_assist_session.mjs
       - name: Test three-mode modality harness
         run: node tests/test_application_assist_modality.mjs
+      - name: Test native projection policy and worker boundaries
+        run: node tests/test_native_profile_bridge.mjs
       - name: Parse popup and modality runtime
         run: |
           node --check browser/application-assist/modality.js
@@ -92,3 +102,23 @@ jobs:
           else
             git diff --check
           fi
+
+  native-profile-windows:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: npm --prefix artifacts/escape-hatch install --ignore-scripts --package-lock=false --no-audit --no-fund
+      - run: npx --prefix artifacts/escape-hatch playwright install chromium
+      - name: Verify native source admission and framed transport
+        run: npm --prefix artifacts/escape-hatch run test:native-profile
+      - name: Verify registration ownership and preservation
+        run: python tests/test_native_host_registration.py
+      - name: Observe native hydration inside Chrome and isolated browser profiles
+        run: npm --prefix artifacts/escape-hatch run test:native-profile:browser

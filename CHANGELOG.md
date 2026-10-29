@@ -5,6 +5,10 @@ Product identity is owned by `VERSION`. Exact freshness is the Git commit (and a
 
 Schema/protocol versions (`escapehatch-*/vN`, contract `version` integers) are independent and are not product releases.
 
+## [1.4.0]
+
+### Added: owner-bound native workspace projection with reviewed profile fields and approved known answers visible in the extension. Existing local edits remain protected.
+
 ## [1.3.0]
 
 ### Added

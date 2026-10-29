@@ -20,6 +20,7 @@ class ApplicationAssistSessionContractTests(unittest.TestCase):
         cls.core = (BROWSER / "assist-core.js").read_text(encoding="utf-8")
         cls.content = (BROWSER / "content.js").read_text(encoding="utf-8")
         cls.popup = (BROWSER / "popup.js").read_text(encoding="utf-8")
+        cls.native_bridge = (BROWSER / "native-profile-bridge.js").read_text(encoding="utf-8")
         cls.html = (BROWSER / "popup.html").read_text(encoding="utf-8")
         cls.docs = DOCS.read_text(encoding="utf-8")
 
@@ -45,11 +46,12 @@ class ApplicationAssistSessionContractTests(unittest.TestCase):
 
     def test_manifest_permissions_are_minimal(self) -> None:
         self.assertEqual(self.manifest["manifest_version"], 3)
-        self.assertEqual(set(self.manifest["permissions"]), {"activeTab", "scripting", "storage"})
+        self.assertEqual(set(self.manifest["permissions"]), {"activeTab", "scripting", "storage", "nativeMessaging"})
+        self.assertEqual(self.manifest.get("externally_connectable"), {"matches": ["http://127.0.0.1/*"]})
         self.assertNotIn("host_permissions", self.manifest)
         self.assertNotIn("content_scripts", self.manifest)
         self.assertEqual(self.manifest.get("background"), {"service_worker": "worker.js"})
-        self.assertEqual(self.contract["surfaces"]["browser_extension"]["background_service"], "worker.js_read_only_submission_observation")
+        self.assertEqual(self.contract["surfaces"]["browser_extension"]["background_service"], "worker.js_submission_observation_and_owner_bound_native_profile")
         self.assertFalse(self.contract["submission_observation"]["operator_submit_proxy"]["implemented"])
         observation = self.contract["submission_observation"]
         self.assertEqual(observation["scope"], "same_tab_same_origin_same_path")
@@ -114,7 +116,9 @@ class ApplicationAssistSessionContractTests(unittest.TestCase):
         self.assertIn("PREFERENCE_STORAGE_KEY", self.core)
         self.assertIn("function resolveFillValue", self.core)
         self.assertIn("function buildCompanionProgressEvent", self.core)
-        self.assertIn("projectProfileToPreferenceStore", self.popup)
+        self.assertIn("projectProfileToPreferenceStore", self.native_bridge)
+        self.assertIn("workspace-edit", self.popup)
+        self.assertNotIn("[PROFILE_KEY]: profile", self.popup)
         self.assertIn("companion_export", self.popup)
         self.assertEqual(
             self.contract["evidence"]["companion_export_schema"],

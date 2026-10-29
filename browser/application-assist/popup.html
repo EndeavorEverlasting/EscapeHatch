@@ -55,6 +55,9 @@
       border-radius: 10px;
       background: var(--panel);
     }
+    #workspaceChoices label { display: block; margin: 8px 0; overflow-wrap: anywhere; }
+    #workspaceChoices input { width: auto; min-height: auto; margin-right: 8px; }
+    #knownAnswers { padding-left: 20px; overflow-wrap: anywhere; }
     .actions, .sheet {
       display: grid;
       gap: 8px;
@@ -215,6 +218,16 @@
     </div>
     <p id="submissionState" role="status">Submission listener status has not been checked.</p>
     <p>Submit through the employer form. An extension Submit button requires a verified terminal-action adapter and is unavailable in this version. Saved evidence is extension-local; it does not synchronize your application queue.</p>
+  </section>
+
+  <section class="panel" aria-label="Private workspace">
+    <h2>Your private workspace</h2>
+    <p id="workspaceStatus" role="status" aria-live="polite">Checking workspace connection.</p>
+    <button id="connectWorkspace" type="button" disabled>Review workspace connection</button>
+    <fieldset id="workspaceChoices" hidden aria-label="Approved profile fields and answers"></fieldset>
+    <button id="confirmWorkspace" type="button" disabled>Connect selected information</button>
+    <h3>Known approved answers</h3>
+    <ul id="knownAnswers" aria-label="Known approved answers"></ul>
   </section>
 
   <section class="panel profile-panel" id="profilePanel" aria-label="Profile destination">

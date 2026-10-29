@@ -18,11 +18,19 @@
       "permissions": [
         "activeTab",
         "scripting",
-        "storage"
+        "storage",
+        "nativeMessaging"
       ],
       "host_permissions": "none",
-      "background_service": "worker.js_read_only_submission_observation",
-      "always_on_content_script": false
+      "background_service": "worker.js_submission_observation_and_owner_bound_native_profile",
+      "always_on_content_script": false,
+      "external_messaging": {
+        "matches": [
+          "http://127.0.0.1/*"
+        ],
+        "request": "workspace-refresh",
+        "data": "metadata_only_wake; no profile, answer, path or owner authority accepted from webpages"
+      }
     }
   },
   "storage": {
@@ -189,5 +197,21 @@
       "unattended_auto_submit": "forbidden",
       "agent_submit": "forbidden"
     }
+  },
+  "native_profile_bridge": {
+    "host": "com.escapehatch.profile",
+    "transport": "Chrome nativeMessaging; exact extension allowed_origins; standard per-user host registration",
+    "source_owner": "artifacts/escape-hatch/workspace-file.ts and preference-file.ts",
+    "owner_admission": "src/lib/workspace-owner-binding.ts authorizeAgentContext",
+    "identity_projection": "src/lib/extension-profile-admission.ts admitExtensionProfileProjection",
+    "first_connection": "explicit popup review and owner confirmation; never inferred from contact values",
+    "bootstrap": "cockpit metadata wake, popup open and browser startup request the trusted native source",
+    "profile_destination": "escapeHatch.applicationAssistProfile.v1",
+    "answer_destination": "approved reusable known answers shown inside extension; no implied session confirmation",
+    "conflict": "preserve nonempty divergent local values; explicit review required",
+    "phone_authority": "unconfirmed unless separately reviewed",
+    "private_sources": "never exposed to content scripts or page messages",
+    "writer": "serialized extension worker; recheck state after asynchronous native response",
+    "proof_ceiling": "requires actual native host and Chrome storage plus popup readback; a pure admission result is insufficient"
   }
 }

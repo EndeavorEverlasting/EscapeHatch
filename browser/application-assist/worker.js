@@ -1,5 +1,5 @@
 'use strict';
-importScripts('submission-observer.js');
+importScripts('submission-observer.js', 'assist-core.js', 'native-profile-bridge.js');
 const submission = globalThis.EscapeHatchSubmission;
 const SESSION = 'escapeHatch.applicationAssistSession.v1';
 let serial = Promise.resolve();
@@ -119,3 +119,53 @@ async function installEscapeHatchActionIcon() {
 chrome.runtime.onInstalled.addListener(() => { void installEscapeHatchActionIcon(); });
 chrome.runtime.onStartup.addListener(() => { void installEscapeHatchActionIcon(); });
 void installEscapeHatchActionIcon();
+
+// Only the registered Windows native host can supply private workspace values.
+// Restrict storage to extension contexts; injected employer-page scripts receive
+// only the existing explicit Fill Plan payload, never direct profile access.
+void chrome.storage.local.setAccessLevel?.({ accessLevel: 'TRUSTED_CONTEXTS' }).catch(() => {});
+const nativeProfile = globalThis.EscapeHatchNativeProfile.create({
+  storage: chrome.storage.local,
+  api: globalThis.EscapeHatchAssist,
+  native: (host, request) => new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('NATIVE_HOST_TIMEOUT')), 15000);
+    chrome.runtime.sendNativeMessage(host, request, response => {
+      clearTimeout(timer);
+      if (chrome.runtime.lastError) reject(new Error('NATIVE_HOST_UNAVAILABLE'));
+      else resolve(response);
+    });
+  })
+});
+function profileFailure(error) {
+  return { ok: false, status: 'BLOCKED', reason: /^[A-Z0-9_]{1,100}$/.test(error?.message || '') ? error.message : 'WORKSPACE_PROFILE_UNAVAILABLE' };
+}
+chrome.runtime.onMessage.addListener((message, sender, respond) => {
+  if (!message || !['workspace-view','workspace-review','workspace-confirm','workspace-refresh','workspace-edit','workspace-clear'].includes(message.type)) return;
+  const popupUrl = chrome.runtime.getURL('popup.html');
+  const popup = sender.id === chrome.runtime.id && sender.url === popupUrl &&
+    (!sender.tab || sender.frameId === 0 && sender.tab.url === popupUrl);
+  if (!popup) { respond({ ok: false, reason: 'POPUP_REQUIRED' }); return; }
+  queued(async () => {
+    if (message.type === 'workspace-view') return nativeProfile.view();
+    if (message.type === 'workspace-review') return nativeProfile.review();
+    if (message.type === 'workspace-confirm') return nativeProfile.confirm(message.approval);
+    if (message.type === 'workspace-edit') return nativeProfile.edit('save', message.profile);
+    if (message.type === 'workspace-clear') return nativeProfile.edit('clear');
+    return nativeProfile.refresh();
+  }).then(value => respond({ ok: true, value }), error => respond(profileFailure(error)));
+  return true;
+});
+chrome.runtime.onMessageExternal.addListener((message, sender, respond) => {
+  let allowed = false;
+  try {
+    const url = new URL(sender.url);
+    allowed = !sender.id && sender.frameId === 0 && Number.isInteger(sender.tab?.id) && url.protocol === 'http:' && url.hostname === '127.0.0.1' && !url.username && !url.password;
+  } catch (_) { /* malformed sender */ }
+  if (!allowed || message?.type !== 'workspace-refresh' || Object.keys(message).length !== 1) { respond({ ok: false, status: 'BLOCKED', reason: 'WAKE_ONLY' }); return; }
+  // A localhost page can wake the native reader, never provide/read private data.
+  queued(() => nativeProfile.refresh()).then(value => respond({ ok: true, status: value.status, profileFieldCount: value.profileFieldCount, answerCount: value.answerCount }), error => respond(profileFailure(error)));
+  return true;
+});
+function refreshNativeProfile() { void queued(() => nativeProfile.refresh()).catch(() => {}); }
+chrome.runtime.onInstalled.addListener(refreshNativeProfile);
+chrome.runtime.onStartup.addListener(refreshNativeProfile);

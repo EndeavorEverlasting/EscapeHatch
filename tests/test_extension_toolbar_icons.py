@@ -23,7 +23,7 @@ class ExtensionToolbarIconTests(unittest.TestCase):
         digest = hashlib.sha256(public_key).hexdigest()[:32]
         extension_id = "".join(chr(ord("a") + int(nibble, 16)) for nibble in digest)
         self.assertEqual(extension_id, "okjcckicklgdjgfaobipmnojleaeepbg")
-        self.assertEqual(set(manifest["permissions"]), {"activeTab", "scripting", "storage"})
+        self.assertEqual(set(manifest["permissions"]), {"activeTab", "scripting", "storage", "nativeMessaging"})
         self.assertNotIn("host_permissions", manifest)
 
     def test_manifest_has_bundled_extension_and_action_icons(self):

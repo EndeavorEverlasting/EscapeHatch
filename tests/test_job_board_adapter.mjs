@@ -151,4 +151,100 @@ const badEvent = syntheticSupportingForm({ area: badEventArea });
 assert.equal(board.writeIndeedCoverLetterText(badEvent.documentObject, ownerSelected, reviewedLetter).reason,
   "native_textarea_write_failed_recheck_required");
 
+assert.equal(board.planIndeedCoverLetterText(supporting, ownerSelected, reviewedLetter, { ...textForm,
+  fields: [{ ...textForm.fields[0], maxLength: 0 }] }).reason, "text_exceeds_observed_limit");
+const disabledFieldset = syntheticSupportingForm();
+disabledFieldset.area.matches = selector => selector === ":disabled";
+assert.equal(board.writeIndeedCoverLetterText(disabledFieldset.documentObject, ownerSelected, reviewedLetter).reason,
+  "unique_editable_cover_letter_textarea_required");
+assert.equal(disabledFieldset.area.value, "");
+const routeChange = syntheticSupportingForm();
+routeChange.area.dispatchEvent = () => {
+  routeChange.documentObject.location.href = "https://smartapply.indeed.com/beta/indeedapply/form/review-module";
+};
+assert.equal(board.writeIndeedCoverLetterText(routeChange.documentObject, ownerSelected, reviewedLetter).reason,
+  "textarea_readback_mismatch");
+for (const mutation of [
+  selected => { selected.workspaceOwnerId = "foreign-owner"; },
+  selected => { selected.expectedSessionNonce = "replaced-session"; },
+  selected => { selected.trustedTransitionObserved = false; }
+]) {
+  const selected = { ...ownerSelected }, changed = syntheticSupportingForm();
+  changed.area.dispatchEvent = () => mutation(selected);
+  assert.equal(board.writeIndeedCoverLetterText(changed.documentObject, selected, reviewedLetter).reason,
+    "textarea_readback_mismatch");
+}
+
 console.log("JOB_BOARD_ADAPTER_SYNTHETIC: PASS");
+
+// Opt-in disposable DOM proof. All requests are intercepted: this never opens
+// an employer session and cannot establish employer acceptance or persistence.
+// Run after installing the cockpit's declared Playwright dependency and Chromium:
+// node tests/test_job_board_adapter.mjs --browser
+if (process.argv.includes("--browser")) {
+  const cockpitRequire = createRequire(new URL("../artifacts/escape-hatch/package.json", import.meta.url));
+  const { chromium } = cockpitRequire("@playwright/test");
+  const { readFileSync } = await import("node:fs");
+  const source = readFileSync(new URL("../browser/application-assist/job-board-adapter.js", import.meta.url), "utf8");
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const page = await browser.newPage();
+    page.setDefaultTimeout(10000);
+    await page.route("**/*", route => route.fulfill({ contentType: "text/html", body: `
+      <!doctype html><h1>Supporting documents</h1>
+      <fieldset><label for="cover">Cover letter</label><textarea id="cover" maxlength="4000"></textarea></fieldset>
+      <button type="button">Continue</button><button type="button">Submit</button>
+    ` }));
+    const url = "https://smartapply.indeed.com/beta/indeedapply/form/questions-module/questions/1";
+    async function runCase(mode) {
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 10000 });
+      await page.addScriptTag({ content: source });
+      return page.evaluate(async ({ selected, artifact, mode }) => {
+        const area = document.querySelector("textarea");
+        const events = [];
+        let clicks = 0;
+        document.addEventListener("click", () => clicks++);
+        area.addEventListener("input", () => {
+          events.push("input");
+          if (mode === "route-change") history.pushState({}, "", "/beta/indeedapply/form/review-module");
+          if (mode === "rerender") {
+            const replacement = area.cloneNode();
+            replacement.value = "";
+            area.replaceWith(replacement);
+          }
+        });
+        area.addEventListener("change", () => events.push("change"));
+        if (mode === "existing-edit") area.value = "Preserved applicant edit";
+        if (mode === "disabled-fieldset") area.closest("fieldset").disabled = true;
+        if (mode === "zero-limit") area.maxLength = 0;
+        if (mode === "foreign-owner") selected.workspaceOwnerId = "foreign-owner";
+        const result = EscapeHatchJobBoard.writeIndeedCoverLetterText(document, selected, artifact);
+        // A separate browser turn observes the surviving control, rather than
+        // equating synchronous setter readback with React or employer persistence.
+        await new Promise(resolve => setTimeout(resolve, 50));
+        return { result, value: document.querySelector("textarea").value, events, clicks };
+      }, { selected: ownerSelected, artifact: reviewedLetter, mode });
+    }
+    const success = await runCase("success");
+    assert.equal(success.result.state, "FIELD_READBACK_ONLY");
+    assert.equal(success.value, planned.text);
+    assert.deepEqual(success.events, ["input", "change"]);
+    assert.equal(success.clicks, 0);
+    for (const [mode, reason, value] of [
+      ["existing-edit", "preserve_existing_applicant_edit", "Preserved applicant edit"],
+      ["disabled-fieldset", "unique_editable_cover_letter_textarea_required", ""],
+      ["zero-limit", "text_exceeds_observed_limit", ""],
+      ["foreign-owner", "applicant_owner_unverified", ""],
+      ["route-change", "textarea_readback_mismatch", planned.text],
+      ["rerender", "textarea_readback_mismatch", ""]
+    ]) {
+      const observed = await runCase(mode);
+      assert.equal(observed.result.reason, reason, mode);
+      assert.equal(observed.value, value, mode);
+      assert.equal(observed.clicks, 0, mode);
+    }
+    console.log("JOB_BOARD_ADAPTER_CHROMIUM_FIXTURE: PASS (7 cases; intercepted DOM only; no employer session)");
+  } finally {
+    await browser.close();
+  }
+}

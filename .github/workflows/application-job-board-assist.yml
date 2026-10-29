@@ -25,6 +25,22 @@ on:
 permissions:
   contents: read
 jobs:
+  chromium-job-board-fixture:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install declared browser test dependency
+        working-directory: artifacts/escape-hatch
+        run: npm install --ignore-scripts --package-lock=false --no-audit --no-fund
+      - name: Install disposable Chromium runtime
+        working-directory: artifacts/escape-hatch
+        run: npx playwright install chromium
+      - name: Native DOM write and protected controls (intercepted fixtures only)
+        run: node tests/test_job_board_adapter.mjs --browser
   synthetic-job-board:
     runs-on: ubuntu-latest
     steps:

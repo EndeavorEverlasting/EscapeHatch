@@ -5,7 +5,8 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
-  // Classification only: never creates a session, clicks, fills, submits, or infers consent.
+  // Classification never creates a session or infers consent. The explicit writer
+  // below is the only mutation entrypoint; it never navigates or submits.
   const PROVIDERS = Object.freeze({
     "smartapply.indeed.com": "indeed",
     "indeed.com": "indeed",
@@ -78,7 +79,7 @@
 
   // Typed, read-only plan: a caller must supply the selected applicant, reviewed
   // opportunity-specific paragraphs and a live form inventory. This module never
-  // accesses private profile storage or writes to employer form controls.
+  // accesses private profile storage. The separate writer consumes this plan.
   function coverLetterParagraphText(paragraphs) {
     if (!Array.isArray(paragraphs) || paragraphs.length === 0 ||
         paragraphs.some(part => typeof part !== "string")) return null;
@@ -116,7 +117,7 @@
     if (String(field.value ?? "").length > 0) return coverLetterReview("preserve_existing_applicant_edit");
     const text = coverLetterParagraphText(artifact.paragraphs);
     if (!text) return coverLetterReview("approved_paragraphs_missing");
-    const max = Math.min(4000, Number.isInteger(field.maxLength) && field.maxLength > 0 ? field.maxLength : 4000);
+    const max = Math.min(4000, Number.isInteger(field.maxLength) && field.maxLength >= 0 ? field.maxLength : 4000);
     if (text.length > max) return { ...coverLetterReview("text_exceeds_observed_limit"), characters: text.length, limit: max };
     return {
       state: "TEXT_PLAN_READY", mode: "text", maySubmit: false,
@@ -138,6 +139,7 @@
     if (!documentObject?.location?.href || typeof documentObject.querySelectorAll !== "function")
       return block("live_document_unavailable");
     const classification = classify(documentObject.location.href);
+    const formUrl = documentObject.location.href;
     if (classification.provider !== "indeed" || classification.surface !== "job_board_form" ||
         classification.stage === "UNKNOWN_FORM_STEP" || !classification.mayPrepareAfterPolicyGate)
       return block("recognized_indeed_form_required");
@@ -154,7 +156,8 @@
       const visibility = view?.getComputedStyle ? view.getComputedStyle(node).visibility : "visible";
       return { tag: "textarea", label, value: node?.value ?? "", maxLength: node?.maxLength,
         visible: !!rects && rects.length > 0 && visibility !== "hidden",
-        disabled: node?.disabled === true, readOnly: node?.readOnly === true };
+        disabled: node?.disabled === true || node?.matches?.(":disabled") === true,
+        readOnly: node?.readOnly === true };
     });
     const plan = planIndeedCoverLetterText(classification, selected, artifact, {
       heading: String(headings[0].textContent || ""), fields: liveFields
@@ -169,7 +172,7 @@
     if (target.value !== "" || selected?.workspaceOwnerId !== plan.ownerId ||
         selected?.opportunityKey !== plan.opportunityKey ||
         selected?.formSessionNonce !== plan.sessionNonce ||
-        classify(documentObject.location.href).origin !== plan.origin)
+        documentObject.location.href !== formUrl)
       return block("stale_or_edited_form");
     try {
       setter.call(target, plan.text);
@@ -178,8 +181,14 @@
     } catch (_) {
       return block("native_textarea_write_failed_recheck_required");
     }
+    // Event handlers may synchronously navigate or replace the selected session.
+    // A matching origin alone cannot prove this is still the reviewed form.
     if (target.isConnected === false || target.value !== plan.text ||
-        classify(documentObject.location.href).origin !== plan.origin)
+        documentObject.location.href !== formUrl ||
+        selected.workspaceOwnerId !== plan.ownerId ||
+        selected.opportunityKey !== plan.opportunityKey ||
+        selected.formSessionNonce !== plan.sessionNonce ||
+        !canAttachToOpportunity(classify(formUrl), selected).attached)
       return block("textarea_readback_mismatch");
     return { state: "FIELD_READBACK_ONLY", filled: true, characters: plan.characters,
       opportunityKey: plan.opportunityKey, maySubmit: false, employerAcceptance: "UNVERIFIED",

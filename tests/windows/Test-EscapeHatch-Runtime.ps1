@@ -49,14 +49,23 @@ $tempLogPaths = @()
 $caseCount = 0
 
 function Assert-True {
-    param([bool]$Condition, [Parameter(Mandatory)][string]$Message)
-    if (-not $Condition) { throw "ASSERTION FAILED: $Message" }
+    param([bool]$Condition, [Parameter(Mandatory)][string]$Message,
+        [ValidatePattern('^[A-Z0-9_]+$')][string]$AssertionId = 'ASSERT_TRUE')
+    if (-not $Condition) {
+        $failure = New-Object Exception -ArgumentList "ASSERTION FAILED: $Message"
+        $failure.Data['AssertionId'] = $AssertionId
+        $failure.Data['CallerLine'] = $MyInvocation.ScriptLineNumber
+        throw $failure
+    }
 }
 
 function Assert-Equal {
     param($Actual, $Expected, [Parameter(Mandatory)][string]$Message)
     if ($Actual -ne $Expected) {
-        throw "ASSERTION FAILED: $Message (expected=$Expected actual=$Actual)"
+        $failure = New-Object Exception -ArgumentList "ASSERTION FAILED: $Message (expected=$Expected actual=$Actual)"
+        $failure.Data['AssertionId'] = 'ASSERT_EQUAL'
+        $failure.Data['CallerLine'] = $MyInvocation.ScriptLineNumber
+        throw $failure
     }
 }
 
@@ -450,18 +459,17 @@ try {
     Write-Case 'startup timeout cleans only its own failed runtime and receipt'
     $runtimeControlBackup = [IO.File]::ReadAllText($RuntimeControl)
     $runtimeControlMutated = $true
-    $inertControl = @'
-import type { Plugin } from 'vite';
-export function createRuntimeControlPlugin(): Plugin {
-  return { name: 'escapehatch-runtime-control-timeout-fixture' };
-}
-'@
+    # Disable only the identity plugin. Removing this module's other exports
+    # breaks workspace/tracker/browser plugins before Vite can own a socket.
+    $pluginRuntime = 'const runtime = readManagedRuntime(options.env);'
+    Assert-Equal ([regex]::Matches($runtimeControlBackup, [regex]::Escape($pluginRuntime)).Count) 1 'timeout fixture must target exactly one plugin initializer'
+    $inertControl = $runtimeControlBackup.Replace($pluginRuntime, 'const runtime = readManagedRuntime({});')
     [IO.File]::WriteAllText($RuntimeControl, $inertControl, (New-Object System.Text.UTF8Encoding -ArgumentList $false))
     $env:ESCAPEHATCH_START_TIMEOUT_SECONDS = '3'
     $timeoutResult = Invoke-Manager -Action Start -ExpectedExitCodes @(1)
-    Assert-True ($timeoutResult.Output -match 'did not establish the expected managed identity') 'timeout failure must be explicit'
+    Assert-True ($timeoutResult.Output -match 'did not establish the expected managed identity') 'timeout failure must be explicit' -AssertionId 'STARTUP_TIMEOUT_REASON'
     Wait-ForNoListener
-    Assert-True (-not (Test-Path -LiteralPath $ReceiptPath)) 'failed owned startup receipt must be cleaned'
+    Assert-True (-not (Test-Path -LiteralPath $ReceiptPath)) 'failed owned startup receipt must be cleaned' -AssertionId 'STARTUP_TIMEOUT_RECEIPT_CLEANUP'
     [IO.File]::WriteAllText($RuntimeControl, $runtimeControlBackup, (New-Object System.Text.UTF8Encoding -ArgumentList $false))
     $runtimeControlMutated = $false
     $env:ESCAPEHATCH_START_TIMEOUT_SECONDS = '10'
@@ -510,6 +518,9 @@ export function createRuntimeControlPlugin(): Plugin {
 } catch {
     Write-Host "WINDOWS_RUNTIME_LIFECYCLE_TESTS: FAIL" -ForegroundColor Red
     Write-Host ("FAILURE_TYPE={0}" -f $_.Exception.GetType().Name) -ForegroundColor Red
+    if ($_.Exception.Data['AssertionId'] -match '^[A-Z0-9_]+$') {
+        Write-Host ("FAILURE_ASSERTION={0}; CALLER_LINE={1}" -f $_.Exception.Data['AssertionId'], [int]$_.Exception.Data['CallerLine']) -ForegroundColor Red
+    }
     # Emit location only, never source text, request headers, or evaluated values.
     Write-Host ("FAILURE_LOCATION={0}:{1}:{2}" -f [IO.Path]::GetFileName($_.InvocationInfo.ScriptName), $_.InvocationInfo.ScriptLineNumber, $_.InvocationInfo.OffsetInLine) -ForegroundColor Red
     foreach ($frame in ([string]$_.ScriptStackTrace -split "`r?`n")) {

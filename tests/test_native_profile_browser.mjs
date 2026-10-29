@@ -113,6 +113,20 @@ test('real Chrome native host hydrates the extension module and survives reopen 
     assert.equal(changed.ok, false);
     assert.equal(changed.reason, 'REAPPROVAL_REQUIRED');
     assert.equal((await stored(first.popup))[profileKey].first_name, profile.first_name);
+    // Protected control: the existing profile editor must still save and clear
+    // through the real worker after native projection and a rejected refresh.
+    await first.popup.locator('#first_name').fill('Manual synthetic edit');
+    await first.popup.locator('#save').click();
+    await first.popup.waitForFunction(() => document.querySelector('#status').textContent.includes('Profile saved locally'));
+    assert.equal((await stored(first.popup))[profileKey].first_name, 'Manual synthetic edit');
+    await first.popup.locator('#clear').click();
+    await first.popup.waitForFunction(() => document.querySelector('#first_name').value === '');
+    const cleared = await stored(first.popup);
+    assert.equal(cleared[profileKey], undefined);
+    assert.equal(cleared[answerKey], undefined);
+    assert.equal((await cockpit.evaluate(extensionId => new Promise(resolve => chrome.runtime.sendMessage(extensionId, { type: 'workspace-refresh' }, resolve)), first.id)).ok, false);
+    assert.equal((await stored(first.popup))[profileKey], undefined, 'clear pauses native sync rather than silently repopulating');
+    console.log('NATIVE_PROTECTED_PROFILE_EDITOR=PASS; manual_save_clear_and_paused_sync');
     console.log(`NATIVE_CHROME_PROFILE_PROOF=PASS; extension=${first.id}; version=${JSON.parse(await readFile(path.join(root, 'browser/application-assist/manifest.json'), 'utf8')).version}; profile_fields=4; approved_answers=1; browser_profiles=2; evidence=${fixture}`);
   } catch (error) {
     if (second?.popup && !second.popup.isClosed()) {

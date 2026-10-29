@@ -75,6 +75,8 @@ jobs:
         run: node tests/test_application_assist_session.mjs
       - name: Test three-mode modality harness
         run: node tests/test_application_assist_modality.mjs
+      - name: Preserve submission observer behavior with coexisting native listeners
+        run: node tests/test_application_operator_submit.mjs
       - name: Test native projection policy and worker boundaries
         run: node tests/test_native_profile_bridge.mjs
       - name: Parse popup and modality runtime

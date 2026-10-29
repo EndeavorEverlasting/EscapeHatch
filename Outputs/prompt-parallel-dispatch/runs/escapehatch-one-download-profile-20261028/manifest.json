@@ -12,16 +12,16 @@
     "refresh_before_mutation": true
   },
   "authorization": {
-    "disposition": "PROVIDER_HANDOFF_ONLY",
+    "disposition": "LOCAL_IMPLEMENTATION_AND_SYNTHETIC_RUNTIME",
     "product_code_write_attempt": "BLOCKED_BY_TOOL_SAFETY_CHECKS",
-    "product_code_committed": false,
-    "local_runtime_access": false,
+    "product_code_committed": true,
+    "local_runtime_access": true,
     "operator_only": [
       "Chrome Web Store developer enrollment / final publish where needed",
       "standard OS/browser install approvals",
       "real employer final Submit and legal attestations"
     ],
-    "private_profile_access": "NOT_GRANTED_OR_OBSERVED"
+    "private_profile_access": "SYNTHETIC_FIXTURES_ONLY_PERSONAL_RECORDS_PRESERVED"
   },
   "graph": {
     "expression": "EH-B0 read-owner-contract; {EH-B1 || EH-B2 || EH-B3} independent after scoped inventory; EH-B4 after EH-B0 + EH-B2; EH-B5 after EH-B1 + EH-B2 + EH-B3 + EH-B4",
@@ -36,13 +36,12 @@
   },
   "convergence_owner": "EH-B5",
   "manifest_path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-one-download-profile-20261028/manifest.json",
-  "status": "NATIVE_PROFILE_RUNTIME_OBSERVED_FRESH_CI_REPAIR_IN_PROGRESS",
+  "status": "NATIVE_PROFILE_CANDIDATE_RUNTIME_VERIFIED_CI_INTEGRATION_PENDING",
   "blockers": [
     "Windows preview is unsigned; trusted signing/publisher identity and bundled Node/npm prerequisites absent",
     "Chrome Store publisher access/publication and intended-profile user approval/readback not exercised",
     "Runtime identity protocol does not expose source/version provenance; wrong-installed-version rejection unproved",
-    "Canonical dispatch CLI/schema absent; canonical parallel receipt validation unavailable",
-    "PR140 fresh CI dependency install reaches root pnpm guard; repair and exact-head CI pending"
+    "Canonical dispatch CLI/schema absent; canonical parallel receipt validation unavailable"
   ],
   "autonomy_gap": "Native concurrency observed; canonical dispatch verifier absent. Signed consumer distribution and Chrome Store publication remain external release gates.",
   "protected_behavior": [
@@ -425,7 +424,7 @@
         "two-user installed Windows Chrome pre-submit observations"
       ],
       "convergence_owner": "EH-B5",
-      "status": "DISPOSABLE_CANONICAL_BOOTSTRAP_PASS_FRESH_CI_REPAIR_PENDING_CONSUMER_RELEASE_UNPROVEN"
+      "status": "DISPOSABLE_CANONICAL_BOOTSTRAP_AND_PROTECTED_EDITOR_PASS_EXACT_CI_PENDING_CONSUMER_RELEASE_UNPROVEN"
     }
   ],
   "receipt_contract": {
@@ -481,10 +480,10 @@
     }
   },
   "next_gate": {
-    "owner": "B1 installer agent and integration coordinator",
-    "dependency": "fresh dependency installation repair then exact-head CI",
-    "expected_proof": "Canonical Bootstrap from dependency-fresh state and native Chrome module projection; preserve existing submission controls",
-    "command_context": "isolated integration worktree; synthetic private state only"
+    "owner": "integration coordinator",
+    "dependency": "exact-head hosted native Chrome and all required checks",
+    "expected_proof": "Merge exact validated candidate to main and verify canonical owners; consumer signing/Store approval remain separate gates",
+    "command_context": "PR140 and isolated integration worktree; synthetic private state only"
   },
   "native_profile_integration": {
     "branch": "codex/owner-extension-integration-20261028",
@@ -495,8 +494,8 @@
     },
     "extension_id": "okjcckicklgdjgfaobipmnojleaeepbg",
     "version": "1.4.0",
-    "runtime_source_commit": "a35e4dc8b55d518fbc51c53f954ce1518eecb4d9",
-    "runtime_evidence": "PASS 119023ms: canonical Bootstrap, actual Chromium module 4 synthetic profile fields and 1 approved education answer, browser reopen, cockpit metadata wake, second browser rejection, changed-source reapproval; protected manual Save/Clear and paused sync; canonical Uninstall preserves private source. Synthetic fixture 2UejVN remains machine-local.",
+    "runtime_source_commit": "f4594e4f3ce463f1ca2dd6fcd6ffd3df1c107ef1",
+    "runtime_evidence": "PASS 112838ms: canonical Bootstrap, actual Chromium module 4 synthetic profile fields and 1 approved education answer, browser reopen, cockpit metadata wake, second browser rejection, changed-source reapproval; protected manual Save/Clear and paused sync; canonical Uninstall preserves private source. Synthetic fixture AKaHez remains machine-local.",
     "proof_ceiling": "Disposable local Windows/Chromium; consumer Store enrollment and existing personal profile upgrade unproved",
     "validation": {
       "native_source_transport": "11 PASS",
@@ -508,8 +507,10 @@
       "typecheck": "PASS",
       "build": "PASS",
       "full_app_unit": "PASS",
-      "fresh_CI": "npm10 dependency lifecycle still reaches root; additional repair in progress",
-      "protected_submission": "PASS unchanged original assertions with actual module imports and multiple Chrome listeners"
+      "fresh_CI": "Final exact-head hosted checks required; prior root-prefix failure repaired and focused/local live checks pass",
+      "protected_submission": "PASS unchanged original assertions with actual module imports and multiple Chrome listeners",
+      "dependency_lifecycle": "4 PASS; exact Node22.16/npm10.9.2 pinned nested fixture verifies no manifest selfdependency, scripts enabled, prefix and cwd restoration",
+      "runtime_lifecycle": "14 PASS plus PortDiscovery; invalid module-replacement test fixture repaired, process manager unchanged"
     },
     "protected_controls": "Existing submission assertions retained; stale VM listener harness repair pending; real employer Submit never invoked",
     "known_gates": [
@@ -548,7 +549,8 @@
       "tests/test_extension_toolbar_icons.py",
       "tests/test_native_host_registration.py",
       "tests/test_native_profile_bridge.mjs",
-      "tests/test_native_profile_browser.mjs"
+      "tests/test_native_profile_browser.mjs",
+      "tests/windows/Test-EscapeHatch-Runtime.ps1"
     ]
   }
 }

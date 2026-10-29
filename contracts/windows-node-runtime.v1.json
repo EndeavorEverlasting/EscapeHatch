@@ -1,0 +1,24 @@
+{
+  "schema": "escapehatch/windows-node-runtime-input/v1",
+  "version": "22.23.4",
+  "platform": "win32",
+  "architecture": "x64",
+  "archiveUrl": "https://nodejs.org/dist/v22.23.4/node-v22.23.4-win-x64.zip",
+  "archiveSha256": "cbc74b5e0982c9dbb41525fd8fb5dcd32fbee237863f7829072f4639a1ce5f20",
+  "archiveRoot": "node-v22.23.4-win-x64",
+  "signedShasumsUrl": "https://nodejs.org/dist/v22.23.4/SHASUMS256.txt.asc",
+  "signedShasumsSha256": "a662bf8938f1ea15a9ba0017a89a53a28812b8ab179be11dd62d642cb6e33396",
+  "shasumsSha256": "c90c3f1478fda8308b22cc1a1b0dc536169196444e67ee8b5c582fd351d02bce",
+  "signerFingerprint": "5BE8A3F6C8A5C01D106C0AD820B1A390B168D356",
+  "releaseKeysRevision": "481637f813e912c4aa3622d7964ab426c97b8e8d",
+  "keyringUrl": "https://raw.githubusercontent.com/nodejs/release-keys/481637f813e912c4aa3622d7964ab426c97b8e8d/gpg/pubring.kbx",
+  "keyringSha256": "610b8d249da3d5733f5a128def2dd0294dbbf5b5713e6ca2529db8db419dee00",
+  "releaseKeysLicenseUrl": "https://raw.githubusercontent.com/nodejs/release-keys/481637f813e912c4aa3622d7964ab426c97b8e8d/LICENSE.md",
+  "releaseKeysLicenseSha256": "596beb1080a8b35a36e6d20ec3a461f603eee71839cd8cd1646f85e32979a9c2",
+  "licenseFiles": {
+    "LICENSE": "8cc9bb466b19fc7e7cc99d03e9df1132021fda8b01eea2624c58bb372dbef576",
+    "node_modules/npm/LICENSE": "af1573a67c9d9051fbf8a9c123a22b7f51ec58cb6a588b4c23bead776dd046ab"
+  },
+  "requiredFiles": ["node.exe", "npm.cmd", "node_modules/npm/bin/npm-cli.js", "node_modules/npm/package.json"],
+  "verification": "GPG-verified upstream SHASUMS and exact archive digest; not an EscapeHatch package signature"
+}

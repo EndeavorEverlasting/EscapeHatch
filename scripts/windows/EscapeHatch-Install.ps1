@@ -11,6 +11,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'EscapeHatch-Toolchain.ps1')
 
 function Full-Path([string]$Value) {
     $full = [IO.Path]::GetFullPath($Value)
@@ -80,6 +81,9 @@ function Verify-Release([string]$Root) {
         if (-not (Test-Path -LiteralPath $file -PathType Leaf) -or (File-Hash $file) -cne [string]$entry.Value) { throw 'INSTALL_RELEASE_INTEGRITY_FAILED: package was preserved.' }
     }
     Require-Source $Root
+    if ((Get-EscapeHatchProperty $release 'nodeBundled') -eq $true) {
+        $null = Get-EscapeHatchToolchain -SourceRoot $Root -RequireNpm
+    }
     return $release
 }
 function Read-Receipt {
@@ -127,10 +131,7 @@ function Stop-SelectedRuntime([string]$Root) {
 }
 function Ensure-Dependencies([string]$Root) {
     if ($SkipDependencies) { return }
-    $node = Get-Command node.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
-    $npm = Get-Command npm.cmd -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
-    if (-not $node -or -not $npm) { throw 'INSTALL_TOOLCHAIN_REQUIRED: install Node.js 22.16 or newer (including npm), then run Install-EscapeHatch.cmd again.' }
-    if (-not (Test-NodeVersion $node.Source)) { throw 'INSTALL_NODE_VERSION_REQUIRED: Node.js 22.16 or newer is required.' }
+    $toolchain = Get-EscapeHatchToolchain -SourceRoot $Root -RequireNpm
     $artifact = Join-Path $Root 'artifacts\escape-hatch'
     $vite = Join-Path $artifact 'node_modules\vite\bin\vite.js'
     $dependencyStamp = Join-Path $artifact 'node_modules\.escapehatch-package.sha256'
@@ -142,23 +143,27 @@ function Ensure-Dependencies([string]$Root) {
         # even for a local install. Isolate that inherited target, not registry,
         # cache or other npm configuration, and restore the caller environment.
         $inheritedNpmPrefix = $env:npm_config_prefix
+        $inheritedPath = $env:PATH
         Push-Location -LiteralPath $artifact
         try {
             Remove-Item Env:npm_config_prefix -ErrorAction SilentlyContinue
-            & $npm.Source install --global=false --location=project --package-lock=false --no-audit --no-fund
+            # npm dependency lifecycle scripts must find this same Node even
+            # when the destination has no system Node or npm on PATH.
+            $env:PATH = $toolchain.BinDirectory + [IO.Path]::PathSeparator + $inheritedPath
+            if ($toolchain.NpmCliPath) {
+                & $toolchain.NodePath $toolchain.NpmCliPath install --global=false --location=project --package-lock=false --no-audit --no-fund
+            } else {
+                & $toolchain.NpmCommandPath install --global=false --location=project --package-lock=false --no-audit --no-fund
+            }
             if ($LASTEXITCODE) { throw 'INSTALL_DEPENDENCIES_FAILED: dependency installation failed; saved career state was preserved.' }
         } finally {
             $env:npm_config_prefix = $inheritedNpmPrefix
+            $env:PATH = $inheritedPath
             Pop-Location
         }
         if (-not (Test-Path -LiteralPath $vite -PathType Leaf)) { throw 'INSTALL_DEPENDENCIES_INCOMPLETE: the Vite runtime is still missing.' }
         [IO.File]::WriteAllText($dependencyStamp, $manifestHash)
     }
-}
-function Test-NodeVersion([string]$Executable) {
-    # Quote-free JavaScript survives Windows PowerShell 5.1 native argv binding.
-    & $Executable -e 'const v=process.versions.node.match(/\d+/g);if(+v[0]<22||(+v[0]===22&&+v[1]<16))process.exit(1)'
-    return ($LASTEXITCODE -eq 0)
 }
 function Update-NativeHost([string]$Root, [string]$NativeAction) {
     # Native messaging registration is separate from browser extension enrollment.
@@ -256,8 +261,11 @@ try {
         $receipt = Read-Receipt
         Write-Host ('ESCAPEHATCH_INSTALLATION=' + $(if ($null -eq $receipt) { 'NOT_INSTALLED' } else { 'INSTALLED' }))
         Write-Host ('SELECTED_SOURCE_AVAILABLE=' + [bool]($receipt -and (Test-Path -LiteralPath ([string]$receipt.sourceRoot) -PathType Container)))
-        $nodeProbe = Get-Command node.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
-        Write-Host ('NODE_VERSION_READY=' + [bool]($nodeProbe -and (Test-NodeVersion $nodeProbe.Source)))
+        try {
+            $toolchain = Get-EscapeHatchToolchain -SourceRoot $SourceRoot
+            Write-Host 'NODE_VERSION_READY=True'
+            Write-Host ('NODE_TOOLCHAIN=' + $toolchain.Kind)
+        } catch { Write-Host 'NODE_VERSION_READY=False' }
         exit 0
     }
     $digest = [Security.Cryptography.SHA256]::Create()

@@ -36,7 +36,7 @@
   },
   "convergence_owner": "EH-B5",
   "manifest_path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-one-download-profile-20261028/manifest.json",
-  "status": "NATIVE_PROFILE_CANDIDATE_RUNTIME_VERIFIED_CI_INTEGRATION_PENDING",
+  "status": "BUNDLED_RUNTIME_PREVIEW_LOCAL_PASS_CI_PENDING",
   "blockers": [
     "Windows preview is unsigned; trusted signing/publisher identity and bundled Node/npm prerequisites absent",
     "Chrome Store publisher access/publication and intended-profile user approval/readback not exercised",
@@ -507,10 +507,11 @@
       "typecheck": "PASS",
       "build": "PASS",
       "full_app_unit": "PASS",
-      "fresh_CI": "Final exact-head hosted checks required; prior root-prefix failure repaired and focused/local live checks pass",
+      "fresh_CI": "PASS both Windows native Chrome jobs at f453aa5; manifest-source mutation guard PASS; all checks green before merge",
       "protected_submission": "PASS unchanged original assertions with actual module imports and multiple Chrome listeners",
       "dependency_lifecycle": "4 PASS; exact Node22.16/npm10.9.2 pinned nested fixture verifies no manifest selfdependency, scripts enabled, prefix and cwd restoration",
-      "runtime_lifecycle": "14 PASS plus PortDiscovery; invalid module-replacement test fixture repaired, process manager unchanged"
+      "runtime_lifecycle": "14 PASS plus PortDiscovery; invalid module-replacement test fixture repaired, process manager unchanged",
+      "post_merge_main": "PASS native11, harness148/version/governance, parent9/journey14 source, productionbuild; existing chunk warning"
     },
     "protected_controls": "Existing submission assertions retained; stale VM listener harness repair pending; real employer Submit never invoked",
     "known_gates": [
@@ -551,6 +552,99 @@
       "tests/test_native_profile_bridge.mjs",
       "tests/test_native_profile_browser.mjs",
       "tests/windows/Test-EscapeHatch-Runtime.ps1"
+    ],
+    "merged_main": "bbb1d6a9eb4693bee9e90cd6c4b13ebe1db6a25d"
+  },
+  "bundled_runtime_preview": {
+    "base": "bbb1d6a9eb4693bee9e90cd6c4b13ebe1db6a25d",
+    "branch": "codex/bundled-runtime-preview-20261029",
+    "state": "INTEGRATED_CANDIDATE_LOCAL_RUNTIME_PASS_EXACT_CI_PENDING",
+    "graph_width": 3,
+    "adapter": "collaboration.followup_task",
+    "canonical_dispatch_verifier": "UNAVAILABLE; native concurrency may be observed but canonical receipt remains UNPROVEN",
+    "lanes": [
+      {
+        "owner": "/root/b1_installer",
+        "scope": "shared Windows toolchain resolver and installer/runtime/native-host callers, GetCMD, focused tests",
+        "forbidden": "packager/pin/workflow/docs/version"
+      },
+      {
+        "owner": "/root/b2_runtime",
+        "scope": "canonical preview packager, official pinned and signature-verified Node payload input, focused package tests",
+        "forbidden": "Windows callers/workflow/docs/version/browser proof"
+      },
+      {
+        "owner": "/root/b3_extension",
+        "scope": "existing native browser proof optional extracted ReleaseInstall route with no system tools",
+        "forbidden": "product helpers/packager/UI/version"
+      }
+    ],
+    "coordinator_scope": "workflow, registry, canonical version generator, docs/evidence, convergence and actual packaged proof",
+    "proof_ceiling": "Unsigned Windows online preview under controlled child PATH; no signed consumer, fresh standard-user VM, offline dependencies, or Store enrollment claim",
+    "validation_commands": [
+      "python tests/test_windows_preview_package.py",
+      "python tests/test_escapehatch_installer_source_delivery.py",
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/windows/Test-EscapeHatch-Install.ps1",
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/windows/Test-EscapeHatch-Runtime-PortDiscovery.ps1",
+      "npm --prefix artifacts/escape-hatch run test:native-profile:browser",
+      "python scripts/validate_harness.py",
+      "python scripts/validate_application_autofill_parent.py",
+      "python scripts/validate_application_journey.py",
+      "git diff --check"
+    ],
+    "pull_request": 142,
+    "version": "1.5.0",
+    "upstream": {
+      "version": "22.23.4",
+      "archiveSha256": "cbc74b5e0982c9dbb41525fd8fb5dcd32fbee237863f7829072f4639a1ce5f20",
+      "signerFingerprint": "5BE8A3F6C8A5C01D106C0AD820B1A390B168D356",
+      "escapehatch_package_signed": false
+    },
+    "parallel_result": "Three native lanes started; all stopped at account usage limit. Partial work checkpointed separately, preserved and converged by coordinator. Canonical dispatch receipt verifier remains absent.",
+    "checkpoints": [
+      "754dd24",
+      "13255fd",
+      "fca171b"
+    ],
+    "runtime_evidence": {
+      "artifact_source": "72b49bdb0c3292e7450c2d3c9950126a70eb2838",
+      "driver_source": "c6846cb521f18fb658209f7ae260baa06a2d53c9",
+      "duration_ms": 156323.9636,
+      "state": "PASS",
+      "scope": "Disposable Windows canonical ReleaseInstall with child PATH Windows-only; Node/npm/Git/Python absent. Actual staged bundled Node process and native launcher readback; Chrome fields/known answer, reopen, cockpit wake, second profile rejection, source reapproval, manual save/clear, canonical uninstall. Regular-file command capture rejects launcher timeout errors.",
+      "private_data": "Synthetic only; existing personal installation untouched"
+    },
+    "validation": {
+      "package": "6 PASS including unsafe ZIP/digest/license and corrupt/no-fallback cases",
+      "installer_source": "4 PASS",
+      "native_registration": "6 PASS",
+      "installer_preservation": "18 PASS",
+      "port_discovery": "PASS",
+      "upstream_fetch_signature_build": "PASS",
+      "source_checkout_browser": "RUNNING",
+      "exact_head_CI": "PENDING"
+    },
+    "files_changed": [
+      ".github/workflows/windows-preview-package.yml",
+      "ARTIFACT_REGISTRY.md",
+      "CHANGELOG.md",
+      "Get-EscapeHatch.cmd",
+      "Outputs/prompt-parallel-dispatch/runs/escapehatch-one-download-profile-20261028/manifest.json",
+      "README.md",
+      "VERSION",
+      "browser/application-assist/manifest.json",
+      "contracts/windows-node-runtime.v1.json",
+      "docs/agent/P04_ONE_DOWNLOAD_EXTENSION_AND_PRIVATE_PROFILE_BOOTSTRAP_2026-10-28.md",
+      "scripts/package_windows_preview.py",
+      "scripts/windows/EscapeHatch-Install.ps1",
+      "scripts/windows/EscapeHatch-NativeHost.ps1",
+      "scripts/windows/EscapeHatch-Runtime.ps1",
+      "scripts/windows/EscapeHatch-Toolchain.ps1",
+      "tests/test_escapehatch_installer_source_delivery.py",
+      "tests/test_native_profile_browser.mjs",
+      "tests/test_windows_preview_package.py",
+      "tests/windows/Test-EscapeHatch-Install.ps1",
+      "tests/windows/Test-EscapeHatch-Runtime-PortDiscovery.ps1"
     ]
   }
 }

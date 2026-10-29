@@ -31,6 +31,7 @@ function Fixture-Source([string]$Root) {
     New-Item -ItemType Directory -Path (Join-Path $Root 'scripts\windows') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $Root 'artifacts\escape-hatch') -Force | Out-Null
     Copy-Item -LiteralPath $installer -Destination (Join-Path $Root 'scripts\windows\EscapeHatch-Install.ps1')
+    Copy-Item -LiteralPath (Join-Path $repo 'scripts\windows\EscapeHatch-Toolchain.ps1') -Destination (Join-Path $Root 'scripts\windows\EscapeHatch-Toolchain.ps1')
     foreach ($adapter in @('Close-EscapeHatch.ps1', 'Status-EscapeHatch.ps1')) {
         Copy-Item -LiteralPath (Join-Path $repo $adapter) -Destination (Join-Path $Root $adapter)
     }

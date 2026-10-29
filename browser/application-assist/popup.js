@@ -137,7 +137,7 @@ async function workspaceCommand(type, payload = {}) {
     const reason = response?.reason || '';
     if (/NATIVE_HOST|NATIVE_WORKSPACE/.test(reason)) throw new Error('Private workspace connection unavailable. Run EscapeHatch setup, then try again.');
     if (/EXISTING_|LOCAL_PROFILE_CHANGED/.test(reason)) throw new Error('Your saved extension information differs. Both copies are preserved; review them before reconnecting.');
-    if (/OWNER|WORKSPACE_MISMATCH|BROWSER|INSTALLATION/.test(reason)) throw new Error('This browser and workspace do not have a matching owner connection. Existing information was preserved.');
+    if (/OWNER|WORKSPACE_MISMATCH|BROWSER|CHROME_PROFILE_MISMATCH|INSTALLATION/.test(reason)) throw new Error('This browser and workspace do not have a matching owner connection. Existing information was preserved.');
     if (/REVISION|REAPPROVAL/.test(reason)) throw new Error('Your workspace changed. Review the connection again to approve current information.');
     throw new Error('Workspace information could not be connected. Review the connection and try again.');
   }

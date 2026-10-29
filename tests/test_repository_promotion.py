@@ -215,6 +215,39 @@ class RepositoryPromotionTests(unittest.TestCase):
             receipt = self.guard.promotion_guard_evaluate(candidate, required, [], current_head=candidate.head_sha, current_base=candidate.base_sha, provider_status=status)
             self.assertEqual(receipt["status"], status)
 
+    def test_tag_command_has_scoped_bot_identity_without_runner_git_config(self):
+        import os
+        import shlex
+        import subprocess
+        import tempfile
+        workflow = (ROOT / '.github/workflows/promotion.yml').read_text(encoding='utf-8')
+        line = next(line.strip() for line in workflow.splitlines()
+                    if line.strip().startswith('git -c user.name=') and ' tag -a ' in line)
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = Path(temporary)
+            empty = repo / 'empty-global-config'
+            empty.write_text('')
+            env = {key:value for key,value in os.environ.items() if not key.startswith('GIT_')}
+            env.update(GIT_CONFIG_NOSYSTEM='1', GIT_CONFIG_GLOBAL=str(empty))
+            def run(*args, check=True):
+                result = subprocess.run(['git', *args], cwd=repo, env=env, capture_output=True, text=True, timeout=15)
+                if check:
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                return result
+            run('init')
+            run('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '--allow-empty', '-m', 'fixture')
+            sha = run('rev-parse', 'HEAD').stdout.strip()
+            refused = run('-c', 'user.name=', '-c', 'user.email=', 'tag', '-a', 'missing-identity', sha, '-m', 'fixture', check=False)
+            self.assertNotEqual(refused.returncode, 0)
+            argv = [arg.replace('$tag', 'v-fixture').replace('$sha', sha) for arg in shlex.split(line)]
+            result = subprocess.run(argv, cwd=repo, env=env, capture_output=True, text=True, timeout=15)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(run('rev-parse', 'v-fixture^{commit}').stdout.strip(), sha)
+            identity = run('for-each-ref', '--format=%(taggername)|%(taggeremail)', 'refs/tags/v-fixture').stdout.strip()
+            self.assertEqual(identity, 'github-actions[bot]|<41898282+github-actions[bot]@users.noreply.github.com>')
+            self.assertEqual(run('config', '--local', '--get', 'user.name', check=False).returncode, 1)
+            self.assertEqual(empty.read_text(), '')
+
     def test_compare_and_set_and_idempotent_markers_present(self):
         # Ensure guard implementation contains markers required by validator
         text = GUARD_PATH.read_text(encoding="utf-8")

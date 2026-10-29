@@ -137,14 +137,20 @@ function Ensure-Dependencies([string]$Root) {
     $manifestHash = File-Hash (Join-Path $artifact 'package.json')
     $savedHash = if (Test-Path -LiteralPath $dependencyStamp -PathType Leaf) { (Get-Content -LiteralPath $dependencyStamp -Raw).Trim() } else { '' }
     if (-not (Test-Path -LiteralPath $vite -PathType Leaf) -or $savedHash -cne $manifestHash) {
-        # npm 10 invoked from an inherited npm-run environment can execute the
-        # caller's root lifecycle scripts despite --prefix. Select the actual
-        # application cwd so clean bootstrap never enters the pnpm root owner.
+        # npm 10 exports --prefix as npm_config_prefix into lifecycle children.
+        # Its install command treats equal local/global prefixes as "install .",
+        # even for a local install. Isolate that inherited target, not registry,
+        # cache or other npm configuration, and restore the caller environment.
+        $inheritedNpmPrefix = $env:npm_config_prefix
         Push-Location -LiteralPath $artifact
         try {
-            & $npm.Source install --package-lock=false --no-audit --no-fund
+            Remove-Item Env:npm_config_prefix -ErrorAction SilentlyContinue
+            & $npm.Source install --global=false --location=project --package-lock=false --no-audit --no-fund
             if ($LASTEXITCODE) { throw 'INSTALL_DEPENDENCIES_FAILED: dependency installation failed; saved career state was preserved.' }
-        } finally { Pop-Location }
+        } finally {
+            $env:npm_config_prefix = $inheritedNpmPrefix
+            Pop-Location
+        }
         if (-not (Test-Path -LiteralPath $vite -PathType Leaf)) { throw 'INSTALL_DEPENDENCIES_INCOMPLETE: the Vite runtime is still missing.' }
         [IO.File]::WriteAllText($dependencyStamp, $manifestHash)
     }

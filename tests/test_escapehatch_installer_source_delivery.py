@@ -33,7 +33,7 @@ fs.mkdirSync('node_modules/vite/bin', {recursive:true});
 fs.writeFileSync('node_modules/vite/bin/vite.js', '// synthetic dependency');
 fs.appendFileSync('app-lifecycle-ran.txt', '1');
 """)
-            (fixture / 'dependency-probe.ps1').write_text("""
+            (fixture / 'dependency-probe.ps1').write_text(r"""
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 Set-Location -LiteralPath $env:EH_DEPENDENCY_FIXTURE
@@ -47,7 +47,10 @@ foreach ($name in $names) {
     Invoke-Expression $function.Extent.Text
 }
 $SkipDependencies = $false
+$npmProbe = Get-Command npm.cmd -CommandType Application | Select-Object -First 1
+Write-Output ('NESTED_NPM_VERSION=' + (& $npmProbe.Source --version))
 $before = (Get-Location).Path
+$beforePrefix = $env:npm_config_prefix
 if ($env:EH_FAIL_APP_INSTALL -eq '1') {
     try { Ensure-Dependencies $env:EH_DEPENDENCY_FIXTURE; throw 'Expected dependency failure' }
     catch { if ($_.Exception.Message -notmatch '^INSTALL_DEPENDENCIES_FAILED:') { throw } }
@@ -56,19 +59,34 @@ if ($env:EH_FAIL_APP_INSTALL -eq '1') {
     Ensure-Dependencies $env:EH_DEPENDENCY_FIXTURE
 }
 if ((Get-Location).Path -cne $before) { throw 'Dependency installation changed caller cwd' }
+if ($env:npm_config_prefix -cne $beforePrefix) { throw 'Dependency installation changed caller npm prefix' }
 Write-Output 'DEPENDENCY_FIXTURE=PASS'
 """)
             env = {**os.environ, 'EH_DEPENDENCY_FIXTURE': str(fixture),
                 'EH_INSTALLER_UNDER_TEST': str(ROOT / 'scripts/windows/EscapeHatch-Install.ps1')}
             # Optional npm CLI path permits the CI npm-10 regression to be run
             # with the exact version independently of the workstation's npm.
-            npm = [shutil.which('node'), env['ESCAPEHATCH_TEST_NPM_CLI']] if env.get('ESCAPEHATCH_TEST_NPM_CLI') else [shutil.which('npm.cmd')]
+            if env.get('ESCAPEHATCH_TEST_NPM_CLI'):
+                node = env.get('ESCAPEHATCH_TEST_NODE_EXE') or shutil.which('node')
+                tools = Path(temporary) / 'toolchain'
+                tools.mkdir()
+                # Pin the inner PowerShell-discovered npm as well as the outer
+                # lifecycle runner. Testing only the outer CLI can mask a bug.
+                (tools / 'npm.cmd').write_text(f'@echo off\n"{node}" "{env["ESCAPEHATCH_TEST_NPM_CLI"]}" %*\n')
+                env['PATH'] = str(tools) + os.pathsep + str(Path(node).parent) + os.pathsep + env['PATH']
+                npm = [node, env['ESCAPEHATCH_TEST_NPM_CLI']]
+            else:
+                npm = [shutil.which('npm.cmd')]
             command = [*npm, '--prefix', str(app), 'run', 'verify']
+            original_manifest = (app / 'package.json').read_bytes()
             result = subprocess.run(command, cwd=fixture, env=env, capture_output=True, text=True, timeout=60)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertIn('DEPENDENCY_FIXTURE=PASS', result.stdout)
+            if env.get('ESCAPEHATCH_TEST_NPM_VERSION'):
+                self.assertIn('NESTED_NPM_VERSION=' + env['ESCAPEHATCH_TEST_NPM_VERSION'], result.stdout)
             self.assertFalse((fixture / 'wrong-root-lifecycle.txt').exists())
-            self.assertEqual((app / 'app-lifecycle-ran.txt').read_text(), '1')
+            self.assertEqual((app / 'package.json').read_bytes(), original_manifest, 'Dependency install must not add a self-dependency')
+            self.assertEqual((app / 'app-lifecycle-ran.txt').read_text(), '1', result.stdout + result.stderr)
             stamp = app / 'node_modules/.escapehatch-package.sha256'
             self.assertTrue(stamp.is_file())
             stamp.unlink()

@@ -131,22 +131,27 @@ async function saveSession(session) {
   return session;
 }
 
-async function saveProfile() {
-  const profile = sanitizeProfile(readForm());
-  const prefKey = api.PREFERENCE_STORAGE_KEY;
-  const existing = await chrome.storage.local.get(prefKey);
-  const preferenceStore = api.projectProfileToPreferenceStore(profile, existing[prefKey] || {});
-  await chrome.storage.local.set({
-    [PROFILE_KEY]: profile,
-    [prefKey]: preferenceStore
-  });
-  setStatus(`Saved ${countProfileValues(profile)} profile fields and projected preference-cache entries locally.`);
+async function workspaceCommand(type, payload = {}) {
+  const response = await chrome.runtime.sendMessage({ type, ...payload });
+  if (!response?.ok) {
+    const reason = response?.reason || '';
+    if (/NATIVE_HOST|NATIVE_WORKSPACE/.test(reason)) throw new Error('Private workspace connection unavailable. Run EscapeHatch setup, then try again.');
+    if (/EXISTING_|LOCAL_PROFILE_CHANGED/.test(reason)) throw new Error('Your saved extension information differs. Both copies are preserved; review them before reconnecting.');
+    if (/OWNER|WORKSPACE_MISMATCH|BROWSER|INSTALLATION/.test(reason)) throw new Error('This browser and workspace do not have a matching owner connection. Existing information was preserved.');
+    if (/REVISION|REAPPROVAL/.test(reason)) throw new Error('Your workspace changed. Review the connection again to approve current information.');
+    throw new Error('Workspace information could not be connected. Review the connection and try again.');
+  }
+  return response.value;
 }
-
+async function saveProfile() {
+  await workspaceCommand('workspace-edit', { profile: sanitizeProfile(readForm()) });
+  setStatus('Profile saved locally. Workspace updates preserve your edits.');
+}
 async function clearProfile() {
-  await chrome.storage.local.remove([PROFILE_KEY, LEGACY_PROFILE_KEY]);
+  await workspaceCommand('workspace-clear');
   writeForm({});
-  setStatus("Cleared the browser-local EscapeHatch assist profile.");
+  await renderWorkspace();
+  setStatus('Profile cleared. Workspace sync is paused until you review and reconnect.');
 }
 
 function downloadJsonText(text, filename) {
@@ -201,7 +206,7 @@ async function importProfile(file) {
     }
   }
   const profile = sanitizeProfile(incoming);
-  await chrome.storage.local.set({ [PROFILE_KEY]: profile });
+  await workspaceCommand('workspace-edit', { profile });
   writeForm(profile);
   setStatus(`Imported ${countProfileValues(profile)} profile fields locally.`);
 }
@@ -618,3 +623,68 @@ async function showJobBoardPageState() {
   }
 }
 void showJobBoardPageState();
+
+// Native workspace review is deliberately separate from employer-page controls.
+const workspaceStatus = document.getElementById('workspaceStatus');
+const workspaceChoices = document.getElementById('workspaceChoices');
+const confirmWorkspace = document.getElementById('confirmWorkspace');
+let workspaceReview = null;
+async function renderWorkspace() {
+  const state = await workspaceCommand('workspace-view');
+  const answers = document.getElementById('knownAnswers');
+  answers.replaceChildren();
+  for (const answer of state.answers || []) {
+    const item = document.createElement('li');
+    const label = document.createElement('strong'); label.textContent = answer.label + ': ';
+    item.append(label, document.createTextNode(answer.value)); answers.append(item);
+  }
+  if (!answers.children.length) {
+    const item = document.createElement('li'); item.textContent = 'No workspace answers connected yet.'; answers.append(item);
+  }
+  workspaceStatus.textContent = state.sync?.paused ? 'Workspace sync paused. Review to reconnect.' : state.sync?.paired ? 'Connected to your private workspace. ' + (state.sync.status || '') : 'Connect your private workspace to review saved profile fields and answers.';
+}
+document.getElementById('connectWorkspace').addEventListener('click', async event => {
+  if (!event.isTrusted) return;
+  confirmWorkspace.disabled = true; workspaceChoices.replaceChildren(); workspaceReview = null;
+  try {
+    const review = await workspaceCommand('workspace-review');
+    workspaceReview = review;
+    for (const [kind, entries] of [['field', review.availableFields || []], ['answer', review.availableAnswers || []]]) {
+      for (const entry of entries) {
+        const label = document.createElement('label');
+        const check = document.createElement('input'); check.type = 'checkbox'; check.dataset.kind = kind; check.value = entry.id;
+        label.append(check, document.createTextNode(entry.label + ': ' + entry.value)); workspaceChoices.append(label);
+      }
+    }
+    workspaceChoices.hidden = false;
+    confirmWorkspace.disabled = false;
+    workspaceStatus.textContent = 'Select the profile fields and answers you approve for this browser profile. Final employer submission remains manual.';
+  } catch (error) { workspaceStatus.textContent = error.message; }
+});
+confirmWorkspace.addEventListener('click', async event => {
+  if (!event.isTrusted || !workspaceReview) return;
+  confirmWorkspace.disabled = true;
+  const selected = [...workspaceChoices.querySelectorAll('input:checked')];
+  if (!selected.some(input => input.dataset.kind === 'field' && input.value !== 'phone_authority')) {
+    workspaceStatus.textContent = 'Choose at least one identity field. Known answers accompany your approved profile.';
+    confirmWorkspace.disabled = false; return;
+  }
+  try {
+    await workspaceCommand('workspace-confirm', { approval: {
+      expectedWorkspaceRevision: workspaceReview.workspaceRevision,
+      expectedPreferenceRevision: workspaceReview.preferenceRevision,
+      approvedFields: selected.filter(input => input.dataset.kind === 'field').map(input => input.value),
+      approvedAnswerIds: selected.filter(input => input.dataset.kind === 'answer').map(input => input.value)
+    } });
+    workspaceReview = null; workspaceChoices.replaceChildren(); workspaceChoices.hidden = true;
+    await loadStoredProfile(); await renderWorkspace();
+    workspaceStatus.textContent = 'Approved workspace fields and answers are available in this extension.';
+  } catch (error) { workspaceStatus.textContent = error.message; }
+});
+async function initializeWorkspace() {
+  let blocked = null;
+  try { await workspaceCommand('workspace-refresh'); } catch (error) { blocked = error.message; }
+  await Promise.all([loadStoredProfile(), renderWorkspace()]);
+  if (blocked) workspaceStatus.textContent = blocked + '. Existing extension information was preserved.';
+}
+void initializeWorkspace().catch(error => { workspaceStatus.textContent = error.message; });

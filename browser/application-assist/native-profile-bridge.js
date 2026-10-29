@@ -98,8 +98,43 @@
         // Preserve existing scope/confirmation provenance; hydration grants none.
         if (Object.hasOwn(existingPreferences, question)) preferences.preferences[question] = existingPreferences[question];
       }
-      await storage.set({ [PROFILE]: profile, [PREF]: preferences, [ANSWERS]: answers,
-        [SYNC]: { ...nextBinding, paired: true, paused: false, workspaceRevision: response.workspaceRevision, preferenceRevision: response.preferenceRevision, profileRevision: response.profileRevision, status: response.status } });
+      const applied = { [PROFILE]: profile, [PREF]: preferences, [ANSWERS]: answers,
+        [SYNC]: { ...nextBinding, paired: true, paused: false, workspaceRevision: response.workspaceRevision, preferenceRevision: response.preferenceRevision, profileRevision: response.profileRevision, status: 'VERIFYING' } };
+      const matchesWrite = (stored, written) => same(sourceState(stored), sourceState({ ...before, ...written })) && same(stored[PREF], written[PREF]);
+      let written = applied;
+      await storage.set(applied);
+      try {
+        // Re-read through the native authority after the browser write. This
+        // detects source changes, but is not a distributed atomic transaction.
+        const verified = await request('project', { existingProfile: profile,
+          existingAnswers: Object.fromEntries(answers.map(entry => [entry.id, entry.value])),
+          expectedWorkspaceRevision: response.workspaceRevision,
+          expectedPreferenceRevision: response.preferenceRevision });
+        assertBinding(verified, nextBinding);
+        if (!['PROJECTED','ALREADY_CURRENT'].includes(verified.status) ||
+          !['workspaceRevision','preferenceRevision','profileRevision'].every(key => verified[key] === response[key]) ||
+          !same(cleanProfile(verified.profile), profile) || !same(cleanAnswers(verified.answers || []), answers)) throw new Error('SOURCE_VERIFICATION_FAILED');
+        if (!matchesWrite(await read(), written)) throw new Error('LOCAL_PROFILE_CHANGED');
+        const completed = { ...applied, [SYNC]: { ...applied[SYNC], status: response.status } };
+        await storage.set({ [SYNC]: completed[SYNC] });
+        written = completed;
+        if (!matchesWrite(await read(), written)) throw new Error('STORAGE_READBACK_FAILED');
+      } catch (error) {
+        const latest = await read();
+        if (matchesWrite(latest, written)) {
+          // Restore only our unchanged projection; never overwrite later edits.
+          const restore = {}, remove = [];
+          for (const key of [PROFILE, PREF, ANSWERS]) {
+            if (Object.hasOwn(before, key)) restore[key] = before[key]; else remove.push(key);
+          }
+          restore[SYNC] = { ...before[SYNC], status: 'BLOCKED', reason: 'SOURCE_VERIFICATION_FAILED' };
+          await storage.set(restore);
+          if (remove.length) await storage.remove(remove);
+        } else if (same(latest[SYNC], written[SYNC])) {
+          await storage.set({ [SYNC]: { ...latest[SYNC], status: 'BLOCKED', reason: 'LOCAL_PROFILE_CHANGED' } });
+        }
+        throw error;
+      }
       return { status: response.status, profileFieldCount: count(profile), answerCount: answers.length };
     }
     async function confirm(values) {

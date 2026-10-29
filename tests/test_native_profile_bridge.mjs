@@ -31,7 +31,7 @@ assert.equal(bridge.cleanProfile({ phone: '555-0100' }).phone_authority, 'unconf
   assert.equal(f.data[bridge.ANSWERS][0].value, 'Remote');
   assert.equal(f.data[api.PREFERENCE_STORAGE_KEY].preferences['identity.email'].value, 'fixture@example.test');
   assert.equal(f.data[api.PREFERENCE_STORAGE_KEY].preferences['work.remote'], undefined);
-  await f.app.refresh(); assert.equal(f.calls.length, 2);
+  await f.app.refresh(); assert.equal(f.calls.length, 4);
 }
 for (const changed of [
   { ...projection, ownerId: '55555555-5555-4555-8555-555555555555' },
@@ -79,6 +79,56 @@ for (const changed of [
   const f = fixture({ ...paired, [api.PREFERENCE_STORAGE_KEY]: { preferences: { 'identity.email': { scope: 'profile_preference', value: 'other@example.test' } } } });
   await assert.rejects(() => f.app.refresh(), /EXISTING_PREFERENCE_REVIEW_REQUIRED/);
   assert.equal(f.data[bridge.PROFILE], undefined);
+}
+{
+  let call = 0;
+  const f = fixture(paired, () => ++call === 1 ? projection : { ok: false, reason: 'REAPPROVAL_REQUIRED' });
+  await assert.rejects(() => f.app.refresh(), /REAPPROVAL_REQUIRED/);
+  assert.equal(f.data[bridge.PROFILE], undefined);
+  assert.equal(f.data[bridge.ANSWERS], undefined);
+  assert.equal(f.data[api.PREFERENCE_STORAGE_KEY], undefined);
+  assert.equal(f.data[bridge.SYNC].status, 'BLOCKED');
+  assert.equal(f.calls[1].request.expectedWorkspaceRevision, projection.workspaceRevision);
+  assert.equal(f.calls[1].request.existingAnswers['work.remote'], 'Remote');
+}
+{
+  let call = 0;
+  const f = fixture(paired, () => ++call === 1 ? projection : { ...projection, workspaceRevision: 'd'.repeat(64) });
+  await assert.rejects(() => f.app.refresh(), /SOURCE_VERIFICATION_FAILED/);
+  assert.equal(f.data[bridge.PROFILE], undefined);
+  assert.equal(f.data[bridge.SYNC].status, 'BLOCKED');
+}
+{
+  let call = 0;
+  const f = fixture(paired, (_request, data) => {
+    if (++call === 2) data[bridge.PROFILE] = { first_name: 'New local edit during final verification' };
+    return projection;
+  });
+  await assert.rejects(() => f.app.refresh(), /LOCAL_PROFILE_CHANGED/);
+  assert.equal(f.data[bridge.PROFILE].first_name, 'New local edit during final verification');
+  assert.equal(f.data[bridge.SYNC].status, 'BLOCKED');
+}
+{
+  const f = fixture(paired);
+  const set = f.storage.set;
+  f.storage.set = async values => {
+    await set(values);
+    if (values[bridge.SYNC]?.status === 'PROJECTED') f.data[bridge.PROFILE] = { first_name: 'Edited during final readback' };
+  };
+  await assert.rejects(() => f.app.refresh(), /STORAGE_READBACK_FAILED/);
+  assert.equal(f.data[bridge.PROFILE].first_name, 'Edited during final readback');
+  assert.equal(f.data[bridge.SYNC].status, 'BLOCKED');
+}
+{
+  const f = fixture(paired);
+  const set = f.storage.set;
+  f.storage.set = async values => {
+    if (values[bridge.SYNC]?.status === 'PROJECTED') throw new Error('Simulated final metadata write failure');
+    await set(values);
+  };
+  await assert.rejects(() => f.app.refresh(), /Simulated final metadata write failure/);
+  assert.equal(f.data[bridge.PROFILE], undefined);
+  assert.equal(f.data[bridge.SYNC].status, 'BLOCKED');
 }
 // Worker boundary: webpage wake responses contain counts only; page/internal
 // messages cannot impersonate the popup or supply profile fields.

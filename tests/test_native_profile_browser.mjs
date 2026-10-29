@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { mkdtemp, writeFile, mkdir, readFile } from 'node:fs/promises';
+import { mkdtemp, writeFile, mkdir, readFile, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -43,7 +43,7 @@ test('real Chrome native host hydrates the extension module and survives reopen 
   const probe = powershell(['-Command', "if (Test-Path -LiteralPath 'HKCU:\\Software\\Google\\Chrome\\NativeMessagingHosts\\com.escapehatch.profile') { exit 17 }"]);
   if (probe.status === 17) return t.skip('Existing native host belongs to another installation; preserved.');
   assert.equal(probe.status, 0, 'Native host registration preflight must succeed.');
-  const fixture = await mkdtemp(path.join(tmpdir(), 'eh-native-browser-'));
+  const fixture = await realpath(await mkdtemp(path.join(tmpdir(), 'eh-native-browser-')));
   const dataRoot = path.join(fixture, 'private');
   await mkdir(dataRoot);
   const profile = { ...emptyProfile, first_name: 'Synthetic Ada', last_name: 'Fixture', email: 'ada@example.invalid', phone: '5550100011', phone_authority: 'user_confirmed_primary' };
@@ -91,11 +91,12 @@ test('real Chrome native host hydrates the extension module and survives reopen 
     if (releaseRoot) {
       const receipt = JSON.parse(await readFile(path.join(dataRoot, 'installation/install.v1.json'), 'utf8'));
       assert.equal(receipt.schema, 'escapehatch-installation/v1');
-      selectedSourceRoot = path.resolve(receipt.sourceRoot);
+      selectedSourceRoot = await realpath(receipt.sourceRoot);
       const staged = path.relative(path.join(dataRoot, 'releases'), selectedSourceRoot);
       assert.ok(staged && !staged.startsWith('..') && !path.isAbsolute(staged), 'ReleaseInstall must select a staged release inside the disposable private root.');
       const bundledNode = path.join(selectedSourceRoot, 'vendor/node/node.exe');
-      const identity = await fetch(`http://127.0.0.1:${port}/__escapehatch/runtime`).then(response => response.json());
+      console.log('BUNDLED_RELEASE_STAGING=PASS; canonical_private_release_selected');
+      const identity = await fetch(`http://127.0.0.1:${port}/__escapehatch/runtime`, { signal: AbortSignal.timeout(10000) }).then(response => response.json());
       assert.equal(identity.app, 'EscapeHatch');
       assert.ok(Number.isInteger(identity.pid) && identity.pid > 0);
       const processProbe = powershell(['-Command', `(Get-CimInstance Win32_Process -Filter 'ProcessId = ${identity.pid}').ExecutablePath | ConvertTo-Json -Compress`], targetEnv);

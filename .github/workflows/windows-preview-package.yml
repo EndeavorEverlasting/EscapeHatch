@@ -4,15 +4,18 @@ on:
   pull_request:
     paths:
       - 'Get-EscapeHatch.cmd'
-      - 'scripts/windows/EscapeHatch-Install.ps1'
+      - 'scripts/windows/**'
       - 'scripts/package_windows_preview.py'
+      - 'contracts/windows-node-runtime.v1.json'
       - 'tests/test_windows_preview_package.py'
+      - 'tests/test_native_profile_browser.mjs'
       - '.github/workflows/windows-preview-package.yml'
 permissions:
   contents: read
 jobs:
   package:
     runs-on: windows-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -22,24 +25,29 @@ jobs:
         with:
           node-version: '22.16.0'
       - run: python tests/test_windows_preview_package.py
-      - run: python scripts/package_windows_preview.py --output-root "${{ runner.temp }}/windows-preview"
-      - name: Verify and build the extracted package
+      - name: Verify upstream signature and build bundled preview
+        run: python scripts/package_windows_preview.py --fetch-node-runtime "${{ runner.temp }}/node-runtime-cache" --output-root "${{ runner.temp }}/windows-preview"
+      - name: Prepare browser proof driver without mutating manifests
+        working-directory: artifacts/escape-hatch
+        run: npm install --ignore-scripts --package-lock=false --no-audit --no-fund
+      - run: git diff --exit-code -- artifacts/escape-hatch/package.json
+      - working-directory: artifacts/escape-hatch
+        run: npx playwright install chromium
+      - name: Observe staged bundled runtime and Chrome without system developer tools
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $archives = @(Get-ChildItem -LiteralPath '${{ runner.temp }}/windows-preview' -Filter '*.zip')
-          if ($archives.Count -ne 1) { throw 'Expected one immutable preview ZIP.' }
+          if ($archives.Count -ne 1) { throw 'Expected one immutable bundled preview ZIP.' }
           $extracted = Join-Path '${{ runner.temp }}' 'windows-preview-extracted'
           Expand-Archive -LiteralPath $archives[0].FullName -DestinationPath $extracted
           & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $extracted 'scripts/windows/EscapeHatch-Install.ps1') -Action ReleaseVerify -SourceRoot $extracted
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          $app = Join-Path $extracted 'artifacts/escape-hatch'
-          & npm.cmd --prefix $app install --ignore-scripts --package-lock=false --no-audit --no-fund
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          & npm.cmd --prefix $app run build
+          $env:ESCAPEHATCH_TEST_RELEASE_ROOT = $extracted
+          & node.exe --experimental-strip-types --test tests/test_native_profile_browser.mjs
           exit $LASTEXITCODE
       - uses: actions/upload-artifact@v4
         with:
-          name: EscapeHatch-unsigned-Windows-preview-${{ github.sha }}
+          name: EscapeHatch-unsigned-bundled-Windows-preview-${{ github.sha }}
           path: ${{ runner.temp }}/windows-preview/*
           if-no-files-found: error

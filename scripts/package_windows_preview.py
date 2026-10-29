@@ -131,6 +131,8 @@ def fetch_node_runtime(repo: Path, cache: Path, gpgv: str | None = None) -> Path
         staging = Path(temporary)
         for filename, url_key, hash_key, maximum in inputs:
             cached = cache / filename
+            if any(p.is_symlink() or getattr(p, 'is_junction', lambda: False)() for p in (cached, *cached.parents)):
+                raise ValueError('Node cache must not contain links or junctions')
             if cached.exists():
                 if cached.stat().st_size > maximum:
                     raise ValueError('Node cache exceeds bounded input size')

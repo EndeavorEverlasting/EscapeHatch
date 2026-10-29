@@ -1,8 +1,16 @@
 @echo off
 setlocal EnableExtensions DisableDelayedExpansion
-title EscapeHatch - Guided Setup
+title EscapeHatch - Developer Preview Setup
+if exist "%~dp0windows-release.json" (
+  echo EscapeHatch unsigned developer preview. Node.js 22.16 or newer is required.
+  echo Chrome extension enrollment and private profile verification are separate gates.
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\windows\EscapeHatch-Install.ps1" -Action ReleaseInstall -SourceRoot "%~dp0."
+  if errorlevel 1 exit /b 7
+  exit /b 0
+)
 echo.
 echo ESCAPEHATCH SETUP - PRIVATE, PRESERVATION-FIRST
+echo Source checkout developer preview; this is not a signed consumer installer.
 echo This guided installer will ask before installing missing dependencies.
 echo It uses an isolated source folder and never overwrites an existing project.
 echo.

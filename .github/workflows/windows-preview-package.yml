@@ -1,0 +1,45 @@
+name: Windows preview package
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'Get-EscapeHatch.cmd'
+      - 'scripts/windows/EscapeHatch-Install.ps1'
+      - 'scripts/package_windows_preview.py'
+      - 'tests/test_windows_preview_package.py'
+      - '.github/workflows/windows-preview-package.yml'
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - run: python tests/test_windows_preview_package.py
+      - run: python scripts/package_windows_preview.py --output-root "${{ runner.temp }}/windows-preview"
+      - name: Verify and build the extracted package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archives = @(Get-ChildItem -LiteralPath '${{ runner.temp }}/windows-preview' -Filter '*.zip')
+          if ($archives.Count -ne 1) { throw 'Expected one immutable preview ZIP.' }
+          $extracted = Join-Path '${{ runner.temp }}' 'windows-preview-extracted'
+          Expand-Archive -LiteralPath $archives[0].FullName -DestinationPath $extracted
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $extracted 'scripts/windows/EscapeHatch-Install.ps1') -Action ReleaseVerify -SourceRoot $extracted
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $app = Join-Path $extracted 'artifacts/escape-hatch'
+          & npm.cmd --prefix $app install --ignore-scripts --package-lock=false --no-audit --no-fund
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          & npm.cmd --prefix $app run build
+          exit $LASTEXITCODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EscapeHatch-unsigned-Windows-preview-${{ github.sha }}
+          path: ${{ runner.temp }}/windows-preview/*
+          if-no-files-found: error

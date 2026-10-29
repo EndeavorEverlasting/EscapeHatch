@@ -16,16 +16,24 @@ $ViteJs = Join-Path $ViteRoot 'node_modules\vite\bin\vite.js'
 $ViteConfig = Join-Path $ViteRoot 'vite.config.ts'
 $RuntimeControl = Join-Path $ViteRoot 'runtime-control.ts'
 $ForeignFixture = Join-Path $PSScriptRoot 'fixtures\foreign-listener.mjs'
-$Port = 21031
+# Reserve a candidate only; the preflight below refuses any listener that wins the race.
+$portProbe = New-Object Net.Sockets.TcpListener([Net.IPAddress]::Loopback, 0)
+$portProbe.Start()
+$Port = $portProbe.LocalEndpoint.Port
+$portProbe.Stop()
 $Origin = "http://127.0.0.1:$Port"
 
 $previousEnv = @{
+    LOCALAPPDATA = $env:LOCALAPPDATA
     PORT = $env:PORT
     BASE_PATH = $env:BASE_PATH
     ESCAPEHATCH_NO_BROWSER = $env:ESCAPEHATCH_NO_BROWSER
     ESCAPEHATCH_START_TIMEOUT_SECONDS = $env:ESCAPEHATCH_START_TIMEOUT_SECONDS
     ESCAPEHATCH_STOP_TIMEOUT_SECONDS = $env:ESCAPEHATCH_STOP_TIMEOUT_SECONDS
 }
+# All adapters must resolve fixture installation state, never the user's selected checkout.
+$FixtureAppDataRoot = Join-Path ([IO.Path]::GetTempPath()) ('eh-runtime-state-' + [Guid]::NewGuid().ToString('N'))
+$env:LOCALAPPDATA = $FixtureAppDataRoot
 $env:PORT = [string]$Port
 $env:BASE_PATH = '/'
 $env:ESCAPEHATCH_NO_BROWSER = '1'
@@ -86,7 +94,9 @@ function Invoke-PowerShellEntryPoint {
     $stderr = Join-Path $env:TEMP "eh-entry-$stamp.err.log"
     $script:tempLogPaths += @($stdout, $stderr)
     $processArgs = @('-NoProfile','-ExecutionPolicy','Bypass','-File',('"' + $Path + '"')) + $Arguments
-    $process = Start-Process powershell.exe -ArgumentList $processArgs -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+    $process = Start-Process powershell.exe -ArgumentList $processArgs -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+    # Retain the process handle so Windows PowerShell 5.1 can read ExitCode after exit.
+    $null = $process.Handle
     if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
         try { Stop-Process -Id $process.Id -Force -ErrorAction Stop } catch {}
         $partial = @(
@@ -95,7 +105,6 @@ function Invoke-PowerShellEntryPoint {
         ) -join [Environment]::NewLine
         throw ("PowerShell entry point {0} exceeded {1}s. Partial output: {2}" -f $Path, $TimeoutSeconds, $partial)
     }
-    $process.Refresh()
     $output = @(
         if (Test-Path -LiteralPath $stdout) { Get-Content -LiteralPath $stdout -Raw -ErrorAction SilentlyContinue }
         if (Test-Path -LiteralPath $stderr) { Get-Content -LiteralPath $stderr -Raw -ErrorAction SilentlyContinue }
@@ -237,8 +246,10 @@ function Invoke-ConcurrentStarts {
     $out2 = Join-Path $env:TEMP "eh-concurrent-$stamp-2.out.log"
     $err2 = Join-Path $env:TEMP "eh-concurrent-$stamp-2.err.log"
     $args = @('-NoProfile','-ExecutionPolicy','Bypass','-File',('"' + $Manager + '"'),'-Action','Start')
-    $p1 = Start-Process powershell.exe -ArgumentList $args -PassThru -RedirectStandardOutput $out1 -RedirectStandardError $err1
-    $p2 = Start-Process powershell.exe -ArgumentList $args -PassThru -RedirectStandardOutput $out2 -RedirectStandardError $err2
+    $p1 = Start-Process powershell.exe -ArgumentList $args -WindowStyle Hidden -PassThru -RedirectStandardOutput $out1 -RedirectStandardError $err1
+    $p2 = Start-Process powershell.exe -ArgumentList $args -WindowStyle Hidden -PassThru -RedirectStandardOutput $out2 -RedirectStandardError $err2
+    $null = $p1.Handle
+    $null = $p2.Handle
     $script:tempLogPaths += @($out1, $err1, $out2, $err2)
     $p1Done = $p1.WaitForExit(45000)
     $p2Done = $p2.WaitForExit(45000)
@@ -268,7 +279,7 @@ function Stop-TestOwnedProcess {
         $Process.Refresh()
         if (-not $Process.HasExited) {
             Stop-Process -Id $Process.Id -Force -ErrorAction Stop
-            $Process.WaitForExit()
+            if (-not $Process.WaitForExit(10000)) { Write-Warning "Test child PID $($Process.Id) did not exit within 10s; fixture state will be preserved." }
         }
     } catch {}
 }
@@ -307,9 +318,8 @@ try {
     Assert-True ($statusCmdText -match 'pause >nul') 'Status CMD must keep the one-click window readable'
     Assert-True ($statusCmdText -match 'exit /b %STATUS_EXIT%') 'Status CMD must return the preserved exit code'
 
-    Invoke-Manager -Action Stop | Out-Null
     $initialPids = @(Get-ListenerPids)
-    Assert-Equal $initialPids.Count 0 "test runner port $Port must be free after safe managed-runtime cleanup"
+    Assert-Equal $initialPids.Count 0 "test runner port $Port must be free; existing listeners are never stopped by preflight"
 
     Write-Case 'cold start creates one healthy instance'
     Invoke-Manager -Action Start | Out-Null
@@ -335,13 +345,14 @@ try {
     Assert-Equal @(Get-ListenerPids).Count 1 'concurrent Start listener count'
     Assert-True ([int]$concurrentIdentity.pid -gt 0) 'concurrent Start identity PID'
 
-    Write-Case 'graceful stop frees port 21031'
+    Write-Case "graceful stop frees fixture port $Port"
     $gracefulPid = [int]$concurrentIdentity.pid
     $gracefulStarted = Get-Date
     $gracefulStop = Invoke-PowerShellEntryPoint -Path $CloseAdapter
     $gracefulElapsed = ((Get-Date) - $gracefulStarted).TotalSeconds
     Assert-True ($gracefulStop.Output -notmatch 'Graceful shutdown request failed') 'healthy Stop must not report graceful shutdown request failure'
-    Assert-True ($gracefulElapsed -lt ([int]$env:ESCAPEHATCH_STOP_TIMEOUT_SECONDS)) 'healthy Stop must complete before the forced-fallback timeout'
+    Assert-True ($gracefulStop.Output -match '(?m)^ESCAPEHATCH_STOP_METHOD=GRACEFUL\s*$') 'healthy Stop must prove graceful exit without forced termination'
+    Write-Host ('GRACEFUL_STOP_ADAPTER_ELAPSED_SECONDS={0:F3}' -f $gracefulElapsed)
     Wait-ForNoListener
     Assert-True (-not (Test-ProcessAlive -ProcessId $gracefulPid)) 'gracefully stopped PID must exit'
 
@@ -483,7 +494,7 @@ export function createRuntimeControlPlugin(): Plugin {
         'x-escapehatch-instance-id' = [string]$secretReceipt.instanceId
         'x-escapehatch-shutdown-token' = $token
     }
-    $shutdownResponse = Invoke-WebRequest -Method Post -Uri "$Origin/__escapehatch/shutdown" -Headers $headers -TimeoutSec 3 -ErrorAction Stop
+    $shutdownResponse = Invoke-WebRequest -UseBasicParsing -Method Post -Uri "$Origin/__escapehatch/shutdown" -Headers $headers -TimeoutSec 3 -ErrorAction Stop
     Assert-Equal ([int]$shutdownResponse.StatusCode) 202 'authorized shutdown HTTP status'
     Assert-True (-not ([string]$shutdownResponse.Content).Contains($token)) 'shutdown response must not expose shutdown token'
     Wait-ForNoListener
@@ -498,7 +509,14 @@ export function createRuntimeControlPlugin(): Plugin {
     Write-Host "WINDOWS_RUNTIME_LIFECYCLE_TESTS: PASS ($caseCount cases)" -ForegroundColor Green
 } catch {
     Write-Host "WINDOWS_RUNTIME_LIFECYCLE_TESTS: FAIL" -ForegroundColor Red
-    Write-Host $_.Exception.Message -ForegroundColor Red
+    Write-Host ("FAILURE_TYPE={0}" -f $_.Exception.GetType().Name) -ForegroundColor Red
+    # Emit location only, never source text, request headers, or evaluated values.
+    Write-Host ("FAILURE_LOCATION={0}:{1}:{2}" -f [IO.Path]::GetFileName($_.InvocationInfo.ScriptName), $_.InvocationInfo.ScriptLineNumber, $_.InvocationInfo.OffsetInLine) -ForegroundColor Red
+    foreach ($frame in ([string]$_.ScriptStackTrace -split "`r?`n")) {
+        if ($frame -match '^at ([A-Za-z0-9_-]+), .*: line ([0-9]+)$') {
+            Write-Host ("FAILURE_FRAME={0}:line{1}" -f $Matches[1], $Matches[2]) -ForegroundColor Red
+        }
+    }
     exit 1
 } finally {
     if ($runtimeControlMutated -and $null -ne $runtimeControlBackup) {
@@ -509,9 +527,23 @@ export function createRuntimeControlPlugin(): Plugin {
     Stop-TestOwnedProcess -Process $foreignProcess
     Stop-TestOwnedProcess -Process $unmanagedProcess
     Stop-TestOwnedProcess -Process $unrelatedProcess
-    try { Invoke-Manager -Action Stop -ExpectedExitCodes @(0,1) | Out-Null } catch {}
+    $fixtureStopped = $false
+    try {
+        Invoke-Manager -Action Stop -ExpectedExitCodes @(0,1) | Out-Null
+        $afterCleanup = Invoke-Manager -Action Status -ExpectedExitCodes @(0,2)
+        $fixtureStopped = $afterCleanup.Output -match '(?m)^ESCAPEHATCH_STATE=STOPPED\s*$'
+    } catch {}
     if ($tempLogPaths.Count -gt 0) {
         Remove-Item -LiteralPath $tempLogPaths -Force -ErrorAction SilentlyContinue
+    }
+    # Preserve fixture evidence if the canonical manager cannot prove shutdown.
+    $resolvedFixture = [IO.Path]::GetFullPath($FixtureAppDataRoot)
+    $resolvedTemp = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\') + '\'
+    if ($fixtureStopped -and $resolvedFixture.StartsWith($resolvedTemp, [StringComparison]::OrdinalIgnoreCase) -and
+        [IO.Path]::GetFileName($resolvedFixture) -match '^eh-runtime-state-[a-f0-9]{32}$') {
+        Remove-Item -LiteralPath $resolvedFixture -Recurse -Force -ErrorAction SilentlyContinue
+    } elseif (Test-Path -LiteralPath $resolvedFixture) {
+        Write-Host "FIXTURE_STATE_PRESERVED=$resolvedFixture" -ForegroundColor Yellow
     }
     foreach ($name in $previousEnv.Keys) {
         [Environment]::SetEnvironmentVariable($name, $previousEnv[$name], 'Process')

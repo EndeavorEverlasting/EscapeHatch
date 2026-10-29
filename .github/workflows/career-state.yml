@@ -10,6 +10,10 @@ on:
       - "scripts/validate_career_artifact_propagation.py"
       - "harness/contracts/career-artifact-propagation.v1.json"
       - "docs/CAREER_ARTIFACT_PROPAGATION_HARNESS.md"
+      - "harness/contracts/resume-selection-graph.v1.json"
+      - "scripts/validate_resume_selection_graph.py"
+      - "artifacts/escape-hatch/src/lib/resume-selection-graph.ts"
+      - "artifacts/escape-hatch/src/lib/resume-selection-graph.test.ts"
       - "scripts/validate_application_companion.py"
       - "scripts/export_study_guidance.py"
       - "tests/test_study_guidance_export.py"
@@ -32,6 +36,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate resume selection graph contract
+        run: python scripts/validate_resume_selection_graph.py
+      - name: Test resume graph resolution and platform overwrite safety
+        run: node --experimental-strip-types --test artifacts/escape-hatch/src/lib/resume-selection-graph.test.ts
       - name: Validate career-state graph
         run: python scripts/validate_career_state.py
       - name: Validate career claim fidelity

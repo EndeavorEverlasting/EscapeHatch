@@ -8,6 +8,7 @@ param(
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'EscapeHatch-Toolchain.ps1')
 $HostName = 'com.escapehatch.profile'
 $ProductionKey = 'HKCU:\Software\Google\Chrome\NativeMessagingHosts\com.escapehatch.profile'
 $mutex = $null
@@ -126,10 +127,7 @@ try {
     if ($publicKey.Length -lt 32) { throw 'NATIVE_HOST_EXTENSION_KEY_INVALID' }
     $keyHash = Hash-Bytes $publicKey
     $extensionId = -join ($keyHash.Substring(0, 32).ToCharArray() | ForEach-Object { [char](97 + [Convert]::ToInt32([string]$_, 16)) })
-    $node = Get-Command node.exe -CommandType Application -ErrorAction Stop | Select-Object -First 1
-    $nodePath = [IO.Path]::GetFullPath($node.Source)
-    & $nodePath -e 'const v=process.versions.node.match(/\d+/g);if(+v[0]<22||(+v[0]===22&&+v[1]<16))process.exit(1)'
-    if ($LASTEXITCODE -ne 0) { throw 'NATIVE_HOST_NODE_VERSION_REQUIRED' }
+    $nodePath = (Get-EscapeHatchToolchain -SourceRoot $SourceRoot).NodePath
     foreach ($path in @($nodePath, $hostScript, $AppDataRoot)) { if ($path -match '[\r\n"]') { throw 'NATIVE_HOST_LAUNCH_PATH_INVALID' } }
     $launcher = '@echo off' + "`r`n" + 'setlocal DisableDelayedExpansion' + "`r`n" + 'chcp 65001 >nul' + "`r`n" +
         'set "ESCAPEHATCH_DATA_HOME=' + $AppDataRoot.Replace('%','%%') + '"' + "`r`n" +

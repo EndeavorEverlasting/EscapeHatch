@@ -40,7 +40,8 @@ Set-Location -LiteralPath $env:EH_DEPENDENCY_FIXTURE
 $tokens = $null; $errors = $null
 $ast = [Management.Automation.Language.Parser]::ParseFile($env:EH_INSTALLER_UNDER_TEST, [ref]$tokens, [ref]$errors)
 if ($errors.Count) { throw 'Installer parse failed' }
-$names = @('File-Hash', 'Ensure-Dependencies', 'Test-NodeVersion')
+. (Join-Path (Split-Path -Parent $env:EH_INSTALLER_UNDER_TEST) 'EscapeHatch-Toolchain.ps1')
+$names = @('File-Hash', 'Ensure-Dependencies')
 foreach ($name in $names) {
     $function = $ast.Find({ param($item) $item -is [Management.Automation.Language.FunctionDefinitionAst] -and $item.Name -eq $name }, $true)
     if ($null -eq $function) { throw 'Canonical dependency function missing' }
@@ -51,6 +52,7 @@ $npmProbe = Get-Command npm.cmd -CommandType Application | Select-Object -First 
 Write-Output ('NESTED_NPM_VERSION=' + (& $npmProbe.Source --version))
 $before = (Get-Location).Path
 $beforePrefix = $env:npm_config_prefix
+$beforePath = $env:PATH
 if ($env:EH_FAIL_APP_INSTALL -eq '1') {
     try { Ensure-Dependencies $env:EH_DEPENDENCY_FIXTURE; throw 'Expected dependency failure' }
     catch { if ($_.Exception.Message -notmatch '^INSTALL_DEPENDENCIES_FAILED:') { throw } }
@@ -60,6 +62,7 @@ if ($env:EH_FAIL_APP_INSTALL -eq '1') {
 }
 if ((Get-Location).Path -cne $before) { throw 'Dependency installation changed caller cwd' }
 if ($env:npm_config_prefix -cne $beforePrefix) { throw 'Dependency installation changed caller npm prefix' }
+if ($env:PATH -cne $beforePath) { throw 'Dependency installation changed caller PATH' }
 Write-Output 'DEPENDENCY_FIXTURE=PASS'
 """)
             env = {**os.environ, 'EH_DEPENDENCY_FIXTURE': str(fixture),

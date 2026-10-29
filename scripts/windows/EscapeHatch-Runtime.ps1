@@ -7,6 +7,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'EscapeHatch-Toolchain.ps1')
 
 $ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot = [IO.Path]::GetFullPath((Join-Path $ScriptRoot '..\..')).TrimEnd('\', '/')
@@ -406,17 +407,7 @@ function Stop-ProvenOwnedProcess {
 }
 
 function Get-NodeExecutable {
-    try {
-        $nodeExe = (Get-Command node.exe -ErrorAction Stop).Source
-        if ($nodeExe -and (Test-Path -LiteralPath $nodeExe -PathType Leaf)) { return $nodeExe }
-    } catch {}
-
-    $node = Get-Command node -ErrorAction SilentlyContinue
-    if ($node) {
-        $candidate = $node.Source -replace '\.cmd$', '.exe'
-        if (Test-Path -LiteralPath $candidate -PathType Leaf) { return $candidate }
-    }
-    throw 'node.exe was not found on PATH. Install a supported Node.js runtime before launching EscapeHatch.'
+    return (Get-EscapeHatchToolchain -SourceRoot $RepoRoot).NodePath
 }
 
 function Open-EscapeHatchBrowser {

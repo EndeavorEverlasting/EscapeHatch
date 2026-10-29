@@ -2,7 +2,8 @@
 setlocal EnableExtensions DisableDelayedExpansion
 title EscapeHatch - Developer Preview Setup
 if exist "%~dp0windows-release.json" (
-  echo EscapeHatch unsigned developer preview. Node.js 22.16 or newer is required.
+  echo EscapeHatch unsigned developer preview. Setup verifies the declared runtime.
+  echo Initial app dependency setup requires an internet connection.
   echo Chrome extension enrollment and private profile verification are separate gates.
   powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\windows\EscapeHatch-Install.ps1" -Action ReleaseInstall -SourceRoot "%~dp0."
   if errorlevel 1 exit /b 7

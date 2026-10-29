@@ -23,6 +23,7 @@ function Run-Manager([string]$Action, [int]$Expected = 0) {
 try {
     New-Item -ItemType Directory -Path (Join-Path $root 'scripts\windows'), (Join-Path $root 'artifacts\escape-hatch\node_modules\vite\bin') -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path $source 'scripts\windows\EscapeHatch-Runtime.ps1') -Destination (Join-Path $root 'scripts\windows\EscapeHatch-Runtime.ps1')
+    Copy-Item -LiteralPath (Join-Path $source 'scripts\windows\EscapeHatch-Toolchain.ps1') -Destination (Join-Path $root 'scripts\windows\EscapeHatch-Toolchain.ps1')
     [IO.File]::WriteAllText((Join-Path $root 'artifacts\escape-hatch\vite.config.ts'), '// disposable controlled runtime fixture')
     $fixture = @"
 const http = require('http');

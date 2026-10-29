@@ -90,7 +90,7 @@ export function WorkspaceStartup({ children }: { children: ReactNode }) {
       const merged = reconcileWorkspace(local, saved);
       if (merged.conflicts.length) {
         setCandidate(local); setSavedCandidate(saved); setConflicts(true);
-        const labels: Record<string, string> = { 'escape-hatch-profile': 'profile', 'escape-hatch-applications': 'application queue', 'escape-hatch-answers': 'answer library', 'escape-hatch-assist-profile': 'reviewed career details', 'escape-hatch-assist-answers': 'assist answers', 'escape-hatch-source-bindings-v1': 'source bindings' };
+        const labels: Record<string, string> = { 'escape-hatch-profile': 'profile', 'escape-hatch-applications': 'application queue', 'escape-hatch-answers': 'answer library', 'escape-hatch-assist-profile': 'reviewed career details', 'escape-hatch-assist-answers': 'assist answers', 'escape-hatch-source-bindings-v1': 'source bindings', 'OWNER_CONTEXT_CONFLICT': 'different profile owners', 'OWNER_CONTEXT_UNVERIFIED': 'unverified profile ownership' };
         setMessage('This browser and your saved workspace differ in: ' + merged.conflicts.map(key => labels[key] || 'saved context').join(', ') + '. Both copies are preserved. Choose which copy to continue; the other copy will be backed up.');
         return;
       }

@@ -3,6 +3,7 @@ import { ASSIST_KEY, ASSIST_ANSWERS_KEY, parseAssistProfile, parseAssistAnswers 
 import { JOURNEY_RESUME_KEY, parseJourneyResume, type JourneyResume } from './application-journey-projection.ts';
 import { SOURCE_BINDINGS_KEY, parseSourceBindings } from './source-bridge.ts';
 import { reconcileSubmissionReceipts } from './submission-reconciliation.ts';
+import { checkOwnerBoundary } from './context-owner-boundary.ts';
 
 export const WORKSPACE_SCHEMA = 'escapehatch-local-workspace/v1';
 export const workspaceParsers = {
@@ -74,6 +75,21 @@ export function rawBrowserWorkspace(storage: Pick<Storage, 'getItem'>): Record<s
 
 /** Merge only empty areas. Divergent nonempty copies remain intact until reviewed. */
 export function reconcileWorkspace(local: SavedWorkspace, saved: SavedWorkspace): { workspace: SavedWorkspace; conflicts: string[] } {
+  const ownerContext = (workspace: SavedWorkspace) => {
+    const values = workspace.values;
+    const assist = parseAssistProfile(values[ASSIST_KEY]);
+    const dependent = [ANSWERS_KEY, APPLICATIONS_KEY, ASSIST_ANSWERS_KEY, SOURCE_BINDINGS_KEY]
+      .some(key => Array.isArray(values[key]) && (values[key] as unknown[]).length > 0) ||
+      Boolean(assist && (assist.summary.trim() || assist.links.length || assist.skills.length ||
+        assist.projects.length || assist.experience.length || assist.education.length || assist.proposals.length));
+    return {
+      profile: parseProfileStorage(values[PROFILE_KEY]),
+      assistContact: assist?.contact,
+      hasContext: hasContext(values),
+      hasDependentData: dependent,
+    };
+  };
+  const ownerBoundary = checkOwnerBoundary(ownerContext(local), ownerContext(saved));
   const values = { ...local.values };
   const conflicts: string[] = [];
   const empty = (key: string, value: unknown) => value === undefined ||
@@ -97,6 +113,16 @@ export function reconcileWorkspace(local: SavedWorkspace, saved: SavedWorkspace)
     }
     return JSON.stringify(left) === JSON.stringify(right);
   };
+  // Metadata-only snapshots carry no new applicant assertions. Preserve the
+  // prior timestamp-tolerant no-op behavior, but never excuse contradictory
+  // profile/assist identities, even when both copies have identical bytes.
+  const keys = new Set([...Object.keys(local.values), ...Object.keys(saved.values)]);
+  const contentEquivalent = [...keys].every(key =>
+    Object.hasOwn(local.values, key) && Object.hasOwn(saved.values, key) &&
+    same(key, local.values[key], saved.values[key]));
+  if (ownerBoundary && !(ownerBoundary === 'OWNER_CONTEXT_UNVERIFIED' && contentEquivalent)) {
+    return { workspace: local, conflicts: [ownerBoundary] };
+  }
   for (const [key, value] of Object.entries(saved.values)) {
     if (empty(key, values[key])) values[key] = value;
     else if (!empty(key, value) && !same(key, values[key], value)) conflicts.push(key);

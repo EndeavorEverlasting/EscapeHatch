@@ -1,12 +1,13 @@
 {
   "manifest_version": 3,
   "name": "EscapeHatch Application Assist",
-  "version": "1.3.0",
+  "version": "1.5.0",
   "description": "Same-application assist session that fills only policy-gated identity fields through a canonical Fill Plan. Never submits.",
   "permissions": [
     "activeTab",
     "scripting",
-    "storage"
+    "storage",
+    "nativeMessaging"
   ],
   "background": {
     "service_worker": "worker.js"
@@ -27,5 +28,10 @@
       "128": "icons/mascot-128.png"
     }
   },
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtEV4MtO15wJ8nAMWgOEp/zL8AzjMJvupNLh1I5iNsmeBhDQ2TxF7ToLYL9EsJT0DYnBC39Czm0gi9rURlWYdbJul0hvt3HPybfhfSGhVfbyFU/OH3S2dDM8dXHwPzvxnlnqF70fbJSl3TM0kob/Z1a3hkufX54zbE+1FVoYlR7cpmrEkUh2MmwQut8NCurWtzy7Es9GQjeUz77it7gDx3Jsv/ptfoqwZ+R1W1Bm1kZGSVbaQWuPJvuHFuiLfSew1+TQr2+9Z9qnFfcT/yVLiIc3YVYcT6CWUBuhAndIxDYEx9gbJ2T/JlLj56XJSUHNCITmoPXfNcZLlH45PFZ6djwIDAQAB"
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtEV4MtO15wJ8nAMWgOEp/zL8AzjMJvupNLh1I5iNsmeBhDQ2TxF7ToLYL9EsJT0DYnBC39Czm0gi9rURlWYdbJul0hvt3HPybfhfSGhVfbyFU/OH3S2dDM8dXHwPzvxnlnqF70fbJSl3TM0kob/Z1a3hkufX54zbE+1FVoYlR7cpmrEkUh2MmwQut8NCurWtzy7Es9GQjeUz77it7gDx3Jsv/ptfoqwZ+R1W1Bm1kZGSVbaQWuPJvuHFuiLfSew1+TQr2+9Z9qnFfcT/yVLiIc3YVYcT6CWUBuhAndIxDYEx9gbJ2T/JlLj56XJSUHNCITmoPXfNcZLlH45PFZ6djwIDAQAB",
+  "externally_connectable": {
+    "matches": [
+      "http://127.0.0.1/*"
+    ]
+  }
 }

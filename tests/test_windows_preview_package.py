@@ -18,6 +18,84 @@ package = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(package)
 
 class WindowsPreviewPackage(unittest.TestCase):
+    def test_node_payload_rejects_digest_paths_collisions_and_missing_notices(self):
+        import copy
+        import io
+        pin = package.load_node_pin((ROOT / package.NODE_PIN).read_bytes())
+        base = {'node.exe': b'synthetic executable never executed', 'npm.cmd': b'@echo off',
+                'node_modules/npm/bin/npm-cli.js': b'// synthetic npm',
+                'node_modules/npm/package.json': b'{}', 'LICENSE': b'Node and third-party notices',
+                'node_modules/npm/LICENSE': b'npm notices'}
+        with tempfile.TemporaryDirectory() as temporary:
+            archive_path = Path(temporary) / 'node.zip'
+            def make(entries):
+                buffer = io.BytesIO()
+                with zipfile.ZipFile(buffer, 'w') as archive:
+                    for name, data in entries.items():
+                        archive.writestr(pin['archiveRoot'] + '/' + name, data)
+                archive_path.write_bytes(buffer.getvalue())
+                candidate = copy.deepcopy(pin)
+                candidate['archiveSha256'] = package.digest(buffer.getvalue())
+                candidate['licenseFiles'] = {name: package.digest(base[name]) for name in pin['licenseFiles']}
+                return candidate
+            valid = make(base)
+            payload = package.node_payload(archive_path, valid)
+            self.assertEqual(payload['vendor/node/LICENSE'], base['LICENSE'])
+            self.assertEqual(len(payload), len(base))
+            wrong = {**valid, 'archiveSha256': '0' * 64}
+            with self.assertRaisesRegex(ValueError, 'digest'):
+                package.node_payload(archive_path, wrong)
+            for extra in ('../escape', 'NODE.EXE', 'CON.txt', 'folder./file'):
+                candidate = make({**base, extra: b'unsafe'})
+                with self.subTest(extra=extra), self.assertRaises(ValueError):
+                    package.node_payload(archive_path, candidate)
+            for omitted in ('LICENSE', 'node_modules/npm/LICENSE', 'node.exe'):
+                candidate = make({k:v for k,v in base.items() if k != omitted})
+                with self.subTest(omitted=omitted), self.assertRaises(ValueError):
+                    package.node_payload(archive_path, candidate)
+            candidate = make({**base, 'LICENSE': b'changed notices'})
+            with self.assertRaisesRegex(ValueError, 'license'):
+                package.node_payload(archive_path, candidate)
+
+    @unittest.skipUnless(shutil.which('powershell.exe'), 'Windows PowerShell required')
+    def test_declared_bundle_fails_closed_before_system_fallback(self):
+        import os
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            probe = root / 'probe.ps1'
+            probe.write_text("""param([string]$SourceRoot)
+$ErrorActionPreference='Stop'
+. $env:EH_TOOLCHAIN_UNDER_TEST
+try { $selected=Get-EscapeHatchToolchain -SourceRoot $SourceRoot -RequireNpm; Write-Output $selected.Kind; exit 0 }
+catch { Write-Output $_.Exception.Message; exit 9 }
+""")
+            runtime_files = {name: b'synthetic bytes never executed' for name in
+                ('vendor/node/node.exe','vendor/node/node_modules/npm/bin/npm-cli.js','vendor/node/LICENSE','vendor/node/node_modules/npm/LICENSE')}
+            for name,data in runtime_files.items():
+                target=root/name; target.parent.mkdir(parents=True,exist_ok=True); target.write_bytes(data)
+            hashes={name:package.digest(data) for name,data in runtime_files.items()}
+            runtime={'schema':'escapehatch/bundled-node-runtime/v1','version':'22.23.4','platform':'win32','architecture':'x64',
+                'archiveUrl':'https://nodejs.org/dist/v22.23.4/node-v22.23.4-win-x64.zip','archiveSha256':'a'*64,'files':hashes}
+            manifest={'schema':package.SCHEMA,'nodeBundled':True,'nodeRuntime':runtime,'files':hashes}
+            path=root/'windows-release.json'
+            env={**os.environ,'EH_TOOLCHAIN_UNDER_TEST':str(ROOT/'scripts/windows/EscapeHatch-Toolchain.ps1')}
+            def reject(expected):
+                path.write_text(json.dumps(manifest))
+                result=subprocess.run(['powershell.exe','-NoProfile','-ExecutionPolicy','Bypass','-File',str(probe),'-SourceRoot',str(root)],env=env,capture_output=True,text=True,timeout=30)
+                self.assertEqual(result.returncode,9,result.stdout+result.stderr)
+                self.assertIn(expected,result.stdout)
+                self.assertNotIn('SYSTEM',result.stdout)
+            (root/'vendor/node/node.exe').write_bytes(b'changed')
+            reject('TOOLCHAIN_BUNDLE_INTEGRITY_FAILED')
+            (root/'vendor/node/node.exe').write_bytes(runtime_files['vendor/node/node.exe'])
+            (root/'vendor/node/extra.js').write_bytes(b'unlisted')
+            reject('TOOLCHAIN_BUNDLE_INTEGRITY_FAILED')
+            (root/'vendor/node/extra.js').unlink()
+            (root/'vendor/node/LICENSE').unlink()
+            reject('TOOLCHAIN_BUNDLE_INTEGRITY_FAILED')
+            manifest['nodeRuntime']={}
+            reject('TOOLCHAIN_BUNDLE_METADATA_INVALID')
+
     def test_source_rejects_windows_case_and_file_directory_collisions(self):
         for names in (('scripts/File', 'scripts/file'), ('scripts/node', 'scripts/Node/file'), ('scripts/file.',)):
             listing = b''.join(b'100644 blob ' + b'a' * 40 + b'\t' + name.encode() + b'\0' for name in names)
@@ -86,7 +164,7 @@ class WindowsPreviewPackage(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             source = root / 'source'
-            files = {'VERSION': b'1.3.0', 'Get-EscapeHatch.cmd': b'@echo off', 'Launch-EscapeHatch.ps1': b'# synthetic launcher', 'scripts/windows/EscapeHatch-Install.ps1': (ROOT / 'scripts/windows/EscapeHatch-Install.ps1').read_bytes(), 'scripts/windows/EscapeHatch-Runtime.ps1': b'param([string]$Action)\nif ($Action -eq "Status") { Write-Host "ESCAPEHATCH_STATE=STOPPED" }\nexit 0', 'artifacts/escape-hatch/package.json': b'{}'}
+            files = {'scripts/windows/EscapeHatch-Toolchain.ps1': (ROOT / 'scripts/windows/EscapeHatch-Toolchain.ps1').read_bytes(), 'VERSION': b'1.3.0', 'Get-EscapeHatch.cmd': b'@echo off', 'Launch-EscapeHatch.ps1': b'# synthetic launcher', 'scripts/windows/EscapeHatch-Install.ps1': (ROOT / 'scripts/windows/EscapeHatch-Install.ps1').read_bytes(), 'scripts/windows/EscapeHatch-Runtime.ps1': b'param([string]$Action)\nif ($Action -eq "Status") { Write-Host "ESCAPEHATCH_STATE=STOPPED" }\nexit 0', 'artifacts/escape-hatch/package.json': b'{}'}
             for name, data in files.items():
                 target = source / name
                 target.parent.mkdir(parents=True, exist_ok=True)

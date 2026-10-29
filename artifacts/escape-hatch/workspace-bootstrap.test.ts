@@ -8,7 +8,7 @@ import { userDataRoot } from './user-data.ts';
 import { migrateLegacyPreferences } from './preference-file.ts';
 import { emptyPreferences } from './src/lib/application-preferences.ts';
 import { WORKSPACE_SCHEMA, parseSavedWorkspace, reconcileWorkspace, profileFromPreferences, applyBrowserWorkspace } from './src/lib/workspace-bootstrap.ts';
-import { PROFILE_KEY, emptyProfile, APPLICATIONS_KEY } from './src/lib/storage.ts';
+import { PROFILE_KEY, emptyProfile, APPLICATIONS_KEY, ANSWERS_KEY } from './src/lib/storage.ts';
 import { authorizedWorkspaceRequest, createWorkspaceControlPlugin } from './workspace-control.ts';
 import type { IncomingMessage } from 'node:http';
 import { importContext } from './import-context.ts';
@@ -18,6 +18,7 @@ import { once } from 'node:events';
 import { JOURNEY_RESUME_KEY, EMPTY_JOURNEY_RESUME } from './src/lib/application-journey-projection.ts';
 import { hasContext } from './src/lib/workspace-bootstrap.ts';
 import { ASSIST_KEY, emptyAssistProfile } from './src/lib/assist-contract.ts';
+import { authorizeAgentContext, parseWorkspaceOwnerBinding, OWNER_BINDING_SCHEMA, AGENT_CONTEXT_SCHEMA, type WorkspaceOwnerBinding, type AgentContextEnvelope } from './src/lib/workspace-owner-binding.ts';
 
 const workspace = (first_name = 'Synthetic') => ({ schema: WORKSPACE_SCHEMA, values: { [PROFILE_KEY]: { ...emptyProfile, first_name } } });
 test('unmanaged dev metadata works with localhost without opening private storage', async () => {
@@ -131,8 +132,10 @@ test('assist-only context is recovered and blank legacy assist contact receives 
   assert.equal(hasContext({ [ASSIST_KEY]: assist }), true);
   const local = { schema: WORKSPACE_SCHEMA, values: { [ASSIST_KEY]: assist } };
   const merged = reconcileWorkspace(local, workspace());
-  assert.equal((merged.workspace.values[ASSIST_KEY] as typeof assist).contact.first_name, 'Synthetic');
-  assert.equal((merged.workspace.values[ASSIST_KEY] as typeof assist).summary, assist.summary);
+  // Under the owner gate this legacy assist summary remains in its own
+  // workspace until the applicant confirms that the saved contact is theirs.
+  assert.deepEqual(merged.conflicts, ['OWNER_CONTEXT_UNVERIFIED']);
+  assert.deepEqual(merged.workspace, local);
   const oldEmpty = emptyAssistProfile(emptyProfile);
   const populated = { ...emptyAssistProfile(workspace().values[PROFILE_KEY]), summary: 'Saved summary' };
   assert.deepEqual(reconcileWorkspace({ schema: WORKSPACE_SCHEMA, values: { [ASSIST_KEY]: oldEmpty } }, { schema: WORKSPACE_SCHEMA, values: { [ASSIST_KEY]: populated } }).conflicts, []);
@@ -179,7 +182,9 @@ test('timestamp-only imported progress does not become a false conflict; edited 
   const saved = { schema: WORKSPACE_SCHEMA, values: { [APPLICATIONS_KEY]: [{ ...application, updatedAt: '2026-10-24T00:00:00Z' }] } };
   assert.deepEqual(reconcileWorkspace(local, saved).conflicts, []);
   saved.values[APPLICATIONS_KEY][0].notes = 'A real user edit';
-  assert.deepEqual(reconcileWorkspace(local, saved).conflicts, [APPLICATIONS_KEY]);
+  // Without a bound owner even an actual source edit must not be assumed
+  // to belong to the same applicant merely because row IDs happen to match.
+  assert.deepEqual(reconcileWorkspace(local, saved).conflicts, ['OWNER_CONTEXT_UNVERIFIED']);
 });
 
 
@@ -222,5 +227,171 @@ test('resume pointer survives revision-checked save and independent process rest
     assert.deepEqual((await readWorkspace(file))?.workspace.values[JOURNEY_RESUME_KEY], nextPointer);
     assert.equal((await readWorkspace(file))?.revision, current.revision);
     assert.deepEqual((await readWorkspace(file + '.previous'))?.workspace.values[JOURNEY_RESUME_KEY], pointer);
+  } finally { await fs.rm(directory, { recursive: true, force: true }); }
+});
+
+test('owner mismatch blocks automatic startup hydration without changing either copy', () => {
+  const alice = { ...emptyProfile, first_name: 'Alex', last_name: 'Example', email: 'alex@example.test' };
+  const brook = { ...emptyProfile, first_name: 'Brook', last_name: 'Example', email: 'brook@example.test' };
+  const local = { schema: WORKSPACE_SCHEMA, values: { [PROFILE_KEY]: alice, [APPLICATIONS_KEY]: [] } };
+  const saved = { schema: WORKSPACE_SCHEMA, values: { [PROFILE_KEY]: brook, [APPLICATIONS_KEY]: [] } };
+  const result = reconcileWorkspace(local, saved);
+  assert.deepEqual(result.conflicts, ['OWNER_CONTEXT_CONFLICT']);
+  assert.deepEqual(result.workspace, local);
+});
+test('unidentified browser applications never inherit another owner profile silently', () => {
+  const local = { schema: WORKSPACE_SCHEMA, values: { [APPLICATIONS_KEY]: [{
+    id: 'local-application', company: 'Synthetic Company', role: 'Test role', url: 'https://example.test/jobs',
+    status: 'saved', priority: 'normal', notes: '', nextAction: '',
+    updatedAt: '2026-10-01T00:00:00.000Z',
+  }] } };
+  const saved = { schema: WORKSPACE_SCHEMA, values: { [PROFILE_KEY]: { ...emptyProfile, first_name: 'Brook', last_name: 'Example', email: 'brook@example.test' } } };
+  const result = reconcileWorkspace(local, saved);
+  assert.deepEqual(result.conflicts, ['OWNER_CONTEXT_UNVERIFIED']);
+  assert.deepEqual(result.workspace, local);
+});
+test('inconsistent profile and assist contact cannot be treated as one resolved owner', () => {
+  const alice = { ...emptyProfile, first_name: 'Alex', last_name: 'Example', email: 'alex@example.test' };
+  const brook = { ...emptyProfile, first_name: 'Brook', last_name: 'Example', email: 'brook@example.test' };
+  const local = { schema: WORKSPACE_SCHEMA, values: {
+    [PROFILE_KEY]: alice, [ASSIST_KEY]: emptyAssistProfile(brook),
+  } };
+  const saved = { schema: WORKSPACE_SCHEMA, values: {} };
+  const result = reconcileWorkspace(local, saved);
+  assert.deepEqual(result.conflicts, ['OWNER_CONTEXT_CONFLICT']);
+  assert.deepEqual(result.workspace, local);
+});
+test('matching verified contact fields allow an ordinary same-owner recovery', () => {
+  const alice = { ...emptyProfile, first_name: 'Alex', last_name: 'Example', email: 'ALEX@Example.Test' };
+  const local = { schema: WORKSPACE_SCHEMA, values: { [PROFILE_KEY]: alice } };
+  const saved = { schema: WORKSPACE_SCHEMA, values: { [PROFILE_KEY]: { ...alice, email: 'alex@example.test' } } };
+  assert.equal(reconcileWorkspace(local, saved).conflicts.includes('OWNER_CONTEXT_CONFLICT'), false);
+});
+
+test('a reviewed display-name change does not orphan an unchanged same-email assist projection', () => {
+  const profile = { ...emptyProfile, first_name: 'Updated', last_name: 'Recovery', email: 'synthetic@example.test' };
+  const oldContact = { ...profile, first_name: 'Synthetic' };
+  const saved = { schema: WORKSPACE_SCHEMA, values: {
+    [PROFILE_KEY]: profile,
+    [ASSIST_KEY]: emptyAssistProfile(oldContact),
+    [ANSWERS_KEY]: [],
+  } };
+  const emptyBrowser = { schema: WORKSPACE_SCHEMA, values: {} };
+  const merged = reconcileWorkspace(emptyBrowser, saved);
+  assert.deepEqual(merged.conflicts, []);
+  assert.equal((merged.workspace.values[PROFILE_KEY] as typeof profile).first_name, 'Updated');
+  // The old assist projection is preserved, not silently rewritten as a fact.
+  assert.equal((merged.workspace.values[ASSIST_KEY] as typeof saved.values[typeof ASSIST_KEY]).contact.first_name, 'Synthetic');
+});
+test('different emails remain a hard context conflict despite matching names', () => {
+  const alice = { ...emptyProfile, first_name: 'Alex', last_name: 'Example', email: 'alex@example.test' };
+  const bob = { ...alice, email: 'bob@example.test' };
+  const saved = { schema: WORKSPACE_SCHEMA, values: { [PROFILE_KEY]: alice, [ASSIST_KEY]: emptyAssistProfile(bob) } };
+  assert.deepEqual(reconcileWorkspace({ schema: WORKSPACE_SCHEMA, values: {} }, saved).conflicts, ['OWNER_CONTEXT_CONFLICT']);
+});
+
+test('versioned applicant binding admits only the selected owner and exact reviewed source revision', () => {
+  const alice = '11111111-1111-4111-8111-111111111111';
+  const bob = '22222222-2222-4222-8222-222222222222';
+  const workspaceA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const workspaceB = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const installation = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+  const profileRevision = 'a'.repeat(64);
+  const sourceRevision = 'b'.repeat(64);
+  const bind = (ownerId: string, workspaceId: string): WorkspaceOwnerBinding => ({
+    schema: OWNER_BINDING_SCHEMA, ownerId, workspaceId, installationId: installation,
+    boundAt: '2026-10-28T12:00:00.000Z', selection: 'applicant-confirmed',
+  });
+  const sourceA = { sourceId: 'reviewed-resume', ownerId: alice, workspaceId: workspaceA, revision: sourceRevision };
+  const request = (ownerId: string, workspaceId: string): AgentContextEnvelope => ({
+    schema: AGENT_CONTEXT_SCHEMA, ownerId, workspaceId, installationId: installation,
+    profileRevision, sources: [sourceA],
+  });
+  const active = bind(alice, workspaceA);
+  assert.equal(parseWorkspaceOwnerBinding(active)?.ownerId, alice);
+  assert.deepEqual(authorizeAgentContext(active, request(alice, workspaceA), profileRevision, [sourceA]),
+    { ok: true, ownerId: alice, workspaceId: workspaceA, sourceCount: 1 });
+  assert.deepEqual(authorizeAgentContext(null, request(alice, workspaceA), profileRevision, [sourceA]),
+    { ok: false, reason: 'OWNER_UNBOUND' });
+  assert.deepEqual(authorizeAgentContext(active, request(bob, workspaceA), profileRevision, [sourceA]),
+    { ok: false, reason: 'OWNER_MISMATCH' });
+  assert.deepEqual(authorizeAgentContext(active, request(alice, workspaceB), profileRevision, [sourceA]),
+    { ok: false, reason: 'WORKSPACE_MISMATCH' });
+  assert.deepEqual(authorizeAgentContext(active, request(alice, workspaceA), 'c'.repeat(64), [sourceA]),
+    { ok: false, reason: 'REVISION_REQUIRED' });
+  assert.deepEqual(authorizeAgentContext(active,
+    { ...request(alice, workspaceA), voiceRevision: 'd'.repeat(64) }, profileRevision, [sourceA],
+    { voiceRevision: 'e'.repeat(64) }),
+    { ok: false, reason: 'REVISION_REQUIRED' });
+  assert.deepEqual(authorizeAgentContext(active,
+    { ...request(alice, workspaceA), opportunityId: 'job-from-other-session' }, profileRevision, [sourceA],
+    { opportunityId: 'current-job' }),
+    { ok: false, reason: 'REVISION_REQUIRED' });
+  assert.equal(authorizeAgentContext(active,
+    { ...request(alice, workspaceA), voiceRevision: 'd'.repeat(64), opportunityId: 'current-job' },
+    profileRevision, [sourceA], { voiceRevision: 'd'.repeat(64), opportunityId: 'current-job' }).ok, true);
+  assert.deepEqual(authorizeAgentContext(active, request(alice, workspaceA), profileRevision, [{ ...sourceA, ownerId: bob }]),
+    { ok: false, reason: 'SOURCE_SCOPE_MISMATCH' });
+  assert.deepEqual(authorizeAgentContext(bind(bob, workspaceB), request(alice, workspaceA), profileRevision, [sourceA]),
+    { ok: false, reason: 'OWNER_MISMATCH' });
+});
+
+test('two developers sharing a repository cannot promote their profiles into another applicant context', () => {
+  // These developer identities intentionally do not occur in the contract:
+  // a checkout, collaborator or agent author cannot determine the applicant.
+  const applicant = '11111111-1111-4111-8111-111111111111';
+  const developer = '22222222-2222-4222-8222-222222222222';
+  const workspaceId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const installationId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+  const binding = { schema: OWNER_BINDING_SCHEMA, ownerId: applicant, workspaceId,
+    installationId, boundAt: '2026-10-28T12:00:00.000Z', selection: 'applicant-confirmed' };
+  const request = { schema: AGENT_CONTEXT_SCHEMA, ownerId: applicant, workspaceId, installationId,
+    profileRevision: 'a'.repeat(64), sources: [] };
+  assert.equal(authorizeAgentContext(binding, request, 'a'.repeat(64), []).ok, true);
+  assert.deepEqual(authorizeAgentContext(binding, { ...request, ownerId: developer }, 'a'.repeat(64), []),
+    { ok: false, reason: 'OWNER_MISMATCH' });
+  assert.equal(parseWorkspaceOwnerBinding({ ...binding, ownerId: 'developer@example.test' }), null);
+  assert.equal(parseWorkspaceOwnerBinding({ ...binding, selection: 'auto-from-repository' }), null);
+  assert.equal(parseWorkspaceOwnerBinding({ ...binding, developerPrivateProfile: 'must-not-import' }), null);
+});
+
+test('two applicant stores stay independent when two developer harnesses reuse one checkout', async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-applicant-isolation-'));
+  const installationId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+  const applicants = [
+    { ownerId: '11111111-1111-4111-8111-111111111111', workspaceId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', name: 'Applicant A' },
+    { ownerId: '22222222-2222-4222-8222-222222222222', workspaceId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', name: 'Applicant B' },
+  ];
+  try {
+    const rows = [];
+    for (const [index, applicant] of applicants.entries()) {
+      const file = path.join(directory, String(index), 'workspace.v1.json');
+      const candidate = { schema: WORKSPACE_SCHEMA, values: { [PROFILE_KEY]: { ...emptyProfile, first_name: applicant.name } } };
+      const receipt = await saveWorkspace(candidate, null, file);
+      const readback = await readWorkspace(file);
+      assert.deepEqual(readback?.workspace, candidate);
+      const binding = {
+        schema: OWNER_BINDING_SCHEMA, ownerId: applicant.ownerId, workspaceId: applicant.workspaceId,
+        installationId, boundAt: '2026-10-28T12:00:00.000Z', selection: 'applicant-confirmed',
+      };
+      const request = {
+        schema: AGENT_CONTEXT_SCHEMA, ownerId: applicant.ownerId, workspaceId: applicant.workspaceId,
+        installationId, profileRevision: receipt.revision, sources: [],
+      };
+      rows.push({ binding, request, revision: receipt.revision });
+    }
+    for (const row of rows) {
+      assert.equal(authorizeAgentContext(row.binding, row.request, row.revision, []).ok, true);
+    }
+    // Any of the independent developer harnesses can present an *untrusted*
+    // old context request, but the current applicant's binding must deny it.
+    assert.deepEqual(authorizeAgentContext(rows[0].binding, rows[1].request, rows[0].revision, []),
+      { ok: false, reason: 'OWNER_MISMATCH' });
+    assert.deepEqual(authorizeAgentContext(rows[1].binding, rows[0].request, rows[1].revision, []),
+      { ok: false, reason: 'OWNER_MISMATCH' });
+    assert.equal((await readWorkspace(path.join(directory, '0', 'workspace.v1.json')))?.workspace.values[PROFILE_KEY].first_name,
+      'Applicant A');
+    assert.equal((await readWorkspace(path.join(directory, '1', 'workspace.v1.json')))?.workspace.values[PROFILE_KEY].first_name,
+      'Applicant B');
   } finally { await fs.rm(directory, { recursive: true, force: true }); }
 });

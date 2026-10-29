@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { ExtensionWorkspaceStatus } from './extension-workspace-status';
 import { PROFILE_KEY, ANSWERS_KEY, APPLICATIONS_KEY, emptyProfile, parseWorkspaceExportText } from '../lib/storage.ts';
 import { applyBrowserWorkspace, hasContext, mergeConfirmedReceiptWorkspace, parseSavedWorkspace, rawBrowserWorkspace, readBrowserWorkspace, reconcileWorkspace, WORKSPACE_SCHEMA, type BootstrapResponse, type SavedWorkspace } from '../lib/workspace-bootstrap.ts';
 
@@ -90,7 +91,7 @@ export function WorkspaceStartup({ children }: { children: ReactNode }) {
       const merged = reconcileWorkspace(local, saved);
       if (merged.conflicts.length) {
         setCandidate(local); setSavedCandidate(saved); setConflicts(true);
-        const labels: Record<string, string> = { 'escape-hatch-profile': 'profile', 'escape-hatch-applications': 'application queue', 'escape-hatch-answers': 'answer library', 'escape-hatch-assist-profile': 'reviewed career details', 'escape-hatch-assist-answers': 'assist answers', 'escape-hatch-source-bindings-v1': 'source bindings' };
+        const labels: Record<string, string> = { 'escape-hatch-profile': 'profile', 'escape-hatch-applications': 'application queue', 'escape-hatch-answers': 'answer library', 'escape-hatch-assist-profile': 'reviewed career details', 'escape-hatch-assist-answers': 'assist answers', 'escape-hatch-source-bindings-v1': 'source bindings', 'OWNER_CONTEXT_CONFLICT': 'different profile owners', 'OWNER_CONTEXT_UNVERIFIED': 'unverified profile ownership' };
         setMessage('This browser and your saved workspace differ in: ' + merged.conflicts.map(key => labels[key] || 'saved context').join(', ') + '. Both copies are preserved. Choose which copy to continue; the other copy will be backed up.');
         return;
       }
@@ -163,7 +164,7 @@ export function WorkspaceStartup({ children }: { children: ReactNode }) {
   const syntheticNotice = syntheticWorkspace ? <aside role="note" data-testid="synthetic-workspace-warning" className="border-b border-amber-600 bg-amber-50 px-6 py-3 font-bold text-amber-950">
     Synthetic test workspace — disposable sample data. Do not use this window for real job applications. Open the normal EscapeHatch launcher for your saved work.
   </aside> : null;
-  if (ready) return <>{syntheticNotice}{managed && <aside className="border-b border-border bg-card px-6 py-2 text-sm" role={blocked.current ? 'alert' : 'status'}>{message}</aside>}{children}</>;
+  if (ready) return <>{syntheticNotice}{managed && <><aside className="border-b border-border bg-card px-6 py-2 text-sm" role={blocked.current ? 'alert' : 'status'}>{message}</aside><ExtensionWorkspaceStatus /></>}{children}</>;
   return <>{syntheticNotice}<main className="mx-auto max-w-2xl px-6 py-16">
     <p className="text-primary">EscapeHatch · Your private workspace</p>
     <h1 className="my-5 font-display text-4xl">{needsContext ? 'Bring your work with you.' : conflicts ? 'Review your saved copies.' : 'Recover your workspace.'}</h1>

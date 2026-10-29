@@ -526,7 +526,7 @@ jobs:
             fi
           fi
           # Create annotated tag locally then push via provider (never reuse, compare-and-set)
-          git tag -a "$tag" "$sha" -m "EscapeHatch $tag"
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' tag -a "$tag" "$sha" -m "EscapeHatch $tag"
           git push origin "$tag"
           echo "Tag $tag created at $sha"
           # Verify tag resolves to exact validated commit

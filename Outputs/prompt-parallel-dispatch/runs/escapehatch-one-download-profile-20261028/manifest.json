@@ -12,16 +12,16 @@
     "refresh_before_mutation": true
   },
   "authorization": {
-    "disposition": "PROVIDER_HANDOFF_ONLY",
+    "disposition": "LOCAL_IMPLEMENTATION_AND_SYNTHETIC_RUNTIME",
     "product_code_write_attempt": "BLOCKED_BY_TOOL_SAFETY_CHECKS",
-    "product_code_committed": false,
-    "local_runtime_access": false,
+    "product_code_committed": true,
+    "local_runtime_access": true,
     "operator_only": [
       "Chrome Web Store developer enrollment / final publish where needed",
       "standard OS/browser install approvals",
       "real employer final Submit and legal attestations"
     ],
-    "private_profile_access": "NOT_GRANTED_OR_OBSERVED"
+    "private_profile_access": "SYNTHETIC_FIXTURES_ONLY_PERSONAL_RECORDS_PRESERVED"
   },
   "graph": {
     "expression": "EH-B0 read-owner-contract; {EH-B1 || EH-B2 || EH-B3} independent after scoped inventory; EH-B4 after EH-B0 + EH-B2; EH-B5 after EH-B1 + EH-B2 + EH-B3 + EH-B4",
@@ -36,15 +36,14 @@
   },
   "convergence_owner": "EH-B5",
   "manifest_path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-one-download-profile-20261028/manifest.json",
-  "status": "BOUNDED_IMPLEMENTATION_VALIDATED_RELEASE_AND_HYDRATION_GATES_OPEN",
+  "status": "BUNDLED_RUNTIME_PREVIEW_LOCAL_PASS_CI_PENDING",
   "blockers": [
-    "B0 is externally owned; opaque owner/workspace admission not integrated into this branch; B4 gated",
     "Windows preview is unsigned; trusted signing/publisher identity and bundled Node/npm prerequisites absent",
     "Chrome Store publisher access/publication and intended-profile user approval/readback not exercised",
     "Runtime identity protocol does not expose source/version provenance; wrong-installed-version rejection unproved",
     "Canonical dispatch CLI/schema absent; canonical parallel receipt validation unavailable"
   ],
-  "autonomy_gap": "Native agent execution available and used; canonical receipt verifier absent. B4 requires external B0 integration. Consumer release requires publisher signing and Chrome Store approval; preview is not a release substitute.",
+  "autonomy_gap": "Native concurrency observed; canonical dispatch verifier absent. Signed consumer distribution and Chrome Store publication remain external release gates.",
   "protected_behavior": [
     "existing merged PR #130 app receipt/event model",
     "enabled and pinned Chrome extension 1.3.0 in operator-reported host state",
@@ -104,7 +103,7 @@
         "python scripts/validate_application_autofill_parent.py"
       ],
       "convergence_owner": "EH-B5",
-      "status": "EXTERNAL_AGENT_OWNED_DO_NOT_MUTATE"
+      "status": "PR134_AND_PR136_INTEGRATED_LOCAL_NATIVE_AUTHORITY_PROVED_SYNTHETIC"
     },
     {
       "lane_id": "EH-B1",
@@ -364,7 +363,7 @@
         "actual extension chrome.storage.local readback"
       ],
       "convergence_owner": "EH-B5",
-      "status": "BLOCKED_ON_EXTERNAL_B0_OWNER_ADMISSION"
+      "status": "REAL_CHROME_MODULE_PROFILE_AND_APPROVED_ANSWERS_OBSERVED_SYNTHETIC"
     },
     {
       "lane_id": "EH-B5",
@@ -425,7 +424,7 @@
         "two-user installed Windows Chrome pre-submit observations"
       ],
       "convergence_owner": "EH-B5",
-      "status": "BOUNDED_LOCAL_REGRESSION_PASSED_INSTALLED_USER_PROOF_GATED"
+      "status": "DISPOSABLE_CANONICAL_BOOTSTRAP_AND_PROTECTED_EDITOR_PASS_EXACT_CI_PENDING_CONSUMER_RELEASE_UNPROVEN"
     }
   ],
   "receipt_contract": {
@@ -435,12 +434,13 @@
     "observed_parallelism": true,
     "app_code_changed": true,
     "chrome_installed_this_chat": false,
-    "profile_hydrated_this_chat": false,
+    "profile_hydrated_this_chat": true,
     "merged": false,
     "deployed": false,
-    "live_observed": false
+    "live_observed": true,
+    "live_scope": "Disposable Windows Chromium and owned runtime; existing personal Chrome and consumer enrollment unproved"
   },
-  "exact_next_command": "npm --prefix artifacts/escape-hatch run test:bootstrap",
+  "exact_next_command": "npm --prefix artifacts/escape-hatch run test:native-profile:browser",
   "local_execution": {
     "base_commit": "15b346ae",
     "default_commit": "6379c4d5904de9f44fc75fdb9d9ed07ab8b84021",
@@ -480,9 +480,171 @@
     }
   },
   "next_gate": {
-    "owner": "external B0 agent, then B4 coordinator",
-    "dependency": "integrated opaque owner/workspace authority at the installed runtime boundary; browser email/name is not proof",
-    "expected_proof": "same-owner admission, missing/wrong-owner rejection and owner-confirmation migration before any extension hydration",
-    "command_context": "B0 owning worktree after its binding implementation; current B1-B3 branch cannot establish this authority"
+    "owner": "integration coordinator",
+    "dependency": "exact-head hosted native Chrome and all required checks",
+    "expected_proof": "Merge exact validated candidate to main and verify canonical owners; consumer signing/Store approval remain separate gates",
+    "command_context": "PR140 and isolated integration worktree; synthetic private state only"
+  },
+  "native_profile_integration": {
+    "branch": "codex/owner-extension-integration-20261028",
+    "pull_request": 140,
+    "dependencies": {
+      "134": "ac6da71f99fcb1bfa938ff30955f16bf3f9cad15",
+      "136": "4a4cd317c55685e13f15dc6a60d137a4c2bd9931"
+    },
+    "extension_id": "okjcckicklgdjgfaobipmnojleaeepbg",
+    "version": "1.4.0",
+    "runtime_source_commit": "f4594e4f3ce463f1ca2dd6fcd6ffd3df1c107ef1",
+    "runtime_evidence": "PASS 112838ms: canonical Bootstrap, actual Chromium module 4 synthetic profile fields and 1 approved education answer, browser reopen, cockpit metadata wake, second browser rejection, changed-source reapproval; protected manual Save/Clear and paused sync; canonical Uninstall preserves private source. Synthetic fixture AKaHez remains machine-local.",
+    "proof_ceiling": "Disposable local Windows/Chromium; consumer Store enrollment and existing personal profile upgrade unproved",
+    "validation": {
+      "native_source_transport": "11 PASS",
+      "native_registration": "6 PASS",
+      "B0C": "19 PASS",
+      "browser_bridge": "PASS",
+      "wake": "2 PASS",
+      "session_contract": "8 PASS",
+      "typecheck": "PASS",
+      "build": "PASS",
+      "full_app_unit": "PASS",
+      "fresh_CI": "PASS both Windows native Chrome jobs at f453aa5; manifest-source mutation guard PASS; all checks green before merge",
+      "protected_submission": "PASS unchanged original assertions with actual module imports and multiple Chrome listeners",
+      "dependency_lifecycle": "4 PASS; exact Node22.16/npm10.9.2 pinned nested fixture verifies no manifest selfdependency, scripts enabled, prefix and cwd restoration",
+      "runtime_lifecycle": "14 PASS plus PortDiscovery; invalid module-replacement test fixture repaired, process manager unchanged",
+      "post_merge_main": "PASS native11, harness148/version/governance, parent9/journey14 source, productionbuild; existing chunk warning"
+    },
+    "protected_controls": "Existing submission assertions retained; stale VM listener harness repair pending; real employer Submit never invoked",
+    "known_gates": [
+      "fresh exact-head CI",
+      "signed Windows distribution and bundled prerequisites",
+      "Chrome Store publication and user approval",
+      "actual installed personal profile upgrade proof"
+    ],
+    "files_changed": [
+      ".github/workflows/application-assist.yml",
+      "ARTIFACT_REGISTRY.md",
+      "CHANGELOG.md",
+      "Outputs/prompt-parallel-dispatch/runs/escapehatch-one-download-profile-20261028/manifest.json",
+      "README.md",
+      "VERSION",
+      "artifacts/escape-hatch/extension-profile-host.test.ts",
+      "artifacts/escape-hatch/extension-profile-host.ts",
+      "artifacts/escape-hatch/native-messaging-host.ts",
+      "artifacts/escape-hatch/package.json",
+      "artifacts/escape-hatch/src/components/extension-workspace-status.tsx",
+      "artifacts/escape-hatch/src/components/workspace-startup.tsx",
+      "artifacts/escape-hatch/src/lib/extension-workspace.test.ts",
+      "artifacts/escape-hatch/src/lib/extension-workspace.ts",
+      "browser/application-assist/manifest.json",
+      "browser/application-assist/native-profile-bridge.js",
+      "browser/application-assist/popup.html",
+      "browser/application-assist/popup.js",
+      "browser/application-assist/worker.js",
+      "contracts/application-assist-session.v1.json",
+      "docs/agent/P04_ONE_DOWNLOAD_EXTENSION_AND_PRIVATE_PROFILE_BOOTSTRAP_2026-10-28.md",
+      "scripts/windows/EscapeHatch-Install.ps1",
+      "scripts/windows/EscapeHatch-NativeHost.ps1",
+      "tests/test_application_assist_session_contract.py",
+      "tests/test_application_operator_submit.mjs",
+      "tests/test_escapehatch_installer_source_delivery.py",
+      "tests/test_extension_toolbar_icons.py",
+      "tests/test_native_host_registration.py",
+      "tests/test_native_profile_bridge.mjs",
+      "tests/test_native_profile_browser.mjs",
+      "tests/windows/Test-EscapeHatch-Runtime.ps1"
+    ],
+    "merged_main": "bbb1d6a9eb4693bee9e90cd6c4b13ebe1db6a25d"
+  },
+  "bundled_runtime_preview": {
+    "base": "bbb1d6a9eb4693bee9e90cd6c4b13ebe1db6a25d",
+    "branch": "codex/bundled-runtime-preview-20261029",
+    "state": "INTEGRATED_CANDIDATE_LOCAL_RUNTIME_PASS_EXACT_CI_PENDING",
+    "graph_width": 3,
+    "adapter": "collaboration.followup_task",
+    "canonical_dispatch_verifier": "UNAVAILABLE; native concurrency may be observed but canonical receipt remains UNPROVEN",
+    "lanes": [
+      {
+        "owner": "/root/b1_installer",
+        "scope": "shared Windows toolchain resolver and installer/runtime/native-host callers, GetCMD, focused tests",
+        "forbidden": "packager/pin/workflow/docs/version"
+      },
+      {
+        "owner": "/root/b2_runtime",
+        "scope": "canonical preview packager, official pinned and signature-verified Node payload input, focused package tests",
+        "forbidden": "Windows callers/workflow/docs/version/browser proof"
+      },
+      {
+        "owner": "/root/b3_extension",
+        "scope": "existing native browser proof optional extracted ReleaseInstall route with no system tools",
+        "forbidden": "product helpers/packager/UI/version"
+      }
+    ],
+    "coordinator_scope": "workflow, registry, canonical version generator, docs/evidence, convergence and actual packaged proof",
+    "proof_ceiling": "Unsigned Windows online preview under controlled child PATH; no signed consumer, fresh standard-user VM, offline dependencies, or Store enrollment claim",
+    "validation_commands": [
+      "python tests/test_windows_preview_package.py",
+      "python tests/test_escapehatch_installer_source_delivery.py",
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/windows/Test-EscapeHatch-Install.ps1",
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/windows/Test-EscapeHatch-Runtime-PortDiscovery.ps1",
+      "npm --prefix artifacts/escape-hatch run test:native-profile:browser",
+      "python scripts/validate_harness.py",
+      "python scripts/validate_application_autofill_parent.py",
+      "python scripts/validate_application_journey.py",
+      "git diff --check"
+    ],
+    "pull_request": 142,
+    "version": "1.5.0",
+    "upstream": {
+      "version": "22.23.4",
+      "archiveSha256": "cbc74b5e0982c9dbb41525fd8fb5dcd32fbee237863f7829072f4639a1ce5f20",
+      "signerFingerprint": "5BE8A3F6C8A5C01D106C0AD820B1A390B168D356",
+      "escapehatch_package_signed": false
+    },
+    "parallel_result": "Three native lanes started; all stopped at account usage limit. Partial work checkpointed separately, preserved and converged by coordinator. Canonical dispatch receipt verifier remains absent.",
+    "checkpoints": [
+      "754dd24",
+      "13255fd",
+      "fca171b"
+    ],
+    "runtime_evidence": {
+      "artifact_source": "72b49bdb0c3292e7450c2d3c9950126a70eb2838",
+      "driver_source": "c6846cb521f18fb658209f7ae260baa06a2d53c9",
+      "duration_ms": 156323.9636,
+      "state": "PASS",
+      "scope": "Disposable Windows canonical ReleaseInstall with child PATH Windows-only; Node/npm/Git/Python absent. Actual staged bundled Node process and native launcher readback; Chrome fields/known answer, reopen, cockpit wake, second profile rejection, source reapproval, manual save/clear, canonical uninstall. Regular-file command capture rejects launcher timeout errors.",
+      "private_data": "Synthetic only; existing personal installation untouched"
+    },
+    "validation": {
+      "package": "6 PASS including unsafe ZIP/digest/license and corrupt/no-fallback cases",
+      "installer_source": "4 PASS",
+      "native_registration": "6 PASS",
+      "installer_preservation": "18 PASS",
+      "port_discovery": "PASS",
+      "upstream_fetch_signature_build": "PASS",
+      "source_checkout_browser": "RUNNING",
+      "exact_head_CI": "PENDING"
+    },
+    "files_changed": [
+      ".github/workflows/windows-preview-package.yml",
+      "ARTIFACT_REGISTRY.md",
+      "CHANGELOG.md",
+      "Get-EscapeHatch.cmd",
+      "Outputs/prompt-parallel-dispatch/runs/escapehatch-one-download-profile-20261028/manifest.json",
+      "README.md",
+      "VERSION",
+      "browser/application-assist/manifest.json",
+      "contracts/windows-node-runtime.v1.json",
+      "docs/agent/P04_ONE_DOWNLOAD_EXTENSION_AND_PRIVATE_PROFILE_BOOTSTRAP_2026-10-28.md",
+      "scripts/package_windows_preview.py",
+      "scripts/windows/EscapeHatch-Install.ps1",
+      "scripts/windows/EscapeHatch-NativeHost.ps1",
+      "scripts/windows/EscapeHatch-Runtime.ps1",
+      "scripts/windows/EscapeHatch-Toolchain.ps1",
+      "tests/test_escapehatch_installer_source_delivery.py",
+      "tests/test_native_profile_browser.mjs",
+      "tests/test_windows_preview_package.py",
+      "tests/windows/Test-EscapeHatch-Install.ps1",
+      "tests/windows/Test-EscapeHatch-Runtime-PortDiscovery.ps1"
+    ]
   }
 }

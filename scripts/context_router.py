@@ -34,6 +34,9 @@ def load_policy(root: Path) -> dict:
             raise ValueError(f"CONTEXT_PATH_UNSAFE:{name}")
         if entry["mode"] not in ("full", "outline") or entry["authority"] < 2:
             raise ValueError(f"CONTEXT_AUTHORITY_INVALID:{name}")
+        if "encoding" in entry and (entry["encoding"] != "compact_json" or
+                                     entry["mode"] != "full" or path.suffix.lower() != ".json"):
+            raise ValueError(f"CONTEXT_ENCODING_INVALID:{name}")
         if entry.get("always") and not entry.get("required"):
             raise ValueError(f"CONTEXT_ALWAYS_MUST_BE_REQUIRED:{name}")
     if not set(policy["baseline_unconditional"]).issubset(sources):
@@ -62,6 +65,14 @@ def outline(text: str, suffix: str) -> str:
         return "\n".join(headings[:80]) + ("\n[HEADINGS_TRUNCATED]\n" if len(headings) > 80 else "\n")
     symbols = re.findall(r"(?m)^(?:export )?(?:async )?(?:function|class|def)\s+([A-Za-z_][\w-]*)", text)
     return "Symbols: " + ", ".join(symbols[:80]) + (" [TRUNCATED]" if len(symbols) > 80 else "") + "\n"
+
+
+def render_source(raw: bytes, path: Path, mode: str, encoding: str | None = None) -> str:
+    """Render complete JSON without whitespace; source provenance stays on raw bytes."""
+    text = raw.decode("utf-8")
+    if encoding == "compact_json":
+        return json.dumps(json.loads(text), ensure_ascii=False, separators=(",", ":")) + "\n"
+    return text if mode == "full" else outline(text, path.suffix)
 
 
 def select(root: Path, task: str, lane: str = "auto", budget: int = 32768, require_full: tuple[str, ...] = ()) -> dict:
@@ -95,12 +106,14 @@ def select(root: Path, task: str, lane: str = "auto", budget: int = 32768, requi
             continue
         raw = path.read_bytes()
         selected_mode = "full" if key in require_full else spec["mode"]
-        payload = raw.decode("utf-8") if selected_mode == "full" else outline(raw.decode("utf-8"), path.suffix)
+        payload = render_source(raw, path, selected_mode, spec.get("encoding"))
         entries.append({"id": key, "path": spec["path"], "owner": spec["owner"],
                         "sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw),
                         "authority": spec["authority"], "always": spec.get("always", False),
                         "required": spec.get("required", False) or key in require_full, "mode": selected_mode,
                         "payload": payload, "state": "SELECTED"})
+        if "encoding" in spec:
+            entries[-1].update(encoding=spec["encoding"], format="json-utf8-compact/v1")
     entries.sort(key=lambda e: (not e.get("always", False), e["authority"], e["id"]))
     used_bytes = sum(len(e.get("payload", "").encode("utf-8")) for e in entries)
     if used_bytes > budget:
@@ -146,8 +159,10 @@ def verify_receipt(root: Path, receipt: dict) -> None:
         mode = "full" if key in explicit else expected["mode"]
         if entry.get("mode") != mode:
             raise ValueError(f"CONTEXT_RECEIPT_MODE_MISMATCH:{key}")
-        raw = path.read_bytes().decode("utf-8")
-        if entry.get("payload") != (raw if mode == "full" else outline(raw, path.suffix)):
+        if entry.get("encoding") != expected.get("encoding") or entry.get("format") != (
+                "json-utf8-compact/v1" if expected.get("encoding") == "compact_json" else None):
+            raise ValueError(f"CONTEXT_RECEIPT_ENCODING_MISMATCH:{key}")
+        if entry.get("payload") != render_source(path.read_bytes(), path, mode, expected.get("encoding")):
             raise ValueError(f"CONTEXT_RECEIPT_PAYLOAD_MISMATCH:{key}")
     required = {key for key, source in policy["sources"].items()
                 if source.get("always") or (source.get("required") and lane in source["triggers"])}

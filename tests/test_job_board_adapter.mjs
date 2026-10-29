@@ -83,4 +83,72 @@ assert.equal(board.planIndeedCoverLetterText(supporting, ownerSelected, reviewed
 assert.equal(board.indeedResumeUploadImpact(supporting, "resume").state, "OPERATOR_APPROVAL_REQUIRED");
 assert.equal(board.indeedResumeUploadImpact(supporting, "resume").effect, "REPLACES_ONE_GLOBAL_INDEED_RESUME");
 assert.equal(board.indeedResumeUploadImpact(supporting, "cover").state, "REVIEW_REQUIRED");
+
+class FakeTextArea {
+  constructor(value = "") { this._value = value; this.events = []; this.maxLength = 4000; this.isConnected = true; this.disabled = false; this.readOnly = false; }
+  get value() { return this._value; }
+  set value(value) { this._value = value; }
+  getAttribute(name) { return name === "aria-label" ? "Cover letter" : null; }
+  getClientRects() { return [{ width: 100, height: 50 }]; }
+  dispatchEvent(event) { this.events.push(event.type); return true; }
+}
+const fakeView = { HTMLTextAreaElement: FakeTextArea,
+  Event: class { constructor(type, options) { this.type = type; this.bubbles = options?.bubbles; } },
+  getComputedStyle: () => ({ visibility: "visible" }) };
+function syntheticSupportingForm(options = {}) {
+  const area = options.area || new FakeTextArea(options.previousValue || "");
+  const headings = options.headings === undefined ? [{ textContent: "Supporting documents" }] : options.headings;
+  const fields = options.fields || [area];
+  const documentObject = {
+    location: { href: options.url || "https://smartapply.indeed.com/beta/indeedapply/form/questions-module/questions/1" },
+    defaultView: options.view === undefined ? fakeView : options.view,
+    querySelectorAll(selector) {
+      if (selector === "h1,h2,h3,[role=heading]") return headings;
+      if (selector === "textarea") return fields;
+      throw new Error("Unsupported synthetic selector: " + selector);
+    }
+  };
+  return { area, documentObject };
+}
+const live = syntheticSupportingForm();
+const result = board.writeIndeedCoverLetterText(live.documentObject, ownerSelected, reviewedLetter);
+assert.equal(result.state, "FIELD_READBACK_ONLY");
+assert.equal(result.filled, true);
+assert.equal(result.maySubmit, false);
+assert.equal(result.employerAcceptance, "UNVERIFIED");
+assert.equal(live.area.value, planned.text);
+assert.deepEqual(live.area.events, ["input", "change"]);
+const existing = syntheticSupportingForm({ previousValue: "My approved text already in the form" });
+assert.equal(board.writeIndeedCoverLetterText(existing.documentObject, ownerSelected, reviewedLetter).reason, "preserve_existing_applicant_edit");
+assert.equal(existing.area.value, "My approved text already in the form");
+const wrongApplicant = syntheticSupportingForm();
+assert.equal(board.writeIndeedCoverLetterText(wrongApplicant.documentObject,
+  { ...ownerSelected, workspaceOwnerId: "wrong-applicant" }, reviewedLetter).reason, "applicant_owner_unverified");
+assert.equal(wrongApplicant.area.value, "");
+const staleNonce = syntheticSupportingForm();
+assert.equal(board.writeIndeedCoverLetterText(staleNonce.documentObject,
+  { ...ownerSelected, formSessionNonce: "stale-nonce" }, reviewedLetter).reason, "unverified_form_session");
+assert.equal(staleNonce.area.value, "");
+const wrongRequisition = syntheticSupportingForm();
+assert.equal(board.writeIndeedCoverLetterText(wrongRequisition.documentObject, ownerSelected,
+  { ...reviewedLetter, opportunityKey: "indeed:bbbbbbbbbbbbbbbb" }).reason, "reviewed_role_letter_required");
+assert.equal(wrongRequisition.area.value, "");
+const ambiguouslyLabelled = syntheticSupportingForm({ fields: [new FakeTextArea(), new FakeTextArea()] });
+assert.equal(board.writeIndeedCoverLetterText(ambiguouslyLabelled.documentObject, ownerSelected, reviewedLetter).reason,
+  "unique_editable_cover_letter_textarea_required");
+const noHeading = syntheticSupportingForm({ headings: [] });
+assert.equal(board.writeIndeedCoverLetterText(noHeading.documentObject, ownerSelected, reviewedLetter).reason,
+  "unique_supporting_document_heading_required");
+const unrecognizedRoute = syntheticSupportingForm({ url: "https://smartapply.indeed.com/beta/indeedapply/form/unknown-module/1" });
+assert.equal(board.writeIndeedCoverLetterText(unrecognizedRoute.documentObject, ownerSelected, reviewedLetter).reason,
+  "recognized_indeed_form_required");
+const noNativeSetter = syntheticSupportingForm({ view: { Event: fakeView.Event } });
+assert.equal(board.writeIndeedCoverLetterText(noNativeSetter.documentObject, ownerSelected, reviewedLetter).reason,
+  "safe_native_textarea_writer_unavailable");
+const badEventArea = new FakeTextArea();
+badEventArea.dispatchEvent = () => { throw new Error("synthetic dispatch failure"); };
+const badEvent = syntheticSupportingForm({ area: badEventArea });
+assert.equal(board.writeIndeedCoverLetterText(badEvent.documentObject, ownerSelected, reviewedLetter).reason,
+  "native_textarea_write_failed_recheck_required");
+
 console.log("JOB_BOARD_ADAPTER_SYNTHETIC: PASS");

@@ -148,6 +148,23 @@ function Test-NodeVersion([string]$Executable) {
     & $Executable -e 'const v=process.versions.node.match(/\d+/g);if(+v[0]<22||(+v[0]===22&&+v[1]<16))process.exit(1)'
     return ($LASTEXITCODE -eq 0)
 }
+function Update-NativeHost([string]$Root, [string]$NativeAction) {
+    # Native messaging registration is separate from browser extension enrollment.
+    # Synthetic installer fixtures must never register a production Chrome host.
+    if ($TestMode) { Write-Host 'NATIVE_HOST=TEST_SKIPPED'; return }
+    $registration = Join-Path $PSScriptRoot 'EscapeHatch-NativeHost.ps1'
+    $hostScript = Join-Path $Root 'artifacts\escape-hatch\native-messaging-host.ts'
+    if ($NativeAction -eq 'Register' -and -not (Test-Path -LiteralPath $hostScript -PathType Leaf)) {
+        Write-Host 'NATIVE_HOST=SOURCE_UNAVAILABLE'
+        return
+    }
+    if (-not (Test-Path -LiteralPath $registration -PathType Leaf)) {
+        if ($NativeAction -eq 'Register') { throw 'INSTALL_NATIVE_HOST_REGISTRAR_MISSING' }
+        return
+    }
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $registration -Action $NativeAction -SourceRoot $Root -AppDataRoot $AppDataRoot
+    if ($LASTEXITCODE -ne 0) { throw 'INSTALL_NATIVE_HOST_REFUSED: existing native registration was preserved; inspect the native-host registration owner.' }
+}
 function Make-Shortcut([string]$Root) {
     $parent = Split-Path -Parent $shortcutPath
     New-Item -ItemType Directory -Path $parent -Force | Out-Null
@@ -280,6 +297,7 @@ try {
         Assert-OwnedShortcutsUnchanged $receipt
         Stop-SelectedRuntime ([string]$receipt.sourceRoot)
         Assert-OwnedShortcutsUnchanged $receipt
+        Update-NativeHost ([string]$receipt.sourceRoot) 'Unregister'
         foreach ($entry in @($receipt.shortcuts)) {
             if ($entry.ownership -eq 'CREATED' -and (Test-Path -LiteralPath $entry.path -PathType Leaf)) { Remove-Item -LiteralPath $entry.path -Force }
         }
@@ -293,6 +311,10 @@ try {
     $selectedRelease = $null
     $selectedManifestPath = Join-Path $selected 'windows-release.json'
     if (Test-Path -LiteralPath $selectedManifestPath -PathType Leaf) { $selectedRelease = Verify-Release $selected }
+    # Refuse foreign registration before changing selected-source resources.
+    if (Test-Path -LiteralPath (Join-Path $selected 'artifacts\escape-hatch\native-messaging-host.ts') -PathType Leaf) {
+        Update-NativeHost $selected 'Inspect'
+    }
     if ($Action -eq 'Bootstrap') {
         # Prove that startup is admissible before provisioning dependencies or
         # changing shortcuts. A foreign listener must remain a visible refusal,
@@ -331,6 +353,7 @@ try {
     } else {
         Repair-OwnedShortcuts $receipt $selected
     }
+    Update-NativeHost $selected 'Register'
     Write-Host 'ESCAPEHATCH_INSTALLATION=INSTALLED'
     if ($Action -eq 'Bootstrap') {
         # Stream Start directly. Capturing a long-lived descendant's inherited

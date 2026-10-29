@@ -116,8 +116,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - run: npm --prefix artifacts/escape-hatch install --ignore-scripts --package-lock=false --no-audit --no-fund
-      - run: npx --prefix artifacts/escape-hatch playwright install chromium
+      - name: Prepare app dependencies without changing source manifests
+        working-directory: artifacts/escape-hatch
+        run: npm install --ignore-scripts --package-lock=false --no-audit --no-fund
+      - name: Reject dependency preparation source mutation
+        run: git diff --exit-code -- artifacts/escape-hatch/package.json
+      - working-directory: artifacts/escape-hatch
+        run: npx playwright install chromium
       - name: Verify native source admission and framed transport
         run: npm --prefix artifacts/escape-hatch run test:native-profile
       - name: Verify dependency lifecycle selection and source preservation

@@ -113,13 +113,14 @@
       "owner": "docs/agent/P04_ZERO_FRICTION_APPLICATION_EXECUTION_2026-10-20.md"
     },
     "runtime_lifecycle": {
-      "path": "docs/WINDOWS_RUNTIME_LIFECYCLE.md",
+      "path": "contracts/local-runtime-lifecycle.v1.json",
       "mode": "full",
+      "encoding": "compact_json",
       "authority": 3,
       "triggers": [
         "runtime"
       ],
-      "owner": "docs/WINDOWS_RUNTIME_LIFECYCLE.md"
+      "owner": "contracts/local-runtime-lifecycle.v1.json"
     },
     "runtime_manager": {
       "path": "scripts/windows/EscapeHatch-Runtime.ps1",

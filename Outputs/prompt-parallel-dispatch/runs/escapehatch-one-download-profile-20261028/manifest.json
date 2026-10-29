@@ -438,7 +438,8 @@
     "profile_hydrated_this_chat": true,
     "merged": false,
     "deployed": false,
-    "live_observed": false
+    "live_observed": true,
+    "live_scope": "Disposable Windows Chromium and owned runtime; existing personal Chrome and consumer enrollment unproved"
   },
   "exact_next_command": "npm --prefix artifacts/escape-hatch run test:native-profile:browser",
   "local_execution": {
@@ -494,8 +495,8 @@
     },
     "extension_id": "okjcckicklgdjgfaobipmnojleaeepbg",
     "version": "1.4.0",
-    "runtime_source_commit": "a50a274",
-    "runtime_evidence": "Disposable Windows canonical Bootstrap and Chromium: profile fields and approved answer visible in module; full browser reopen; actual cockpit metadata wake; second profile rejected; changed source requires review; canonical Uninstall preserves private source. PASS 114987ms. Machine-local synthetic artifacts excluded from git.",
+    "runtime_source_commit": "a35e4dc8b55d518fbc51c53f954ce1518eecb4d9",
+    "runtime_evidence": "PASS 119023ms: canonical Bootstrap, actual Chromium module 4 synthetic profile fields and 1 approved education answer, browser reopen, cockpit metadata wake, second browser rejection, changed-source reapproval; protected manual Save/Clear and paused sync; canonical Uninstall preserves private source. Synthetic fixture 2UejVN remains machine-local.",
     "proof_ceiling": "Disposable local Windows/Chromium; consumer Store enrollment and existing personal profile upgrade unproved",
     "validation": {
       "native_source_transport": "11 PASS",
@@ -507,7 +508,8 @@
       "typecheck": "PASS",
       "build": "PASS",
       "full_app_unit": "PASS",
-      "fresh_CI": "dependency install failure under repair"
+      "fresh_CI": "npm10 dependency lifecycle still reaches root; additional repair in progress",
+      "protected_submission": "PASS unchanged original assertions with actual module imports and multiple Chrome listeners"
     },
     "protected_controls": "Existing submission assertions retained; stale VM listener harness repair pending; real employer Submit never invoked",
     "known_gates": [
@@ -515,6 +517,38 @@
       "signed Windows distribution and bundled prerequisites",
       "Chrome Store publication and user approval",
       "actual installed personal profile upgrade proof"
+    ],
+    "files_changed": [
+      ".github/workflows/application-assist.yml",
+      "ARTIFACT_REGISTRY.md",
+      "CHANGELOG.md",
+      "Outputs/prompt-parallel-dispatch/runs/escapehatch-one-download-profile-20261028/manifest.json",
+      "README.md",
+      "VERSION",
+      "artifacts/escape-hatch/extension-profile-host.test.ts",
+      "artifacts/escape-hatch/extension-profile-host.ts",
+      "artifacts/escape-hatch/native-messaging-host.ts",
+      "artifacts/escape-hatch/package.json",
+      "artifacts/escape-hatch/src/components/extension-workspace-status.tsx",
+      "artifacts/escape-hatch/src/components/workspace-startup.tsx",
+      "artifacts/escape-hatch/src/lib/extension-workspace.test.ts",
+      "artifacts/escape-hatch/src/lib/extension-workspace.ts",
+      "browser/application-assist/manifest.json",
+      "browser/application-assist/native-profile-bridge.js",
+      "browser/application-assist/popup.html",
+      "browser/application-assist/popup.js",
+      "browser/application-assist/worker.js",
+      "contracts/application-assist-session.v1.json",
+      "docs/agent/P04_ONE_DOWNLOAD_EXTENSION_AND_PRIVATE_PROFILE_BOOTSTRAP_2026-10-28.md",
+      "scripts/windows/EscapeHatch-Install.ps1",
+      "scripts/windows/EscapeHatch-NativeHost.ps1",
+      "tests/test_application_assist_session_contract.py",
+      "tests/test_application_operator_submit.mjs",
+      "tests/test_escapehatch_installer_source_delivery.py",
+      "tests/test_extension_toolbar_icons.py",
+      "tests/test_native_host_registration.py",
+      "tests/test_native_profile_bridge.mjs",
+      "tests/test_native_profile_browser.mjs"
     ]
   }
 }

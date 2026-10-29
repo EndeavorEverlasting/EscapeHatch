@@ -1,5 +1,7 @@
 """Deterministic negative and positive cases for the EscapeHatch model-context router."""
 import importlib.util
+import copy
+import hashlib
 import json
 import tempfile
 import unittest
@@ -109,6 +111,76 @@ class ContextRoutingTests(unittest.TestCase):
         receipt["selected"] = [e for e in receipt["selected"] if e["id"] != "governance"]
         with self.assertRaisesRegex(ValueError, "CONTEXT_RECEIPT_REQUIRED_SOURCE_OMITTED:governance"):
             router.verify_receipt(self.root, receipt)
+
+    def test_compact_runtime_preserves_entire_canonical_contract_and_raw_digest(self):
+        canonical = BASE / 'contracts/local-runtime-lifecycle.v1.json'
+        raw = canonical.read_bytes()
+        target = self.root / 'contracts/local-runtime-lifecycle.v1.json'
+        target.write_bytes(raw)
+        receipt = router.select(self.root, 'Windows startup', 'runtime')
+        entry = next(e for e in receipt['selected'] if e['id'] == 'runtime_lifecycle')
+        self.assertEqual(entry['mode'], 'full')
+        self.assertEqual(entry['encoding'], 'compact_json')
+        self.assertEqual(entry['format'], 'json-utf8-compact/v1')
+        self.assertEqual(entry['sha256'], hashlib.sha256(raw).hexdigest())
+        self.assertEqual(entry['bytes'], len(raw))
+        contract = json.loads(entry['payload'])
+        self.assertEqual(contract, json.loads(raw))
+        self.assertEqual(contract['states']['FOREIGN_CONFLICT']['kill_listener'], 'forbidden')
+        self.assertFalse(contract['kill_policy']['port_number_alone_sufficient'])
+        self.assertIn('never_kill_unknown_listener', contract['invariants'])
+        self.assertLess(len(entry['payload'].encode('utf-8')), len(raw))
+        router.verify_receipt(self.root, receipt)
+
+    def test_compact_json_preserves_unicode_and_nested_values(self):
+        path = self.root / 'contracts/local-runtime-lifecycle.v1.json'
+        value = {'text': 'caf\u00e9', 'nested': [None, True, 42, {'rule': 'preserve'}]}
+        path.write_text(json.dumps(value, ensure_ascii=False, indent=4), encoding='utf-8')
+        receipt = router.select(self.root, 'startup', 'runtime')
+        entry = next(e for e in receipt['selected'] if e['id'] == 'runtime_lifecycle')
+        self.assertEqual(json.loads(entry['payload']), value)
+        self.assertIn('caf\u00e9', entry['payload'])
+        router.verify_receipt(self.root, receipt)
+
+    def test_compact_receipt_rejects_encoding_format_and_payload_tampering(self):
+        receipt = router.select(self.root, 'startup', 'runtime')
+        for field, value in (('encoding', 'text'), ('format', 'json-utf8-compact/v2'),
+                             ('payload', '{"missing":"rules"}')):
+            with self.subTest(field=field):
+                altered = copy.deepcopy(receipt)
+                entry = next(e for e in altered['selected'] if e['id'] == 'runtime_lifecycle')
+                entry[field] = value
+                with self.assertRaisesRegex(ValueError, 'CONTEXT_RECEIPT_(ENCODING|PAYLOAD)_MISMATCH'):
+                    router.verify_receipt(self.root, altered)
+        for field in ('encoding', 'format'):
+            altered = copy.deepcopy(receipt)
+            next(e for e in altered['selected'] if e['id'] == 'runtime_lifecycle').pop(field)
+            with self.assertRaisesRegex(ValueError, 'CONTEXT_RECEIPT_ENCODING_MISMATCH'):
+                router.verify_receipt(self.root, altered)
+
+    def test_compact_receipt_rejects_source_format_change_even_if_json_equivalent(self):
+        receipt = router.select(self.root, 'startup', 'runtime')
+        path = self.root / 'contracts/local-runtime-lifecycle.v1.json'
+        path.write_text('{\n}\n')
+        with self.assertRaisesRegex(ValueError, 'CONTEXT_SOURCE_STALE:runtime_lifecycle'):
+            router.verify_receipt(self.root, receipt)
+
+    def test_encoding_policy_rejects_unsupported_non_json_and_outline(self):
+        policy_path = self.root / router.POLICY_PATH
+        original = json.loads(policy_path.read_text())
+        for change in ({'encoding': 'gzip'}, {'encoding': None}, {'mode': 'outline'},
+                       {'path': 'docs/WINDOWS_RUNTIME_LIFECYCLE.md'}):
+            with self.subTest(change=change):
+                policy = copy.deepcopy(original)
+                policy['sources']['runtime_lifecycle'].update(change)
+                policy_path.write_text(json.dumps(policy))
+                with self.assertRaisesRegex(ValueError, 'CONTEXT_ENCODING_INVALID:runtime_lifecycle'):
+                    router.load_policy(self.root)
+
+    def test_invalid_json_does_not_fall_back_to_partial_context(self):
+        (self.root / 'contracts/local-runtime-lifecycle.v1.json').write_text('{invalid')
+        with self.assertRaises(json.JSONDecodeError):
+            router.select(self.root, 'startup', 'runtime')
 
 
 if __name__ == "__main__":

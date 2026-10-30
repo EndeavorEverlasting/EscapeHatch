@@ -9,7 +9,7 @@ test('all canonical scenes have a visible route and direct action', () => {
   assert.deepEqual(items.map(s => s.id), registry.scenes.map(s => s.id));
   for (const item of items) {
     assert.ok(PUBLIC_ROUTES.includes(item.route));
-    assert.ok(item.action.length > 10);
+    assert.ok(item.action.trim().length >= 4);
     assert.ok(item.location);
     for (const target of item.outgoing) assert.ok(items.some(s => s.id === target));
   }

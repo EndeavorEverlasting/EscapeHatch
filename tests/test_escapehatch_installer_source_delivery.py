@@ -132,7 +132,7 @@ if ($bytes.Length -lt 50 -or $bytes[0] -ne 0 -or $bytes[1] -ne 0 -or $bytes[2] -
 if ($bytes[22] -ne 137 -or $bytes[23] -ne 80 -or $bytes[24] -ne 78 -or $bytes[25] -ne 71) { throw 'Bundled PNG payload missing' }
 $before = [IO.File]::ReadAllBytes($path)
 $second = Ensure-BrandIcon $env:EH_INSTALL_SOURCE
-if ($second -cne $path -or -not [Linq.Enumerable]::SequenceEqual([byte[]]$before, [byte[]][IO.File]::ReadAllBytes($path))) { throw 'Existing icon altered' }
+if ($second -cne $path -or [Convert]::ToBase64String($before) -cne [Convert]::ToBase64String([IO.File]::ReadAllBytes($path))) { throw 'Existing icon altered' }
 Write-Output 'BRAND_ICON_GENERATION=PASS'
 """, encoding="utf-8")
             result = subprocess.run(

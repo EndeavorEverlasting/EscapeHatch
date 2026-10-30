@@ -7,6 +7,10 @@ test('desktop journey map exposes every canonical scene and every user page', as
   await expect(page.getByTestId('journey-selected-step')).toContainText('Bring your career sources');
   const scenes = page.locator('[data-testid^="journey-canonical-"]');
   await expect(scenes).toHaveCount(14);
+  await expect(page.getByTestId('journey-setup')).toBeVisible();
+  await expect(page.getByTestId('journey-download-setup')).toHaveAttribute('href', /Get-EscapeHatch[.]cmd$/);
+  await expect(page.getByTestId('journey-bundled-package')).toHaveAttribute('href', /windows-preview-package[.]yml$/);
+
   for (const title of ['Sources', 'Profile', 'Answer library', 'Applications', 'Browser assist']) {
     await expect(page.getByTestId('journey-destination-' + title.toLowerCase().replaceAll(' ', '-'))).toBeVisible();
   }

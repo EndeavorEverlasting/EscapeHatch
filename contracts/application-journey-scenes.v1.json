@@ -605,7 +605,9 @@
     ],
     "recovery": "At any studio subscene, persist partial approved data to its existing owner and show the next missing step; authentication and terminal Submit are never inherited from a saved scene.",
     "preference": "Progressive, skippable onboarding; prefer 2-3 short guided screens per sitting over a giant upfront form; role-specific skills and six-skill ATS prompts are an evidence-backed reuse opportunity, never an invented quota.",
-    "aesthetic": "Reuse existing Manrope/Newsreader/DM Mono typography, cream/teal design tokens, contextual Your next step coach and puzzle cards. Visible current/next/blocked/resume states; reduced-motion, keyboard, screen-reader, 320px and 200% zoom support."
+    "aesthetic": "Reuse existing Manrope/Newsreader/DM Mono typography, cream/teal design tokens, contextual Your next step coach and puzzle cards. Visible current/next/blocked/resume states; reduced-motion, keyboard, screen-reader, 320px and 200% zoom support.",
+    "projection_module": "artifacts/escape-hatch/src/lib/preapplication-studio.ts",
+    "projection_test": "artifacts/escape-hatch/src/lib/preapplication-studio.test.ts"
   },
   "application_progress_projection": {
     "projection_module": "artifacts/escape-hatch/src/lib/application-progress-checkpoint.ts",

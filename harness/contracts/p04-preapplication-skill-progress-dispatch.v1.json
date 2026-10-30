@@ -1,0 +1,140 @@
+{
+  "schema": "escapehatch/p04-preapplication-skill-progress-dispatch/v1",
+  "date": "2026-10-30",
+  "parent_issue": "https://github.com/EndeavorEverlasting/EscapeHatch/issues/69",
+  "baseline_branch": "main",
+  "working_branch": "feat/p04-preapplication-skills-progress-20261030",
+  "primary_host": "LOCAL_AGENT_RUNTIME",
+  "current_chat_provider": "GitHub",
+  "exact_scene_registry": "contracts/application-journey-scenes.v1.json",
+  "handoff": "docs/agent/P04_PREAPPLICATION_SKILLS_PROGRESS_2026-10-30.md",
+  "dependencies": [
+    "PR #145 role-scoped skills (draft, not merged)",
+    "PR #138 career materials graph",
+    "PR #139 Indeed text projection"
+  ],
+  "scope_protections": [
+    "do_not_touch_real_employer_submit",
+    "do_not_collect_credentials_or_MFA",
+    "do_not_publish_private_career_data",
+    "do_not_overwrite_dirty_or_parallel_work",
+    "one_writer_per_branch",
+    "no_new_answer_store"
+  ],
+  "lanes": [
+    {
+      "id": "F0",
+      "owner": "local agent coordinator",
+      "host": "LOCAL_AGENT_RUNTIME",
+      "owned": [
+        "git preflight",
+        "PR #145 collision review",
+        "failing test repair"
+      ],
+      "forbidden": [
+        "dirty work reset",
+        "branch force push"
+      ],
+      "depends_on": [],
+      "proof": "provider/current HEAD, status/worktrees, exact collision map"
+    },
+    {
+      "id": "F1",
+      "owner": "local product/UI engineer",
+      "host": "LOCAL_AGENT_RUNTIME",
+      "owned": [
+        "studio UI under existing cockpit",
+        "per-role skills reviewed states",
+        "scene accessibility"
+      ],
+      "forbidden": [
+        "PR #145 sources absent explicit integration",
+        "new skills master"
+      ],
+      "depends_on": [
+        "F0"
+      ],
+      "proof": "synthetic skill reuse, dates, evidence role binding, staged visual comparison"
+    },
+    {
+      "id": "F2",
+      "owner": "local persistence engineer",
+      "host": "LOCAL_AGENT_RUNTIME",
+      "owned": [
+        "owner-bound private checkpoint API",
+        "readback/CAS/idempotence"
+      ],
+      "forbidden": [
+        "public career artifacts",
+        "credentials"
+      ],
+      "depends_on": [
+        "F0"
+      ],
+      "proof": "reload and cross-user/job negative fixtures"
+    },
+    {
+      "id": "F3",
+      "owner": "local integration engineer",
+      "host": "LOCAL_AGENT_RUNTIME",
+      "owned": [
+        "per-opportunity resume card",
+        "workbench progress display",
+        "reinspections"
+      ],
+      "forbidden": [
+        "receipt authority replacement",
+        "terminal click"
+      ],
+      "depends_on": [
+        "F1",
+        "F2"
+      ],
+      "proof": "verified count, estimated position only when known, blocker and resume loop"
+    },
+    {
+      "id": "F4",
+      "owner": "local runtime proof executor",
+      "host": "LOCAL_AGENT_RUNTIME",
+      "owned": [
+        "isolated fixtures",
+        "protected login/resume control",
+        "operator-approved Chrome evidence"
+      ],
+      "forbidden": [
+        "real final submission",
+        "real employer data disclosure"
+      ],
+      "depends_on": [
+        "F3"
+      ],
+      "proof": "P08 observed interaction receipts separately from synthetic PASS"
+    },
+    {
+      "id": "F5",
+      "owner": "repository integrator",
+      "host": "LOCAL_AGENT_RUNTIME",
+      "owned": [
+        "exact-head checks",
+        "PR/CI reconciliation",
+        "authorized mainline merge"
+      ],
+      "forbidden": [
+        "false deployed/live claims",
+        "unreviewed merge"
+      ],
+      "depends_on": [
+        "F4"
+      ],
+      "proof": "merge SHA plus separately observed local runtime"
+    }
+  ],
+  "first_gate": "F0 current head and safe collision-proof checkout. Then execute F1/F2 without waiting for a new chat plan.",
+  "tests": [
+    "artifacts/escape-hatch/src/lib/application-progress-checkpoint.test.ts",
+    "scripts/validate_application_journey.py",
+    "scripts/validate_application_autofill_parent.py"
+  ],
+  "runtime_proof_status": "NOT_RUN",
+  "privacy_classification": "PUBLIC_SYNTHETIC_HANDOFF_ONLY"
+}

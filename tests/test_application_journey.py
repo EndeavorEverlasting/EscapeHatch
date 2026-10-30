@@ -47,5 +47,22 @@ class SceneContractTests(unittest.TestCase):
         data=copy.deepcopy(self.original);data["user_prompts"]["never_request"].remove("password")
         with self.assertRaises(SceneContractError):validate(data)
 
+    def test_preapplication_studio_missing_or_misrouted_is_rejected(self):
+        for defect in ("missing", "owner", "transition", "private_owner"):
+            data=copy.deepcopy(self.original)
+            if defect == "missing": data["pre_application_studio"]["subscenes"].pop(2)
+            if defect == "owner": data["pre_application_studio"]["subscenes"][2]["owner_scene"]="UNKNOWN"
+            if defect == "transition":
+                data["pre_application_studio"]["transitions"].remove(["STUDIO_READY","OPPORTUNITY_INTAKE"])
+            if defect == "private_owner": data["pre_application_studio"]["data_routing"].pop("reusable_answers")
+            with self.assertRaises(SceneContractError): validate(data)
+    def test_checkpoint_projection_owner_or_proof_drift_is_rejected(self):
+        for defect in ("module", "schema", "submission"):
+            data=copy.deepcopy(self.original)
+            if defect=="module": data["application_progress_projection"]["projection_module"]="tmp/new-authority.ts"
+            if defect=="schema": data["application_progress_projection"]["snapshot_schema"]="unknown"
+            if defect=="submission": data["application_progress_projection"]["submission_proof"]="local flag is enough"
+            with self.assertRaises(SceneContractError): validate(data)
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,115 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { projectApplicationCheckpoint, type ApplicationCheckpoint } from './application-progress-checkpoint.ts';
+const url = 'https://jobs.example.org/roles/123';
+const now = Date.parse('2026-10-30T17:00:00Z');
+const fresh = '2026-10-30T16:59:00Z';
+function fixture(): ApplicationCheckpoint {
+  return {
+    schema: 'escapehatch/application-progress-checkpoint/v1',
+    opportunityId: 'job-123', applicationUrl: url,
+    activeScene: 'FORM_PREPARATION', activeSectionId: 'skills',
+    knownSectionCount: 5,
+    sections: [{
+      id: 'skills', label: 'Role-specific skills', index: 2, inspectedAt: fresh,
+      completeInventory: true, fingerprint: 'synthetic-fingerprint',
+      fields: [
+        { id: 'skill-a', label: 'Skill A', required: 'required', domVerified: true },
+        { id: 'skill-b', label: 'Skill B', required: 'required', domVerified: true },
+        { id: 'skill-c', label: 'Skill C', required: 'required', domVerified: true },
+        { id: 'skill-d', label: 'Skill D', required: 'required', domVerified: false },
+      ],
+    }],
+  };
+}
+test('one observed section is not application completion; bounded position is explicitly an estimate', () => {
+  const p = projectApplicationCheckpoint(fixture(), 'job-123', url, now);
+  assert.equal(p.evidence, 'CURRENT_PAGE_ONLY');
+  assert.equal(p.observedFieldsPercent, 75);
+  assert.equal(p.unresolvedRequired,1);
+  assert.equal(p.positionStep,3);
+  assert.equal(p.positionTotalSections,5);
+  assert.equal(p.lastVerifiedAt,fresh);
+  assert.equal(p.positionEstimatePercent, 40);
+  assert.equal(p.applicationCompletionPercent, null);
+  assert.equal(p.status, 'IN_PROGRESS');
+  assert.equal(p.finalSubmitAutomated, false);
+});
+test('unknown future steps never yield a synthetic whole-job percent', () => {
+  const s = fixture(); s.knownSectionCount = null;
+  const p = projectApplicationCheckpoint(s, s.opportunityId, url, now);
+  assert.equal(p.positionEstimatePercent, null);
+  assert.equal(p.applicationCompletionPercent, null);
+  assert.equal(p.currentSection, 'Role-specific skills');
+});
+test('stale evidence keeps named resume point, but invalidates numeric claims', () => {
+  const s = fixture(); s.sections[0].inspectedAt = '2026-10-30T16:00:00Z';
+  const p = projectApplicationCheckpoint(s, s.opportunityId, url, now);
+  assert.equal(p.evidence, 'STALE');
+  assert.equal(p.currentSection, 'Role-specific skills');
+  assert.equal(p.observedFieldsPercent, null);
+  assert.equal(p.unresolvedRequired,null);
+  assert.equal(p.lastVerifiedAt,'2026-10-30T16:00:00Z');
+  assert.match(p.nextAction, /reinspect/i);
+});
+test('another opportunity or URL never inherits a checkpoint', () => {
+  for (const [id, location] of [['job-OTHER', url], ['job-123','https://other.example.org/jobs/9']]) {
+    const p = projectApplicationCheckpoint(fixture(), id, location, now);
+    assert.equal(p.status, 'NOT_OBSERVED');
+    assert.equal(p.currentSection, null);
+    assert.equal(p.observedFieldsPercent, null);
+  }
+});
+test('protected decisions are not counted as verified from DOM checkboxes', () => {
+  const s = fixture(); s.sections[0].fields = [{
+    id:'privacy',label:'Privacy terms',required:'required',domVerified:true,
+    operatorOnly:true,operatorConfirmed:false,
+  }];
+  const p = projectApplicationCheckpoint(s,s.opportunityId,url,now);
+  assert.equal(p.verifiedRequired,0);
+  assert.equal(p.manualDecisionsRemaining,1);
+  assert.equal(p.status,'NEEDS_USER');
+});
+test('unknown required controls block readiness even if known fields look complete', () => {
+  const s=fixture();s.sections[0].fields=s.sections[0].fields.filter(f=>f.domVerified);
+  s.sections[0].fields.push({id:'dynamic',label:'Unmapped control',required:'unknown',domVerified:true});
+  const p=projectApplicationCheckpoint(s,s.opportunityId,url,now);
+  assert.equal(p.status,'NEEDS_USER');assert.equal(p.observedFieldsPercent,null);
+});
+test('terminal review is not submission; all sections must be inventoried before Ready', () => {
+  const s=fixture();s.sections[0].fields.forEach(f=>f.domVerified=true);
+  s.terminalReviewObserved=true;
+  assert.equal(projectApplicationCheckpoint(s,s.opportunityId,url,now).status,'IN_PROGRESS');
+  s.knownSectionCount=1;s.sections[0].index=0;
+  const p=projectApplicationCheckpoint(s,s.opportunityId,url,now);
+  assert.equal(p.status,'READY_FOR_FINAL_REVIEW');
+  assert.match(p.nextAction,/Final Submit is yours/);
+  assert.equal(p.applicationCompletionPercent,null);
+});
+test('only matching independently reconciled employer receipt may confer submitted status', () => {
+  const s=fixture();
+  const receipt = { opportunityId:s.opportunityId, applicationUrl:url,
+    receiptId:'synthetic-receipt', verifiedAt:fresh,
+    reconciledBy:'existing-submission-reconciliation' as const };
+  assert.notEqual(projectApplicationCheckpoint(s,s.opportunityId,url,now).status,'SUBMITTED_CONFIRMED');
+  assert.equal(projectApplicationCheckpoint(s,s.opportunityId,url,now,receipt).status,'SUBMITTED_CONFIRMED');
+  assert.notEqual(projectApplicationCheckpoint(s,s.opportunityId,url,now,{...receipt,opportunityId:'other'}).status,'SUBMITTED_CONFIRMED');
+  assert.notEqual(projectApplicationCheckpoint(s,s.opportunityId,url,now,{...receipt,applicationUrl:'https://other.example.org/'}).status,'SUBMITTED_CONFIRMED');
+});
+test('verified submission remains durable when the browser page inventory becomes stale', () => {
+  const s=fixture();s.sections[0].inspectedAt='2026-10-29T11:00:00Z';
+  const receipt = { opportunityId:s.opportunityId, applicationUrl:url, receiptId:'receipt-valid',
+    verifiedAt:fresh, reconciledBy:'existing-submission-reconciliation' as const };
+  const projected=projectApplicationCheckpoint(s,s.opportunityId,url,now,receipt);
+  assert.equal(projected.status,'SUBMITTED_CONFIRMED');
+  assert.equal(projected.applicationCompletionPercent,null);
+  assert.equal(projected.finalSubmitAutomated,false);
+  assert.notEqual(projectApplicationCheckpoint(s,s.opportunityId,url,now,
+    {...receipt,verifiedAt:'2026-10-31T10:00:00Z'}).status,'SUBMITTED_CONFIRMED');
+});
+test('malformed or duplicated sections and fields fail closed', () => {
+  const s=fixture();s.sections[0].fields.push({...s.sections[0].fields[0]});
+  assert.equal(projectApplicationCheckpoint(s,s.opportunityId,url,now).status,'NOT_OBSERVED');
+  const other=fixture();other.knownSectionCount=1;
+  assert.equal(projectApplicationCheckpoint(other,other.opportunityId,url,now).status,'NOT_OBSERVED');
+});

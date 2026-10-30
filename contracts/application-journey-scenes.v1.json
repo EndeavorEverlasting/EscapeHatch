@@ -477,5 +477,171 @@
     "context_readiness": false,
     "conflict_policy": "preserve_divergent_nonempty_pointers",
     "empty_semantics": "absence_default_not_forget_authority"
+  },
+  "pre_application_studio": {
+    "version": 1,
+    "authority": "Nested, optional scenes under HOME_READY and PREREQUISITES; existing 14 root scene IDs and their authority remain unchanged.",
+    "identity_boundary": "Verified active owner/workspace first. Never mix applicant, developer, fixture or other owner. No answer/profile values in tracked Git.",
+    "entry_policy": "Offer before first opportunity intake, not a forced quiz. Surface what is already known; ask for unknowns only; always allow partial completion and later return.",
+    "data_routing": {
+      "career_history": "Existing private career-state / AssistProfile; approved job titles, employer names, start and end dates; do not invent chronology.",
+      "skills": "Experience-scoped reviewed skills only, attached to the exact career-role evidence; preserve draft PR #145's role-scoped skills owner and do not create a competing global skills truth.",
+      "skill_interview_evidence": "Private career-claim evidence or reviewed role experience; an explainability prompt is not a claim of proficiency.",
+      "reusable_answers": "Existing application-question preferences + approved answer-memory owner; never another store.",
+      "opportunity_overrides": "Exact opportunity-bound private overlay; never promote salary, employer history, legal or current facts to global defaults.",
+      "documents": "Approved canonical career master/role derivative and opportunity document store; no silent overwrite or unreviewed upload.",
+      "progress": "Existing opportunity/workspace session owner; new read-only application-progress-checkpoint projection, not a second public database."
+    },
+    "subscenes": [
+      {
+        "id": "STUDIO_WELCOME",
+        "owner_scene": "HOME_READY",
+        "title": "Make the next application easier",
+        "action": "REVIEW_KNOWN",
+        "proof": "workspace_owner_and_known_answer_inventory"
+      },
+      {
+        "id": "STUDIO_TIMELINE",
+        "owner_scene": "HOME_READY",
+        "title": "Experience and dates",
+        "action": "REVIEW_EXPERIENCE",
+        "proof": "reviewed_experience_dates_and_identity"
+      },
+      {
+        "id": "STUDIO_ROLE_SKILLS",
+        "owner_scene": "PREREQUISITES",
+        "title": "Skills for each role",
+        "action": "CONFIRM_ROLE_SKILLS",
+        "proof": "role_id_skill_id_source_and_user_review"
+      },
+      {
+        "id": "STUDIO_SKILL_STORIES",
+        "owner_scene": "PREREQUISITES",
+        "title": "Explain your skills",
+        "action": "REVIEW_EVIDENCE",
+        "proof": "private_skill_to_experience_example"
+      },
+      {
+        "id": "STUDIO_ANSWERS",
+        "owner_scene": "PREREQUISITES",
+        "title": "Reusable application answers",
+        "action": "SAVE_REUSABLE",
+        "proof": "existing_private_answer_memory_readback"
+      },
+      {
+        "id": "STUDIO_DOCUMENTS",
+        "owner_scene": "PREREQUISITES",
+        "title": "Career documents",
+        "action": "REVIEW_DOCUMENTS",
+        "proof": "approved_source_and_document_version"
+      },
+      {
+        "id": "STUDIO_READY",
+        "owner_scene": "HOME_READY",
+        "title": "Your application kit",
+        "action": "GO_TO_JOBS",
+        "proof": "known_missing_fields_with_opt_in_review"
+      },
+      {
+        "id": "APPLICATION_RESUME_CARD",
+        "owner_scene": "RECOVERY",
+        "title": "Continue this application",
+        "action": "REINSPECT_CHECKPOINT",
+        "proof": "same_owner_opportunity_origin_and_fresh_form_readback"
+      },
+      {
+        "id": "APPLICATION_BLOCKER",
+        "owner_scene": "MANUAL_DECISION",
+        "title": "One thing needs your attention",
+        "action": "RESOLVE_ONE",
+        "proof": "specific_unresolved_control_or_operator_only_gate"
+      }
+    ],
+    "transitions": [
+      [
+        "STUDIO_WELCOME",
+        "STUDIO_TIMELINE"
+      ],
+      [
+        "STUDIO_TIMELINE",
+        "STUDIO_ROLE_SKILLS"
+      ],
+      [
+        "STUDIO_ROLE_SKILLS",
+        "STUDIO_SKILL_STORIES"
+      ],
+      [
+        "STUDIO_SKILL_STORIES",
+        "STUDIO_ANSWERS"
+      ],
+      [
+        "STUDIO_ANSWERS",
+        "STUDIO_DOCUMENTS"
+      ],
+      [
+        "STUDIO_DOCUMENTS",
+        "STUDIO_READY"
+      ],
+      [
+        "STUDIO_READY",
+        "OPPORTUNITY_INTAKE"
+      ],
+      [
+        "STUDIO_READY",
+        "STUDIO_ROLE_SKILLS"
+      ],
+      [
+        "APPLICATION_RESUME_CARD",
+        "FORM_PREPARATION"
+      ],
+      [
+        "FORM_PREPARATION",
+        "APPLICATION_BLOCKER"
+      ],
+      [
+        "APPLICATION_BLOCKER",
+        "FORM_PREPARATION"
+      ]
+    ],
+    "recovery": "At any studio subscene, persist partial approved data to its existing owner and show the next missing step; authentication and terminal Submit are never inherited from a saved scene.",
+    "preference": "Progressive, skippable onboarding; prefer 2-3 short guided screens per sitting over a giant upfront form; role-specific skills and six-skill ATS prompts are an evidence-backed reuse opportunity, never an invented quota.",
+    "aesthetic": "Reuse existing Manrope/Newsreader/DM Mono typography, cream/teal design tokens, contextual Your next step coach and puzzle cards. Visible current/next/blocked/resume states; reduced-motion, keyboard, screen-reader, 320px and 200% zoom support."
+  },
+  "application_progress_projection": {
+    "projection_module": "artifacts/escape-hatch/src/lib/application-progress-checkpoint.ts",
+    "snapshot_schema": "escapehatch/application-progress-checkpoint/v1",
+    "scope": "one verified applicant + one bound opportunity + one same-employer application URL",
+    "freshness_ms": 300000,
+    "always_display": [
+      "application_name",
+      "current_section",
+      "last_verified_checkpoint",
+      "next_user_action",
+      "verified_required_count",
+      "unresolved_required_count",
+      "evidence_scope"
+    ],
+    "nullable_estimates": [
+      "observed_fields_percent",
+      "position_estimate_percent"
+    ],
+    "never_claim": [
+      "whole_application_completion_percent_without_full_employer_inventory",
+      "browser_url_is_submission",
+      "fill_is_employer_acceptance",
+      "clicked_button_is_completion",
+      "prior_page_receipt_is_current_evidence"
+    ],
+    "submission_proof": "independent employer confirmation receipt owned by existing listener/reconciliation; no auto-submit",
+    "status_values": [
+      "NOT_OBSERVED",
+      "IN_PROGRESS",
+      "NEEDS_USER",
+      "BLOCKED",
+      "READY_FOR_FINAL_REVIEW",
+      "SUBMITTED_CONFIRMED"
+    ],
+    "privacy": "never print or commit field values, private career evidence, employer profile answers or protected choices",
+    "no_second_tracker": "Use existing opportunity/tracker reconciliation; saved checkpoint is resumable user context, not authoritative ATS completion."
   }
 }

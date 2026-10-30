@@ -182,6 +182,50 @@ function Update-NativeHost([string]$Root, [string]$NativeAction) {
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $registration -Action $NativeAction -SourceRoot $Root -AppDataRoot $AppDataRoot
     if ($LASTEXITCODE -ne 0) { throw 'INSTALL_NATIVE_HOST_REFUSED: existing native registration was preserved; inspect the native-host registration owner.' }
 }
+# Reuse the approved bundled mascot PNG as a native Windows shortcut icon.
+# ICO can embed PNG bytes; no network request, image library, new dependency or
+# modified original asset is necessary. Existing user-owned icons are preserved.
+function Ensure-BrandIcon([string]$Root) {
+    $source = Join-Path $Root 'browser\application-assist\icons\mascot-48.png'
+    if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+        Write-Host 'INSTALL_BRAND_ICON=SOURCE_UNAVAILABLE'
+        return $null
+    }
+    $png = [IO.File]::ReadAllBytes($source)
+    if ($png.Length -lt 24 -or ($png[0] -ne 137) -or ($png[1] -ne 80) -or ($png[2] -ne 78) -or ($png[3] -ne 71)) {
+        throw 'INSTALL_BRAND_ICON_INVALID: expected bundled PNG; no original asset was changed.'
+    }
+    $target = Join-Path $AppDataRoot 'assets\EscapeHatch.ico'
+    if (Test-Path -LiteralPath $target) {
+        if (-not (Test-Path -LiteralPath $target -PathType Leaf)) { throw 'INSTALL_BRAND_ICON_COLLISION: preserved.' }
+        Write-Host 'INSTALL_BRAND_ICON=EXISTING_PRESERVED'
+        return $target
+    }
+    $parent = Split-Path -Parent $target
+    New-Item -ItemType Directory -Path $parent -Force | Out-Null
+    $temporary = Join-Path $parent ('EscapeHatch.' + [Guid]::NewGuid().ToString('N') + '.ico')
+    $stream = New-Object IO.MemoryStream
+    $writer = New-Object IO.BinaryWriter($stream)
+    try {
+        # ICONDIR (6 bytes) + one ICONDIRENTRY (16 bytes) + embedded PNG.
+        $writer.Write([uint16]0); $writer.Write([uint16]1); $writer.Write([uint16]1)
+        $writer.Write([byte]48); $writer.Write([byte]48)
+        $writer.Write([byte]0); $writer.Write([byte]0)
+        $writer.Write([uint16]1); $writer.Write([uint16]32)
+        $writer.Write([uint32]$png.Length); $writer.Write([uint32]22)
+        $writer.Write($png, 0, $png.Length); $writer.Flush()
+        [IO.File]::WriteAllBytes($temporary, $stream.ToArray())
+        # A concurrently created icon wins. Never overwrite a different file.
+        if (Test-Path -LiteralPath $target) { throw 'INSTALL_BRAND_ICON_COLLISION: preserved.' }
+        [IO.File]::Move($temporary, $target)
+        Write-Host 'INSTALL_BRAND_ICON=BUNDLED_MASCOT'
+        return $target
+    } finally {
+        $writer.Dispose(); $stream.Dispose()
+        if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force }
+    }
+}
+
 function Make-Shortcut([string]$Root) {
     $parent = Split-Path -Parent $shortcutPath
     New-Item -ItemType Directory -Path $parent -Force | Out-Null
@@ -193,6 +237,8 @@ function Make-Shortcut([string]$Root) {
         $link.Arguments = '-NoProfile -ExecutionPolicy Bypass -File "' + (Join-Path $Root 'Launch-EscapeHatch.ps1') + '"'
         $link.WorkingDirectory = $Root
         $link.Description = 'Open your private EscapeHatch application workspace'
+        $brandIcon = Ensure-BrandIcon $Root
+        if ($brandIcon) { $link.IconLocation = $brandIcon + ',0' }
         $link.Save()
         # Publish without overwrite: an externally created path wins the race.
         [IO.File]::Move($temporary, $shortcutPath)

@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
+import androidx.appcompat.widget.SwitchCompat
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -13,7 +14,11 @@ import java.util.UUID
 
 class CompanionActivity : AppCompatActivity() {
     private lateinit var store: AssistSessionStore
+    private lateinit var privacyPreference: ApplicantPrivacyPreferenceStore
+    private lateinit var privacyToggle: SwitchCompat
+    private lateinit var privacyStatus: TextView
     private lateinit var statusView: TextView
+    private var restoringPrivacyToggle = false
 
     private val requestPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -28,7 +33,22 @@ class CompanionActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_companion)
         store = AssistSessionStore(this)
+        privacyPreference = ApplicantPrivacyPreferenceStore(this)
         statusView = findViewById(R.id.status)
+        privacyStatus = findViewById(R.id.privacyPreferenceStatus)
+        privacyToggle = findViewById(R.id.applicantPrivacyToggle)
+        restoringPrivacyToggle = true
+        privacyToggle.isChecked = privacyPreference.isEnabled()
+        restoringPrivacyToggle = false
+        privacyToggle.setOnCheckedChangeListener { _, enabled ->
+            if (restoringPrivacyToggle) return@setOnCheckedChangeListener
+            if (!privacyPreference.setEnabled(enabled)) {
+                restoringPrivacyToggle = true
+                privacyToggle.isChecked = privacyPreference.isEnabled()
+                restoringPrivacyToggle = false
+            }
+            renderPrivacyPreference()
+        }
         findViewById<Button>(R.id.postNotification).setOnClickListener { postQuietNotification() }
         findViewById<Button>(R.id.dismissNotification).setOnClickListener {
             QuietAssistNotification.dismiss(this)
@@ -97,7 +117,12 @@ class CompanionActivity : AppCompatActivity() {
         render()
     }
 
+    private fun renderPrivacyPreference() {
+        privacyStatus.text = getString(if (privacyPreference.isEnabled()) R.string.privacy_preference_enabled else R.string.privacy_preference_disabled)
+    }
+
     private fun render() {
+        renderPrivacyPreference()
         val session = store.load()
         statusView.text = if (session == null) {
             "No session"

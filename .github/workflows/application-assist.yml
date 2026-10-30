@@ -5,6 +5,8 @@ on:
   push:
     paths:
       - "browser/application-assist/**"
+      - "android/application-assist/**"
+      - "tests/test_android_privacy_preference_contract.py"
       - "scripts/package_application_assist.py"
       - "tests/test_application_assist_package.py"
       - "artifacts/escape-hatch/*native*"
@@ -22,6 +24,8 @@ on:
   pull_request:
     paths:
       - "browser/application-assist/**"
+      - "android/application-assist/**"
+      - "tests/test_android_privacy_preference_contract.py"
       - "scripts/package_application_assist.py"
       - "tests/test_application_assist_package.py"
       - "artifacts/escape-hatch/*native*"
@@ -67,6 +71,8 @@ jobs:
             Outputs/application-assist/*.zip
             Outputs/application-assist/*.zip.release.json
           if-no-files-found: error
+      - name: Validate Android privacy preference bootstrap boundary
+        run: python tests/test_android_privacy_preference_contract.py
       - name: Validate assist session contract and extension safety
         run: python tests/test_application_assist_session_contract.py
       - name: Validate assist modality contract
@@ -131,3 +137,30 @@ jobs:
         run: python tests/test_native_host_registration.py
       - name: Observe native hydration inside Chrome and isolated browser profiles
         run: npm --prefix artifacts/escape-hatch run test:native-profile:browser
+
+  android-companion-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Java 17 for Android Gradle Plugin
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Android SDK without removed legacy tools package
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
+      - name: Set up supported Gradle version
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+      - name: Compile Android companion from canonical VERSION
+        run: gradle --no-daemon --project-dir android/application-assist :app:assembleDebug
+      - name: Keep a synthetic debug-build receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-companion-debug-${{ github.sha }}
+          path: android/application-assist/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error

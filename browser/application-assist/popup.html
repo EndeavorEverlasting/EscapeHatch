@@ -173,6 +173,23 @@
     }
     html.modality-phone .grid { grid-template-columns: 1fr; }
     html.modality-phone .actions { grid-template-columns: 1fr; }
+
+    .guide-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    #guideToggle { min-height: 40px; padding: 7px 10px; font-size: 12px; white-space: nowrap; }
+    .guide-scenes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 0; list-style: none; }
+    .guide-scene { width: 100%; min-height: 54px; font-size: 12px; text-align: left; }
+    .guide-scene.active { border-color: var(--accent); background: #e1f2ec; font-weight: 700; }
+    .guide-puzzle { padding: 12px; border-radius: 12px; background: #e9f4ef; border: 1px solid #b0d5cb; }
+    .guide-modes { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; }
+    .guide-modes input { min-height: 20px; width: 20px; margin: 0; }
+    .guide-navigation { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    #guideFind { flex: 1 1 100%; font-weight: 700; color: white; border-color: var(--accent); background: var(--accent); }
+    .guide-navigation button:disabled { opacity: 0.45; cursor: not-allowed; }
+    .guide-step-info { font-size: 11px; color: var(--muted); margin: 8px 0; }
+    @media (max-width: 360px) { .guide-scenes { grid-template-columns: 1fr; } }
+    @media (prefers-reduced-motion: reduce) {
+      button, .sheet-btn { transition: none !important; scroll-behavior: auto !important; }
+    }
   </style>
 </head>
 <body>
@@ -187,6 +204,29 @@
       Reuse my approval for recognized routine applicant privacy notices
     </label>
     <p id="privacyConsentState" class="privacy" role="status" aria-live="polite">Checking your private saved setting…</p>
+  </section>
+
+  <section class="panel" aria-label="Guided EscapeHatch puzzle">
+    <div class="guide-header">
+      <div><h2>EscapeHatch puzzle guide</h2><p class="privacy">Follow the journey; open any scene yourself.</p></div>
+      <button id="guideToggle" type="button" aria-controls="extensionJourneyGuide" aria-expanded="true">Hide guide</button>
+    </div>
+    <label class="guide-modes"><input id="guidedMode" type="checkbox" checked> Guided experience by default</label>
+    <p id="guideStatus" class="privacy" role="status" aria-live="polite">Loading your guide setting…</p>
+    <div id="extensionJourneyGuide">
+      <ol class="guide-scenes" id="guideScenes" aria-label="Choose a puzzle scene"></ol>
+      <div class="guide-puzzle">
+        <p id="guideScenePosition" class="guide-step-info">Puzzle piece 1 of 6</p>
+        <h3 id="guideSceneTitle">Prepare your identity</h3>
+        <p id="guideSceneDetail" class="privacy">Review your local profile before you apply.</p>
+        <div class="guide-navigation">
+          <button type="button" id="guidePrevious">Previous</button>
+          <button type="button" id="guideNext">Next</button>
+          <button type="button" id="guideFind">Open related control</button>
+        </div>
+      </div>
+      <p class="privacy">Opening a puzzle piece never fills, consents, signs in or submits. The employer page and policy checks still decide what can safely be filled.</p>
+    </div>
   </section>
 
   <div id="commandPalette" role="dialog" aria-label="Command palette" aria-modal="true">
@@ -278,5 +318,6 @@
   <script src="modality.js"></script>
   <script src="job-board-adapter.js"></script>
   <script src="popup.js"></script>
+  <script src="journey-guide.js"></script>
 </body>
 </html>

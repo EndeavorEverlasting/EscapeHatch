@@ -45,6 +45,22 @@ export function JourneyAtlas({ applications }: { applications: Application[] }) 
       </div>
     </section>
 
+    <section id="setup" aria-label="Install and open EscapeHatch" className="rounded-2xl border border-border bg-card p-5 sm:p-7" data-testid="journey-setup">
+      <p className="font-mono-app text-[11px] font-bold uppercase tracking-[.16em] text-primary">From download to first puzzle</p>
+      <h2 className="mt-2 font-display text-3xl">Set up once. Return to your work.</h2>
+      <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">The Windows developer-preview setup checks prerequisites, preserves existing installations and starts the owned local cockpit. The packaged Windows preview bundles Node/npm; the source-only script requires tools to be installed first. Neither path silently installs a Chrome extension or signs in to an employer.</p>
+      <ol className="mt-5 grid gap-3 md:grid-cols-3">
+        <li className="rounded-xl border border-border p-4"><span className="font-mono-app text-xs text-primary">01 · Download</span><p className="mt-2 font-bold">Get the verified source path</p><p className="mt-2 text-xs leading-5 text-muted-foreground">Review and download the unsigned guided setup script, or select the released preview ZIP and checksum from the build workflow.</p></li>
+        <li className="rounded-xl border border-border p-4"><span className="font-mono-app text-xs text-primary">02 · Install</span><p className="mt-2 font-bold">Confirm your Windows choices</p><p className="mt-2 text-xs leading-5 text-muted-foreground">Review security prompts, missing dependencies and the installation location. The installer creates the mascot shortcut for a new install and preserves previous user changes.</p></li>
+        <li className="rounded-xl border border-border p-4"><span className="font-mono-app text-xs text-primary">03 · Connect</span><p className="mt-2 font-bold">Open your cockpit and extension</p><p className="mt-2 text-xs leading-5 text-muted-foreground">Choose your saved career workspace, verify the intended Chrome profile, and use the extension's Guided mode. The app shows the next safe puzzle piece without making employer decisions for you.</p></li>
+      </ol>
+      <div className="mt-5 flex flex-wrap items-center gap-4 text-sm">
+        <a href="https://raw.githubusercontent.com/EndeavorEverlasting/EscapeHatch/main/Get-EscapeHatch.cmd" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 py-2 font-bold text-primary-foreground" data-testid="journey-download-setup">Review developer-preview setup <ArrowRight size={16} /></a>
+        <a href="https://github.com/EndeavorEverlasting/EscapeHatch/actions/workflows/windows-preview-package.yml" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1 font-bold text-primary underline underline-offset-4" data-testid="journey-bundled-package">View bundled preview packages <ArrowRight size={15} /></a>
+      </div>
+      <p className="mt-3 text-xs text-muted-foreground">This guide is navigation, not installed-state telemetry. Confirm actual installer, shortcut, extension enrollment and owner-bound profile readiness in the local application.</p>
+    </section>
+
     <section aria-label="Website destinations" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {[
         { route: '/', name: 'Today', detail: 'Home and recommendations' },
@@ -69,7 +85,7 @@ export function JourneyAtlas({ applications }: { applications: Application[] }) 
           <p className="font-mono-app text-[10px] text-muted-foreground">{String(index + 1).padStart(2, '0')} · {scene.id.replaceAll('_', ' ')} · {scene.location}</p>
           <p className="mt-2 text-sm font-semibold">{scene.title}</p>
           <div className="mt-2 flex items-center justify-between gap-3">
-            <Link href={scene.route} className="inline-flex min-h-10 items-center gap-1 text-xs font-bold text-primary underline underline-offset-4">{scene.action} <ArrowRight size={13} /></Link>
+            {scene.location === 'Setup' ? <a href="#setup" className="inline-flex min-h-10 items-center gap-1 text-xs font-bold text-primary underline underline-offset-4">{scene.action} <ArrowRight size={13} /></a> : <Link href={scene.route} className="inline-flex min-h-10 items-center gap-1 text-xs font-bold text-primary underline underline-offset-4">{scene.action} <ArrowRight size={13} /></Link>}
             {scene.operatorOnly && <span className="text-[10px] font-bold text-muted-foreground">You decide</span>}
           </div>
           <p className="mt-2 text-[11px] text-muted-foreground">Transitions: {scene.outgoing.length ? scene.outgoing.map(id => id.replaceAll('_', ' ').toLowerCase()).join(' · ') : 'No next scene in this registry'}</p>

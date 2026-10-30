@@ -29,6 +29,13 @@
         android:text="@string/privacy_preference_disabled" />
 
     <TextView
+        android:id="@+id/materialsReviewBoundary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/materials_review_boundary" />
+
+    <TextView
         android:id="@+id/status"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

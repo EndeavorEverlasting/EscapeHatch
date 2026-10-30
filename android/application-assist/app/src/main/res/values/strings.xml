@@ -9,4 +9,5 @@
     <string name="privacy_preference_label">Remember my choice for routine applicant privacy notices</string>
     <string name="privacy_preference_enabled">Enabled on this device. Employer-site consent automation is not available in this Android companion yet.</string>
     <string name="privacy_preference_disabled">Off on this device. No consent will be automated.</string>
+    <string name="materials_review_boundary">Résumé and cover letter review seals are confirmed in the desktop EscapeHatch Materials desk. This companion does not mark employer documents reviewed.</string>
 </resources>

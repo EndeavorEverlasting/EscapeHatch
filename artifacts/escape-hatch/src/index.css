@@ -141,3 +141,15 @@
 @media (prefers-reduced-motion: reduce) {
   .mascot-guidance-art { animation: none; transition: none; }
 }
+
+/* Materials desk: seal confirmation motion is local and reduced-motion safe (UP-60FBA76B5). */
+@keyframes materials-seal-set {
+  from { transform: scale(0.86) rotate(-8deg); opacity: 0.35; }
+  to { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.materials-seal--set .materials-seal__mark {
+  animation: materials-seal-set 280ms ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .materials-seal--set .materials-seal__mark { animation: none; }
+}

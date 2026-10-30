@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "EscapeHatch Application Assist",
-  "version": "1.6.0",
-  "description": "Same-application assist session that fills only policy-gated identity fields through a canonical Fill Plan. Never submits.",
+  "version": "1.6.1",
+  "description": "Guided, policy-gated same-application assist with local profile review and optional submission observation. Never auto-submits.",
   "permissions": [
     "activeTab",
     "scripting",

@@ -43,6 +43,9 @@
   let index = 0;
   let guided = true;
   let saving = false;
+  // Gate the first preference write on an actual saved-state readback.
+  toggle.disabled = true;
+  mode.disabled = true;
   function render() {
     panel.hidden = !guided;
     toggle.textContent = guided ? "Hide guide" : "Show guide";
@@ -101,7 +104,7 @@
     const id = resolveTarget(current, modeName);
     const destination = id ? doc.getElementById(id) : null;
     if (!destination) { guideStatus.textContent = "Open the linked EscapeHatch cockpit page or employer tab to continue."; return; }
-    destination.scrollIntoView?.({ block: "center", behavior: root.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
+    destination.scrollIntoView?.({ block: "center", behavior: root.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     (destination.querySelector?.("button:not([disabled]), input:not([disabled]), select:not([disabled])") ||
       (destination.matches?.("button:not([disabled]), input:not([disabled]), select:not([disabled])") ? destination : null))?.focus?.();
     guideStatus.textContent = "Target located. Choose the actual action yourself; no employer action was triggered.";
@@ -110,11 +113,15 @@
   // A fresh install is guide-on; previous user choice survives extension upgrades.
   root.chrome.storage.local.get(KEY).then(saved => {
     if (typeof saved[KEY] === "boolean") guided = saved[KEY];
+    toggle.disabled = false;
+    mode.disabled = false;
     render();
     guideStatus.textContent = guided
       ? "Guided mode is on. Use the six pieces, or work directly from any control."
       : "Quiet mode restored. Show guide any time.";
   }, () => {
+    toggle.disabled = false;
+    mode.disabled = false;
     guideStatus.textContent = "Guided preference unavailable; default guide remains visible.";
     render();
   });

@@ -100,8 +100,8 @@ export function projectApplicationCheckpoint(
   };
   if (!Array.isArray(checkpoint.sections)) return empty('Saved checkpoint invalid. Reinspect the selected job.');
   const sections = checkpoint.sections;
-  const ids = new Set(sections.map(s => s.id));
-  const indices = new Set(sections.map(s => s.index));
+  const ids = new Set(sections.map(s => s?.id));
+  const indices = new Set(sections.map(s => s?.index));
   const invalid = sections.some(s => !s || typeof s !== 'object' ||
     !s.id || !s.fingerprint || !Number.isInteger(s.index) || s.index < 0 ||
     !Array.isArray(s.fields) || new Set(s.fields.map(f => f.id)).size !== s.fields.length ||

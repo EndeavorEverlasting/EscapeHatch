@@ -39,6 +39,10 @@
 
 **Upstream provenance read, not dependencies installed:** private Upstream Intelligence Library master registry and Start Here guide (resolve their exact private identities through the authorized instruction index; never publish private Drive IDs); registered `impeccable` (UX audit method), `UP-A85AD9DC3` (Cathryn Lavery/Diagram Design, narrative hierarchy), `UP-AFAEE2D9D` (Julian Oczkowski, design brief/tokens), `UP-1B0AFA8BE` (Jakub Krehel, state-aware critique), `browser-view-transitions` (native transitions), `UP-60B0939CC` (Playwright visual snapshots), `UP-60FBA76B5` (motion accessibility). Each is a reference only; not claimed installed, licensed, or adopted wholesale. Existing `xyflow-reactflow` is explicitly **DEFER**.
 
+## Implemented pre-application question projection (F1 precursor)
+
+`artifacts/escape-hatch/src/lib/preapplication-studio.ts` now produces an actionable, one-question-at-a-time queue from the existing `AssistProfile` structure. It surfaces missing approved career state, experience/start-end dates, missing email, unreviewed per-role skills, optional technical teach-back examples and a reusable introduction. It **does not infer role-specific skills from the global skills list**, does not impose an artificial six-skill quota, persists nothing, and cannot authorize an employer action. It accepts PR #145's optional `skillsUsed` and `skillsUsedReviewedAt` fields without modifying that separately owned draft. The private owner/UI adapters and actual skill save/readback remain for F1–F3. Seven synthetic source tests are wired into the existing unit suite alongside ten checkpoint tests.
+
 ## Progress truth contract
 **Inputs:** independent applicant workspace identity, exact opportunity ID + employer application URL, timestamped section/field readback, known-versus-unknown section total, verified required controls, manual-only controls, observed trusted final-review boundary, and separately validated employer submission receipt.
 

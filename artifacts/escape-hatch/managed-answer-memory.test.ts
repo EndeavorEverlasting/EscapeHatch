@@ -204,6 +204,8 @@ test('saved applicant privacy opt-in checks only routine notice, persists, and r
   assert.equal(isRoutineApplicantPrivacyAcknowledgement('I acknowledge I have read the applicant Privacy Notice.'), true);
   assert.equal(isRoutineApplicantPrivacyAcknowledgement('I agree to the Privacy Policy and Terms of Service.'), false);
   assert.equal(isRoutineApplicantPrivacyAcknowledgement('I agree to marketing updates and the Privacy Policy.'), false);
+  assert.equal(isRoutineApplicantPrivacyAcknowledgement('I agree to cookies and the Privacy Policy.'), false);
+  assert.equal(isRoutineApplicantPrivacyAcknowledgement('I have not read the Privacy Notice.'), false);
   assert.equal(isRoutineApplicantPrivacyAcknowledgement('I consent to a background check and the Privacy Policy.'), false);
   assert.equal(isRoutineApplicantPrivacyAcknowledgement('I certify the application is accurate.'), false);
   assert.equal(parsePreferences({ ...emptyPreferences(), application_privacy_acknowledgement_enabled: 'yes' }), null);

@@ -142,6 +142,15 @@ def validate(contract: dict, root: Path = ROOT) -> None:
     if ["STUDIO_READY", "OPPORTUNITY_INTAKE"] not in arcs or (
             ["APPLICATION_BLOCKER", "FORM_PREPARATION"] not in arcs):
         raise SceneContractError("studio-to-application or blocker recovery transition missing")
+    studio_projection = "artifacts/escape-hatch/src/lib/preapplication-studio.ts"
+    studio_test = "artifacts/escape-hatch/src/lib/preapplication-studio.test.ts"
+    if studio.get("projection_module") != studio_projection or studio.get("projection_test") != studio_test:
+        raise SceneContractError("studio must route to its owned read-only question projection")
+    if not (root / studio_projection).is_file() or not (root / studio_test).is_file():
+        raise SceneContractError("studio projection or negative-case test file missing")
+    if "preapplication-studio.test.ts" not in (
+            root / "artifacts/escape-hatch/package.json").read_text(encoding="utf-8"):
+        raise SceneContractError("studio regression not wired into unit suite")
     routing = studio.get("data_routing", {})
     if not routing.get("skills") or not routing.get("reusable_answers") or not routing.get("progress"):
         raise SceneContractError("studio must route to existing private owners")

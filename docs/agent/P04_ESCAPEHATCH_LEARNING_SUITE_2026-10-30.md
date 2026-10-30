@@ -1,8 +1,8 @@
 # P04 — EscapeHatch Learning Suite: deterministic learning, immersive visualization and retained mastery
-**Date:** 2026-10-30  
-**Source:** operator's current private interview workbook, recent experience, and reviewed capability catalog — no private source IDs or transcript material are tracked here.  
-**Disposition:** P04 PLAN / DISTRIBUTE — source-inspected design and run-scoped machine handoff; **not product implementation, UI approval, dispatch proof, deployment or live-use proof**.  
-**Repository:** `EndeavorEverlasting/EscapeHatch`; base `main@bdbb64ecaf0447f50ee7269d132c4a4753439be0`; planning branch `plan/p04-learning-suite-deterministic-20261030`.  
+**Date:** 2026-10-30
+**Source:** operator's current private interview workbook, recent experience, and reviewed capability catalog — no private source IDs or transcript material are tracked here.
+**Disposition:** P04 PLAN / DISTRIBUTE — source-inspected design and run-scoped machine handoff; **not product implementation, UI approval, dispatch proof, deployment or live-use proof**.
+**Repository:** `EndeavorEverlasting/EscapeHatch`; base `main@bdbb64ecaf0447f50ee7269d132c4a4753439be0`; planning branch `plan/p04-learning-suite-deterministic-20261030`.
 **Parent continuity:** issue [#69](https://github.com/EndeavorEverlasting/EscapeHatch/issues/69) remains independently **OPEN** for application preparation; this new suite is an adjacent career-to-learning capability, not a replacement for that parent.
 
 ## 0. LAUNCH ORDER — use machine dispatch first, no operator prompt shuttle

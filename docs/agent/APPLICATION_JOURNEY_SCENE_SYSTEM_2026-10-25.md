@@ -378,3 +378,12 @@ The agent should independently read the private canonical career index, current 
 **Source authority and privacy:** Role-specific targets, statuses, employer URLs, profile answers, uploaded documents and compensation rules are derived **at run time** from the approved private career sources, **not** hardcoded or copied into this public GitHub document. The historical counts in §9.7 and target examples in older handoffs are not current queue truth. Do not use Gmail or infer submitted from local draft state. If the installed 21031 is still synthetic/incorrect, execute §9.8 repair first and preserve 21033. A merged sprint handoff is *instructional*, not local browser execution proof.
 
 **One local-agent invocation:** `P04 + P94 application sprint: follow AGENTS.md and docs/agent/P04_OPERATOR_LIGHT_APPLICATION_SPRINT_2026-10-27.md; use my real saved workspace to prepare up to 3 fit-qualified unsubmitted jobs while I rest; checkpoint each operator-only gate, move on, and leave a one-screen review queue without submitting.`
+
+
+## 2026-10-30 — Preparation Studio and per-opportunity progress checkpoint extension
+
+**Canonical contract:** `contracts/application-journey-scenes.v1.json` now contains `pre_application_studio` and `application_progress_projection` as subordinate registries. Its original 14 root scenes, recovery edges, and operator-only final Submit authority remain unchanged.
+
+**Execution & design handoff:** [P04_PREAPPLICATION_SKILLS_PROGRESS_2026-10-30.md](P04_PREAPPLICATION_SKILLS_PROGRESS_2026-10-30.md) and `harness/contracts/p04-preapplication-skill-progress-dispatch.v1.json`. Pre-application experience/skills intake must reuse approved private career state and answers; role-scoped skills remain owned by draft PR #145 pending reviewed integration. Progress is evidence-bound and resumable with explicit stale/unknown states; locally saved checkpoint flags cannot independently certify submission. The pure read-only projection and synthetic tests are in `artifacts/escape-hatch/src/lib/application-progress-checkpoint.ts` and `.test.ts`.
+
+**Release status:** this branch is a design/contract/test foundation, not a deployed Studio, persistent production checkpoint, or proved Windows/employer journey. Continue F0–F5 execution and protect parent Issue #69.

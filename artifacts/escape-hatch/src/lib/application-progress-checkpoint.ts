@@ -98,10 +98,12 @@ export function projectApplicationCheckpoint(
     ...empty('Open the verified employer receipt and reconcile the tracker.'),
     status: 'SUBMITTED_CONFIRMED', activeScene: checkpoint.activeScene || null,
   };
+  if (!Array.isArray(checkpoint.sections)) return empty('Saved checkpoint invalid. Reinspect the selected job.');
   const sections = checkpoint.sections;
   const ids = new Set(sections.map(s => s.id));
   const indices = new Set(sections.map(s => s.index));
-  const invalid = sections.some(s => !s.id || !s.fingerprint || !Number.isInteger(s.index) || s.index < 0 ||
+  const invalid = sections.some(s => !s || typeof s !== 'object' ||
+    !s.id || !s.fingerprint || !Number.isInteger(s.index) || s.index < 0 ||
     !Array.isArray(s.fields) || new Set(s.fields.map(f => f.id)).size !== s.fields.length ||
     s.fields.some(f => !f.id || !f.label || !['required','optional','unknown'].includes(f.required))) ||
     ids.size !== sections.length || indices.size !== sections.length ||
@@ -111,7 +113,7 @@ export function projectApplicationCheckpoint(
   if (invalid) return empty('Checkpoint structure changed. Reinspect the employer form.');
   const active = checkpoint.activeSectionId ? sections.find(s => s.id === checkpoint.activeSectionId) : null;
   const currentSection = active?.label ?? null;
-  const stale = !sections.length || sections.some(s => !isFresh(s.inspectedAt, now));
+  const stale = !sections.length || sections.some(s => !s.inspectedAt || !isFresh(s.inspectedAt, now));
   if (stale) return {
     ...empty('Resume the saved checkpoint in Chrome and reinspect required fields before filling.', 'STALE'),
     currentSection, activeScene: checkpoint.activeScene || null,

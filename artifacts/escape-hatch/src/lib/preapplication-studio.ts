@@ -55,6 +55,11 @@ export function projectPreapplicationStudio(
       'private_career_profile', true));
   } else {
     const roleIds = new Set<string>();
+    if (profile.experience.length === 0) {
+      questions.push(question('career.experience', 'STUDIO_TIMELINE', 'Add my work experience',
+        'Prepare job titles, employer names, responsibilities and reviewed dates before employer forms.',
+        'private_career_profile', true));
+    }
     if (!approved(profile.approvedAt)) {
       questions.push(question('career.approve', 'STUDIO_TIMELINE', 'Review my career timeline',
         'Confirm that imported career facts are yours before reusing them.',

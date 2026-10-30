@@ -37,7 +37,7 @@
 
 **Visual architecture:** reuse the application's Manrope/Newsreader/DM Mono and existing cream/teal design tokens; wide-screen two-panel workbench (pinned opportunity context + focused next-step card), narrow-screen vertical card stack; scene title, completed indicator, current step, next action and clear resume point. Use restrained native View Transitions 120–180ms only when supported; reduced-motion = instant. Progress is informational, never a gate that locks a user out. Avoid images, dashboards and animation that make filling fields slower.
 
-**Upstream provenance read, not dependencies installed:** private Upstream Intelligence Library `1Xc6T70qEvb9tE1JM9SNDBWXfbSiYBZyE` / Start Here guide `1pwYg8VaP-G23wiZ2bVABmmGEVjLTJyIh`; registered `impeccable` (UX audit method), `UP-A85AD9DC3` (Cathryn Lavery/Diagram Design, narrative hierarchy), `UP-AFAEE2D9D` (Julian Oczkowski, design brief/tokens), `UP-1B0AFA8BE` (Jakub Krehel, state-aware critique), `browser-view-transitions` (native transitions), `UP-60B0939CC` (Playwright visual snapshots), `UP-60FBA76B5` (motion accessibility). Each is a reference only; not claimed installed, licensed, or adopted wholesale. Existing `xyflow-reactflow` is explicitly **DEFER**.
+**Upstream provenance read, not dependencies installed:** private Upstream Intelligence Library master registry and Start Here guide (resolve their exact private identities through the authorized instruction index; never publish private Drive IDs); registered `impeccable` (UX audit method), `UP-A85AD9DC3` (Cathryn Lavery/Diagram Design, narrative hierarchy), `UP-AFAEE2D9D` (Julian Oczkowski, design brief/tokens), `UP-1B0AFA8BE` (Jakub Krehel, state-aware critique), `browser-view-transitions` (native transitions), `UP-60B0939CC` (Playwright visual snapshots), `UP-60FBA76B5` (motion accessibility). Each is a reference only; not claimed installed, licensed, or adopted wholesale. Existing `xyflow-reactflow` is explicitly **DEFER**.
 
 ## Progress truth contract
 **Inputs:** independent applicant workspace identity, exact opportunity ID + employer application URL, timestamped section/field readback, known-versus-unknown section total, verified required controls, manual-only controls, observed trusted final-review boundary, and separately validated employer submission receipt.
@@ -68,7 +68,7 @@
 
 **P08 protected control:** Existing login return → two stable same-page observations → Resume preparation and the protected operator-only final Submit. Never weaken current scene continuity while implementing progress.
 
-**One actionable first local command** (from `C:\Users\CheeksMcClappeth\dev\EscapeHatch`, in PowerShell; inspect local status/dirty work first, do not reset):
+**One actionable first local command** (from the existing local EscapeHatch checkout, in PowerShell; inspect local status/dirty work first, do not reset):
 ```powershell
 git fetch --all --prune --tags; if ($LASTEXITCODE) { exit $LASTEXITCODE }; git status --short; git worktree list; git branch -r --list "*preapplication-skills-progress*"; git log -1 --oneline origin/feat/p04-preapplication-skills-progress-20261030
 ```

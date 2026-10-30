@@ -5,6 +5,8 @@ on:
   push:
     paths:
       - "browser/application-assist/**"
+      - "android/application-assist/**"
+      - "tests/test_android_privacy_preference_contract.py"
       - "scripts/package_application_assist.py"
       - "tests/test_application_assist_package.py"
       - "artifacts/escape-hatch/*native*"
@@ -22,6 +24,8 @@ on:
   pull_request:
     paths:
       - "browser/application-assist/**"
+      - "android/application-assist/**"
+      - "tests/test_android_privacy_preference_contract.py"
       - "scripts/package_application_assist.py"
       - "tests/test_application_assist_package.py"
       - "artifacts/escape-hatch/*native*"
@@ -67,6 +71,8 @@ jobs:
             Outputs/application-assist/*.zip
             Outputs/application-assist/*.zip.release.json
           if-no-files-found: error
+      - name: Validate Android privacy preference bootstrap boundary
+        run: python tests/test_android_privacy_preference_contract.py
       - name: Validate assist session contract and extension safety
         run: python tests/test_application_assist_session_contract.py
       - name: Validate assist modality contract

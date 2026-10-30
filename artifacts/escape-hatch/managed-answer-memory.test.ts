@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from '@playwright/test';
-import { emptyPreferences, matchQuestion, acceptDiscoveredAnswer, discoveredValue, parsePreferences } from './src/lib/application-preferences.ts';
+import { emptyPreferences, matchQuestion, acceptDiscoveredAnswer, discoveredValue, parsePreferences, isRoutineApplicantPrivacyAcknowledgement } from './src/lib/application-preferences.ts';
 import { installAnswerMemory, mergeCapturedAnswer, mergeQuestionCatalog, scanQuestionCatalog, type CapturedAnswer } from './managed-answer-memory.ts';
 import { fillSavedPreferences } from './managed-form.ts';
 
@@ -197,4 +197,45 @@ test('captured employer relationship is a question candidate, never a global emp
   const generic = mergeCapturedAnswer(emptyPreferences(),{...event,question:'Current employee',normalized_question:'current employee'});
   assert.equal(generic.preferences['employment.current_employee'],undefined);
   assert.equal(generic.discovered_answers?.['current employee employer example employer']?.value,'No');
+});
+
+
+test('saved applicant privacy opt-in checks only routine notice, persists, and respects a later uncheck', async () => {
+  assert.equal(isRoutineApplicantPrivacyAcknowledgement('I acknowledge I have read the applicant Privacy Notice.'), true);
+  assert.equal(isRoutineApplicantPrivacyAcknowledgement('I agree to the Privacy Policy and Terms of Service.'), false);
+  assert.equal(isRoutineApplicantPrivacyAcknowledgement('I agree to marketing updates and the Privacy Policy.'), false);
+  assert.equal(isRoutineApplicantPrivacyAcknowledgement('I agree to cookies and the Privacy Policy.'), false);
+  assert.equal(isRoutineApplicantPrivacyAcknowledgement('I have not read the Privacy Notice.'), false);
+  assert.equal(isRoutineApplicantPrivacyAcknowledgement('I consent to a background check and the Privacy Policy.'), false);
+  assert.equal(isRoutineApplicantPrivacyAcknowledgement('I certify the application is accurate.'), false);
+  assert.equal(parsePreferences({ ...emptyPreferences(), application_privacy_acknowledgement_enabled: 'yes' }), null);
+
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const page = await browser.newPage();
+    await page.setContent(`<form>
+      <label><input type="checkbox" id="privacy">I acknowledge I have read the applicant Privacy Notice.</label>
+      <label><input type="checkbox" id="marketing">I agree to marketing updates and the Privacy Policy.</label>
+      <label><input type="checkbox" id="terms">I agree to the Privacy Policy and Terms of Service.</label>
+      <label><input type="checkbox" id="certify">I certify my information is accurate.</label>
+      <button type="submit">Submit application</button>
+    </form>`);
+    const disabled = emptyPreferences();
+    await fillSavedPreferences(page, disabled);
+    assert.equal(await page.locator('#privacy').isChecked(), false);
+    const enabled = parsePreferences({ ...emptyPreferences(), application_privacy_acknowledgement_enabled: true });
+    assert.ok(enabled);
+    const first = await fillSavedPreferences(page, enabled);
+    assert.ok(first.filled.includes('privacy.application_notice_acknowledged'));
+    assert.equal(await page.locator('#privacy').isChecked(), true);
+    assert.equal(await page.locator('#marketing').isChecked(), false);
+    assert.equal(await page.locator('#terms').isChecked(), false);
+    assert.equal(await page.locator('#certify').isChecked(), false);
+    await page.locator('#privacy').uncheck();
+    const second = await fillSavedPreferences(page, enabled);
+    assert.ok(second.skipped.includes('privacy.application_notice_acknowledged:user_override'));
+    assert.equal(await page.locator('#privacy').isChecked(), false);
+  } finally {
+    await browser.close();
+  }
 });

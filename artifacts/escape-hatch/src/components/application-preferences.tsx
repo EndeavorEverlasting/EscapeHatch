@@ -44,6 +44,16 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
     <h2 className="font-display text-2xl">Reusable application answers</h2>
     <p className="mt-2 text-sm text-muted-foreground">Save your own answers once. Leave unknown facts blank. Review the employer form before submitting. Agreements and certifications stay manual.</p>
     <fieldset disabled={!ready || busy}>
+      <section className="mt-4 rounded-xl border border-border p-4" aria-label="Applicant privacy acknowledgements">
+        <h3 className="font-display text-xl">Applicant privacy acknowledgements</h3>
+        <label className="mt-3 flex items-start gap-2 text-sm">
+          <input type="checkbox" data-testid="applicant-privacy-acknowledgement-toggle"
+            checked={data.application_privacy_acknowledgement_enabled === true}
+            onChange={event => { setDirty(true); onEdit?.(); setData(current => ({ ...current, application_privacy_acknowledgement_enabled: event.target.checked })); }} />
+          Reuse my approval for routine applicant privacy notices during job applications
+        </label>
+        <p className="mt-2 text-xs text-muted-foreground">Off until you enable and save it. EscapeHatch checks only clearly identified application privacy acknowledgements, verifies the result, and leaves optional marketing/data sharing, contracts, certifications, signatures, and final submission for your own review. You can turn this off or clear it at any time.</p>
+      </section>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {questions.filter(q => q.automation_policy === 'fill_if_explicit_preference' && q.confirmation_policy === 'until_changed' && q.id !== 'identity.full_name' && !q.id.startsWith('experience.') && !['education.institution', 'education.credential', 'education.field_of_study', 'education.dates', 'education.details'].includes(q.id)).map(q => {
           const label = q.id === 'identity.title' ? 'Salutation (Mr., Ms., Dr.)' : q.id === 'identity.job_title' ? 'Target opportunity title' : q.id === 'identity.professional_title' ? 'Selected professional title' : q.aliases[0];

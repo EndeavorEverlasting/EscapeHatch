@@ -1,7 +1,11 @@
 import type { Page } from '@playwright/test';
-import { matchQuestion, normalizeQuestion, discoveredValue, optionMatches, reusableValue, type Preferences } from './src/lib/application-preferences.ts';
+import { matchQuestion, normalizeQuestion, discoveredValue, optionMatches, reusableValue, isRoutineApplicantPrivacyAcknowledgement, type Preferences } from './src/lib/application-preferences.ts';
 
 export type FillOutcome = { filled: string[]; skipped: string[] };
+
+// Prevent a repeated Prepare from overriding an applicant's deliberate uncheck
+// after EscapeHatch previously checked the same notice in this browser session.
+const privacyChecksApplied = new WeakMap<Page, Set<string>>();
 
 export function internationalPhone(value: string, country: string): string | null {
   const digits = value.replace(/\D/g, '');
@@ -118,7 +122,7 @@ export async function captureMilitaryAnswers(page: Page): Promise<Record<string,
   return Object.fromEntries(Object.entries(answers).filter(([, value]) => value.trim() && value.length <= 512 && !/^(select|choose|please select|select one)(?:\b|$)/i.test(value)));
 }
 
-// Changes field values and explicit binary toggles only; never activates navigation, agreements or submission.
+// Fills approved values and narrowly scoped saved privacy-notice acknowledgements; never navigates, certifies, or submits.
 export async function fillSavedPreferences(page: Page, preferences: Preferences, employerName = ''): Promise<FillOutcome> {
   const result: FillOutcome = { filled: [], skipped: [] };
   const { controls, descriptors, available, ids } = await inspectPreferenceFields(page, employerName);
@@ -130,7 +134,34 @@ export async function fillSavedPreferences(page: Page, preferences: Preferences,
   }
   for (let index = 0; index < controls.length; index++) {
     const control = controls[index], descriptor = descriptors[index];
-    if (['hidden', 'file', 'checkbox', 'password', 'submit', 'button', 'reset'].includes(descriptor.type)) continue;
+    if (descriptor.type === 'checkbox') {
+      if (preferences.application_privacy_acknowledgement_enabled !== true) continue;
+      const noticeText = await control.evaluate(element => {
+        const field = element as HTMLInputElement;
+        const labels = Array.from(field.labels || []).map(label => label.textContent || '');
+        const aria = field.getAttribute('aria-label') || '';
+        const labelledBy = (field.getAttribute('aria-labelledby') || '').split(/\s+/).map(id => document.getElementById(id)?.textContent || '');
+        return [...labels, aria, ...labelledBy].filter(Boolean).join(' ');
+      });
+      if (!isRoutineApplicantPrivacyAcknowledgement(noticeText)) continue;
+      const proofId = 'privacy.application_notice_acknowledged';
+      try {
+        if (!await control.isVisible() || !await control.isEnabled() || await control.getAttribute('readonly') !== null) {
+          result.skipped.push(proofId + ':unavailable'); continue;
+        }
+        const fingerprint = [page.url(), await control.getAttribute('id') || '', await control.getAttribute('name') || '', normalizeQuestion(noticeText)].join('|');
+        if (await control.isChecked()) { result.skipped.push(proofId + ':preserved'); continue; }
+        const prior = privacyChecksApplied.get(page);
+        if (prior?.has(fingerprint)) { result.skipped.push(proofId + ':user_override'); continue; }
+        await control.check({ timeout: 2500 });
+        if (!await control.isChecked()) throw new Error('privacy acknowledgement not retained');
+        if (prior) prior.add(fingerprint);
+        else privacyChecksApplied.set(page, new Set([fingerprint]));
+        result.filled.push(proofId);
+      } catch { result.skipped.push(proofId + ':not_verified'); }
+      continue;
+    }
+    if (['hidden', 'file', 'password', 'submit', 'button', 'reset'].includes(descriptor.type)) continue;
     if (ids[index].length !== 1) { result.skipped.push('unmapped_or_ambiguous'); continue; }
     const id = ids[index][0];
     if (preferences.optional_omissions?.includes(id) && !await control.evaluate(element => {

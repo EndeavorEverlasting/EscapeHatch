@@ -111,6 +111,38 @@ Write-Output 'DEPENDENCY_FIXTURE=PASS'
         self.assertIn("<BirdsongControl />", shell)
         self.assertIn('focusOpportunity=', shell)
 
+    @unittest.skipUnless(shutil.which('powershell.exe'), 'Windows PowerShell required')
+    def test_brand_icon_is_generated_offline_and_preserves_existing_file(self):
+        with tempfile.TemporaryDirectory(prefix='eh-brand-icon-') as temporary:
+            probe = Path(temporary) / "verify-brand.ps1"
+            probe.write_text(r"""
+$ErrorActionPreference = 'Stop'
+$installer = Join-Path $env:EH_INSTALL_SOURCE 'scripts\windows\EscapeHatch-Install.ps1'
+$tokens = $null; $errors = $null
+$ast = [Management.Automation.Language.Parser]::ParseFile($installer, [ref]$tokens, [ref]$errors)
+if ($errors.Count) { throw 'Installer PowerShell parse failed' }
+$function = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Ensure-BrandIcon' }, $true)
+if ($null -eq $function) { throw 'Bundled-brand icon generator missing' }
+Invoke-Expression $function.Extent.Text
+$AppDataRoot = $env:EH_ICON_TEST_ROOT
+$path = Ensure-BrandIcon $env:EH_INSTALL_SOURCE
+if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw 'Icon not created' }
+$bytes = [IO.File]::ReadAllBytes($path)
+if ($bytes.Length -lt 50 -or $bytes[0] -ne 0 -or $bytes[1] -ne 0 -or $bytes[2] -ne 1 -or $bytes[3] -ne 0 -or $bytes[4] -ne 1 -or $bytes[5] -ne 0) { throw 'ICO directory invalid' }
+if ($bytes[22] -ne 137 -or $bytes[23] -ne 80 -or $bytes[24] -ne 78 -or $bytes[25] -ne 71) { throw 'Bundled PNG payload missing' }
+$before = [IO.File]::ReadAllBytes($path)
+$second = Ensure-BrandIcon $env:EH_INSTALL_SOURCE
+if ($second -cne $path -or -not [Linq.Enumerable]::SequenceEqual([byte[]]$before, [byte[]][IO.File]::ReadAllBytes($path))) { throw 'Existing icon altered' }
+Write-Output 'BRAND_ICON_GENERATION=PASS'
+""", encoding="utf-8")
+            result = subprocess.run(
+                ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(probe)],
+                capture_output=True, text=True, timeout=40,
+                env={**os.environ, "EH_INSTALL_SOURCE": str(ROOT), "EH_ICON_TEST_ROOT": str(Path(temporary) / "appdata")},
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("BRAND_ICON_GENERATION=PASS", result.stdout)
+
     def test_existing_installation_updater_is_consentful_and_non_destructive(self):
         source = (ROOT / "Get-EscapeHatch.cmd").read_text(encoding="utf-8")
         self.assertIn("call :safe_update_existing", source)

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "EscapeHatch Application Assist",
-  "version": "1.6.1",
+  "version": "1.6.0",
   "description": "Guided, policy-gated same-application assist with local profile review and optional submission observation. Never auto-submits.",
   "permissions": [
     "activeTab",

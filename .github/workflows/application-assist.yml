@@ -148,14 +148,14 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Set up Android SDK
+      - name: Set up Android SDK without removed legacy tools package
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
       - name: Set up supported Gradle version
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
-      - name: Install Android 34 SDK platform and build tools
-        run: sdkmanager --install "platforms;android-34" "build-tools;34.0.0"
       - name: Compile Android companion from canonical VERSION
         run: gradle --no-daemon --project-dir android/application-assist :app:assembleDebug
       - name: Keep a synthetic debug-build receipt

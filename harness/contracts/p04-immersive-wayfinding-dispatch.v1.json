@@ -1,0 +1,146 @@
+{
+  "schema": "escapehatch/p04-immersive-wayfinding-dispatch/v1",
+  "parent_issue": "https://github.com/EndeavorEverlasting/EscapeHatch/issues/69",
+  "branch": "feat/p04-immersive-wayfinding-bootstrap-20261030",
+  "sibling_branch_dependency": "feat/p04-preapplication-skills-progress-20261030",
+  "allowed_runtime_modes": {
+    "current": "CURRENT_CHAT_RUNTIME+GitHub_provider",
+    "windows": "LOCAL_AGENT_RUNTIME",
+    "chrome_profile": "OPERATOR_OR_PHYSICAL_RUNTIME"
+  },
+  "owned_contracts": [
+    "contracts/application-journey-scenes.v1.json"
+  ],
+  "ownership_policy": "READ_ONLY_CANONICAL; UI projections must not create competing source",
+  "invariants": [
+    "no_unreviewed_autofill",
+    "no_terminal_auto_submit",
+    "no_credential_or_MFA_collection",
+    "no_permission_escalation",
+    "no_cross_applicant_profile_merge",
+    "existing_icons_and_dirty_work_preserved",
+    "guide_mode_not_autofill_authority"
+  ],
+  "lanes": [
+    {
+      "id": "W0",
+      "name": "source_and_collisions",
+      "status": "PROVIDER_REVIEWED",
+      "dependencies": [],
+      "paths": [
+        "AGENTS.md",
+        "contracts/application-journey-scenes.v1.json"
+      ],
+      "tests": [
+        "git status --short",
+        "git fetch origin --prune"
+      ],
+      "live_proof": "UNPROVEN"
+    },
+    {
+      "id": "W1",
+      "name": "website_wayfinding",
+      "status": "REMOTE_COMMITTED_VALIDATION_PENDING",
+      "dependencies": [
+        "W0"
+      ],
+      "paths": [
+        "artifacts/escape-hatch/src/App.tsx",
+        "artifacts/escape-hatch/src/components/journey-atlas.tsx",
+        "artifacts/escape-hatch/src/lib/journey-wayfinding.ts"
+      ],
+      "tests": [
+        "npm --prefix artifacts/escape-hatch run test:unit",
+        "npm --prefix artifacts/escape-hatch run typecheck",
+        "npm --prefix artifacts/escape-hatch run test:browser"
+      ],
+      "live_proof": "UNPROVEN"
+    },
+    {
+      "id": "W2",
+      "name": "extension_guided_mode",
+      "status": "REMOTE_COMMITTED_VALIDATION_PENDING",
+      "dependencies": [
+        "W0"
+      ],
+      "paths": [
+        "browser/application-assist/popup.html",
+        "browser/application-assist/journey-guide.js"
+      ],
+      "tests": [
+        "python tests/test_application_assist_modality_contract.py"
+      ],
+      "live_proof": "UNPROVEN"
+    },
+    {
+      "id": "W3",
+      "name": "branded_windows_bootstrap",
+      "status": "REMOTE_COMMITTED_VALIDATION_PENDING",
+      "dependencies": [
+        "W0"
+      ],
+      "paths": [
+        "scripts/windows/EscapeHatch-Install.ps1"
+      ],
+      "tests": [
+        "python tests/test_escapehatch_installer_source_delivery.py",
+        "python tests/test_windows_preview_package.py"
+      ],
+      "live_proof": "UNPROVEN"
+    },
+    {
+      "id": "W4",
+      "name": "owner_bound_studio_and_progress_integration",
+      "status": "PENDING",
+      "dependencies": [
+        "W1",
+        "W2",
+        "PR147"
+      ],
+      "paths": [
+        "artifacts/escape-hatch/src/components/managed-browser-assist.tsx",
+        "artifacts/escape-hatch/src/lib/application-journey-projection.ts"
+      ],
+      "tests": [
+        "python scripts/validate_application_autofill_parent.py",
+        "python scripts/validate_application_journey.py"
+      ],
+      "live_proof": "UNPROVEN"
+    },
+    {
+      "id": "W5",
+      "name": "measured_installed_acceptance",
+      "status": "PENDING_OPERATOR_HOST",
+      "dependencies": [
+        "W1",
+        "W2",
+        "W3",
+        "W4"
+      ],
+      "paths": [],
+      "tests": [
+        "synthetic_windows_chrome_installed_flow",
+        "P08_accessibility_320px_200percent_reduced_motion",
+        "P82_cold_warm_bootstrap_comparison"
+      ],
+      "live_proof": "UNPROVEN"
+    }
+  ],
+  "proof_ontology": [
+    "SOURCE_READ",
+    "REMOTE_COMMITTED",
+    "CI_PASSED",
+    "PR_OPEN",
+    "MERGED",
+    "WINDOWS_INSTALLED",
+    "CHROME_EXTENSION_ENROLLED",
+    "ATS_OBSERVED"
+  ],
+  "forbidden": [
+    "publish_private_registry_rows",
+    "hardcode_real_applicant_answers",
+    "click_final_submit",
+    "guess_extension_identity",
+    "destructive_reset_user_state"
+  ]
+}

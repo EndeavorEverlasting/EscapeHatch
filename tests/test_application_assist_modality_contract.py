@@ -100,6 +100,19 @@ class ApplicationAssistModalityTests(unittest.TestCase):
         ):
             self.assertIn(f'id="{control_id}"', self.html)
         self.assertIn('src="modality.js"', self.html)
+        self.assertIn('src="journey-guide.js"', self.html)
+        for control_id in ("guideToggle", "guidedMode", "extensionJourneyGuide", "guideScenes", "guideFind"):
+            self.assertIn(f'id="{control_id}"', self.html)
+
+
+    def test_node_guided_journey_harness_converges(self) -> None:
+        script = ROOT / "tests" / "test_extension_journey_guide.mjs"
+        completed = subprocess.run(
+            ["node", "--test", str(script)], cwd=ROOT, text=True,
+            capture_output=True, check=False,
+        )
+        if completed.returncode:
+            self.fail(completed.stdout + completed.stderr)
 
     def test_node_modality_harness_converges(self) -> None:
         script = ROOT / "tests" / "test_application_assist_modality.mjs"

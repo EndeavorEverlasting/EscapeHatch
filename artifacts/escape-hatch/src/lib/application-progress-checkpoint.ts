@@ -48,9 +48,13 @@ export type ProgressProjection = {
   evidence: 'NONE' | 'STALE' | 'CURRENT_PAGE_ONLY' | 'FULL_INVENTORY';
   inspectedRequired: number;
   verifiedRequired: number;
+  unresolvedRequired: number | null; // null until fresh bound inventory exists
   unknownRequired: number;
   manualDecisionsRemaining: number;
   currentSection: string | null;
+  lastVerifiedAt: string | null;
+  positionStep: number | null;
+  positionTotalSections: number | null;
   activeScene: string | null;
   observedFieldsPercent: number | null;
   positionEstimatePercent: number | null; // position, NEVER application-completion percent
@@ -68,8 +72,9 @@ function isFresh(at: string, now: number): boolean {
 }
 const empty = (nextAction: string, evidence: ProgressProjection['evidence'] = 'NONE'): ProgressProjection => ({
   status: 'NOT_OBSERVED', evidence, inspectedRequired: 0, verifiedRequired: 0,
-  unknownRequired: 0, manualDecisionsRemaining: 0, currentSection: null,
-  activeScene: null, observedFieldsPercent: null, positionEstimatePercent: null,
+  unresolvedRequired: null, unknownRequired: 0, manualDecisionsRemaining: 0,
+  currentSection: null, lastVerifiedAt: null, positionStep: null,
+  positionTotalSections: null, activeScene: null, observedFieldsPercent: null, positionEstimatePercent: null,
   applicationCompletionPercent: null, nextAction, finalSubmitAutomated: false,
 });
 /** Recompute after every dynamic reveal, reload, selected job change, or checkpoint return. */
@@ -113,10 +118,12 @@ export function projectApplicationCheckpoint(
   if (invalid) return empty('Checkpoint structure changed. Reinspect the employer form.');
   const active = checkpoint.activeSectionId ? sections.find(s => s.id === checkpoint.activeSectionId) : null;
   const currentSection = active?.label ?? null;
+  const lastVerifiedAt = active?.inspectedAt ?? (sections.length
+    ? sections.map(s => s.inspectedAt).sort().at(-1) ?? null : null);
   const stale = !sections.length || sections.some(s => !s.inspectedAt || !isFresh(s.inspectedAt, now));
   if (stale) return {
     ...empty('Resume the saved checkpoint in Chrome and reinspect required fields before filling.', 'STALE'),
-    currentSection, activeScene: checkpoint.activeScene || null,
+    currentSection, lastVerifiedAt, activeScene: checkpoint.activeScene || null,
   };
   const required = sections.flatMap(s => s.fields).filter(f => f.required === 'required');
   const unknownRequired = sections.flatMap(s => s.fields).filter(f => f.required === 'unknown').length;
@@ -142,8 +149,12 @@ export function projectApplicationCheckpoint(
   return {
     status,
     evidence: allInventoried ? 'FULL_INVENTORY' : 'CURRENT_PAGE_ONLY',
-    inspectedRequired: required.length, verifiedRequired, unknownRequired,
-    manualDecisionsRemaining, currentSection, activeScene: checkpoint.activeScene || null,
+    inspectedRequired: required.length, verifiedRequired,
+    unresolvedRequired: required.length - verifiedRequired, unknownRequired,
+    manualDecisionsRemaining, currentSection, lastVerifiedAt,
+    positionStep: active && checkpoint.knownSectionCount !== null ? active.index + 1 : null,
+    positionTotalSections: checkpoint.knownSectionCount,
+    activeScene: checkpoint.activeScene || null,
     observedFieldsPercent, positionEstimatePercent, applicationCompletionPercent: null,
     nextAction, finalSubmitAutomated: false,
   };

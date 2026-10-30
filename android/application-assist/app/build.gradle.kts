@@ -1,3 +1,8 @@
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+}
+
 // Product release identity comes from repository VERSION, never an independent Android label.
 val canonicalVersion = rootProject.file("../../VERSION").readText().trim()
 val versionParts = canonicalVersion.split(".")
@@ -10,10 +15,6 @@ require(releaseNumbers[0] in 0..2099 && releaseNumbers[1] in 0..999 && releaseNu
 }
 val canonicalVersionCode = releaseNumbers[0] * 1_000_000 + releaseNumbers[1] * 1_000 + releaseNumbers[2]
 
-plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-}
 
 android {
     namespace = "com.escapehatch.assist"

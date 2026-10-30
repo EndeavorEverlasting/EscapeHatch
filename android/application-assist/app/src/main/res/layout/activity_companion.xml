@@ -13,6 +13,21 @@
         android:textSize="22sp"
         android:textStyle="bold" />
 
+    <com.google.android.material.switchmaterial.SwitchMaterial
+        android:id="@+id/applicantPrivacyToggle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:minHeight="48dp"
+        android:text="@string/privacy_preference_label" />
+
+    <TextView
+        android:id="@+id/privacyPreferenceStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="@string/privacy_preference_disabled" />
+
     <TextView
         android:id="@+id/status"
         android:layout_width="match_parent"

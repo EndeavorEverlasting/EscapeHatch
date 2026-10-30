@@ -87,7 +87,7 @@ export function isRoutineApplicantPrivacyAcknowledgement(label: string): boolean
   const applicationProcessing = /\b(?:process|processing) (?:of )?(?:my|your) personal (?:data|information) (?:for|in connection with) (?:this |the )?(?:job )?(?:application|recruitment)\b/.test(text);
   if (!notice && !applicationProcessing) return false;
   if (!/\b(?:acknowledge|acknowledgment|agree|read|consent|accept|understand)\b/.test(text)) return false;
-  if (/\b(?:do not agree|do not consent|decline|disagree|opt out|marketing|promotional|newsletter|talent community|future opportunities|future vacancies|background check|arbitration|terms and conditions|terms of service|terms of use|employment agreement|certify|certification|attest|signature|waive|waiver|release|biometric|automated decision|text messages|sms|third parties|third party|data sharing|sharing my data|share my data)\b/.test(text)) return false;
+  if (/\b(?:do not agree|do not consent|do not accept|have not read|did not read|do not acknowledge|decline|disagree|opt out|cookie|cookies|tracking|analytics|advertising|marketing|promotional|newsletter|talent community|future opportunities|future vacancies|background check|arbitration|terms and conditions|terms of service|terms of use|employment agreement|certify|certification|attest|signature|waive|waiver|release|biometric|automated decision|text messages|sms|third parties|third party|data sharing|sharing my data|share my data)\b/.test(text)) return false;
   return true;
 }
 

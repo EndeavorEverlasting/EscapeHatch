@@ -26,6 +26,10 @@ test('one observed section is not application completion; bounded position is ex
   const p = projectApplicationCheckpoint(fixture(), 'job-123', url, now);
   assert.equal(p.evidence, 'CURRENT_PAGE_ONLY');
   assert.equal(p.observedFieldsPercent, 75);
+  assert.equal(p.unresolvedRequired,1);
+  assert.equal(p.positionStep,3);
+  assert.equal(p.positionTotalSections,5);
+  assert.equal(p.lastVerifiedAt,fresh);
   assert.equal(p.positionEstimatePercent, 40);
   assert.equal(p.applicationCompletionPercent, null);
   assert.equal(p.status, 'IN_PROGRESS');
@@ -44,6 +48,8 @@ test('stale evidence keeps named resume point, but invalidates numeric claims', 
   assert.equal(p.evidence, 'STALE');
   assert.equal(p.currentSection, 'Role-specific skills');
   assert.equal(p.observedFieldsPercent, null);
+  assert.equal(p.unresolvedRequired,null);
+  assert.equal(p.lastVerifiedAt,'2026-10-30T16:00:00Z');
   assert.match(p.nextAction, /reinspect/i);
 });
 test('another opportunity or URL never inherits a checkpoint', () => {

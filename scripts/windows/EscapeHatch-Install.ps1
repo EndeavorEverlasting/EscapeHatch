@@ -204,8 +204,8 @@ function Ensure-BrandIcon([string]$Root) {
     $parent = Split-Path -Parent $target
     New-Item -ItemType Directory -Path $parent -Force | Out-Null
     $temporary = Join-Path $parent ('EscapeHatch.' + [Guid]::NewGuid().ToString('N') + '.ico')
-    $stream = New-Object IO.MemoryStream
-    $writer = New-Object IO.BinaryWriter($stream)
+    $stream = [IO.MemoryStream]::new()
+    $writer = [IO.BinaryWriter]::new($stream)
     try {
         # ICONDIR (6 bytes) + one ICONDIRENTRY (16 bytes) + embedded PNG.
         $writer.Write([uint16]0); $writer.Write([uint16]1); $writer.Write([uint16]1)

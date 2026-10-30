@@ -118,10 +118,56 @@ def validate(contract: dict, root: Path = ROOT) -> None:
         if marker not in ux:
             raise SceneContractError("missing visible coached auth/prerequisite control "+marker)
 
+
+    # The parent scene IDs are immutable; the studio is a typed subordinate journey.
+    studio = contract.get("pre_application_studio", {})
+    expected_studio = (
+        "STUDIO_WELCOME", "STUDIO_TIMELINE", "STUDIO_ROLE_SKILLS",
+        "STUDIO_SKILL_STORIES", "STUDIO_ANSWERS", "STUDIO_DOCUMENTS",
+        "STUDIO_READY", "APPLICATION_RESUME_CARD", "APPLICATION_BLOCKER",
+    )
+    subscenes = studio.get("subscenes", [])
+    if not isinstance(subscenes, list) or [x.get("id") for x in subscenes if isinstance(x, dict)] != list(expected_studio):
+        raise SceneContractError("pre-application subscenes absent, reordered or duplicated")
+    if any(item.get("owner_scene") not in ids or not item.get("action") or not item.get("proof")
+           for item in subscenes):
+        raise SceneContractError("studio subscene missing canonical scene owner, action or evidence")
+    arcs = studio.get("transitions", [])
+    if not isinstance(arcs, list) or any(not isinstance(arc, list) or len(arc) != 2 for arc in arcs):
+        raise SceneContractError("studio transitions invalid")
+    studio_ids = set(expected_studio)
+    if any(left not in studio_ids | set(ids) or right not in studio_ids | set(ids)
+           for left, right in arcs):
+        raise SceneContractError("studio transition references unknown scene")
+    if ["STUDIO_READY", "OPPORTUNITY_INTAKE"] not in arcs or (
+            ["APPLICATION_BLOCKER", "FORM_PREPARATION"] not in arcs):
+        raise SceneContractError("studio-to-application or blocker recovery transition missing")
+    routing = studio.get("data_routing", {})
+    if not routing.get("skills") or not routing.get("reusable_answers") or not routing.get("progress"):
+        raise SceneContractError("studio must route to existing private owners")
+    if "never" not in studio.get("identity_boundary", "").lower() or (
+            "not a forced" not in studio.get("entry_policy", "").lower()):
+        raise SceneContractError("workspace separation or opt-in onboarding regressed")
+
+    progress = contract.get("application_progress_projection", {})
+    progress_path = progress.get("projection_module")
+    expected_progress_path = "artifacts/escape-hatch/src/lib/application-progress-checkpoint.ts"
+    if progress_path != expected_progress_path or not (root / progress_path).is_file():
+        raise SceneContractError("missing canonical evidence-based progress projection")
+    if progress.get("snapshot_schema") != "escapehatch/application-progress-checkpoint/v1":
+        raise SceneContractError("progress checkpoint schema drift")
+    if "applicationCompletionPercent: null" not in (root / progress_path).read_text(encoding="utf-8"):
+        raise SceneContractError("unknown whole-application completion must not become numeric")
+    if progress.get("submission_proof", "").find("employer") < 0:
+        raise SceneContractError("independent employer receipt required for submitted")
+    pkg = json.loads((root / "artifacts/escape-hatch/package.json").read_text(encoding="utf-8"))
+    if "application-progress-checkpoint.test.ts" not in pkg.get("scripts", {}).get("test:unit", ""):
+        raise SceneContractError("checkpoint negative regressions must run in unit suite")
+
 def main() -> int:
     try:
         validate(json.loads(SCENE_PATH.read_text(encoding="utf-8")))
-        print("PASS 14 owned scenes, auth continuity, bootstrap and coach routing (source-level only)")
+        print("PASS 14 owned scenes + 9 studio subscenes, auth, private progress, bootstrap and coach routing (source-level only)")
         return 0
     except (OSError, ValueError, TypeError, KeyError) as error:
         print("FAIL application journey scene system:", str(error))

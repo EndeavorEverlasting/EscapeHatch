@@ -9,7 +9,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { userDataRoot } from './user-data.ts';
 import { readWorkspace } from './workspace-file.ts';
-import { readPreferences } from './preference-file.ts';
+import { readPreferences, updatePreferences } from './preference-file.ts';
 import { PROFILE_KEY, parseProfileStorage, type Profile } from './src/lib/storage.ts';
 import { emptyPreferences, questions, reusableValue, type Preferences } from './src/lib/application-preferences.ts';
 import { OWNER_BINDING_SCHEMA, AGENT_CONTEXT_SCHEMA, parseWorkspaceOwnerBinding, authorizeAgentContext, type WorkspaceOwnerBinding } from './src/lib/workspace-owner-binding.ts';
@@ -30,7 +30,8 @@ const digest = (v: unknown) => createHash('sha256').update(JSON.stringify(v)).di
 const fail = (reason: string) => ({ ok: false as const, reason });
 export type ReviewItem = { id: string; label: string; value: string };
 export type HostRequest = {
-  protocol: 1; action: 'status' | 'confirm' | 'project'; browserProfileId: string;
+  protocol: 1; action: 'status' | 'confirm' | 'project' | 'privacy-preference-read' | 'privacy-preference-write'; browserProfileId: string;
+  privacyConsentEnabled?: boolean; expectedPrivacyRevision?: string;
   expectedWorkspaceRevision?: string; expectedPreferenceRevision?: string;
   approvedFields?: string[]; approvedAnswerIds?: string[];
   existingProfile?: unknown; existingAnswers?: Record<string, string>;
@@ -138,7 +139,8 @@ async function snapshot(root: string) {
     return [{ id, label: id.replaceAll('_', ' '), value: value.trim() }];
   });
   return { workspaceRevision: saved.revision, profileRevision: profileDigest,
-    preferenceRevision: preferenceDigest, profile, answers, availableFields };
+    preferenceRevision: preferenceDigest, profile, answers, availableFields,
+    privacyConsentEnabled: preferences.application_privacy_acknowledgement_enabled === true };
 }
 function normalizeExisting(input: unknown): ApprovedExtensionProfile | null {
   if (input === undefined || input === null) return null;
@@ -152,10 +154,13 @@ function normalizeExisting(input: unknown): ApprovedExtensionProfile | null {
   return Object.keys(existing).length > 1 ? existing : null;
 }
 function parseRequest(input: unknown): HostRequest | null {
-  if (!object(input) || Object.keys(input).some(k => !['protocol','action','browserProfileId','expectedWorkspaceRevision','expectedPreferenceRevision','approvedFields','approvedAnswerIds','existingProfile','existingAnswers'].includes(k)) ||
-    input.protocol !== 1 || typeof input.action !== 'string' || !['status','confirm','project'].includes(input.action) || typeof input.browserProfileId !== 'string' || !uuid.test(input.browserProfileId)) return null;
+  if (!object(input) || Object.keys(input).some(k => !['protocol','action','browserProfileId','expectedWorkspaceRevision','expectedPreferenceRevision','approvedFields','approvedAnswerIds','existingProfile','existingAnswers','privacyConsentEnabled','expectedPrivacyRevision'].includes(k)) ||
+    input.protocol !== 1 || typeof input.action !== 'string' || !['status','confirm','project','privacy-preference-read','privacy-preference-write'].includes(input.action) || typeof input.browserProfileId !== 'string' || !uuid.test(input.browserProfileId)) return null;
   if (input.expectedWorkspaceRevision !== undefined && (typeof input.expectedWorkspaceRevision !== 'string' || !sha.test(input.expectedWorkspaceRevision))) return null;
   if (input.expectedPreferenceRevision !== undefined && (typeof input.expectedPreferenceRevision !== 'string' || !sha.test(input.expectedPreferenceRevision))) return null;
+  if (input.action === 'privacy-preference-write' &&
+    (typeof input.privacyConsentEnabled !== 'boolean' || typeof input.expectedPrivacyRevision !== 'string' || !sha.test(input.expectedPrivacyRevision))) return null;
+  if (input.action !== 'privacy-preference-write' && (input.privacyConsentEnabled !== undefined || input.expectedPrivacyRevision !== undefined)) return null;
   return input as unknown as HostRequest;
 }
 async function confirm(request: HostRequest, root: string, file: string) {
@@ -208,8 +213,30 @@ export async function handleNativeProfileRequest(input: unknown, callerOrigin: u
     const metadata = { workspaceRevision: source.workspaceRevision, preferenceRevision: source.preferenceRevision, profileRevision: source.profileRevision,
       ...(pairing ? { ownerId: pairing.binding.ownerId, workspaceId: pairing.binding.workspaceId, installationId: pairing.binding.installationId } : {}) };
     const changed = pairing && (pairing.profileDigest !== source.profileRevision || pairing.preferenceDigest !== source.preferenceRevision);
+    if (request.action === 'privacy-preference-read' || request.action === 'privacy-preference-write') {
+      if (!pairing) return fail('OWNER_UNBOUND');
+      if (changed) return fail('REAPPROVAL_REQUIRED');
+      const preferencePath = path.join(root, 'application-question-preferences.json');
+      await noLinks(preferencePath);
+      if (request.action === 'privacy-preference-write') {
+        try {
+          await updatePreferences(current => {
+            if (digest(current) !== request.expectedPrivacyRevision) throw new Error('PRIVACY_PREFERENCE_CHANGED');
+            return { ...current, application_privacy_acknowledgement_enabled: request.privacyConsentEnabled,
+              exported_at: new Date().toISOString() };
+          }, preferencePath);
+        } catch (error) {
+          if ((error as Error).message === 'PRIVACY_PREFERENCE_CHANGED') return fail('PRIVACY_PREFERENCE_CHANGED');
+          throw error;
+        }
+      }
+      const current = await readPreferences(preferencePath);
+      return { ok: true as const, status: 'READY', ...pairing.binding,
+        privacyConsentEnabled: current.application_privacy_acknowledgement_enabled === true,
+        privacyPreferenceRevision: digest(current) };
+    }
     if (request.action === 'status') return { ok: true as const, status: !pairing ? 'REVIEW_REQUIRED' : changed ? 'REAPPROVAL_REQUIRED' : 'READY', ...metadata,
-      availableFields: source.availableFields, availableAnswers: source.answers,
+      privacyConsentEnabled: source.privacyConsentEnabled, availableFields: source.availableFields, availableAnswers: source.answers,
       approvedFields: pairing?.approvedFields ?? [], approvedAnswerIds: pairing?.approvedAnswerIds ?? [] };
     if (!pairing) return fail('OWNER_UNBOUND');
     if (changed) return fail('REAPPROVAL_REQUIRED');
@@ -235,7 +262,8 @@ export async function handleNativeProfileRequest(input: unknown, callerOrigin: u
     const current = await snapshot(root);
     const currentPairing = await readPairing(file);
     if (current.workspaceRevision !== source.workspaceRevision || current.preferenceRevision !== source.preferenceRevision || digest(currentPairing) !== digest(pairing)) return fail('SOURCE_REVISION_CHANGED');
-    return { ok: true as const, status: result.action === 'ALREADY_CURRENT' ? 'ALREADY_CURRENT' : 'PROJECTED', ...metadata, profile: result.profile, answers };
+    return { ok: true as const, status: result.action === 'ALREADY_CURRENT' ? 'ALREADY_CURRENT' : 'PROJECTED', ...metadata,
+      privacyConsentEnabled: source.privacyConsentEnabled, profile: result.profile, answers };
   } catch (error) {
     const message = (error as Error).message;
     return fail(['WORKSPACE_REQUIRED','PROFILE_REQUIRED','PAIRING_RECOVERY_REQUIRED','PRIVATE_PATH_LINK_FORBIDDEN','INVALID_EXISTING_PROFILE'].includes(message) ? message : 'PRIVATE_SOURCE_UNAVAILABLE');

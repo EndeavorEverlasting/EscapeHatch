@@ -9,7 +9,7 @@ import { PassThrough, Readable } from 'node:stream';
 import { handleNativeProfileRequest, nativeExtensionOrigin, PAIRING_SCHEMA } from './extension-profile-host.ts';
 import { MAX_NATIVE_BYTES, encodeNativeMessage, readNativeMessage } from './native-messaging-host.ts';
 import { saveWorkspace } from './workspace-file.ts';
-import { savePreferences } from './preference-file.ts';
+import { savePreferences, readPreferences } from './preference-file.ts';
 import { PROFILE_KEY, ANSWERS_KEY, emptyProfile } from './src/lib/storage.ts';
 import { WORKSPACE_SCHEMA } from './src/lib/workspace-bootstrap.ts';
 import { emptyPreferences } from './src/lib/application-preferences.ts';
@@ -28,7 +28,7 @@ async function fixture() {
     'employment.work_authorization_proof': preference('Synthetic eligibility'), 'legal.non_compete_blocking': preference('Synthetic legal'), 'compensation.desired_annual_salary': preference('Synthetic salary') } };
   await saveWorkspace(workspace, null, workspaceFile);
   await savePreferences(preferences, preferenceFile);
-  const request = (action: 'status' | 'confirm' | 'project', extra: object = {}, selectedBrowser = browser) => handleNativeProfileRequest({ protocol: 1, action, browserProfileId: selectedBrowser, ...extra }, origin, { dataRoot: root });
+  const request = (action: 'status' | 'confirm' | 'project' | 'privacy-preference-read' | 'privacy-preference-write', extra: object = {}, selectedBrowser = browser) => handleNativeProfileRequest({ protocol: 1, action, browserProfileId: selectedBrowser, ...extra }, origin, { dataRoot: root });
   const status = await request('status');
   assert.equal(status.ok, true);
   const confirm = (extra: object = {}) => request('confirm', { expectedWorkspaceRevision: (status as any).workspaceRevision,
@@ -70,6 +70,28 @@ test('explicit confirmation binds canonical schema; narrow profile and known ans
     const binding = sidecar.binding;
     await f.confirm();
     assert.deepEqual(JSON.parse(await fs.readFile(f.pairingFile, 'utf8')).binding, binding);
+  } finally { await f.cleanup(); }
+});
+
+test('privacy toggle reads and writes the existing owner-private preference with revision checks', async () => {
+  const f = await fixture();
+  try {
+    assert.deepEqual(await f.request('privacy-preference-read'), { ok: false, reason: 'OWNER_UNBOUND' });
+    await f.confirm();
+    const first = await f.request('privacy-preference-read') as any;
+    assert.equal(first.ok, true); assert.equal(first.privacyConsentEnabled, false);
+    assert.match(first.privacyPreferenceRevision, /^[a-f0-9]{64}$/);
+    assert.deepEqual(await f.request('privacy-preference-write', { privacyConsentEnabled: true }), { ok: false, reason: 'INVALID_REQUEST' });
+    assert.deepEqual(await f.request('privacy-preference-write', { privacyConsentEnabled: 'true', expectedPrivacyRevision: first.privacyPreferenceRevision }), { ok: false, reason: 'INVALID_REQUEST' });
+    assert.deepEqual(await f.request('privacy-preference-write', { privacyConsentEnabled: true, expectedPrivacyRevision: first.privacyPreferenceRevision }, randomUUID()), { ok: false, reason: 'CHROME_PROFILE_MISMATCH' });
+    const saved = await f.request('privacy-preference-write', { privacyConsentEnabled: true, expectedPrivacyRevision: first.privacyPreferenceRevision }) as any;
+    assert.equal(saved.ok, true); assert.equal(saved.privacyConsentEnabled, true);
+    assert.equal((await readPreferences(f.preferenceFile)).application_privacy_acknowledgement_enabled, true);
+    assert.deepEqual(await f.request('privacy-preference-write', { privacyConsentEnabled: false, expectedPrivacyRevision: first.privacyPreferenceRevision }), { ok: false, reason: 'PRIVACY_PREFERENCE_CHANGED' });
+    assert.equal((await readPreferences(f.preferenceFile)).application_privacy_acknowledgement_enabled, true);
+    const disabled = await f.request('privacy-preference-write', { privacyConsentEnabled: false, expectedPrivacyRevision: saved.privacyPreferenceRevision }) as any;
+    assert.equal(disabled.privacyConsentEnabled, false);
+    assert.equal((await readPreferences(f.preferenceFile)).application_privacy_acknowledgement_enabled, false);
   } finally { await f.cleanup(); }
 });
 

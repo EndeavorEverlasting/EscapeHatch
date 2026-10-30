@@ -5,6 +5,13 @@ Product identity is owned by `VERSION`. Exact freshness is the Git commit (and a
 
 Schema/protocol versions (`escapehatch-*/vN`, contract `version` integers) are independent and are not product releases.
 
+## [1.6.0]
+
+### Added
+
+- Owner-bound routine applicant-privacy preference control in the Chrome extension, with a user-controlled toggle, private preference-file persistence, native revision checks and safe checkbox-only Fill Plan integration.
+- Extension bootstrap restores the saved preference for the paired browser profile. Unsupported or unpaired clients remain off. No employer submissions or certifications are automated.
+
 ## [1.5.0]
 
 Bundle a verified Node/npm runtime in the unsigned Windows online preview and select it consistently for setup, owned runtime and Chrome native messaging.

@@ -93,6 +93,9 @@
       const current = await read();
       if (!same(sourceState(before), sourceState(current)) || !same(before[PREF], current[PREF])) throw new Error('LOCAL_PROFILE_CHANGED');
       const preferences = api.projectProfileToPreferenceStore(profile, current[PREF] || {});
+      // Native private preferences are authoritative; browser storage is a
+      // versioned projection, never an independently editable consent store.
+      preferences.application_privacy_acknowledgement_enabled = response.privacyConsentEnabled === true;
       const existingPreferences = api.normalizePreferenceStore(current[PREF]).preferences;
       for (const key of FIELDS) {
         if (!profile[key]) continue;
@@ -117,7 +120,8 @@
         assertBinding(verified, nextBinding);
         if (!['PROJECTED','ALREADY_CURRENT'].includes(verified.status) ||
           !['workspaceRevision','preferenceRevision','profileRevision'].every(key => verified[key] === response[key]) ||
-          !same(cleanProfile(verified.profile), profile) || !same(cleanAnswers(verified.answers || []), answers)) throw new Error('SOURCE_VERIFICATION_FAILED');
+          !same(cleanProfile(verified.profile), profile) || !same(cleanAnswers(verified.answers || []), answers) ||
+          (verified.privacyConsentEnabled === true) !== (response.privacyConsentEnabled === true)) throw new Error('SOURCE_VERIFICATION_FAILED');
         if (!matchesWrite(await read(), written)) throw new Error('LOCAL_PROFILE_CHANGED');
         const completed = { ...applied, [SYNC]: { ...applied[SYNC], status: response.status } };
         await storage.set({ [SYNC]: completed[SYNC] });
@@ -152,6 +156,21 @@
       await storage.set({ [SYNC]: { ...nextBinding, paired: true, paused: false, status: 'READY' } });
       return refresh();
     }
+    async function privacy(action, enabled, expectedRevision) {
+      await browserId(); // Establish the owner-bound browser identity before the concurrency snapshot.
+      const before = await read(), sync = before[SYNC];
+      if (!sync?.paired || sync.paused) throw new Error('OWNER_UNBOUND');
+      const values = action === 'write' ? { privacyConsentEnabled: enabled, expectedPrivacyRevision: expectedRevision } : {};
+      const response = await request(action === 'write' ? 'privacy-preference-write' : 'privacy-preference-read', values);
+      assertBinding(response, sync);
+      if (typeof response.privacyConsentEnabled !== 'boolean' || typeof response.privacyPreferenceRevision !== 'string' ||
+        !/^[a-f0-9]{64}$/.test(response.privacyPreferenceRevision)) throw new Error('INVALID_NATIVE_REVISION');
+      const current = await read();
+      if (!same(sourceState(before), sourceState(current)) || !same(before[PREF], current[PREF])) throw new Error('LOCAL_PROFILE_CHANGED');
+      await storage.set({ [PREF]: { ...(current[PREF] || {}), application_privacy_acknowledgement_enabled: response.privacyConsentEnabled } });
+      if ((await read())[PREF]?.application_privacy_acknowledgement_enabled !== response.privacyConsentEnabled) throw new Error('STORAGE_READBACK_FAILED');
+      return { enabled: response.privacyConsentEnabled, revision: response.privacyPreferenceRevision };
+    }
     async function edit(action, value) {
       const current = await read(), sync = current[SYNC];
       if (action === 'clear') {
@@ -159,7 +178,9 @@
         const retained = { ...preferences.preferences };
         for (const key of Object.values(api.PROFILE_TO_QUESTION)) delete retained[key];
         await storage.remove([PROFILE, LEGACY, ANSWERS]);
-        await storage.set({ [PREF]: { schema_version: 'escapehatch-application-question-preferences/v1', preferences: retained }, [SYNC]: { ...sync, paused: true, status: 'PAUSED' } });
+        await storage.set({ [PREF]: { schema_version: 'escapehatch-application-question-preferences/v1', preferences: retained,
+          application_privacy_acknowledgement_enabled: current[PREF]?.application_privacy_acknowledgement_enabled === true },
+          [SYNC]: { ...sync, paused: true, status: 'PAUSED' } });
         return view();
       }
       const profile = cleanProfile(value);
@@ -167,7 +188,7 @@
       await storage.set({ [PROFILE]: profile, [PREF]: preferences, [SYNC]: { ...sync, status: 'LOCAL_EDIT' } });
       return view();
     }
-    return { view, review, refresh, confirm, edit };
+    return { view, review, refresh, confirm, edit, privacy };
   }
   root.EscapeHatchNativeProfile = { create, cleanProfile, cleanAnswers, PROFILE, LEGACY, SYNC, ANSWERS, BROWSER, HOST };
   if (typeof module !== 'undefined') module.exports = root.EscapeHatchNativeProfile;

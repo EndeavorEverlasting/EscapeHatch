@@ -150,6 +150,45 @@ class FakeInput extends EventTarget {
   }
 }
 
+// The extension's Fill Plan must neither guess consent nor recheck a user override.
+{
+  const notice = new FakeInput({ label: "I have read and understand the applicant privacy notice", type: "checkbox", name: "privacy_ack" });
+  notice.checked = false;
+  const page = { querySelectorAll: () => [notice] };
+  const session = core.createSession({ origin: "https://jobs.example.invalid" });
+  const defaultOff = core.fillDocument(page, {}, session, { application_privacy_acknowledgement_enabled: false });
+  assert.equal(defaultOff.filled, 0);
+  assert.equal(notice.checked, false);
+  let changes = 0;
+  notice.addEventListener("change", () => { changes += 1; });
+  const enabled = core.fillDocument(page, {}, session, { application_privacy_acknowledgement_enabled: true });
+  assert.equal(enabled.filled, 1);
+  assert.equal(notice.checked, true);
+  assert.equal(changes, 1);
+  notice.checked = false; // Applicant's deliberate override during the same session.
+  const override = core.fillDocument(page, {}, enabled.session, { application_privacy_acknowledgement_enabled: true });
+  assert.equal(override.filled, 0);
+  assert.equal(notice.checked, false);
+  notice.checked = true;
+  const undone = core.undoLastFill(page, enabled.session);
+  assert.equal(undone.undone, 1);
+  assert.equal(notice.checked, false);
+  assert.equal(core.fillDocument(page, {}, undone.session, { application_privacy_acknowledgement_enabled: true }).filled, 0);
+  for (const unsafe of [
+    "I agree to marketing emails and the applicant privacy notice",
+    "I consent to the privacy policy and a background check",
+    "I certify the accuracy of my application and agree to the privacy notice",
+    "I do not agree to the candidate privacy policy",
+    "I accept cookie tracking under the privacy policy",
+    "I agree to privacy terms and data sharing with third parties"
+  ]) {
+    const control = new FakeInput({ label: unsafe, type: "checkbox" }); control.checked = false;
+    assert.equal(core.fillDocument({ querySelectorAll: () => [control] }, {}, session,
+      { application_privacy_acknowledgement_enabled: true }).filled, 0, unsafe);
+    assert.equal(control.checked, false, unsafe);
+  }
+}
+
 const first = new FakeInput({ label: "First Name", autocomplete: "given-name" });
 const email = new FakeInput({ label: "Email", autocomplete: "email" });
 const events = [];

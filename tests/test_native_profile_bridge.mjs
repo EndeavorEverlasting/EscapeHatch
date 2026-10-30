@@ -19,6 +19,25 @@ function fixture(initial = {}, responder = () => projection, sortedRoundtrip = f
   return { data, calls, storage, app: bridge.create({ storage, native, api, randomUUID: () => browser }) };
 }
 const paired = { [bridge.SYNC]: { ...ids, paired: true } };
+{
+  const revision = 'd'.repeat(64);
+  const f = fixture(paired, request => request.action === 'privacy-preference-write'
+    ? { ok: true, status: 'READY', ...ids, privacyConsentEnabled: request.privacyConsentEnabled, privacyPreferenceRevision: 'e'.repeat(64) }
+    : { ok: true, status: 'READY', ...ids, privacyConsentEnabled: false, privacyPreferenceRevision: revision });
+  const current = await f.app.privacy('read');
+  assert.equal(current.enabled, false);
+  assert.equal(f.data[api.PREFERENCE_STORAGE_KEY].application_privacy_acknowledgement_enabled, false);
+  const updated = await f.app.privacy('write', true, current.revision);
+  assert.equal(updated.enabled, true);
+  assert.equal(f.data[api.PREFERENCE_STORAGE_KEY].application_privacy_acknowledgement_enabled, true);
+  assert.equal(f.calls[1].request.expectedPrivacyRevision, revision);
+  assert.equal(f.calls[1].request.privacyConsentEnabled, true);
+}
+{
+  const f = fixture();
+  await assert.rejects(() => f.app.privacy('write', true, 'a'.repeat(64)), /OWNER_UNBOUND/);
+}
+
 assert.equal(bridge.cleanProfile({ phone: '555-0100' }).phone_authority, 'unconfirmed');
 {
   const f = fixture();

@@ -84,7 +84,7 @@
       "extension_bridge": {
         "schema": "escapehatch/extension-privacy-preference-bridge/v1",
         "owner": "existing OS-private application-question-preferences.json",
-        "extension_version": "1.5.1",
+        "extension_version": "1.6.0",
         "transport": "trusted Chrome MV3 popup -> service worker -> fixed-ID native messaging host; not website messaging",
         "bootstrap": "onInstalled/onStartup refresh from paired owner workspace; absent host or owner binding means disabled, not implicit consent",
         "readback": "signed-in bound native profile must return current boolean and revision; writes compare full local preference revision under existing transaction lock",

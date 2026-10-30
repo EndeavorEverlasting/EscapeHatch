@@ -157,6 +157,7 @@
       return refresh();
     }
     async function privacy(action, enabled, expectedRevision) {
+      await browserId(); // Establish the owner-bound browser identity before the concurrency snapshot.
       const before = await read(), sync = before[SYNC];
       if (!sync?.paired || sync.paused) throw new Error('OWNER_UNBOUND');
       const values = action === 'write' ? { privacyConsentEnabled: enabled, expectedPrivacyRevision: expectedRevision } : {};

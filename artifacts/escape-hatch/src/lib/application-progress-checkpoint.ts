@@ -85,6 +85,19 @@ export function projectApplicationCheckpoint(
   if (!expectedOpportunityId || checkpoint.opportunityId !== expectedOpportunityId ||
       !sameUrl(checkpoint.applicationUrl, expectedApplicationUrl))
     return empty('Select the matching job and inspect its own application. Do not reuse another job checkpoint.');
+  // Verified employer receipts are durable; a page inventory may legitimately
+  // be stale after submission. Trusted reconciliation must occur in its owner.
+  const receiptTime = Date.parse(reconciledReceipt?.verifiedAt || '');
+  const confirmedSubmission = Boolean(reconciledReceipt &&
+    reconciledReceipt.reconciledBy === 'existing-submission-reconciliation' &&
+    reconciledReceipt.receiptId && Number.isFinite(receiptTime) &&
+    receiptTime <= now &&
+    reconciledReceipt.opportunityId === expectedOpportunityId &&
+    sameUrl(reconciledReceipt.applicationUrl, expectedApplicationUrl));
+  if (confirmedSubmission) return {
+    ...empty('Open the verified employer receipt and reconcile the tracker.'),
+    status: 'SUBMITTED_CONFIRMED', activeScene: checkpoint.activeScene || null,
+  };
   const sections = checkpoint.sections;
   const ids = new Set(sections.map(s => s.id));
   const indices = new Set(sections.map(s => s.index));
@@ -114,21 +127,12 @@ export function projectApplicationCheckpoint(
   const positionEstimatePercent = active && checkpoint.knownSectionCount !== null &&
     checkpoint.knownSectionCount > 0
     ? Math.floor(active.index * 100 / checkpoint.knownSectionCount) : null;
-  // A stored checkpoint cannot proclaim submission. Only a separately reconciled,
-  // same-opportunity employer receipt from the existing trusted owner may do so.
-  const confirmedSubmission = Boolean(reconciledReceipt &&
-    reconciledReceipt.reconciledBy === 'existing-submission-reconciliation' &&
-    reconciledReceipt.receiptId && Number.isFinite(Date.parse(reconciledReceipt.verifiedAt)) &&
-    reconciledReceipt.opportunityId === expectedOpportunityId &&
-    sameUrl(reconciledReceipt.applicationUrl, expectedApplicationUrl));
-  const status: ProgressStatus = confirmedSubmission ? 'SUBMITTED_CONFIRMED' :
-    checkpoint.blocker ? 'BLOCKED' :
+  const status: ProgressStatus = checkpoint.blocker ? 'BLOCKED' :
     unknownRequired || manualDecisionsRemaining ? 'NEEDS_USER' :
     checkpoint.terminalReviewObserved && allInventoried &&
       required.length === verifiedRequired ? 'READY_FOR_FINAL_REVIEW' :
     'IN_PROGRESS';
-  const nextAction = status === 'SUBMITTED_CONFIRMED' ? 'Open the verified employer receipt and reconcile the tracker.' :
-    status === 'READY_FOR_FINAL_REVIEW' ? 'Review the actual employer form. Final Submit is yours.' :
+  const nextAction = status === 'READY_FOR_FINAL_REVIEW' ? 'Review the actual employer form. Final Submit is yours.' :
     checkpoint.blocker ? 'Resolve checkpoint: ' + checkpoint.blocker :
     manualDecisionsRemaining ? 'Answer the protected or legal question in the employer window.' :
     unknownRequired ? 'Review unmapped required controls on the current employer page.' :

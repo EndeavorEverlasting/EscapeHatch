@@ -11,8 +11,10 @@ required = ["escapeHatch.applicationQuestionPreferences.v1", "application_privac
 assert all(s in store for s in required)
 assert all(s in activity for s in ["privacyPreference.setEnabled(enabled)", "R.id.applicantPrivacyToggle", "renderPrivacyPreference()"])
 assert any(e.attrib.get("{http://schemas.android.com/apk/res/android}id") == "@+id/applicantPrivacyToggle" for e in layout.iter())
-assert all(s in strings for s in ["privacy_preference_label", "privacy_preference_enabled", "privacy_preference_disabled"])
+assert all(s in strings for s in ["privacy_preference_label", "privacy_preference_enabled", "privacy_preference_disabled", "materials_review_boundary"])
 assert "Employer-site consent automation is not available" in strings
+assert "Materials desk" in strings
+assert any(e.attrib.get("{http://schemas.android.com/apk/res/android}id") == "@+id/materialsReviewBoundary" for e in layout.iter())
 android_gradle = (root / "android/application-assist/app/build.gradle.kts").read_text()
 assert 'rootProject.file("../../VERSION")' in android_gradle
 assert "versionCode = canonicalVersionCode" in android_gradle

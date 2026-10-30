@@ -80,11 +80,15 @@ test('terminal review is not submission; all sections must be inventoried before
   assert.match(p.nextAction,/Final Submit is yours/);
   assert.equal(p.applicationCompletionPercent,null);
 });
-test('only an independently verified receipt may confer submitted status', () => {
-  const s=fixture();s.employerSubmissionReceiptVerified=true;
-  assert.equal(projectApplicationCheckpoint(s,s.opportunityId,url,now).status,'SUBMITTED_CONFIRMED');
-  s.employerSubmissionReceiptVerified=false;s.terminalReviewObserved=true;
+test('only matching independently reconciled employer receipt may confer submitted status', () => {
+  const s=fixture();
+  const receipt = { opportunityId:s.opportunityId, applicationUrl:url,
+    receiptId:'synthetic-receipt', verifiedAt:fresh,
+    reconciledBy:'existing-submission-reconciliation' as const };
   assert.notEqual(projectApplicationCheckpoint(s,s.opportunityId,url,now).status,'SUBMITTED_CONFIRMED');
+  assert.equal(projectApplicationCheckpoint(s,s.opportunityId,url,now,receipt).status,'SUBMITTED_CONFIRMED');
+  assert.notEqual(projectApplicationCheckpoint(s,s.opportunityId,url,now,{...receipt,opportunityId:'other'}).status,'SUBMITTED_CONFIRMED');
+  assert.notEqual(projectApplicationCheckpoint(s,s.opportunityId,url,now,{...receipt,applicationUrl:'https://other.example.org/'}).status,'SUBMITTED_CONFIRMED');
 });
 test('malformed or duplicated sections and fields fail closed', () => {
   const s=fixture();s.sections[0].fields.push({...s.sections[0].fields[0]});

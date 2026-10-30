@@ -4,9 +4,9 @@ export const PREFERENCE_KEY = 'escapeHatch.applicationQuestionPreferences.v1';
 export const PREFERENCE_SCHEMA = 'escapehatch-application-question-preferences/v1';
 export type Preference = { scope: 'profile_preference'; value: string; source: 'user'; updated_at: string };
 export type DiscoveredAnswer = { question: string; value: string; source: 'user' | 'observed_question'; updated_at: string; accepted: boolean };
-export type Preferences = { schema_version: typeof PREFERENCE_SCHEMA; exported_at: string; preferences: Record<string, Preference>; optional_omissions?: string[]; discovered_answers?: Record<string, DiscoveredAnswer>; job_titles?: string[]; professional_titles?: string[]; require_document_review?: boolean; vpn_recovery_assist_enabled?: boolean };
+export type Preferences = { schema_version: typeof PREFERENCE_SCHEMA; exported_at: string; preferences: Record<string, Preference>; optional_omissions?: string[]; discovered_answers?: Record<string, DiscoveredAnswer>; job_titles?: string[]; professional_titles?: string[]; require_document_review?: boolean; vpn_recovery_assist_enabled?: boolean; application_privacy_acknowledgement_enabled?: boolean };
 export const questions = taxonomy.questions;
-export const emptyPreferences = (): Preferences => ({ schema_version: PREFERENCE_SCHEMA, exported_at: new Date().toISOString(), preferences: {}, vpn_recovery_assist_enabled: true });
+export const emptyPreferences = (): Preferences => ({ schema_version: PREFERENCE_SCHEMA, exported_at: new Date().toISOString(), preferences: {}, vpn_recovery_assist_enabled: true, application_privacy_acknowledgement_enabled: false });
 
 export function parsePreferences(input: unknown): Preferences | null {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
@@ -22,6 +22,10 @@ export function parsePreferences(input: unknown): Preferences | null {
   if (data.vpn_recovery_assist_enabled !== undefined) {
     if (typeof data.vpn_recovery_assist_enabled !== 'boolean') return null;
     clean.vpn_recovery_assist_enabled = data.vpn_recovery_assist_enabled;
+  }
+  if (data.application_privacy_acknowledgement_enabled !== undefined) {
+    if (typeof data.application_privacy_acknowledgement_enabled !== 'boolean') return null;
+    clean.application_privacy_acknowledgement_enabled = data.application_privacy_acknowledgement_enabled;
   }
   if (data.require_document_review !== undefined) {
     if (typeof data.require_document_review !== 'boolean') return null;
@@ -72,6 +76,19 @@ export function matchQuestion(prompt: string, employerName = ''): string | null 
   }
   const matches = questions.filter(q => q.aliases.some(alias => normalizeQuestion(alias) === text));
   return matches.length === 1 ? matches[0].id : null;
+}
+
+// A user-enabled preference is limited to a routine applicant privacy-notice
+// acknowledgement. Never extend it to unrelated employer opt-ins or attestations.
+export function isRoutineApplicantPrivacyAcknowledgement(label: string): boolean {
+  const text = normalizeQuestion(label);
+  if (text.length < 14 || text.length > 360) return false;
+  const notice = /\b(?:privacy (?:notice|policy|statement)|applicant privacy|candidate privacy)\b/.test(text);
+  const applicationProcessing = /\b(?:process|processing) (?:of )?(?:my|your) personal (?:data|information) (?:for|in connection with) (?:this |the )?(?:job )?(?:application|recruitment)\b/.test(text);
+  if (!notice && !applicationProcessing) return false;
+  if (!/\b(?:acknowledge|acknowledgment|agree|read|consent|accept|understand)\b/.test(text)) return false;
+  if (/\b(?:do not agree|do not consent|decline|disagree|opt out|marketing|promotional|newsletter|talent community|future opportunities|future vacancies|background check|arbitration|terms and conditions|terms of service|terms of use|employment agreement|certify|certification|attest|signature|waive|waiver|release|biometric|automated decision|text messages|sms|third parties|third party|data sharing|sharing my data|share my data)\b/.test(text)) return false;
+  return true;
 }
 
 export function reusableValue(id: string, data: Preferences): string | null {

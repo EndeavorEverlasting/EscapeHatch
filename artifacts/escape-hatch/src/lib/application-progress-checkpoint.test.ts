@@ -90,6 +90,17 @@ test('only matching independently reconciled employer receipt may confer submitt
   assert.notEqual(projectApplicationCheckpoint(s,s.opportunityId,url,now,{...receipt,opportunityId:'other'}).status,'SUBMITTED_CONFIRMED');
   assert.notEqual(projectApplicationCheckpoint(s,s.opportunityId,url,now,{...receipt,applicationUrl:'https://other.example.org/'}).status,'SUBMITTED_CONFIRMED');
 });
+test('verified submission remains durable when the browser page inventory becomes stale', () => {
+  const s=fixture();s.sections[0].inspectedAt='2026-10-29T11:00:00Z';
+  const receipt = { opportunityId:s.opportunityId, applicationUrl:url, receiptId:'receipt-valid',
+    verifiedAt:fresh, reconciledBy:'existing-submission-reconciliation' as const };
+  const projected=projectApplicationCheckpoint(s,s.opportunityId,url,now,receipt);
+  assert.equal(projected.status,'SUBMITTED_CONFIRMED');
+  assert.equal(projected.applicationCompletionPercent,null);
+  assert.equal(projected.finalSubmitAutomated,false);
+  assert.notEqual(projectApplicationCheckpoint(s,s.opportunityId,url,now,
+    {...receipt,verifiedAt:'2026-10-31T10:00:00Z'}).status,'SUBMITTED_CONFIRMED');
+});
 test('malformed or duplicated sections and fields fail closed', () => {
   const s=fixture();s.sections[0].fields.push({...s.sections[0].fields[0]});
   assert.equal(projectApplicationCheckpoint(s,s.opportunityId,url,now).status,'NOT_OBSERVED');

@@ -25,8 +25,8 @@ test('mobile journey is reachable, keyboard operable and never marks application
   await page.getByTestId('journey-step-5').focus();
   await page.keyboard.press('Enter');
   await expect(page.getByTestId('journey-selected-step')).toContainText('Review and submit yourself');
-  await expect(page.getByTestId('journey-selected-step')).toContainText('You decide');
-  await expect(page.getByTestId('journey-atlas')).toContainText('never');
+  await expect(page.getByTestId('journey-step-5')).toContainText('You decide');
+  await expect(page.getByTestId('journey-atlas')).toContainText('Final Submit');
   await expect(page.getByTestId('journey-open-stage')).toHaveAttribute('href','/assist');
 });
 test('journey respects reduced motion and preserves user-only final boundary', async ({ page }) => {

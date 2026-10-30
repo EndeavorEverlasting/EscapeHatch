@@ -61,3 +61,10 @@ test('approved answer memory removes redundant reusable-question prompts', () =>
   const after=projectPreapplicationStudio(p,['professional-summary']);
   assert.equal(after.questionCount,before.questionCount-1);
 });
+
+test('approved but empty career history still has an early experience prompt', () => {
+  const p=profile();p.experience=[];
+  const projected=projectPreapplicationStudio(p,['professional-summary']);
+  assert.equal(projected.nextQuestion?.id,'career.experience');
+  assert.equal(projected.kitPrepared,false);
+});

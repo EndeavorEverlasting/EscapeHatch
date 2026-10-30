@@ -42,3 +42,5 @@ values before any use. The installed mobile form path is **UNPROVEN**.
 Contract static check: `python tests/test_android_privacy_preference_contract.py`.
 On a configured Android build host, compile `:app:assembleDebug` and instrument
 the preference upgrade/readback journey; neither is proved by a static check.
+
+Android `versionName` and monotonically increasing `versionCode` derive from canonical repository `VERSION` during Gradle builds. A package missing VERSION fails to build instead of emitting an independently invented release number. This companion remains a prototype, not a published Android browser autofill application.

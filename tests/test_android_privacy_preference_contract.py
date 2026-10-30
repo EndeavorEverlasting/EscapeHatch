@@ -13,4 +13,9 @@ assert all(s in activity for s in ["privacyPreference.setEnabled(enabled)", "R.i
 assert any(e.attrib.get("{http://schemas.android.com/apk/res/android}id") == "@+id/applicantPrivacyToggle" for e in layout.iter())
 assert all(s in strings for s in ["privacy_preference_label", "privacy_preference_enabled", "privacy_preference_disabled"])
 assert "Employer-site consent automation is not available" in strings
+android_gradle = (root / "android/application-assist/app/build.gradle.kts").read_text()
+assert 'rootProject.file("../../VERSION")' in android_gradle
+assert "versionCode = canonicalVersionCode" in android_gradle
+assert "versionName = canonicalVersion" in android_gradle
+assert (root / "VERSION").read_text().strip().count(".") >= 2
 print("ANDROID_PRIVACY_PREFERENCE_BOOTSTRAP_STATIC: PASS (not APK or device proof)")

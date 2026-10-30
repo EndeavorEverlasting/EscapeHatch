@@ -59,7 +59,29 @@
       "never_print_preference_values_in_logs",
       "clear_must_be_user_accessible",
       "export_is_explicit_user_action"
-    ]
+    ],
+    "application_privacy_acknowledgement": {
+      "field": "application_privacy_acknowledgement_enabled",
+      "default": false,
+      "persistence": "browser-local and existing private local-file preference adapter; not public Git",
+      "behavior": "After a one-time user opt-in, check only a recognizable routine employer applicant-privacy notice, verify native checked state, and preserve any applicant uncheck on repeated Prepare in the same browser session.",
+      "exclusions": [
+        "marketing or promotional contact",
+        "third-party data sharing",
+        "background-check authorizations",
+        "terms of service or arbitration",
+        "accuracy certifications",
+        "signatures",
+        "final Submit",
+        "unrecognized or compound consent"
+      ],
+      "user_controls": [
+        "Save Preferences",
+        "Disable and Save",
+        "Clear Preferences"
+      ],
+      "evidence": "Actual employer-browser acceptance remains unproven until installed Windows runtime testing."
+    }
   },
   "attestation_policy": "manual_only"
 }

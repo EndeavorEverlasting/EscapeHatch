@@ -120,6 +120,9 @@
     }
     .wide { grid-column: 1 / -1; }
     .privacy { font-size: 11px; color: var(--muted); margin: 8px 0 0; }
+    .privacy-choice { display: flex; align-items: center; gap: 10px; font-size: 13px; line-height: 1.35; }
+    .privacy-choice input { flex: 0 0 20px; width: 20px; min-width: 20px; height: 20px; min-height: 20px; }
+    .privacy-choice input:disabled { opacity: 0.6; }
     #importFile { display: none; }
     .panel {
       border: 1px solid var(--line);
@@ -178,6 +181,13 @@
   <div class="mode-chip" id="modeChip" aria-live="polite">Mode: detecting</div>
   <div id="sessionState" role="status" aria-live="polite">Session: idle</div>
   <div id="jobBoardState" role="status" aria-live="polite">Application page: checking</div>
+  <section class="panel" aria-label="Applicant privacy preference">
+    <h2>Applicant privacy</h2>
+    <label class="privacy-choice"><input id="privacyConsentToggle" type="checkbox" disabled>
+      Reuse my approval for recognized routine applicant privacy notices
+    </label>
+    <p id="privacyConsentState" class="privacy" role="status" aria-live="polite">Checking your private saved setting…</p>
+  </section>
 
   <div id="commandPalette" role="dialog" aria-label="Command palette" aria-modal="true">
     <p class="kbd-hint">Type to filter. Enter runs the action. Esc closes without changing session state.</p>

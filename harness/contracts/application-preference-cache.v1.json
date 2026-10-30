@@ -80,7 +80,18 @@
         "Disable and Save",
         "Clear Preferences"
       ],
-      "evidence": "Actual employer-browser acceptance remains unproven until installed Windows runtime testing."
+      "evidence": "Actual employer-browser acceptance remains unproven until installed Windows runtime testing.",
+      "extension_bridge": {
+        "schema": "escapehatch/extension-privacy-preference-bridge/v1",
+        "owner": "existing OS-private application-question-preferences.json",
+        "extension_version": "1.5.1",
+        "transport": "trusted Chrome MV3 popup -> service worker -> fixed-ID native messaging host; not website messaging",
+        "bootstrap": "onInstalled/onStartup refresh from paired owner workspace; absent host or owner binding means disabled, not implicit consent",
+        "readback": "signed-in bound native profile must return current boolean and revision; writes compare full local preference revision under existing transaction lock",
+        "mobile": "shared semantic setting exposed by responsive extension panel where extension/native messaging is supported; unsupported browsers have no automatically enabled consent",
+        "runtime": "enabled flag gates only recognized applicant privacy checkbox Fill Plan items; manual uncheck and Undo remain preserved",
+        "proof_ceiling": "repository and CI only until actual installed Chrome/Android sessions are observed"
+      }
     }
   },
   "attestation_policy": "manual_only"

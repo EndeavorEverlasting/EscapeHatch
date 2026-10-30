@@ -426,6 +426,23 @@
     return { allow: true, reason: "gate_allowed", value: proposedValue };
   }
 
+  // Mirrors the narrow applicant-only policy in application-preferences.ts.
+  // Marketing, background checks, signatures and general legal opt-ins stay manual.
+  function routinePrivacyNotice(label) {
+    const text = String(label || "").normalize("NFKC").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    if (text.length < 14 || text.length > 360) return false;
+    const notice = /\b(?:privacy (?:notice|policy|statement)|applicant privacy|candidate privacy)\b/.test(text);
+    const processing = /\b(?:process|processing) (?:of )?(?:my|your) personal (?:data|information) (?:for|in connection with) (?:this |the )?(?:job )?(?:application|recruitment)\b/.test(text);
+    if (!notice && !processing || !/\b(?:acknowledge|acknowledgment|agree|read|consent|accept|understand)\b/.test(text)) return false;
+    return !/\b(?:do not agree|do not consent|do not accept|have not read|did not read|do not acknowledge|decline|disagree|opt out|cookie|cookies|tracking|analytics|advertising|marketing|promotional|newsletter|talent community|future opportunities|future vacancies|background check|arbitration|terms and conditions|terms of service|terms of use|employment agreement|certify|certification|attest|signature|waive|waiver|release|biometric|automated decision|text messages|sms|third parties|third party|data sharing|sharing my data|share my data)\b/.test(text);
+  }
+  function privacyKey(field, index) {
+    const value = [index, field.name, field.id, field.label].join("|");
+    let hash = 2166136261;
+    for (let i = 0; i < value.length; i++) hash = Math.imul(hash ^ value.charCodeAt(i), 16777619);
+    return "privacy-" + (hash >>> 0).toString(16);
+  }
+
   /**
    * Canonical Fill Plan. DOM writes must consume only gate-allowed items from this plan.
    */
@@ -439,6 +456,18 @@
     const denied = [];
     for (let index = 0; index < fields.length; index += 1) {
       const field = fields[index];
+      if (field.type === "checkbox") {
+        const key = privacyKey(field, index);
+        if (session.status === "active" && preferenceStore?.application_privacy_acknowledgement_enabled === true &&
+          !field.disabled && !field.hidden && !field.readOnly && !field.checked &&
+          !session.privacy_decisions?.[key] && routinePrivacyNotice(field.label)) {
+          items.push({ index, profile_key: "privacy_acknowledgement", question_id: "privacy.applicant_notice",
+            privacy_key: key, value: "checked", decision: "gate_allowed" });
+        } else {
+          denied.push({ index, profile_key: "privacy_acknowledgement", question_id: "privacy.applicant_notice", decision: "privacy_manual_only_or_already_handled" });
+        }
+        continue;
+      }
       const key = classifyField(field);
       if (!key) {
         denied.push({ index, profile_key: null, question_id: null, decision: "unknown_fields_stay_blank" });
@@ -492,6 +521,7 @@
             (!element.getClientRects || element.getClientRects().length === 0))
       ),
       value: element.value || "",
+      checked: Boolean(element.checked),
       autocomplete: element.getAttribute ? element.getAttribute("autocomplete") || "" : "",
       label: labels || (element.getAttribute ? element.getAttribute("aria-label") || "" : ""),
       name: element.name || "",
@@ -537,11 +567,26 @@
     const elements = Array.from(documentObject.querySelectorAll("input, select"));
     const matched = [];
     const writes = [];
+    const privacyDecisions = { ...(session.privacy_decisions || {}) };
     for (const item of plan.items || []) {
       if (session.status !== "active") break;
       if (!item || item.decision !== "gate_allowed") continue;
       const element = elements[item.index];
       if (!element || element.isConnected === false) continue;
+      if (item.profile_key === "privacy_acknowledgement") {
+        const live = descriptorFromElement(element);
+        if (preferenceStore?.application_privacy_acknowledgement_enabled !== true || live.type !== "checkbox" ||
+          live.disabled || live.hidden || live.checked || !routinePrivacyNotice(live.label) ||
+          item.privacy_key !== privacyKey(live, item.index) || privacyDecisions[item.privacy_key]) continue;
+        element.checked = true;
+        element.dispatchEvent(new Event("input", { bubbles: true }));
+        element.dispatchEvent(new Event("change", { bubbles: true }));
+        if (element.checked !== true) continue;
+        privacyDecisions[item.privacy_key] = true;
+        matched.push("privacy_acknowledgement");
+        writes.push({ kind: "privacy_checkbox", index: item.index, privacy_key: item.privacy_key, previous_checked: false, written_checked: true });
+        continue;
+      }
       const live = descriptorFromElement(element);
       const proposed = resolveFillValue(item.profile_key, profile, preferenceStore);
       const gated = policyGate(session, live, item.profile_key, proposed, contactAuthority);
@@ -563,6 +608,7 @@
     const nextSession = touchSession(
       Object.assign({}, session, {
         plan_revision: plan.revision,
+        privacy_decisions: privacyDecisions,
         fill_stack: (Array.isArray(session.fill_stack) ? session.fill_stack : []).concat(
           writes.length
             ? [
@@ -612,6 +658,15 @@
         continue;
       }
       const live = descriptorFromElement(element);
+      if (write.kind === "privacy_checkbox") {
+        if (live.type !== "checkbox" || !live.checked || !routinePrivacyNotice(live.label) ||
+          privacyKey(live, write.index) !== write.privacy_key) { skipped += 1; continue; }
+        element.checked = false;
+        element.dispatchEvent(new Event("input", { bubbles: true }));
+        element.dispatchEvent(new Event("change", { bubbles: true }));
+        if (element.checked === false) undone += 1; else skipped += 1;
+        continue;
+      }
       if (classifyField(live) !== write.profile_key) {
         skipped += 1;
         continue;

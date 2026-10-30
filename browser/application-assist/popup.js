@@ -277,8 +277,16 @@ async function startAssist() {
 async function fillAllowedFields() {
   const storedProfile = await chrome.storage.local.get(PROFILE_KEY);
   const profile = sanitizeProfile(storedProfile[PROFILE_KEY] || readForm());
-  if (!hasProfileValues(profile)) {
-    setStatus("No saved profile. Save or import one first.");
+  let privacyEnabled = false;
+  try {
+    const saved = await workspaceCommand('workspace-privacy-read');
+    privacyEnabled = saved.enabled === true;
+  } catch (_) {
+    // Native owner/profile not verified. Do not use stale local opt-in state.
+    privacyEnabled = false;
+  }
+  if (!hasProfileValues(profile) && !privacyEnabled) {
+    setStatus("No saved profile or verified privacy preference. Connect your private workspace first.");
     return;
   }
   let session = await loadStoredSession();
@@ -287,7 +295,8 @@ async function fillAllowedFields() {
     return;
   }
   const prefStored = await chrome.storage.local.get(api.PREFERENCE_STORAGE_KEY);
-  const preferenceStore = prefStored[api.PREFERENCE_STORAGE_KEY] || null;
+  const preferenceStore = { ...(prefStored[api.PREFERENCE_STORAGE_KEY] || {}),
+    application_privacy_acknowledgement_enabled: privacyEnabled };
   const result = await runPageCommand("fill", profile, session, preferenceStore);
   if (result.skipped_reason === "emergency_stop") {
     setStatus("Emergency Stop is latched. No fields were written.");
@@ -677,7 +686,7 @@ confirmWorkspace.addEventListener('click', async event => {
       approvedAnswerIds: selected.filter(input => input.dataset.kind === 'answer').map(input => input.value)
     } });
     workspaceReview = null; workspaceChoices.replaceChildren(); workspaceChoices.hidden = true;
-    await loadStoredProfile(); await renderWorkspace();
+    await loadStoredProfile(); await renderWorkspace(); await loadPrivacySetting();
     workspaceStatus.textContent = 'Approved workspace fields and answers are available in this extension.';
   } catch (error) { workspaceStatus.textContent = error.message; }
 });
@@ -687,6 +696,49 @@ async function initializeWorkspace() {
   await Promise.all([loadStoredProfile(), renderWorkspace()]);
   if (blocked) workspaceStatus.textContent = blocked + '. Existing extension information was preserved.';
 }
+const privacyToggle = document.getElementById('privacyConsentToggle');
+const privacyConsentState = document.getElementById('privacyConsentState');
+let privacyPreferenceRevision = null;
+let savedPrivacyValue = false;
+async function loadPrivacySetting() {
+  privacyToggle.disabled = true;
+  try {
+    const response = await workspaceCommand('workspace-privacy-read');
+    privacyPreferenceRevision = response.revision;
+    savedPrivacyValue = response.enabled === true;
+    privacyToggle.checked = savedPrivacyValue;
+    privacyToggle.disabled = false;
+    privacyConsentState.textContent = savedPrivacyValue
+      ? 'Enabled in your private EscapeHatch profile. Marketing and other agreements remain manual.'
+      : 'Off. Enable once to save this choice in your private EscapeHatch profile.';
+  } catch (_) {
+    privacyPreferenceRevision = null;
+    privacyToggle.checked = false;
+    privacyConsentState.textContent = 'Connect your private workspace to change this setting. No automatic consent is enabled.';
+  }
+}
+privacyToggle.addEventListener('change', async event => {
+  if (!event.isTrusted || privacyPreferenceRevision === null) { privacyToggle.checked = savedPrivacyValue; return; }
+  const requested = privacyToggle.checked;
+  privacyToggle.disabled = true;
+  try {
+    const result = await workspaceCommand('workspace-privacy-write', {
+      enabled: requested, expectedRevision: privacyPreferenceRevision
+    });
+    savedPrivacyValue = result.enabled === true;
+    privacyPreferenceRevision = result.revision;
+    privacyToggle.checked = savedPrivacyValue;
+    privacyConsentState.textContent = savedPrivacyValue
+      ? 'Enabled and saved in your private profile. Review each employer application.'
+      : 'Disabled and saved in your private profile.';
+  } catch (_) {
+    privacyToggle.checked = savedPrivacyValue;
+    privacyConsentState.textContent = 'Save was not confirmed. Existing preference preserved; reopen this panel to refresh.';
+  } finally { privacyToggle.disabled = privacyPreferenceRevision === null; }
+});
 void initializeWorkspace()
   .catch(error => { workspaceStatus.textContent = error.message; })
-  .finally(() => { document.getElementById('connectWorkspace').disabled = false; });
+  .finally(() => {
+    document.getElementById('connectWorkspace').disabled = false;
+    void loadPrivacySetting();
+  });

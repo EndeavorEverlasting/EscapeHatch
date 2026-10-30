@@ -31,7 +31,14 @@ export type ApplicationCheckpoint = {
   sections: SectionCheckpoint[];
   blocker?: string | null;
   terminalReviewObserved?: boolean;
-  employerSubmissionReceiptVerified?: boolean;
+};
+/** Trusted only when obtained from existing validated employer-receipt/tracker reconciliation. */
+export type ReconciledEmployerReceipt = {
+  opportunityId: string;
+  applicationUrl: string;
+  receiptId: string;
+  verifiedAt: string;
+  reconciledBy: 'existing-submission-reconciliation';
 };
 export type ProgressStatus =
   | 'NOT_OBSERVED' | 'IN_PROGRESS' | 'NEEDS_USER' | 'BLOCKED'
@@ -71,6 +78,7 @@ export function projectApplicationCheckpoint(
   expectedOpportunityId: string,
   expectedApplicationUrl: string,
   now = Date.now(),
+  reconciledReceipt: ReconciledEmployerReceipt | null = null,
 ): ProgressProjection {
   if (!checkpoint || checkpoint.schema !== 'escapehatch/application-progress-checkpoint/v1')
     return empty('Inspect the selected employer application to establish its first checkpoint.');
@@ -106,9 +114,14 @@ export function projectApplicationCheckpoint(
   const positionEstimatePercent = active && checkpoint.knownSectionCount !== null &&
     checkpoint.knownSectionCount > 0
     ? Math.floor(active.index * 100 / checkpoint.knownSectionCount) : null;
-  // A receipt is the only positive submission signal, and may only be set by the
-  // existing employer-receipt reconciliation owner after independent validation.
-  const status: ProgressStatus = checkpoint.employerSubmissionReceiptVerified ? 'SUBMITTED_CONFIRMED' :
+  // A stored checkpoint cannot proclaim submission. Only a separately reconciled,
+  // same-opportunity employer receipt from the existing trusted owner may do so.
+  const confirmedSubmission = Boolean(reconciledReceipt &&
+    reconciledReceipt.reconciledBy === 'existing-submission-reconciliation' &&
+    reconciledReceipt.receiptId && Number.isFinite(Date.parse(reconciledReceipt.verifiedAt)) &&
+    reconciledReceipt.opportunityId === expectedOpportunityId &&
+    sameUrl(reconciledReceipt.applicationUrl, expectedApplicationUrl));
+  const status: ProgressStatus = confirmedSubmission ? 'SUBMITTED_CONFIRMED' :
     checkpoint.blocker ? 'BLOCKED' :
     unknownRequired || manualDecisionsRemaining ? 'NEEDS_USER' :
     checkpoint.terminalReviewObserved && allInventoried &&

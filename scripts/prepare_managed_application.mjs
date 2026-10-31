@@ -23,12 +23,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { fitApplicationProse } from './lib/fit-application-prose.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = parseArgs(process.argv.slice(2));
 const port = String(args.port || process.env.PORT || '21031');
 const base = `http://127.0.0.1:${port}`;
 const api = `${base}/__escapehatch/managed-assist`;
+/** Live type-labeled endpoint historically capped values at 500; never mid-sentence slice. */
+const MOTIVATION_CHAR_BUDGET = Number(args['motivation-max-chars'] || process.env.ESCAPEHATCH_MOTIVATION_MAX_CHARS || 500);
 
 function parseArgs(argv) {
   const out = {};
@@ -183,8 +186,18 @@ async function main() {
     console.log('RESUME_FIELD=omitted_no_verified_public_pdf');
   }
   if (motivation) {
-    await typeLabeled('Why this role', motivation.slice(0, 500));
-    console.log('MOTIVATION_FIELD=set');
+    let fitted;
+    try {
+      fitted = fitApplicationProse(motivation, MOTIVATION_CHAR_BUDGET);
+    } catch (error) {
+      console.log(`MOTIVATION_FIELD=blocked error=${error?.message || error}`);
+      throw error;
+    }
+    await typeLabeled('Why this role, in five sentences or fewer', fitted.text);
+    console.log(`MOTIVATION_FIELD=set chars=${fitted.text.length} truncated=${fitted.truncated} reason=${fitted.reason}`);
+    if (fitted.truncated) {
+      console.log('MOTIVATION_WARNING=source exceeded budget; wrote complete sentences only (never a mid-word cut)');
+    }
   }
   await toggleConsent(consentLabel);
 

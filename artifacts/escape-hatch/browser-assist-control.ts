@@ -22,6 +22,7 @@ import { readPreferences, updatePreferences, clearPreferences, mergePreferenceEd
 import { accessSync, constants as fsConstants } from 'node:fs';
 import { fillSavedPreferences, openApplicationForm } from './managed-form.ts';
 import { emptyPreferences } from './src/lib/application-preferences.ts';
+import { assertEmployerFacingDocumentUrl } from './src/lib/employer-facing-document-url.ts';
 import { prepareToFinalReview, type PreparationResult } from './application-autopilot-executor.ts';
 import {
   ADAPTER_EVIDENCE_SCHEMA,
@@ -674,6 +675,64 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             if (recorded.length) await updatePreferences(current => mergePreferenceEdits(current, preferences));
             return respond(res, 200, { ok: true, recorded });
           }
+          if (url.pathname === PREFIX + '/toggle-labeled-checkbox') {
+            const labelText = typeof payload.label === 'string' ? payload.label.trim() : '';
+            if (!labelText || labelText.length > 120) return respond(res, 422, { ok: false, error: 'label_required' });
+            const escaped = labelText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const box = page.getByRole('checkbox', { name: new RegExp(escaped, 'i') });
+            const byLabel = page.locator('label').filter({ hasText: new RegExp('^' + escaped + '$', 'i') });
+            if (await box.count() === 1) {
+              const checked = await box.isChecked();
+              if (payload.checked === true && !checked) await box.check({ timeout: 2500 });
+              if (payload.checked === false && checked) await box.uncheck({ timeout: 2500 });
+              return respond(res, 200, { ok: true, label: labelText, checked: await box.isChecked() });
+            }
+            if (await byLabel.count() === 1) {
+              await byLabel.click({ timeout: 2500 });
+              return respond(res, 200, { ok: true, label: labelText, via: 'label_click' });
+            }
+            return respond(res, 409, { ok: false, error: 'checkbox_not_unique', count: await box.count() });
+          }
+
+          if (url.pathname === PREFIX + '/type-labeled') {
+            const labelText = typeof payload.label === 'string' ? payload.label.trim() : '';
+            const value = typeof payload.value === 'string' ? payload.value : '';
+            // Textareas such as "Why this role" routinely exceed 500 chars; keep a generous
+            // ceiling while still rejecting unbounded paste. Never silently mid-word truncate.
+            if (!labelText || labelText.length > 160 || value.length > 4000) {
+              return respond(res, 422, { ok: false, error: 'label_and_value_required' });
+            }
+            try {
+              assertEmployerFacingDocumentUrl(labelText, value);
+            } catch (error) {
+              const message = error instanceof Error ? error.message : 'employer_facing_document_url_forbidden';
+              return respond(res, 422, { ok: false, error: message.slice(0, 160) });
+            }
+            const all = page.locator('input:not([type="hidden"]):not([type="password"]):not([type="submit"]):not([type="button"]), textarea');
+            const hits: number[] = [];
+            const count = await all.count();
+            for (let i = 0; i < count; i++) {
+              const visible = await all.nth(i).evaluate((el) => (el as HTMLElement).getClientRects().length > 0);
+              if (!visible) continue;
+              const text = await all.nth(i).evaluate((el, needle) => {
+                const c = el as HTMLInputElement;
+                const label = [...Array.from(c.labels || []).map((n) => n.textContent || ''), c.getAttribute('aria-label') || '', c.placeholder || '', c.id]
+                  .join(' ').replace(/\s+/g, ' ').trim();
+                return label.toLowerCase().includes(String(needle).toLowerCase()) ? label : '';
+              }, labelText);
+              if (text) hits.push(i);
+            }
+            if (hits.length !== 1) return respond(res, 409, { ok: false, error: 'input_not_unique', count: hits.length });
+            const control = all.nth(hits[0]);
+            await control.fill(value, { timeout: 2500 });
+            await control.evaluate((el) => {
+              el.dispatchEvent(new Event('input', { bubbles: true }));
+              el.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+            const readback = await control.inputValue();
+            return respond(res, 200, { ok: true, label: labelText, value, readback });
+          }
+
           if (url.pathname === PREFIX + '/fill' || url.pathname === PREFIX + '/resume') {
             if (url.pathname === PREFIX + '/resume') {
               // Recheck immediately: an earlier poll cannot authorize writing to a page that changed.

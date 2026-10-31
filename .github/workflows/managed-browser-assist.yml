@@ -4,6 +4,11 @@ on:
     paths:
       - "artifacts/escape-hatch/browser-assist-control.ts"
       - "artifacts/escape-hatch/browser-assist-control.test.ts"
+      - "artifacts/escape-hatch/application-requirements.ts"
+      - "artifacts/escape-hatch/application-requirements.test.ts"
+      - "artifacts/escape-hatch/src/lib/application-puzzle.ts"
+      - "artifacts/escape-hatch/src/lib/application-puzzle.test.ts"
+      - "artifacts/escape-hatch/src/components/application-puzzle.tsx"
       - "artifacts/escape-hatch/managed-auth-checkpoint.ts"
       - "artifacts/escape-hatch/managed-auth-checkpoint.test.ts"
       - "contracts/application-journey-scenes.v1.json"
@@ -23,6 +28,11 @@ on:
     paths:
       - "artifacts/escape-hatch/browser-assist-control.ts"
       - "artifacts/escape-hatch/browser-assist-control.test.ts"
+      - "artifacts/escape-hatch/application-requirements.ts"
+      - "artifacts/escape-hatch/application-requirements.test.ts"
+      - "artifacts/escape-hatch/src/lib/application-puzzle.ts"
+      - "artifacts/escape-hatch/src/lib/application-puzzle.test.ts"
+      - "artifacts/escape-hatch/src/components/application-puzzle.tsx"
       - "artifacts/escape-hatch/managed-auth-checkpoint.ts"
       - "artifacts/escape-hatch/managed-auth-checkpoint.test.ts"
       - "contracts/application-journey-scenes.v1.json"

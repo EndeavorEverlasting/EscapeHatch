@@ -70,6 +70,19 @@ def validate() -> list[str]:
         errors.append("Private author source must be disallowed from Git")
     if not str(obj.get("private_source_event", {}).get("alias", "")).startswith("opaque:"):
         errors.append("Private source alias must be opaque")
+    source = obj.get("private_source_event", {})
+    if source.get("canonical_text_preservation") != "VERBATIM_UNTIL_EXPLICIT_AUTHOR_REVISION":
+        errors.append("Canonical author text must be verbatim until explicit revision")
+    if source.get("canonical_source_count") != 1:
+        errors.append("Canonical author source must not have competing copies")
+    if source.get("derivatives_replace_source") is not False:
+        errors.append("Derivatives must never replace the canonical source")
+    if source.get("derivative_approval") != "SEPARATE_REVIEW":
+        errors.append("Derivative approval must be separate from source acceptance")
+    if not {"resume", "cover_letter", "professional_bio"}.issubset(
+        set(source.get("derived_outputs", []))
+    ):
+        errors.append("Allowed source-derived writing outcomes missing")
     if obj.get("local_trifecta") != "docs/agent/TRIFECTA.md":
         errors.append("EscapeHatch Trifecta must resolve locally")
     refs = [str(CONTRACT_PATH.relative_to(ROOT)), obj.get("handoff", "")]

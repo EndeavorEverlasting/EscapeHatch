@@ -50,3 +50,61 @@ test('inspection must match launched job identity and live path, not merely empl
     assert.throws(() => assertInspectionScope(id, selected, 'one', url, live), /Application changed/);
   }
 });
+
+
+test('conditional cover-letter upload changes only the observed required denominator', () => {
+  const values: FormInspection = {
+    ...inspection,
+    requirements: [
+      { id: 'resume', label: 'Résumé', requirement: 'required', kind: 'resume', populated: true },
+      { id: 'interest', label: 'Why this role?', requirement: 'required', kind: 'question', populated: true },
+    ],
+  };
+  const result = (data: FormInspection) => projectApplicationPuzzle(data, 'one', inspection.applicationUrl, now, currentPage).checkpoint;
+  const missing = result(values);
+  assert.equal(missing.coverLetter, 'NOT_OBSERVED');
+  assert.equal(missing.totalRequired, 2);
+  assert.equal(missing.percent, 100);
+  assert.equal(missing.wholeApplicationPercent, null);
+
+  const optional: FormInspection = { ...values, requirements: [...values.requirements,
+    { id: 'cover', label: 'Cover letter', requirement: 'optional', kind: 'cover', populated: false }] };
+  assert.equal(result(optional).coverLetter, 'OPTIONAL');
+  assert.equal(result(optional).excludedOptional, 1);
+  assert.equal(result(optional).totalRequired, 2);
+  assert.equal(result(optional).percent, 100);
+
+  const required: FormInspection = { ...optional, requirements: optional.requirements.map(p =>
+    p.id === 'cover' ? { ...p, requirement: 'required' as const } : p) };
+  assert.equal(result(required).coverLetter, 'REQUIRED');
+  assert.equal(result(required).requiredCoverInputs, 1);
+  assert.equal(result(required).totalRequired, 3);
+  assert.equal(result(required).percent, 67);
+  assert.equal(result(required).verifiedRequired, 2);
+
+  const attached: FormInspection = { ...required, requirements: required.requirements.map(p =>
+    p.id === 'cover' ? { ...p, populated: true } : p) };
+  assert.equal(result(attached).percent, 100);
+  assert.equal(result(attached).wholeApplicationPercent, null);
+
+  const unknown: FormInspection = { ...required, requirements: required.requirements.map(p =>
+    p.id === 'cover' ? { ...p, requirement: 'unknown' as const } : p) };
+  assert.equal(result(unknown).coverLetter, 'UNKNOWN');
+  assert.equal(result(unknown).percent, null);
+  // A required free-text cover-letter question is an answer, not a file attachment.
+  const textAnswer: FormInspection = { ...values, requirements: [...values.requirements,
+    { id: 'essay', label: 'Cover letter or interest statement', requirement: 'required', kind: 'question', populated: false }] };
+  assert.equal(result(textAnswer).coverLetter, 'NOT_OBSERVED');
+  assert.equal(result(textAnswer).totalRequired, 3);
+  assert.equal(result(textAnswer).percent, 67);
+});
+
+test('progress disappears on stale, foreign or unverified page inventories', () => {
+  const stale = projectApplicationPuzzle(inspection, 'one', inspection.applicationUrl, now + INSPECTION_MAX_AGE_MS + 1, currentPage);
+  assert.equal(stale.checkpoint.percent, null);
+  assert.equal(stale.checkpoint.coverLetter, 'NOT_OBSERVED');
+  assert.equal(stale.checkpoint.totalRequired, 0);
+  const switched = projectApplicationPuzzle(inspection, 'two', inspection.applicationUrl, now, currentPage);
+  assert.equal(switched.checkpoint.percent, null);
+  assert.equal(switched.checkpoint.totalRequired, 0);
+});

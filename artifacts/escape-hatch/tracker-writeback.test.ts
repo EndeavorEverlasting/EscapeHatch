@@ -64,8 +64,13 @@ test('canonical tracker glyphs, Research status and date-validated serial surviv
   assert.equal(verified.done, true);
   assert.deepEqual(verified.data, []);
   assert.equal(after[1][7], 'unchanged');
+  // Already-checked Applied? + employer-confirmed In Process: preserve ownership (PR #156), do not rewrite.
   const progressed = [cells[0], ['☑', 'Medium', 'In Process', 'Synthetic', 'Role', url, serial, 'unchanged']];
-  assert.throws(() => planSubmissionWrite(current, evidence, progressed), /CONFLICT/);
+  assert.equal(planSubmissionWrite(current, evidence, progressed).done, true);
+  assert.deepEqual(planSubmissionWrite(current, evidence, progressed).data, []);
+  // Same In Process status without Applied? still cannot certify submission.
+  const unchecked = [cells[0], ['☐', 'Medium', 'In Process', 'Synthetic', 'Role', url, serial, 'unchanged']];
+  assert.throws(() => planSubmissionWrite(current, evidence, unchecked), /CONFLICT/);
 });
 
 

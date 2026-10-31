@@ -57,9 +57,15 @@ export type TrackerConnectionState =
   | { status: 'STALE'; reason: string; capturedAtUtc: string; contentDigest: string }
   | { status: 'CONNECTED'; snapshot: TrackerSnapshot };
 
-function normalizeStatus(value: string): ApplicationStatus {
+/** Ownership is separate from employer receipt. A second applicant step does not undo submission. */
+function normalizeStatus(value: string, appliedCheckbox: boolean): ApplicationStatus {
   const s = value.trim().toLowerCase();
+  if (/^submitted\s*[-–—]\s*applicant action required$/.test(s)) return appliedCheckbox ? 'follow_up' : 'preparing';
   if (s.startsWith('submit')) return 'applied';
+  if (/^pending\s*[-–—]\s*employer$/.test(s)) return appliedCheckbox ? 'applied' : 'preparing';
+  if (/^action required\s*[-–—]\s*applicant$/.test(s)) return appliedCheckbox ? 'follow_up' : 'preparing';
+  if (/^in progress\s*[-–—]\s*applicant$/.test(s)) return 'preparing';
+  // Preserve imported legacy labels until a human classifies who owns the next step.
   if (s.includes('process') || s.includes('interview') || s.includes('follow')) return 'follow_up';
   if (s.includes('closed') || s.includes('reject') || s.includes('withdraw')) return 'closed';
   if (s.includes('ready') || s.includes('verify')) return 'preparing';
@@ -95,7 +101,12 @@ export function computeTrackerMetrics(rows: TrackerRow[]): TrackerMetrics {
     trackedRoles: rows.length,
     appliedOrSubmittedCheckbox: rows.filter((row) => row.appliedCheckbox).length,
     readyToApply: rows.filter((row) => row.status.toLowerCase().includes('ready')).length,
-    inProcess: rows.filter((row) => row.status.toLowerCase().includes('process')).length,
+    inProcess: rows.filter((row) => {
+      const s = row.status.trim().toLowerCase();
+      return s.includes('process') || /^in progress\s*[-–—]\s*applicant$/.test(s) ||
+        /^action required\s*[-–—]\s*applicant$/.test(s) ||
+        /^submitted\s*[-–—]\s*applicant action required$/.test(s);
+    }).length,
     submittedStatus: rows.filter((row) => row.status.toLowerCase().startsWith('submit')).length,
     highPriority: rows.filter((row) => row.priority.toLowerCase().startsWith('high')).length,
   };
@@ -134,7 +145,7 @@ export function parseTrackerSnapshot(value: unknown): TrackerSnapshot | null {
 }
 
 export function trackerRowToApplication(row: TrackerRow, capturedAt?: string): Application {
-  const status = normalizeStatus(row.status);
+  const status = normalizeStatus(row.status, row.appliedCheckbox);
   // Checkbox alone never upgrades to submitted; status text must say Submitted.
   const safeStatus = row.appliedCheckbox && status === 'saved' ? 'preparing' : status;
   const packageBits = [
@@ -218,8 +229,15 @@ export function selectNextActionableOpportunity(snapshot: TrackerSnapshot): Trac
 }
 
 export function isSubmittedLocked(row: TrackerRow): boolean {
-  return row.status.toLowerCase().startsWith('submit') ||
-    (/google|mandiant/i.test(row.company) && row.appliedCheckbox && row.status.toLowerCase().includes('submit'));
+  const status = row.status.trim().toLowerCase();
+  if (status.startsWith('submit')) return true;
+  // A confirmed prior application stays locked through the employer and
+  // applicant's post-submission turns. A bare checkbox or pre-submit
+  // applicant step alone is never a submission receipt.
+  if (!row.appliedCheckbox) return false;
+  return ['in process', 'follow-up', 'interviewing', 'offer'].includes(status) ||
+    /^pending\s*[-–—]\s*employer$/.test(status) ||
+    /^action required\s*[-–—]\s*applicant$/.test(status);
 }
 
 export function connectionFromSnapshot(

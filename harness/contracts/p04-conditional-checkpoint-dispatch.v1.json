@@ -1,0 +1,44 @@
+{
+  "schema": "escapehatch/p04-conditional-checkpoint-dispatch/v1",
+  "date": "2026-10-31",
+  "parent_issue": 69,
+  "owner": "EscapeHatch",
+  "handoff": "docs/agent/P04_CONDITIONAL_FORM_CHECKPOINT_PROGRESS_2026-10-31.md",
+  "release_pr": 157,
+  "source": "original operator-selected private ledger",
+  "roles": [
+    {
+      "id": "P04",
+      "host": "CURRENT_CHAT_RUNTIME",
+      "mission": "source verification and bounded execution coordination",
+      "result": "source approval recorded"
+    },
+    {
+      "id": "P08",
+      "host": "LOCAL_AGENT_RUNTIME",
+      "mission": "actual browser checkpoint and document hash readback",
+      "result": "not observed"
+    },
+    {
+      "id": "P82",
+      "host": "CI_OR_REMOTE_RUNNER",
+      "mission": "conditional required-field denominator comparison",
+      "result": "validation pending"
+    },
+    {
+      "id": "P07",
+      "host": "CURRENT_CHAT_RUNTIME",
+      "mission": "current puzzle implementation and integration",
+      "result": "pull request pending"
+    }
+  ],
+  "dependent_work": "separately owned PR #147 cross-section engine; preserve PR #138 materials graph",
+  "invariants": [
+    "no whole-application percentage from a current page",
+    "optional and absent cover inputs do not count",
+    "required cover enters denominator only after observation",
+    "unknown required fields suppress numeric claim",
+    "application submission and reviewer action remain separate"
+  ],
+  "proof_ceiling": "provider source and synthetic validation; real employer/browser proof pending"
+}

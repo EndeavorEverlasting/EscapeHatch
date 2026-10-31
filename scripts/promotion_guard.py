@@ -102,15 +102,22 @@ def evaluate_required_checks(
 ) -> tuple[bool, list[str]]:
     """Return (is_ready, reasons). Fail closed on SKIP, stale, missing, pending, failure."""
     errors: list[str] = []
-    # Map by name
-    provided_by_name = {c.name: c for c in provided}
+    # CheckResult has no provider attempt identity. Never let input order select
+    # a green result over conflicting or stale evidence for the same check.
+    provided_by_name: dict[str, list[CheckResult]] = {}
+    for check in provided:
+        provided_by_name.setdefault(check.name, []).append(check)
     for req in required:
         name = req["name"]
         expected_conclusion = req["conclusion"]
-        chk = provided_by_name.get(name)
-        if chk is None:
+        matches = provided_by_name.get(name, [])
+        if not matches:
             errors.append(f"missing required check: {name} — contract mismatch blocking promotion")
             continue
+        if len(matches) != 1:
+            errors.append(f"ambiguous duplicate required check: {name} — resolve provider attempts before promotion")
+            continue
+        chk = matches[0]
         # Check that check is attributable to exact candidate SHA
         if chk.head_sha != candidate_head_sha:
             errors.append(f"stale proof: check {name} head {chk.head_sha[:7]} != candidate {candidate_head_sha[:7]}")

@@ -99,3 +99,36 @@ test('required-field blocker projection never counts a separate checkbox as cons
     'unclassified_field_review:Unclassified custom widget',
   ]);
 });
+
+
+test('conditional cover-letter file is a requirement only while observed and visible', async () => {
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  try {
+    const page = await browser.newPage();
+    await page.route('https://example.test/**', route => route.fulfill({ contentType: 'text/html', body: `
+      <form>
+        <label>Résumé <input type="file" id="cv" required></label>
+        <label>Include a cover letter?
+          <select id="extra" onchange="document.getElementById('cover-wrapper').hidden = this.value !== 'yes'">
+            <option value="no">No</option><option value="yes">Yes</option>
+          </select>
+        </label>
+        <div id="cover-wrapper" hidden><label>Cover letter * <input type="file" id="cover" required></label></div>
+        <label>Why are you interested? <textarea id="interest" required></textarea></label>
+      </form>`
+    }));
+    await page.goto(applicationUrl);
+    let inspected = await inspectApplicationRequirements(page, 'synthetic-cover', applicationUrl);
+    assert.equal(inspected.requirements.some(item => item.kind === 'cover'), false);
+    assert.equal(inspected.requirements.filter(item => item.requirement === 'required').length, 2);
+    await page.locator('#extra').selectOption('yes');
+    inspected = await inspectApplicationRequirements(page, 'synthetic-cover', applicationUrl);
+    assert.equal(inspected.requirements.find(item => item.kind === 'cover')?.requirement, 'required');
+    assert.equal(inspected.requirements.find(item => item.kind === 'cover')?.populated, false);
+    assert.equal(inspected.requirements.filter(item => item.requirement === 'required').length, 3);
+    await page.locator('#extra').selectOption('no');
+    inspected = await inspectApplicationRequirements(page, 'synthetic-cover', applicationUrl);
+    assert.equal(inspected.requirements.find(item => item.kind === 'cover'), undefined);
+    assert.equal(inspected.requirements.filter(item => item.requirement === 'required').length, 2);
+  } finally { await browser.close(); }
+});

@@ -1,0 +1,105 @@
+{
+  "schema_version": "escapehatch/agent-context-boundaries/v1",
+  "contract_id": "agent-context-boundaries",
+  "owner": "AGENTS.md",
+  "registry": "ARTIFACT_REGISTRY.md",
+  "handoff": "docs/agent/CONTEXT_BOUNDARY_AND_PRIVATE_PROFILE_HANDOFF_2026-10-31.md",
+  "standalone_escapepath_required": true,
+  "external_prompt_registry_required": false,
+  "purpose": "Define repository-local agent readiness and typed separation of user-private applicant data, contributor-local agent settings, tracked repository policy, and sanitized handoff context.",
+  "read_first": [
+    "AGENTS.md",
+    "ARTIFACT_REGISTRY.md",
+    "harness/WORKFLOWS.md",
+    "docs/WINDOWS_RUNTIME_LIFECYCLE.md",
+    "docs/agent/TRIFECTA.md",
+    "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md",
+    "docs/agent/P04_ONE_DOWNLOAD_EXTENSION_AND_PRIVATE_PROFILE_BOOTSTRAP_2026-10-28.md",
+    "harness/contracts/application-autofill-parent.v1.json",
+    "harness/contracts/application-preference-cache.v1.json"
+  ],
+  "context_classes": [
+    {
+      "id": "applicant_private",
+      "owner": "installed_user_workspace",
+      "tracked": false,
+      "scope": "verified_user_and_opportunity",
+      "examples": [
+        "authored motivation text",
+        "career narrative",
+        "approved answers",
+        "real ATS state"
+      ],
+      "gate": "exact owner/workspace plus revision-aware canonical writer and destination readback"
+    },
+    {
+      "id": "contributor_local",
+      "owner": "human_developer_or_agent_profile",
+      "tracked": false,
+      "scope": "one developer/harness/profile",
+      "examples": [
+        "personal IDE prompts",
+        "API tokens",
+        "individual model preferences"
+      ],
+      "gate": "never promote into applicant state or global repository defaults"
+    },
+    {
+      "id": "repository_policy",
+      "owner": "AGENTS.md_and_existing_escapehatch_harness",
+      "tracked": true,
+      "scope": "product_portable",
+      "examples": [
+        "doctrine",
+        "contract",
+        "synthetic fixtures",
+        "validators"
+      ],
+      "gate": "versioned reviewed repo writes; no actual user data"
+    },
+    {
+      "id": "sanitized_handoff",
+      "owner": "bounded_sprint",
+      "tracked": true,
+      "scope": "specific_repo_task",
+      "examples": [
+        "typed evidence class",
+        "opaque private source alias",
+        "acceptance gates",
+        "proof ceiling"
+      ],
+      "gate": "only opaque private references and public-neutral content"
+    }
+  ],
+  "private_source_event": {
+    "alias": "opaque:career-author-voice/2026-10-31",
+    "class": "applicant_private",
+    "source_owner": "existing_private_career_narrative",
+    "anchor": "latest author-approved Broadcastwell motivation section",
+    "source_state": "PRIVATE_DOC_WRITE_AND_READBACK_VERIFIED",
+    "local_profile_state": "NOT_OBSERVED",
+    "employer_form_state": "NOT_OBSERVED",
+    "repo_payload_allowed": false
+  },
+  "parent": {
+    "issue": "https://github.com/EndeavorEverlasting/EscapeHatch/issues/69",
+    "profile_issue": "https://github.com/EndeavorEverlasting/EscapeHatch/issues/146",
+    "no_automatic_parent_completion": true
+  },
+  "local_trifecta": "docs/agent/TRIFECTA.md",
+  "validation": [
+    "python scripts/validate_agent_context_boundaries.py --self-test",
+    "python scripts/validate_agent_context_boundaries.py",
+    "python scripts/validate_governance.py",
+    "python scripts/validate_harness.py",
+    "python scripts/validate_application_autofill_parent.py",
+    "python scripts/validate_application_journey.py"
+  ],
+  "negative_acceptance": [
+    "no_tokencorridor_prerequisite",
+    "no_public_private_payload",
+    "no_applicant_developer_conflation",
+    "no_unverified_local_profile_write_claim",
+    "no_unauthorized_submit"
+  ]
+}

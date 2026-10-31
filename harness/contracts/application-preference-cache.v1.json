@@ -58,7 +58,8 @@
       "never_commit_real_preferences",
       "never_print_preference_values_in_logs",
       "clear_must_be_user_accessible",
-      "export_is_explicit_user_action"
+      "export_is_explicit_user_action",
+      "never_fill_employer_resume_or_document_url_fields_with_google_drive_or_docs_links"
     ],
     "application_privacy_acknowledgement": {
       "field": "application_privacy_acknowledgement_enabled",

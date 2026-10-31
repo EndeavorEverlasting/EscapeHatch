@@ -18,7 +18,8 @@ import { chromium, type BrowserContext, type Page } from '@playwright/test';
 import type { Plugin } from 'vite';
 import { isLoopbackAddress, readManagedRuntime } from './runtime-control.ts';
 import { userDataRoot } from './user-data.ts';
-import { readPreferences, updatePreferences, clearPreferences, mergePreferenceEdits } from './preference-file.ts';
+import { readPreferences, updatePreferences, clearPreferences, mergePreferenceEdits, preferenceStoreLocator } from './preference-file.ts';
+import { accessSync, constants as fsConstants } from 'node:fs';
 import { fillSavedPreferences, openApplicationForm } from './managed-form.ts';
 import { emptyPreferences } from './src/lib/application-preferences.ts';
 import { prepareToFinalReview, type PreparationResult } from './application-autopilot-executor.ts';
@@ -370,7 +371,22 @@ export function createManagedBrowserAssistPlugin(): Plugin {
         }
         if (url.pathname === PREFIX + '/preferences' && req.method === 'GET') {
           if (req.headers.origin && req.headers.origin !== expectedOrigin || req.headers['sec-fetch-site'] === 'cross-site') return respond(res, 403, { ok: false, error: 'operator_origin_required' });
-          try { return respond(res, 200, { ok: true, preferences: await readPreferences() }); }
+          try {
+            const locator = preferenceStoreLocator();
+            let storeExists = false;
+            try { accessSync(locator.preferenceStore, fsConstants.F_OK); storeExists = true; } catch { storeExists = false; }
+            return respond(res, 200, {
+              ok: true,
+              preferences: await readPreferences(),
+              store: {
+                dataHome: locator.dataHome,
+                preferenceStore: locator.preferenceStore,
+                source: locator.source,
+                exists: storeExists,
+                values: 'redacted',
+              },
+            });
+          }
           catch { return respond(res, 422, { ok: false, error: 'Saved preferences could not be read; existing data preserved.' }); }
         }
         if (url.pathname.startsWith(PREFIX + '/documents/') && req.method === 'GET') {

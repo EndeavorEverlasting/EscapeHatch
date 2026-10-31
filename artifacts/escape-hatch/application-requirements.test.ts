@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from '@playwright/test';
-import { inspectApplicationRequirements, unresolvedCurrentPageRequirements } from './application-requirements.ts';
+import { inspectApplicationRequirements, unresolvedCurrentPageRequirements, assertSubmitFormComplete } from './application-requirements.ts';
 
 const applicationUrl = 'https://example.test/apply';
 
@@ -98,6 +98,8 @@ test('required-field blocker projection never counts a separate checkbox as cons
     'required_operator_action:Applicant Privacy Notice *',
     'unclassified_field_review:Unclassified custom widget',
   ]);
+  assert.throws(() => assertSubmitFormComplete(blockers), /submit_blocked_incomplete_form/);
+  assert.doesNotThrow(() => assertSubmitFormComplete([]));
 });
 
 

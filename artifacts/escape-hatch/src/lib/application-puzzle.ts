@@ -31,11 +31,31 @@ export function projectApplicationPuzzle(inspection: FormInspection | null, oppo
     Number.isFinite(timestamp) && timestamp <= now && now - timestamp <= INSPECTION_MAX_AGE_MS);
   const pieces = current ? inspection!.requirements : [];
   const required = pieces.filter(piece => piece.requirement === 'required');
+  const verifiedRequired = required.filter(piece => piece.populated).length;
+  const unknownCount = pieces.filter(piece => piece.requirement === 'unknown').length;
+  const covers = pieces.filter(piece => piece.kind === 'cover');
+  const coverLetter = !covers.length ? 'NOT_OBSERVED' as const :
+    covers.some(piece => piece.requirement === 'required') ? 'REQUIRED' as const :
+    covers.some(piece => piece.requirement === 'unknown') ? 'UNKNOWN' as const : 'OPTIONAL' as const;
+  // A missing cover-letter input is not a missing document. An observed optional
+  // control contributes no term. An observed required cover file contributes
+  // exactly one input to the required denominator, whether or not a PDF exists
+  // in private storage. Unknown controls and unseen pages cannot be called done.
+  const percent = current && required.length > 0 && unknownCount === 0
+    ? Math.round(100 * verifiedRequired / required.length) : null;
   return {
     current, pieces,
     requiredCount: required.length,
-    unresolvedCount: required.filter(piece => !piece.populated).length,
-    unknownCount: pieces.filter(piece => piece.requirement === 'unknown').length,
+    unresolvedCount: required.length - verifiedRequired,
+    unknownCount,
+    checkpoint: {
+      scope: 'current_page_only' as const,
+      verifiedRequired, totalRequired: required.length,
+      excludedOptional: pieces.filter(piece => piece.requirement === 'optional').length,
+      coverLetter, requiredCoverInputs: required.filter(piece => piece.kind === 'cover').length,
+      percent,
+      wholeApplicationPercent: null as null,
+    },
     // Neither DOM validity nor local files prove complete requirements, vacancy availability or submission.
     preparationReady: false as const,
     finalSubmitAuthorized: false as const,

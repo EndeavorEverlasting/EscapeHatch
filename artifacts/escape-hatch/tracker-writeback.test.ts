@@ -170,3 +170,33 @@ test('provider sync verifies readback, preserves notes and retries an ambiguous 
     assert.equal(writes, 1);
   } finally { await fs.rm(root, { recursive: true, force: true }); }
 });
+
+
+test('post-submission action ownership cannot be rewound by a late confirmed receipt', () => {
+  for (const status of [
+    'Submitted — Applicant Action Required', 'Pending — Employer',
+    'Action Required — Applicant', 'In Process', 'Interviewing', 'Offer',
+  ]) {
+    const cells = values();
+    cells[1][2] = status;
+    cells[1][5] = '☑';
+    cells[1][6] = '01/02/2026';
+    const current = createTrackerSnapshotFromValues(cells, {
+      spreadsheetId: 'synthetic_sheet_id', sheetName: 'Applications',
+    }, 'synthetic', new Date('2026-01-01'));
+    const confirmed = { ...receipt(), opportunityId: trackerOpportunityId(current.applications[0]) };
+    const planned = planSubmissionWrite(current, confirmed, cells, 'America/New_York');
+    assert.equal(planned.done, true, status);
+    assert.equal(planned.data.length, 0, status);
+    assert.equal(planned.row.status, status);
+  }
+
+  // Pending by itself cannot certify submission without the separate Applied flag.
+  const unproven = values();
+  unproven[1][2] = 'Pending — Employer';
+  const snapshot = createTrackerSnapshotFromValues(unproven, {
+    spreadsheetId: 'synthetic_sheet_id', sheetName: 'Applications',
+  }, 'synthetic', new Date('2026-01-01'));
+  const confirmation = { ...receipt(), opportunityId: trackerOpportunityId(snapshot.applications[0]) };
+  assert.throws(() => planSubmissionWrite(snapshot, confirmation, unproven), /CONFLICT/);
+});

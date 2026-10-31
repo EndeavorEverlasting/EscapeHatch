@@ -93,9 +93,17 @@ export function planSubmissionWrite(snapshot: TrackerSnapshot, receipt: Submissi
   const status = headers.indexOf('status'), applied = headers.indexOf('applied?'), date = headers.indexOf('date applied');
   if ([status, applied, date].some(index => index < 0) || new Set(headers.filter(Boolean)).size !== headers.filter(Boolean).length) throw new Error('CONFLICT');
   const statusValue = row.status.trim().toLowerCase();
-  const done = /^(submitted|applied)$/i.test(statusValue) && row.appliedCheckbox;
-  // Preserve downstream statuses such as In Process or Interviewing, even if
-  // an employer confirmation receipt arrives after a later portal update.
+  // A verified receipt must never rewind an already-submitted application
+  // because the applicant owes a questionnaire or the employer owns review.
+  // The Applied checkbox alone is not proof; this function is reached only
+  // after a bound employer confirmation receipt has been validated.
+  const done = row.appliedCheckbox && (
+    /^(?:submitted(?:\s*[-–—]\s*.+)?|applied)$/.test(statusValue) ||
+    /^pending\s*[-–—]\s*employer$/.test(statusValue) ||
+    /^action required\s*[-–—]\s*applicant$/.test(statusValue) ||
+    ['in process', 'follow-up', 'interviewing', 'offer', 'closed'].includes(statusValue));
+  // Preserve the actual downstream stage when an employer confirmation receipt
+  // arrives after a later portal status update.
   if (!done && (row.appliedCheckbox ||
       !['', 'saved', 'preparing', 'ready', 'ready to apply', 'research', 'resume ready',
         'review required', 'verify submission', 'not started', 'draft'].includes(statusValue))) throw new Error('CONFLICT');

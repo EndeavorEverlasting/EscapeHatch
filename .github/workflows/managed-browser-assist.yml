@@ -52,6 +52,7 @@ permissions:
   contents: read
 jobs:
   validate:
+    name: managed-browser-assist
     runs-on: ubuntu-latest
     defaults:
       run:

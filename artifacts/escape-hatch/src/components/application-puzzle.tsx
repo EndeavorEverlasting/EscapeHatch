@@ -75,7 +75,7 @@ export function ApplicationPuzzle({ opportunity, url, documents, disabled, onByp
             ? 'Cover-letter input is optional on this page: excluded from required progress.'
             : projection.checkpoint.coverLetter === 'UNKNOWN'
               ? 'Cover-letter field exists, but whether it is required remains unknown.'
-              : 'No cover-letter input observed on this page. Do not create one by default; later pages may differ.'}</p>
+              : 'No cover-letter upload input observed on this page. A written interest response is separate; later pages may differ.'}</p>
         <p className="mt-1 text-xs text-muted-foreground">This percentage covers only the currently inspected employer page. Conditional fields can change the denominator. Future questionnaire pages, employer acceptance and whole-application completion are unmeasured; even 100% here does not authorize Submit.</p>
       </div>
       <p className="mb-4 text-xs text-muted-foreground break-all">Observed {new Date(inspection!.capturedAt).toLocaleTimeString()} on {inspection!.pageUrl}. This inventory expires after five minutes.</p>

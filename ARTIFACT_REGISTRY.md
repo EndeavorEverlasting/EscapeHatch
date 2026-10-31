@@ -209,6 +209,16 @@ The following are intentionally **not** tracked repository artifacts:
 | Visual resume PDF (optional projection) | user | may follow `contracts/resume-presentation-visual.v1.json`; marked not-for-ATS-submission; keep under `private/` or `Outputs/resume-visual/` |
 | Live ATS/application evidence | user/operator | keep local unless sanitized into an approved fixture/report |
 
+
+## Context boundaries and private-profile handoff registration (2026-10-31)
+
+| Artifact | Path | Policy | Update trigger | Validation |
+| --- | --- | --- | --- | --- |
+| Self-contained context-boundary handoff | `docs/agent/CONTEXT_BOUNDARY_AND_PRIVATE_PROFILE_HANDOFF_2026-10-31.md` | Tracked and sanitized; no private profile bytes/URLs, applicant values or personal developer rules | Private author-voice correction, user/developer/repo boundary or local-agent continuity changes | `python scripts/validate_agent_context_boundaries.py` |
+| Agent context boundary contract | `harness/contracts/agent-context-boundaries.v1.json` | Tracked schema/owner routing; local EscapeHatch harness must be independently discoverable | Cross-harness contexts, local profile ownership or policy-adapter changes | `python scripts/validate_agent_context_boundaries.py` |
+| Agent context boundary validator | `scripts/validate_agent_context_boundaries.py` | Tracked stdlib validator with synthetic leak-negative self-test | Contract or handoff changes | `python scripts/validate_agent_context_boundaries.py --self-test` and `python scripts/validate_agent_context_boundaries.py` |
+
+
 ## Validation output
 
 Validator stdout is evidence, not a canonical tracked artifact. CI logs/operator terminal output may be cited as proof. Persistent receipts require an explicit registered output path, naming rule, producer, retention policy, and privacy review before use.

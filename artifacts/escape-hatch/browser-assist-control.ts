@@ -118,6 +118,22 @@ export function reviewedContactFields(value: unknown): Record<string, string> {
   return safe;
 }
 
+// Presentation-only composites are built from complete, reviewed granular answers.
+export function derivedContactPreferenceValues(
+  preferences: Record<string, { value: string }>,
+): Record<string, string> {
+  const value = (id: string) => typeof preferences[id]?.value === 'string'
+    ? preferences[id].value.trim() : '';
+  const result: Record<string, string> = {};
+  const first = value('identity.first_name'), last = value('identity.last_name');
+  if (first && last && !value('identity.full_name')) result['identity.full_name'] = first + ' ' + last;
+  const location = ['identity.city', 'identity.region', 'identity.country'].map(value);
+  if (location.every(Boolean) && !value('identity.location_summary')) {
+    result['identity.location_summary'] = location.join(', ');
+  }
+  return result;
+}
+
 export function parseNavigationAuthorization(
   value: unknown,
   origin: string,
@@ -256,6 +272,20 @@ export async function attachPdfs(page: Page, resume: ReturnType<typeof parsePriv
         });
         if ((kind === 'resume' ? /\b(resume|r[ée]sum[ée]|cv)\b/i : /\b(cover[\s_-]*letter)\b/i).test(attrs)) matches.push(input);
       } catch { /* page changed; leave control unmodified */ }
+    }
+    if (matches.length === 0 && kind === 'resume') {
+      // Only a unique Resume uploader on the exact Cognizant talent-community route.
+      const current = new URL(page.url());
+      const cognizantTalent = current.origin === 'https://careers.cognizant.com' &&
+        /^\/us-en\/talent-community\/?$/.test(current.pathname);
+      if (cognizantTalent && inputs.length === 1 &&
+          await page.getByText('Resume', { exact: true }).count() === 1) {
+        try {
+          await inputs[0].setInputFiles(file, { timeout: 5000 });
+          outcome[kind] = 'attached_to_input_review_required';
+        } catch { outcome[kind] = 'manual_required'; }
+        continue;
+      }
     }
     if (matches.length === 0) {
       // Portal-based uploaders leave their anonymous file inputs under body. Bind the chooser
@@ -556,8 +586,14 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             // Only the CURRENT employer page determines which documents are requested.
             // Missing or unreviewed optional cover letters cannot block preparation.
             const formRequirements = await inspectApplicationRequirements(page!, opportunityId, applicationUrl);
+            const activeForm = new URL(page!.url());
+            const anonymousTalentResume = activeForm.origin === 'https://careers.cognizant.com' &&
+              /^\/us-en\/talent-community\/?$/.test(activeForm.pathname) &&
+              await page!.locator('input[type="file"]').count() === 1 &&
+              await page!.getByText('Resume', { exact: true }).count() === 1;
             const requestedKinds = (['resume', 'cover'] as const).filter(kind =>
-              formRequirements.requirements.some(field => field.kind === kind));
+              formRequirements.requirements.some(field => field.kind === kind) ||
+              (kind === 'resume' && anonymousTalentResume));
             const requiredKinds = (['resume', 'cover'] as const).filter(kind =>
               formRequirements.requirements.some(field => field.kind === kind && field.requirement === 'required'));
             const packageFiles = await documentStore.forCurrentEmployerForm(
@@ -571,6 +607,9 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               if (!merged.preferences[id]) {
                 merged.preferences[id] = { scope: 'profile_preference', source: 'user', value, updated_at: now };
               }
+            }
+            for (const [id, value] of Object.entries(derivedContactPreferenceValues(merged.preferences))) {
+              merged.preferences[id] = { scope: 'profile_preference', source: 'user', value, updated_at: now };
             }
             const approvedPreferences = withCareerPreferences(merged, payload.careerProfile, payload.targetRole);
             if (!payload.adapterRegistry) {

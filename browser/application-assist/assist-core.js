@@ -20,6 +20,9 @@
     "country"
   ]);
 
+  // Presentation fields reuse reviewed identity; no duplicate stored profile.
+  const FILLABLE_KEYS = Object.freeze([...PROFILE_KEYS, "full_name", "location_summary", "sponsorship_required"]);
+
   const PROFILE_TO_QUESTION = Object.freeze({
     name_prefix: "identity.title",
     first_name: "identity.first_name",
@@ -32,7 +35,10 @@
     city: "identity.city",
     region: "identity.region",
     postal_code: "identity.postal_code",
-    country: "identity.country"
+    country: "identity.country",
+    full_name: "identity.full_name",
+    location_summary: "identity.location_summary",
+    sponsorship_required: "employment.sponsorship_required"
   });
 
   const RULES = Object.freeze({
@@ -95,6 +101,22 @@
       autocomplete: ["country", "country-name"],
       labels: ["country", "country region"],
       names: ["country", "countryname", "country_name"]
+    },
+    full_name: {
+      autocomplete: ["name"],
+      labels: ["full name", "legal full name"],
+      names: ["fullname", "full_name", "legalfullname"]
+    },
+    location_summary: {
+      autocomplete: [],
+      // Do not map an ambiguous generic Location field.
+      labels: ["location city state province country", "location city state country"],
+      names: []
+    },
+    sponsorship_required: {
+      autocomplete: [],
+      labels: ["will you now or in the future require sponsorship to work in your current country location"],
+      names: []
     }
   });
 
@@ -139,6 +161,9 @@
     "identity.region": "fill_if_explicit_preference",
     "identity.postal_code": "fill_if_explicit_preference",
     "identity.country": "fill_if_explicit_preference",
+    "identity.full_name": "fill_if_explicit_preference",
+    "identity.location_summary": "fill_if_explicit_preference",
+    "employment.sponsorship_required": "fill_if_explicit_preference",
     "attestation.truth_accuracy": "manual_only"
   });
 
@@ -183,6 +208,14 @@
     const fromPref = resolvePreferenceEntry(questionId, preferenceStore);
     if (fromPref) return fromPref.value;
     const clean = normalizeProfile(profile);
+    if (profileKey === "full_name") {
+      return clean.first_name && clean.last_name ? clean.first_name + " " + clean.last_name : "";
+    }
+    if (profileKey === "location_summary") {
+      return clean.city && clean.region && clean.country
+        ? [clean.city, clean.region, clean.country].join(", ") : "";
+    }
+    // Eligibility is never inferred; it requires an explicitly approved preference.
     return clean[profileKey] || "";
   }
 
@@ -244,7 +277,7 @@
   function normalizeSignal(value) {
     return String(value || "")
       .toLowerCase()
-      .replace(/[*:_/\\()[\].,-]+/g, " ")
+      .replace(/[?*:_/\\()[\].,|\-]+/g, " ")
       .replace(/\s+/g, " ")
       .trim();
   }
@@ -282,7 +315,7 @@
     const placeholder = normalizeSignal(field.placeholder);
     let best = null;
     let bestScore = 0;
-    for (const key of PROFILE_KEYS) {
+    for (const key of FILLABLE_KEYS) {
       const rule = RULES[key];
       let score = 0;
       if (rule.autocomplete.some((token) => autocomplete.includes(token))) score = Math.max(score, 100);

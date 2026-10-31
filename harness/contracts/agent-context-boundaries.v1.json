@@ -75,11 +75,23 @@
     "alias": "opaque:career-author-voice/2026-10-31",
     "class": "applicant_private",
     "source_owner": "existing_private_career_narrative",
-    "anchor": "latest author-approved Broadcastwell motivation section",
+    "anchor": "author-selected verbatim five-sentence career motivation, private source section 21",
     "source_state": "PRIVATE_DOC_WRITE_AND_READBACK_VERIFIED",
     "local_profile_state": "NOT_OBSERVED",
     "employer_form_state": "NOT_OBSERVED",
-    "repo_payload_allowed": false
+    "repo_payload_allowed": false,
+    "canonical_text_preservation": "VERBATIM_UNTIL_EXPLICIT_AUTHOR_REVISION",
+    "canonical_source_count": 1,
+    "derived_outputs": [
+      "resume",
+      "cover_letter",
+      "professional_bio",
+      "interview_answer",
+      "job_specific_short_answer"
+    ],
+    "derivatives_replace_source": false,
+    "derivative_approval": "SEPARATE_REVIEW",
+    "private_source_policy_section": "22"
   },
   "parent": {
     "issue": "https://github.com/EndeavorEverlasting/EscapeHatch/issues/69",

@@ -150,3 +150,36 @@ test('tracker refresh preserves locally saved employer posting', () => {
   const refreshed = mergeTrackerIntoApplications(initial, snapshot as Parameters<typeof mergeTrackerIntoApplications>[1]);
   assert.equal(refreshed[0].jobDescription, 'Locally saved employer posting');
 });
+
+
+test('explicit next-action owner preserves submission and avoids duplicate application', () => {
+  const assigned = (status: string, appliedCheckbox: boolean) => row({
+    sheetRow: 70, company: 'Example', role: 'Role', status, appliedCheckbox,
+    applyUrl: 'https://example.test/job/70',
+  });
+  const employer = assigned('Pending — Employer', true);
+  assert.equal(trackerRowToApplication(employer).status, 'applied');
+  assert.equal(isSubmittedLocked(employer), true);
+
+  const questions = assigned('Submitted — Applicant Action Required', true);
+  assert.equal(trackerRowToApplication(questions).status, 'follow_up');
+  assert.equal(isSubmittedLocked(questions), true);
+  const nextStep = assigned('Action Required — Applicant', true);
+  assert.equal(trackerRowToApplication(nextStep).status, 'follow_up');
+  assert.equal(isSubmittedLocked(nextStep), true);
+
+  // Pre-submission work and a mistakenly checked checkbox cannot become a receipt.
+  const draft = assigned('In Progress — Applicant', false);
+  assert.equal(trackerRowToApplication(draft).status, 'preparing');
+  assert.equal(isSubmittedLocked(draft), false);
+  const unprovenEmployer = assigned('Pending — Employer', false);
+  assert.equal(trackerRowToApplication(unprovenEmployer).status, 'preparing');
+  assert.equal(isSubmittedLocked(unprovenEmployer), false);
+
+  // Legacy states remain imported, but a submitted downstream state is locked.
+  assert.equal(isSubmittedLocked(assigned('In Process', true)), true);
+  assert.equal(isSubmittedLocked(assigned('Interviewing', true)), true);
+  const metrics = computeTrackerMetrics([employer, questions, nextStep, draft]);
+  assert.equal(metrics.inProcess, 3);
+  assert.equal(metrics.submittedStatus, 1);
+});

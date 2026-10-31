@@ -37,11 +37,23 @@ def main() -> int:
     fill = FILL.read_text(encoding="utf-8")
     test = TEST.read_text(encoding="utf-8")
     require("private_cloud_document_url_forbidden" in pure, "pure module missing error code")
+    require("employer_facing_document_url_must_be_pdf" in pure, "pure module missing PDF error code")
     require("drive.google.com" in pure, "pure module missing Drive host")
     require("assertEmployerFacingDocumentUrl" in fill, "fill path must call assertEmployerFacingDocumentUrl")
     require("private_cloud_document_url_forbidden" in fill, "fill path must surface forbid reason")
     require("private_cloud_document_url_forbidden" in test, "tests must cover forbid code")
-    require("perezparallax.dev/static/resume/current.html" in test or "public" in test.lower(), "tests must allow public resume URL")
+    require("employer_facing_document_url_must_be_pdf" in test, "tests must cover PDF-labeled field gate")
+    require(
+        "perezparallax.dev/static/resume/current.pdf" in test or "public" in test.lower(),
+        "tests must allow public PDF resume URL",
+    )
+    require(runtime.get("pdf_error_code") == "employer_facing_document_url_must_be_pdf", "contract pdf error code")
+    prepare = ROOT / "scripts" / "prepare_managed_application.mjs"
+    require(prepare.is_file(), "prepare script missing")
+    prepare_text = prepare.read_text(encoding="utf-8")
+    require("skipped_non_pdf_url" in prepare_text, "prepare script must refuse non-PDF resume URLs")
+    require("current.html" not in prepare_text, "prepare must not hard-default an HTML resume URL")
+    require("omitted_no_verified_public_pdf" in prepare_text, "prepare must omit resume when no verified public PDF is supplied")
     print("EMPLOYER_FACING_DOCUMENT_URL_VALIDATION: PASS")
     print(f"contract={CONTRACT.relative_to(ROOT)}")
     print(f"forbidden_hosts={len(hosts)}")

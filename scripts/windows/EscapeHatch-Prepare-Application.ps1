@@ -19,7 +19,8 @@ param(
     [string]$Company,
     [string]$OpportunityId,
     [string]$Url,
-    [string]$PublicResumeUrl = 'https://www.perezparallax.dev/static/resume/current.html',
+    # Leave blank unless a verified public HTTPS PDF exists. Do not default to current.html.
+    [string]$PublicResumeUrl = '',
     [string]$PortfolioUrl = 'https://www.perezparallax.dev',
     [string]$MotivationFile,
     [string]$ConsentLabel = 'Consent',

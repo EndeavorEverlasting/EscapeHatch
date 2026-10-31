@@ -115,9 +115,11 @@ async function main() {
     url: args.url,
     company: args.company,
   });
-  const publicResumeUrl = args['public-resume-url']
-    || process.env.ESCAPEHATCH_PUBLIC_RESUME_URL
-    || 'https://www.perezparallax.dev/static/resume/current.html';
+  // Never default to an HTML resume page for PDF-labeled employer fields.
+  // Supply --public-resume-url / ESCAPEHATCH_PUBLIC_RESUME_URL only when a real public .pdf exists.
+  const publicResumeUrl = String(
+    args['public-resume-url'] || process.env.ESCAPEHATCH_PUBLIC_RESUME_URL || '',
+  ).trim();
   const portfolioUrl = args['portfolio-url']
     || process.env.ESCAPEHATCH_PORTFOLIO_URL
     || '';
@@ -127,6 +129,15 @@ async function main() {
   const consentLabel = args['consent-label'] || 'Consent';
   const wantSubmit = Boolean(args.submit);
   const confirmedSubmit = Boolean(args['confirmed-submit']);
+
+  function isPdfResumeUrl(value) {
+    try {
+      const parsed = new URL(value.includes('://') ? value : `https://${value}`);
+      return parsed.pathname.toLowerCase().endsWith('.pdf');
+    } catch {
+      return false;
+    }
+  }
 
   console.log('PREPARE_MANAGED_APPLICATION: start');
   console.log(`PORT=${port}`);
@@ -161,8 +172,15 @@ async function main() {
     console.log('PORTFOLIO_FIELD=set');
   }
   if (publicResumeUrl) {
-    await typeLabeled('Resume (link to a PDF)', publicResumeUrl);
-    console.log('RESUME_FIELD=set');
+    if (!isPdfResumeUrl(publicResumeUrl)) {
+      console.log('RESUME_FIELD=skipped_non_pdf_url');
+      console.log('RESUME_HINT=pass a public https URL whose path ends in .pdf, or omit --public-resume-url');
+    } else {
+      await typeLabeled('Resume (link to a PDF)', publicResumeUrl);
+      console.log('RESUME_FIELD=set');
+    }
+  } else {
+    console.log('RESUME_FIELD=omitted_no_verified_public_pdf');
   }
   if (motivation) {
     await typeLabeled('Why this role', motivation.slice(0, 500));

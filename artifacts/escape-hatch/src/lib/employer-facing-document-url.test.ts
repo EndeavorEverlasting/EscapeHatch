@@ -4,6 +4,7 @@ import {
   assertEmployerFacingDocumentUrl,
   isEmployerFacingDocumentUrlField,
   isForbiddenPrivateCloudDocumentUrl,
+  isPdfDocumentUrl,
 } from './employer-facing-document-url.ts';
 
 test('document URL field labels include resume/CV/transcript/cover', () => {
@@ -29,13 +30,20 @@ test('Google Drive and Docs hosts are forbidden; public applicant URLs are not',
     true,
   );
   assert.equal(
-    isForbiddenPrivateCloudDocumentUrl('https://www.perezparallax.dev/static/resume/current.html'),
+    isForbiddenPrivateCloudDocumentUrl('https://www.perezparallax.dev/static/resume/current.pdf'),
     false,
   );
   assert.equal(isForbiddenPrivateCloudDocumentUrl('https://linkedin.com/in/example'), false);
 });
 
-test('assert blocks Drive links only on document URL fields', () => {
+test('PDF path detection rejects HTML resume pages', () => {
+  assert.equal(isPdfDocumentUrl('https://www.perezparallax.dev/static/resume/current.pdf'), true);
+  assert.equal(isPdfDocumentUrl('https://example.test/resume.pdf?download=1'), true);
+  assert.equal(isPdfDocumentUrl('https://www.perezparallax.dev/static/resume/current.html'), false);
+  assert.equal(isPdfDocumentUrl('https://www.perezparallax.dev/'), false);
+});
+
+test('assert blocks Drive links and non-PDF URLs on PDF-labeled document fields', () => {
   assert.doesNotThrow(() =>
     assertEmployerFacingDocumentUrl(
       'LinkedIn or portfolio URL',
@@ -50,9 +58,23 @@ test('assert blocks Drive links only on document URL fields', () => {
       ),
     /private_cloud_document_url_forbidden/,
   );
+  assert.throws(
+    () =>
+      assertEmployerFacingDocumentUrl(
+        'Resume (link to a PDF)',
+        'https://www.perezparallax.dev/static/resume/current.html',
+      ),
+    /employer_facing_document_url_must_be_pdf/,
+  );
   assert.doesNotThrow(() =>
     assertEmployerFacingDocumentUrl(
       'Resume (link to a PDF)',
+      'https://www.perezparallax.dev/static/resume/current.pdf',
+    ),
+  );
+  assert.doesNotThrow(() =>
+    assertEmployerFacingDocumentUrl(
+      'CV (link)',
       'https://www.perezparallax.dev/static/resume/current.html',
     ),
   );

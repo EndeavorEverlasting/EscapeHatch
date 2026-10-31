@@ -65,6 +65,19 @@ export function ApplicationPuzzle({ opportunity, url, documents, disabled, onByp
     <p role="status" className="my-3 text-sm">{message}</p>
     {projection.current ? <>
       <p className="my-3 text-sm font-bold">Current page: {projection.requiredCount} required inputs · {projection.unresolvedCount} still empty or invalid · {projection.unknownCount} with unknown requiredness</p>
+      <div className="rounded-lg border border-primary/30 bg-secondary/40 p-3" data-testid="application-checkpoint-progress" aria-live="polite">
+        <p className="text-sm font-bold" data-testid="application-checkpoint-percent">{projection.checkpoint.percent === null
+          ? 'Checkpoint percentage unavailable — no verified required inputs or unresolved field classification.'
+          : `Observed checkpoint: ${projection.checkpoint.percent}% of required inputs verified (${projection.checkpoint.verifiedRequired}/${projection.checkpoint.totalRequired})`}</p>
+        <p className="mt-1 text-xs text-muted-foreground" data-testid="application-cover-requirement">{projection.checkpoint.coverLetter === 'REQUIRED'
+          ? 'Required cover-letter input observed: included in the required-input denominator. Upload only a reviewed, approved document.'
+          : projection.checkpoint.coverLetter === 'OPTIONAL'
+            ? 'Cover-letter input is optional on this page: excluded from required progress.'
+            : projection.checkpoint.coverLetter === 'UNKNOWN'
+              ? 'Cover-letter field exists, but whether it is required remains unknown.'
+              : 'No cover-letter input observed on this page. Do not create one by default; later pages may differ.'}</p>
+        <p className="mt-1 text-xs text-muted-foreground">This percentage covers only the currently inspected employer page. Conditional fields can change the denominator. Future questionnaire pages, employer acceptance and whole-application completion are unmeasured; even 100% here does not authorize Submit.</p>
+      </div>
       <p className="mb-4 text-xs text-muted-foreground break-all">Observed {new Date(inspection!.capturedAt).toLocaleTimeString()} on {inspection!.pageUrl}. This inventory expires after five minutes.</p>
       {!projection.pieces.length && <p className="my-3 text-sm">No supported inputs found on this page. Open the employer’s application form and inspect again; this does not mean nothing is required.</p>}
       <div className="puzzle-pieces">{projection.pieces.map(piece => <article key={piece.id} className="puzzle-piece" data-populated={piece.populated}>

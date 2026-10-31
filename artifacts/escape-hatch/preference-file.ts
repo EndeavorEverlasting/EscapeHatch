@@ -9,6 +9,19 @@ export function preferenceFile() {
   return process.env.ESCAPEHATCH_PREFERENCES_FILE || path.join(userDataRoot(), 'application-question-preferences.json');
 }
 
+/** Path presence only — never preference values. Shared across browsers via OS-private EscapeHatch data. */
+export function preferenceStoreLocator(env: NodeJS.ProcessEnv = process.env) {
+  const file = env.ESCAPEHATCH_PREFERENCES_FILE
+    ? path.resolve(env.ESCAPEHATCH_PREFERENCES_FILE)
+    : path.join(userDataRoot(env), 'application-question-preferences.json');
+  const source = env.ESCAPEHATCH_PREFERENCES_FILE
+    ? 'ESCAPEHATCH_PREFERENCES_FILE'
+    : env.ESCAPEHATCH_DATA_HOME
+      ? 'ESCAPEHATCH_DATA_HOME'
+      : 'platform_default';
+  return { dataHome: userDataRoot(env), preferenceStore: file, source };
+}
+
 /** Resolve the original repository through Git, not a remembered checkout path. */
 export function legacyPreferenceFile() {
   const root = legacyPrivateRoots().at(-1);

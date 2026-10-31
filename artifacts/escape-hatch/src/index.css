@@ -134,6 +134,18 @@
 
 /* Contextual mascot: a speech-card accent with motion only on direct pointer interaction. */
 .mascot-guidance { background-image: radial-gradient(circle at 6rem 2.5rem, hsl(var(--primary) / .09), transparent 18rem); }
+.preference-store-rail {
+  border-radius: 0 .75rem .75rem 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .preference-store-rail {
+    animation: preference-store-settle 420ms ease-out both;
+  }
+}
+@keyframes preference-store-settle {
+  from { opacity: 0; transform: translateY(0.35rem); }
+  to { opacity: 1; transform: none; }
+}
 @media (prefers-reduced-motion: no-preference) {
   .mascot-guidance-art { transition: transform 180ms ease-out; }
   .mascot-guidance-art:hover { transform: translateY(-3px) rotate(-2deg); }

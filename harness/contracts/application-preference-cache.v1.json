@@ -14,7 +14,40 @@
       "Import Preferences",
       "Clear Preferences"
     ],
-    "local_file_adapter": "private/application-question-preferences.json; optional ESCAPEHATCH_PREFERENCES_FILE override; same schema, explicit Save/Clear, no remote sync"
+    "local_file_adapter": "canonical_store below; same schema, explicit Save/Clear, no remote sync",
+    "canonical_store": {
+      "owner": "os_private_user_data",
+      "filename": "application-question-preferences.json",
+      "windows_default": "%LOCALAPPDATA%\\EscapeHatch\\application-question-preferences.json",
+      "posix_default": "$XDG_DATA_HOME/EscapeHatch/application-question-preferences.json or ~/.local/share/EscapeHatch/application-question-preferences.json",
+      "resolution_order": [
+        "ESCAPEHATCH_PREFERENCES_FILE exact file override",
+        "ESCAPEHATCH_DATA_HOME/application-question-preferences.json",
+        "platform default under LOCALAPPDATA or XDG user data EscapeHatch/"
+      ],
+      "shared_across": [
+        "managed_browser_assist",
+        "cockpit",
+        "native_messaging_host",
+        "extension_bridge",
+        "isolated_worktrees",
+        "ordinary_browser_sessions_via_native_host"
+      ],
+      "not_source_of_truth": [
+        "chrome.storage.local alone",
+        "per-checkout private/application-question-preferences.json",
+        "per-browser-profile caches",
+        "repository-tracked files"
+      ],
+      "discoverability": [
+        "python scripts/resolve_escapehatch_user_data.py",
+        "EscapeHatch-Runtime.ps1 -Action Status"
+      ],
+      "field_semantics": {
+        "identity.website": "Preferred for portfolio/website and LinkedIn-or-portfolio combined URL fields",
+        "identity.linkedin": "Preferred only for LinkedIn-specific URL fields"
+      }
+    }
   },
   "portability": {
     "export_schema": "escapehatch-application-question-preferences/v1",

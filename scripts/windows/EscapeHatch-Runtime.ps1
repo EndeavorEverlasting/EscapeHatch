@@ -722,6 +722,13 @@ function Invoke-StatusAction {
         Write-Host "PROCESS=$($observation.Process.Name)"
     }
     Write-Host "REASON=$($observation.Reason)"
+    $dataHome = if ($env:ESCAPEHATCH_DATA_HOME) { $env:ESCAPEHATCH_DATA_HOME } else { Join-Path $env:LOCALAPPDATA 'EscapeHatch' }
+    $preferenceStore = if ($env:ESCAPEHATCH_PREFERENCES_FILE) { $env:ESCAPEHATCH_PREFERENCES_FILE } else { Join-Path $dataHome 'application-question-preferences.json' }
+    Write-Host "DATA_HOME=$dataHome"
+    Write-Host "DATA_HOME_EXISTS=$([bool](Test-Path -LiteralPath $dataHome -PathType Container))"
+    Write-Host "PREFERENCE_STORE=$preferenceStore"
+    Write-Host "PREFERENCE_STORE_EXISTS=$([bool](Test-Path -LiteralPath $preferenceStore -PathType Leaf))"
+    Write-Host "PREFERENCE_VALUES=redacted"
     if ($observation.State -eq 'FOREIGN_CONFLICT') {
         $script:StatusExitCode = 2
     }

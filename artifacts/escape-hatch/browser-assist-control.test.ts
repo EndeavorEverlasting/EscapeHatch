@@ -11,9 +11,11 @@ import { WORKSPACE_SCHEMA } from './src/lib/workspace-bootstrap.ts';
 import { APPLICATIONS_KEY } from './src/lib/storage.ts';
 import {
   parseNavigationAuthorization,
+  attachPdfs,
   parsePrivatePdf,
   parseTrustedAdapterRegistry,
   reviewedContactFields,
+  derivedContactPreferenceValues,
   validateApplicationUrl,
   managedBrowserProfileDirectory,
   createManagedBrowserAssistPlugin,
@@ -324,4 +326,59 @@ test('trusted adapter registry never accepts page-authored schemas', () => {
   assert.throws(() => parseTrustedAdapterRegistry({
     schema: 'page-invented/v1', adapterId: 'x', atsProvider: 'y', evidence: [],
   }), /schema|evidence/i);
+});
+
+
+test('talent-community composite fields derive only from complete approved contact data', () => {
+  const current = {
+    'identity.first_name': { value: 'Alex' }, 'identity.last_name': { value: 'Example' },
+    'identity.city': { value: 'Example City' }, 'identity.region': { value: 'NY' },
+    'identity.country': { value: 'US' },
+  };
+  assert.deepEqual(derivedContactPreferenceValues(current), {
+    'identity.full_name': 'Alex Example', 'identity.location_summary': 'Example City, NY, US',
+  });
+  assert.deepEqual(derivedContactPreferenceValues({ ...current,
+    'identity.full_name': { value: 'Reviewed Legal Name' },
+    'identity.location_summary': { value: 'Reviewed Location' },
+  }), {}, 'explicit values take precedence');
+  assert.deepEqual(derivedContactPreferenceValues({ ...current, 'identity.region': { value: '' } }),
+    { 'identity.full_name': 'Alex Example' }, 'partial locations stay blank');
+});
+
+// Real Chromium on synthetic routed HTML; zero employer traffic, no personal data.
+test('Cognizant anonymous Resume input is unique and exact-origin bound', async () => {
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const sample = '<!doctype html><h2>Resume</h2><input type="file" id="anonymous" />';
+  const resume = { name: 'synthetic.pdf', mimeType: 'application/pdf' as const,
+    buffer: Buffer.from('%PDF-1.4\nsynthetic fixture\n') };
+  try {
+    await page.route('https://careers.cognizant.com/**', route => route.fulfill({
+      status: 200, contentType: 'text/html', body: sample,
+    }));
+    await page.goto('https://careers.cognizant.com/us-en/talent-community/');
+    const attached = await attachPdfs(page, resume, null);
+    assert.equal(attached.resume, 'attached_to_input_review_required');
+    assert.equal(await page.locator('#anonymous').evaluate(element =>
+      (element as HTMLInputElement).files?.length), 1);
+
+    await page.setContent(sample + '<input type="file" id="second" />');
+    const duplicate = await attachPdfs(page, resume, null);
+    assert.equal(duplicate.resume, 'manual_required');
+    assert.equal(await page.locator('#anonymous').evaluate(element =>
+      (element as HTMLInputElement).files?.length), 0);
+
+    await page.route('https://example.org/**', route => route.fulfill({
+      status: 200, contentType: 'text/html', body: sample,
+    }));
+    await page.goto('https://example.org/us-en/talent-community/');
+    const wrongOrigin = await attachPdfs(page, resume, null);
+    assert.equal(wrongOrigin.resume, 'manual_required');
+    assert.equal(await page.locator('#anonymous').evaluate(element =>
+      (element as HTMLInputElement).files?.length), 0);
+  } finally {
+    await browser.close();
+  }
 });

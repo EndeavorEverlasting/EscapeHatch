@@ -320,3 +320,29 @@ assert.equal(coreSource.includes("PREFERENCE_STORAGE_KEY"), true);
 assert.equal(coreSource.includes("buildCompanionProgressEvent"), true);
 
 console.log("APPLICATION_ASSIST_SESSION_RUNTIME_TESTS: PASS");
+
+// Talent community: reusable, exact semantic questions; no inferred eligibility.
+assert.equal(core.classifyField({ label: "Full name *", type: "text" }), "full_name");
+assert.equal(core.classifyField({ label: "Location | City, State/Province, Country *", type: "text" }), "location_summary");
+assert.equal(core.classifyField({ label: "Location", type: "text" }), null);
+const talentFields = [
+  { label: "Full name *", value: "" },
+  { label: "Email address *", value: "" },
+  { label: "Location | City, State/Province, Country *", value: "" },
+  { label: "Phone number", value: "" },
+  { label: "LinkedIn profile URL", value: "" },
+  { label: "Resume", type: "file", value: "" },
+  { label: "Will you now or in the future require sponsorship to work in your current country/location?", tag: "select", type: "select-one", options: [{ value: "", text: "Select an option" }, { value: "no", text: "No" }] }
+];
+const talentPlan = core.buildFillPlan(talentFields, profile, session);
+assert.deepEqual(talentPlan.items.map(item => item.profile_key),
+  ["full_name", "email", "location_summary", "phone", "linkedin_url"]);
+assert.equal(talentPlan.items[0].value, "Alex Example");
+assert.equal(talentPlan.items[2].value, "Example City, NY, US");
+const approvedTalent = core.buildFillPlan(talentFields, profile, session,
+  { preferences: { "employment.sponsorship_required": { scope: "profile_preference", value: "No" } } });
+assert.equal(approvedTalent.items.at(-1).value, "no");
+assert.equal(core.buildFillPlan(talentFields, { first_name: "One", city: "City", country: "US" }, session).items.length, 0);
+assert.equal(core.resolveFillValue("full_name", profile,
+  { preferences: { "identity.full_name": { scope: "profile_preference", value: "Reviewed Legal Name" } } }),
+  "Reviewed Legal Name");

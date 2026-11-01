@@ -1,0 +1,185 @@
+{
+  "schema": "escapehatch-career-browser-pid-selection-fixture/v1",
+  "version": 1,
+  "cases": [
+    {
+      "id": "attach-existing-owned-root-over-playwright-mcp",
+      "mode": "ATTACH_EXISTING",
+      "expected": {
+        "ok": true,
+        "selectionReason": "attach_existing_owned_progress_session",
+        "selectedPid": 56204,
+        "mustIncludeSignals": [
+          "managed_career_user_data_dir",
+          "browser_root_process"
+        ],
+        "mustNotSelectPid": 40472
+      },
+      "afterProcesses": [
+        {
+          "pid": 56204,
+          "processName": "chrome",
+          "startTimeUtc": "2026-10-31T22:06:51.0000000Z",
+          "mainWindowHandle": 123456,
+          "mainWindowTitle": "AI Automation Engineer - Broadcastwell",
+          "visible": true,
+          "commandLine": "chrome.exe --user-data-dir=C:\\Users\\x\\AppData\\Local\\EscapeHatch\\managed-career-browser-origins\\21031 --remote-debugging-pipe --no-sandbox",
+          "userDataDir": "C:\\Users\\x\\AppData\\Local\\EscapeHatch\\managed-career-browser-origins\\21031",
+          "hasRemoteDebugging": true,
+          "isBrowserRoot": true,
+          "isChromeChild": false,
+          "isOwnedManagedProfile": true,
+          "isForbiddenEphemeral": false,
+          "assistOriginPort": 21031
+        },
+        {
+          "pid": 40472,
+          "processName": "chrome",
+          "startTimeUtc": "2026-11-01T04:00:00.0000000Z",
+          "mainWindowHandle": 999,
+          "mainWindowTitle": "Playwright",
+          "visible": true,
+          "commandLine": "chrome.exe --user-data-dir=C:\\Users\\x\\AppData\\Local\\ms-playwright-mcp\\mcp-chrome-bce8a02 --remote-debugging-pipe",
+          "userDataDir": "C:\\Users\\x\\AppData\\Local\\ms-playwright-mcp\\mcp-chrome-bce8a02",
+          "hasRemoteDebugging": true,
+          "isBrowserRoot": true,
+          "isChromeChild": false,
+          "isOwnedManagedProfile": false,
+          "isForbiddenEphemeral": true,
+          "assistOriginPort": null
+        },
+        {
+          "pid": 36096,
+          "processName": "chrome",
+          "startTimeUtc": "2026-10-31T22:07:00.0000000Z",
+          "mainWindowHandle": 0,
+          "mainWindowTitle": "",
+          "visible": false,
+          "commandLine": "chrome.exe --type=renderer --user-data-dir=C:\\Users\\x\\AppData\\Local\\EscapeHatch\\managed-career-browser-origins\\21031",
+          "userDataDir": "C:\\Users\\x\\AppData\\Local\\EscapeHatch\\managed-career-browser-origins\\21031",
+          "hasRemoteDebugging": false,
+          "isBrowserRoot": false,
+          "isChromeChild": true,
+          "isOwnedManagedProfile": true,
+          "isForbiddenEphemeral": false,
+          "assistOriginPort": 21031
+        }
+      ]
+    },
+    {
+      "id": "select-after-launch-prefers-new-pid",
+      "mode": "SELECT_AFTER_LAUNCH",
+      "expected": {
+        "ok": true,
+        "selectionReason": "s2_minus_s1_new_pid",
+        "selectedPid": 70001
+      },
+      "baselineProcesses": [
+        {
+          "pid": 100,
+          "processName": "chrome",
+          "startTimeUtc": "2026-10-01T00:00:00.0000000Z",
+          "mainWindowHandle": 1,
+          "mainWindowTitle": "old",
+          "visible": true,
+          "commandLine": "chrome.exe --user-data-dir=C:\\Users\\x\\AppData\\Local\\EscapeHatch\\managed-career-browser-origins\\21031",
+          "userDataDir": "C:\\Users\\x\\AppData\\Local\\EscapeHatch\\managed-career-browser-origins\\21031",
+          "hasRemoteDebugging": true,
+          "isBrowserRoot": true,
+          "isChromeChild": false,
+          "isOwnedManagedProfile": true,
+          "isForbiddenEphemeral": false,
+          "assistOriginPort": 21031
+        }
+      ],
+      "afterProcesses": [
+        {
+          "pid": 100,
+          "processName": "chrome",
+          "startTimeUtc": "2026-10-01T00:00:00.0000000Z",
+          "mainWindowHandle": 1,
+          "mainWindowTitle": "old",
+          "visible": true,
+          "commandLine": "chrome.exe --user-data-dir=C:\\Users\\x\\AppData\\Local\\EscapeHatch\\managed-career-browser-origins\\21031",
+          "userDataDir": "C:\\Users\\x\\AppData\\Local\\EscapeHatch\\managed-career-browser-origins\\21031",
+          "hasRemoteDebugging": true,
+          "isBrowserRoot": true,
+          "isChromeChild": false,
+          "isOwnedManagedProfile": true,
+          "isForbiddenEphemeral": false,
+          "assistOriginPort": 21031
+        },
+        {
+          "pid": 70001,
+          "processName": "chrome",
+          "startTimeUtc": "2026-11-01T12:00:00.0000000Z",
+          "mainWindowHandle": 2,
+          "mainWindowTitle": "new session",
+          "visible": true,
+          "commandLine": "chrome.exe --user-data-dir=C:\\Users\\x\\AppData\\Local\\EscapeHatch\\managed-career-browser-origins\\21031 --remote-debugging-pipe",
+          "userDataDir": "C:\\Users\\x\\AppData\\Local\\EscapeHatch\\managed-career-browser-origins\\21031",
+          "hasRemoteDebugging": true,
+          "isBrowserRoot": true,
+          "isChromeChild": false,
+          "isOwnedManagedProfile": true,
+          "isForbiddenEphemeral": false,
+          "assistOriginPort": 21031
+        }
+      ]
+    },
+    {
+      "id": "attach-only-fails-without-owned-session",
+      "mode": "ATTACH_ONLY",
+      "expected": {
+        "ok": false,
+        "selectionReason": "attach_only_no_owned_candidate"
+      },
+      "afterProcesses": [
+        {
+          "pid": 40472,
+          "processName": "chrome",
+          "startTimeUtc": "2026-11-01T04:00:00.0000000Z",
+          "mainWindowHandle": 999,
+          "mainWindowTitle": "Playwright",
+          "visible": true,
+          "commandLine": "chrome.exe --user-data-dir=C:\\Users\\x\\AppData\\Local\\ms-playwright-mcp\\mcp-chrome-bce8a02",
+          "userDataDir": "C:\\Users\\x\\AppData\\Local\\ms-playwright-mcp\\mcp-chrome-bce8a02",
+          "hasRemoteDebugging": true,
+          "isBrowserRoot": true,
+          "isChromeChild": false,
+          "isOwnedManagedProfile": false,
+          "isForbiddenEphemeral": true,
+          "assistOriginPort": null
+        }
+      ]
+    },
+    {
+      "id": "attach-existing-when-no-baseline-available",
+      "mode": "ATTACH_EXISTING",
+      "expected": {
+        "ok": true,
+        "selectionReason": "attach_existing_owned_progress_session",
+        "selectedPid": 56204,
+        "note": "Window already started before agent; launch-delta unavailable."
+      },
+      "afterProcesses": [
+        {
+          "pid": 56204,
+          "processName": "chrome",
+          "startTimeUtc": "2026-10-31T22:06:51.0000000Z",
+          "mainWindowHandle": 123456,
+          "mainWindowTitle": "Application received",
+          "visible": true,
+          "commandLine": "chrome.exe --user-data-dir=C:\\Users\\x\\AppData\\Local\\EscapeHatch\\managed-career-browser-origins\\21031 --remote-debugging-pipe",
+          "userDataDir": "C:\\Users\\x\\AppData\\Local\\EscapeHatch\\managed-career-browser-origins\\21031",
+          "hasRemoteDebugging": true,
+          "isBrowserRoot": true,
+          "isChromeChild": false,
+          "isOwnedManagedProfile": true,
+          "isForbiddenEphemeral": false,
+          "assistOriginPort": 21031
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,130 @@
+{
+  "schema": "escapehatch-career-browser-pid-selection/v1",
+  "version": 1,
+  "mission": "Select the exact Chrome process that owns EscapeHatch career/application progress without relaunching, reauthenticating, or binding Playwright MCP ephemeral browsers.",
+  "provenance": {
+    "adapted_from": "EndeavorEverlasting/BlacksmithGuild",
+    "source_spine": [
+      "scripts/pr11-process-window-classifier.ps1",
+      "scripts/launcher-pid-baseline-policy.ps1",
+      "scripts/launcher-window-context.ps1",
+      "docs/handoff/launcher-window-context-factoring.md",
+      "AttachOnly / existing_session semantics"
+    ],
+    "escapehatch_extension": "Score and bind already-running managed career Chrome (progress-bearing) when launch-delta is unavailable because the window started before the agent."
+  },
+  "governing_invariant": "PORT OR PROCESS NAME IS EVIDENCE, NOT CAREER-BROWSER IDENTITY.",
+  "invariants": [
+    "snapshot_before_open_when_launching",
+    "prefer_s2_minus_s1_when_new_pids_exist",
+    "attach_existing_does_not_require_new_pid",
+    "never_relaunch_when_owned_progress_session_is_selectable",
+    "never_bind_playwright_mcp_ephemeral_profile_as_career_session",
+    "prefer_browser_root_pid_over_renderer_utility_gpu",
+    "user_data_dir_is_primary_ownership_signal",
+    "receipt_pid_alone_is_not_identity",
+    "attach_only_refuses_launch_and_termination",
+    "frozen_selection_until_exit_or_explicit_rebind",
+    "operator_progress_is_evidence_not_interference"
+  ],
+  "process_family": {
+    "relevant_names": ["chrome", "msedge", "chromium"],
+    "owned_user_data_dir_markers": [
+      "EscapeHatch\\managed-career-browser-origins",
+      "EscapeHatch\\managed-career-browser",
+      "EscapeHatch/managed-career-browser-origins",
+      "EscapeHatch/managed-career-browser"
+    ],
+    "forbidden_user_data_dir_markers": [
+      "ms-playwright-mcp",
+      "ms-playwright\\",
+      "playwright\\mcp-chrome",
+      "Temp\\playwright"
+    ],
+    "browser_root_requires": "command_line_lacks_chrome_type_flag",
+    "child_type_flags": ["--type=renderer", "--type=gpu-process", "--type=utility", "--type=crashpad-handler"]
+  },
+  "modes": {
+    "CAPTURE_BASELINE": {
+      "definition": "S1 snapshot of career-relevant browser processes before any open/launch action.",
+      "mutates_browser": false
+    },
+    "SELECT_AFTER_LAUNCH": {
+      "definition": "S2 snapshot after open/launch; prefer new PIDs (S2-S1); fall back to owned existing only when no new PID and AttachFallbackAllowed.",
+      "mutates_browser": false
+    },
+    "ATTACH_EXISTING": {
+      "definition": "Bind the best already-running owned career browser without requiring a launch-delta. Required when the window started before the agent.",
+      "mutates_browser": false,
+      "required_behavior": [
+        "do_not_start_chrome",
+        "do_not_kill_chrome",
+        "score_owned_profiles_even_when_not_new_after_baseline",
+        "reject_forbidden_ephemeral_profiles"
+      ]
+    },
+    "ATTACH_ONLY": {
+      "definition": "Same selection as ATTACH_EXISTING, but fail closed if no owned candidate exists; launch and termination are forbidden.",
+      "mutates_browser": false
+    },
+    "STATUS": {
+      "definition": "Report live candidates, receipt, and whether attach is possible without relaunch.",
+      "mutates_browser": false
+    }
+  },
+  "scoring": {
+    "signals": {
+      "managed_career_user_data_dir": 40,
+      "browser_root_process": 25,
+      "remote_debugging_present": 20,
+      "visible_top_level_window": 15,
+      "assist_origin_port_folder_match": 15,
+      "target_host_or_title_hint": 15,
+      "new_pid_after_baseline": 30,
+      "changed_window_after_baseline": 10
+    },
+    "penalties": {
+      "forbidden_ephemeral_profile": -100,
+      "chrome_child_process": -40,
+      "unknown_user_data_dir": -10
+    },
+    "minimum_bind_score": 50,
+    "attach_existing_does_not_require_new_pid_signal": true
+  },
+  "selection_order": [
+    "fresh_bound_receipt_reproof",
+    "attach_existing_owned_progress_session",
+    "s2_minus_s1_new_pid",
+    "owned_existing_fallback_when_no_new_pid",
+    "fail_closed"
+  ],
+  "receipt": {
+    "schema": "escapehatch-career-browser/v1",
+    "location": "%LOCALAPPDATA%\\EscapeHatch\\career-browser\\<repoFingerprint>\\career-browser.json",
+    "fields": [
+      "schema",
+      "repoFingerprint",
+      "selectionMode",
+      "pid",
+      "processStartTimeUtc",
+      "userDataDir",
+      "remoteDebuggingPort",
+      "mainWindowHandle",
+      "mainWindowTitle",
+      "score",
+      "signals",
+      "baselineLabel",
+      "afterLabel",
+      "boundAtUtc",
+      "provenance"
+    ],
+    "tracking": "forbidden",
+    "kill_policy": "attach_only_forbids_termination; otherwise terminate_only_after_positive_ownership_reproof_matching_pid_start_time_and_user_data_dir"
+  },
+  "canonical_implementation": {
+    "library": "scripts/windows/EscapeHatch-CareerBrowser-PidSelection.ps1",
+    "cli": "scripts/windows/EscapeHatch-CareerBrowser.ps1",
+    "validator": "scripts/validate_career_browser_pid_selection.py",
+    "tests": "tests/windows/Test-EscapeHatch-CareerBrowser-PidSelection.ps1"
+  }
+}

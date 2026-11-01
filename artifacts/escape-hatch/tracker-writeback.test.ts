@@ -220,6 +220,8 @@ test('sync status and queue evidence never borrow receipts from another opportun
     const missing = await readSubmissionSyncStatus({ ...options, opportunityId: 'third-role-without-receipt' });
     assert.equal(ownState.state, 'PENDING');
     assert.equal(ownState.pending, 1);
+    assert.equal(ownState.opportunityId, own.opportunityId);
+    assert.equal(unrelatedState.opportunityId, 'other-employer-and-role');
     assert.equal(unrelatedState.pending, 1);
     assert.equal(missing.state, 'NO_RECEIPT');
     assert.equal(missing.synced, 0);

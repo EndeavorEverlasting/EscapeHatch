@@ -2,9 +2,10 @@ import { Link } from 'wouter';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import type { Application } from '@/lib/storage';
 
-export function ApplicationOutcome({ application, receiptCaptured, onChooseAnother }: {
+export function ApplicationOutcome({ application, receiptCaptured, trackerSyncState, onChooseAnother }: {
   application: Application;
   receiptCaptured: boolean;
+  trackerSyncState?: string;
   onChooseAnother: () => void;
 }) {
   return (
@@ -32,7 +33,13 @@ export function ApplicationOutcome({ application, receiptCaptured, onChooseAnoth
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 py-4">
           <dt>Automatic tracker sync</dt>
-          <dd className="font-medium">Not verified for this application</dd>
+          <dd className="font-medium" data-tracker-sync-state={trackerSyncState || 'UNKNOWN'}>{trackerSyncState === 'SYNCED'
+            ? 'Google Sheets readback verified for this job'
+            : trackerSyncState === 'PENDING' ? 'Pending retry for this job'
+            : trackerSyncState === 'AUTH_REQUIRED' ? 'Google authorization required'
+            : trackerSyncState === 'CONFLICT' ? 'Tracker conflict requires review'
+            : trackerSyncState === 'NO_RECEIPT' ? 'No outbox receipt for this job'
+            : 'Not verified for this application'}</dd>
         </div>
       </dl>
       {!receiptCaptured && <p className="mb-6 max-w-prose text-sm leading-relaxed text-muted-foreground">

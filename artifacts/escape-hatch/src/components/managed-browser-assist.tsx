@@ -530,7 +530,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   // the completed-outcome scene; aggregate sync counts and another job's receipt do not.
   const persistedReceipt = parseSubmissionEvidence(completedApplication?.submissionEvidence);
   const liveReceipt = listenerConnected && listenerStatus?.opportunityId === completedApplication?.id &&
-    listenerStatus.submission?.state === 'CONFIRMED'
+    listenerStatus?.submission?.state === 'CONFIRMED'
     ? parseSubmissionEvidence(listenerStatus?.submission?.receipt) : null;
   const hasMatchingReceipt = Boolean(completedApplication && [persistedReceipt, liveReceipt].some(receipt =>
     receipt?.opportunityId === completedApplication.id &&

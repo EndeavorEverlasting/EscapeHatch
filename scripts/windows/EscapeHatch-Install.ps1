@@ -182,6 +182,18 @@ function Update-NativeHost([string]$Root, [string]$NativeAction) {
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $registration -Action $NativeAction -SourceRoot $Root -AppDataRoot $AppDataRoot
     if ($LASTEXITCODE -ne 0) { throw 'INSTALL_NATIVE_HOST_REFUSED: existing native registration was preserved; inspect the native-host registration owner.' }
 }
+function Update-SubmissionSyncTask([string]$Root, [string]$TaskAction) {
+    # Installer ownership only: never replace a foreign task or alter OS settings
+    # during synthetic tests. Running the worker never submits employer forms.
+    if ($TestMode) { Write-Host 'SUBMISSION_SYNC_TASK=TEST_SKIPPED'; return }
+    $helper = Join-Path $Root 'scripts\windows\EscapeHatch-SubmissionSync.ps1'
+    if (-not (Test-Path -LiteralPath $helper -PathType Leaf)) {
+        if ($TaskAction -eq 'Register') { throw 'INSTALL_SUBMISSION_SYNC_WORKER_MISSING: existing installation preserved.' }
+        return
+    }
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $helper -Action $TaskAction -SourceRoot $Root
+    if ($LASTEXITCODE -ne 0) { throw 'INSTALL_SUBMISSION_SYNC_TASK_REFUSED: task ownership or scheduling needs repair.' }
+}
 function Make-Shortcut([string]$Root) {
     $parent = Split-Path -Parent $shortcutPath
     New-Item -ItemType Directory -Path $parent -Force | Out-Null
@@ -315,9 +327,11 @@ try {
     if ($Action -eq 'Uninstall') {
         if ($null -eq $receipt) { Write-Host 'ESCAPEHATCH_INSTALLATION=NOT_INSTALLED'; exit 0 }
         Assert-OwnedShortcutsUnchanged $receipt
+        Update-SubmissionSyncTask ([string]$receipt.sourceRoot) 'Inspect'
         Stop-SelectedRuntime ([string]$receipt.sourceRoot)
         Assert-OwnedShortcutsUnchanged $receipt
         Update-NativeHost ([string]$receipt.sourceRoot) 'Unregister'
+        Update-SubmissionSyncTask ([string]$receipt.sourceRoot) 'Unregister'
         foreach ($entry in @($receipt.shortcuts)) {
             if ($entry.ownership -eq 'CREATED' -and (Test-Path -LiteralPath $entry.path -PathType Leaf)) { Remove-Item -LiteralPath $entry.path -Force }
         }
@@ -335,6 +349,7 @@ try {
     if (Test-Path -LiteralPath (Join-Path $selected 'artifacts\escape-hatch\native-messaging-host.ts') -PathType Leaf) {
         Update-NativeHost $selected 'Inspect'
     }
+    Update-SubmissionSyncTask $selected 'Inspect'
     if ($Action -eq 'Bootstrap') {
         # Prove that startup is admissible before provisioning dependencies or
         # changing shortcuts. A foreign listener must remain a visible refusal,
@@ -344,7 +359,9 @@ try {
             throw 'INSTALL_RUNTIME_STATUS_UNPROVEN: canonical status did not prove a safe startup state; no dependencies or shortcuts were changed.'
         }
     }
+    $previousSyncRoot = $null
     if ($null -ne $receipt -and -not (Same-Path ([string]$receipt.sourceRoot) $selected)) {
+        $previousSyncRoot = [string]$receipt.sourceRoot
         # Only an explicit Install can change the selected source. Verify/stop the
         # previous source via its canonical ownership-aware lifecycle manager.
         Assert-OwnedShortcutsUnchanged $receipt
@@ -374,6 +391,8 @@ try {
         Repair-OwnedShortcuts $receipt $selected
     }
     Update-NativeHost $selected 'Register'
+    Update-SubmissionSyncTask $selected 'Register'
+    if ($previousSyncRoot) { Update-SubmissionSyncTask $previousSyncRoot 'Unregister' }
     Write-Host 'ESCAPEHATCH_INSTALLATION=INSTALLED'
     if ($Action -eq 'Bootstrap') {
         # Stream Start directly. Capturing a long-lived descendant's inherited

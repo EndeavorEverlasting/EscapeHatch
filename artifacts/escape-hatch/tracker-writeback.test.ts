@@ -9,10 +9,10 @@ import { emptyProfile, APPLICATIONS_KEY, PROFILE_KEY } from './src/lib/storage.t
 import { saveWorkspace, readWorkspace } from './workspace-file.ts';
 import { mergeConfirmedReceiptWorkspace, WORKSPACE_SCHEMA, type SavedWorkspace } from './src/lib/workspace-bootstrap.ts';
 import { reconcileSubmissionReceipts } from './src/lib/submission-reconciliation.ts';
-import { enqueueSubmissionSync, retrySubmissionSync, readSubmissionSyncStatus, planSubmissionWrite } from './tracker-writeback.ts';
+import { enqueueSubmissionSync, retrySubmissionSync, readSubmissionSyncStatus, planSubmissionWrite, runSubmissionSyncOnce } from './tracker-writeback.ts';
 
 const url = 'https://jobs.lever.co/synthetic/00000000-0000-0000-0000-000000000000';
-const values = () => [['Company', 'Role', 'Status', 'Priority', 'Apply Link', 'Applied?', 'Date Applied', 'Notes'], ['Synthetic', 'Role', 'Ready to Apply', 'Normal', url, false, '', 'preserve user notes']];
+const values = () => [['Company', 'Role', 'Status', 'Priority', 'Apply Link', 'Applied?', 'Date Applied', 'Notes', 'Submission Proof'], ['Synthetic', 'Role', 'Ready to Apply', 'Normal', url, false, '', 'preserve user notes', '']];
 const snapshot = () => createTrackerSnapshotFromValues(values(), { spreadsheetId: 'synthetic_sheet_id', sheetName: 'Applications' }, 'synthetic', new Date('2026-01-01'));
 const receipt = () => ({ opportunityId: trackerOpportunityId(snapshot().applications[0]), sessionId: 'synthetic-session', attemptId: 'synthetic-attempt',
   applicationOrigin: 'https://jobs.lever.co', applicationPath: '/synthetic/00000000-0000-0000-0000-000000000000/apply', observedAt: '2026-01-02T12:00:00Z', source: 'same_session_page_confirmation' as const, evidenceCode: 'APPLICATION_RECEIVED_AFTER_USER_SUBMIT' as const });
@@ -30,12 +30,12 @@ test('hosted posting to questionnaire binding reaches the same unique tracker ro
 
 test('plan uses exact receipt, fresh headers and unique opportunity; row moves remap and unrelated cells stay untouched', () => {
   const r = receipt(), s = snapshot();
-  const reordered = [values()[0], ['Other', 'Other', 'Saved', 'Normal', 'https://example.test/other', false], values()[1]];
+  const reordered = [values()[0], ['Other', 'Other', 'Saved', 'Normal', 'https://example.test/other', false, '', '', ''], values()[1]];
   const plan = planSubmissionWrite(s, r, reordered);
   assert.equal(plan.row.sheetRow, 3);
-  assert.deepEqual(plan.data.map(item => item.range), ["'Applications'!C3", "'Applications'!F3", "'Applications'!G3"]);
+  assert.deepEqual(plan.data.map(item => item.range), ["'Applications'!C3", "'Applications'!F3", "'Applications'!G3", "'Applications'!I3"]);
   const expectedSerial = Math.round((Date.parse('2026-01-02T00:00:00Z') - Date.UTC(1899, 11, 30)) / 86400000);
-  assert.deepEqual(plan.data.map(item => item.values[0][0]), ['Submitted', true, expectedSerial]);
+  assert.deepEqual(plan.data.map(item => item.values[0][0]), ['Submitted', true, expectedSerial, 'Employer Confirmed']);
   assert.throws(() => planSubmissionWrite(s, { ...r, opportunityId: 'other' }, values()), /CONFLICT/);
   assert.throws(() => planSubmissionWrite(s, { ...r, applicationPath: '/synthetic/other/apply' }, values()), /CONFLICT/);
   assert.throws(() => planSubmissionWrite(s, r, [...values(), values()[1]]), /CONFLICT/);
@@ -48,29 +48,72 @@ test('plan uses exact receipt, fresh headers and unique opportunity; row moves r
 test('canonical tracker glyphs, Research status and date-validated serial survive exact readback', () => {
   // Mirrors the canonical Google Sheet (Applied? is a text dropdown, not a boolean).
   const cells: (string | number | boolean)[][] = [
-    ['Applied?', 'Priority', 'Status', 'Company', 'Role', 'Apply Link', 'Date Applied', 'Notes'],
-    ['☐', 'Medium', 'Research', 'Synthetic', 'Role', url, '', 'unchanged'],
+    ['Applied?', 'Priority', 'Status', 'Company', 'Role', 'Apply Link', 'Date Applied', 'Notes', 'Submission Proof'],
+    ['☐', 'Medium', 'Research', 'Synthetic', 'Role', url, '', 'unchanged', ''],
   ];
   const target = { spreadsheetId: 'synthetic_sheet_id', sheetName: 'Applications' };
   const current = createTrackerSnapshotFromValues(cells, target, 'synthetic', new Date('2026-01-01'));
   const evidence = { ...receipt(), opportunityId: trackerOpportunityId(current.applications[0]) };
   const planned = planSubmissionWrite(current, evidence, cells, 'America/New_York');
   const serial = Math.round((Date.parse('2026-01-02T00:00:00Z') - Date.UTC(1899, 11, 30)) / 86400000);
-  assert.deepEqual(planned.data.map(item => item.values[0][0]), ['Submitted', '☑', serial]);
+  assert.deepEqual(planned.data.map(item => item.values[0][0]), ['Submitted', '☑', serial, 'Employer Confirmed']);
   const after = [
-    cells[0], ['☑', 'Medium', 'Submitted', 'Synthetic', 'Role', url, serial, 'unchanged'],
+    cells[0], ['☑', 'Medium', 'Submitted', 'Synthetic', 'Role', url, serial, 'unchanged', 'Employer Confirmed'],
   ];
   const verified = planSubmissionWrite(current, evidence, after, 'America/New_York');
   assert.equal(verified.done, true);
   assert.deepEqual(verified.data, []);
   assert.equal(after[1][7], 'unchanged');
   // Already-checked Applied? + employer-confirmed In Process: preserve ownership (PR #156), do not rewrite.
-  const progressed = [cells[0], ['☑', 'Medium', 'In Process', 'Synthetic', 'Role', url, serial, 'unchanged']];
+  const progressed = [cells[0], ['☑', 'Medium', 'In Process', 'Synthetic', 'Role', url, serial, 'unchanged', 'Employer Confirmed']];
   assert.equal(planSubmissionWrite(current, evidence, progressed).done, true);
   assert.deepEqual(planSubmissionWrite(current, evidence, progressed).data, []);
   // Same In Process status without Applied? still cannot certify submission.
-  const unchecked = [cells[0], ['☐', 'Medium', 'In Process', 'Synthetic', 'Role', url, serial, 'unchanged']];
+  const unchecked = [cells[0], ['☐', 'Medium', 'In Process', 'Synthetic', 'Role', url, serial, 'unchanged', 'Employer Confirmed']];
   assert.throws(() => planSubmissionWrite(current, evidence, unchecked), /CONFLICT/);
+});
+
+test('Submission Proof AD writes Employer Confirmed and never clobbers portal AE:AJ cells', () => {
+  const heading = Array.from({ length: 36 }, (_, i) => {
+    if (i === 0) return 'Company';
+    if (i === 1) return 'Role';
+    if (i === 2) return 'Status';
+    if (i === 3) return 'Priority';
+    if (i === 4) return 'Apply Link';
+    if (i === 5) return 'Applied?';
+    if (i === 6) return 'Date Applied';
+    if (i === 7) return 'Notes';
+    if (i === 29) return 'Submission Proof';
+    if (i === 30) return 'Portal Profile Status';
+    if (i === 31) return 'Portal Profile Progress';
+    if (i === 32) return 'Portal Required Fields';
+    if (i === 33) return 'Portal Evidence';
+    if (i === 34) return 'Portal Photo';
+    if (i === 35) return 'Portal Notes';
+    return `Pad ${i}`;
+  });
+  const row = Array.from({ length: 36 }, (_, i) => {
+    if (i === 0) return 'Synthetic';
+    if (i === 1) return 'Role';
+    if (i === 2) return 'Research';
+    if (i === 3) return 'Normal';
+    if (i === 4) return url;
+    if (i === 5) return '☐';
+    if (i === 6) return '';
+    if (i === 7) return 'historic audit note';
+    if (i === 29) return '';
+    if (i >= 30) return `portal-${i}`;
+    return '';
+  });
+  const cells = [heading, row];
+  const current = createTrackerSnapshotFromValues(cells, { spreadsheetId: 'synthetic_sheet_id', sheetName: 'Applications' }, 'synthetic', new Date('2026-01-01'));
+  const evidence = { ...receipt(), opportunityId: trackerOpportunityId(current.applications[0]) };
+  const planned = planSubmissionWrite(current, evidence, cells, 'America/New_York');
+  assert.ok(planned.data.some(item => item.range === "'Applications'!AD2" && item.values[0][0] === 'Employer Confirmed'));
+  assert.equal(planned.data.some(item => /!(AE|AF|AG|AH|AI|AJ)2$/.test(item.range)), false);
+  for (let i = 30; i <= 35; i++) assert.equal(cells[1][i], `portal-${i}`);
+  assert.equal(cells[1][7], 'historic audit note');
+  assert.throws(() => planSubmissionWrite(current, evidence, [heading.slice(0, 29), row.slice(0, 29)]), /CONFLICT/);
 });
 
 
@@ -122,8 +165,8 @@ test('date write readback is verified and conflicting partial provider writes ne
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-outbox-date-'));
   const current = values();
   const options = { root, env: { LOCALAPPDATA: root, TOKEN_CORRIDOR_GOOGLE_TOKEN: 'synthetic-only' }, timeZone: 'America/New_York', fetch: (async (_url: string, init?: RequestInit) => {
-    if (init?.method === 'POST') { current[1][2] = 'Submitted'; current[1][5] = true; current[1][6] = 'wrong-date'; return new Response('{}'); }
-    return new Response(JSON.stringify({ range: 'Applications!A1:H2', majorDimension: 'ROWS', values: current }));
+    if (init?.method === 'POST') { current[1][2] = 'Submitted'; current[1][5] = true; current[1][6] = 'wrong-date'; current[1][8] = 'Employer Confirmed'; return new Response('{}'); }
+    return new Response(JSON.stringify({ range: 'Applications!A1:I2', majorDimension: 'ROWS', values: current }));
   }) as typeof fetch };
   try {
     await fs.writeFile(path.join(root, 'tracker-snapshot.v1.json'), JSON.stringify(snapshot()));
@@ -157,11 +200,16 @@ test('provider sync verifies readback, preserves notes and retries an ambiguous 
     if (init?.method === 'POST') {
       writes++;
       const payload = JSON.parse(String(init.body));
-      for (const item of payload.data) { const match = /!([A-Z])(\d+)$/.exec(item.range)!; current[Number(match[2]) - 1][match[1].charCodeAt(0) - 65] = item.values[0][0]; }
+      for (const item of payload.data) {
+        const match = /!([A-Z]+)(\d+)$/.exec(item.range)!;
+        let index = 0;
+        for (const ch of match[1]) index = index * 26 + (ch.charCodeAt(0) - 64);
+        current[Number(match[2]) - 1][index - 1] = item.values[0][0];
+      }
       if (loseResponse) { loseResponse = false; throw new Error('Lost provider response'); }
       return new Response('{}');
     }
-    return new Response(JSON.stringify({ range: 'Applications!A1:H2', majorDimension: 'ROWS', values: current }));
+    return new Response(JSON.stringify({ range: 'Applications!A1:I2', majorDimension: 'ROWS', values: current }));
   }) as typeof fetch };
   try {
     await fs.writeFile(path.join(root, 'tracker-snapshot.v1.json'), JSON.stringify(snapshot()));
@@ -186,6 +234,7 @@ test('post-submission action ownership cannot be rewound by a late confirmed rec
     cells[1][2] = status;
     cells[1][5] = '☑';
     cells[1][6] = '01/02/2026';
+    cells[1][8] = 'Employer Confirmed';
     const current = createTrackerSnapshotFromValues(cells, {
       spreadsheetId: 'synthetic_sheet_id', sheetName: 'Applications',
     }, 'synthetic', new Date('2026-01-01'));
@@ -199,9 +248,91 @@ test('post-submission action ownership cannot be rewound by a late confirmed rec
   // Pending by itself cannot certify submission without the separate Applied flag.
   const unproven = values();
   unproven[1][2] = 'Pending — Employer';
+  unproven[1][8] = 'Employer Confirmed';
   const snapshot = createTrackerSnapshotFromValues(unproven, {
     spreadsheetId: 'synthetic_sheet_id', sheetName: 'Applications',
   }, 'synthetic', new Date('2026-01-01'));
   const confirmation = { ...receipt(), opportunityId: trackerOpportunityId(snapshot.applications[0]) };
   assert.throws(() => planSubmissionWrite(snapshot, confirmation, unproven), /CONFLICT/);
+});
+
+test('sync status and queue evidence never borrow receipts from another opportunity', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-outbox-job-scoped-'));
+  const options = { root, env: { LOCALAPPDATA: root } };
+  try {
+    await fs.writeFile(path.join(root, 'tracker-snapshot.v1.json'), JSON.stringify(snapshot()));
+    const own = receipt();
+    await enqueueSubmissionSync(own, options);
+    await enqueueSubmissionSync({ ...own, opportunityId: 'other-employer-and-role',
+      attemptId: 'unrelated-attempt', applicationPath: '/other-job/application' }, options);
+    const ownState = await readSubmissionSyncStatus({ ...options, opportunityId: own.opportunityId });
+    const unrelatedState = await readSubmissionSyncStatus({ ...options, opportunityId: 'other-employer-and-role' });
+    const missing = await readSubmissionSyncStatus({ ...options, opportunityId: 'third-role-without-receipt' });
+    assert.equal(ownState.state, 'PENDING');
+    assert.equal(ownState.pending, 1);
+    assert.equal(ownState.opportunityId, own.opportunityId);
+    assert.equal(unrelatedState.opportunityId, 'other-employer-and-role');
+    assert.equal(unrelatedState.pending, 1);
+    assert.equal(missing.state, 'NO_RECEIPT');
+    assert.equal(missing.synced, 0);
+    assert.equal(missing.pending, 0);
+    assert.equal((await readSubmissionSyncStatus(options)).pending, 2);
+  } finally { await fs.rm(root, { recursive: true, force: true }); }
+});
+
+test('headless replay recovers durable browser receipts without operator prompting or a browser', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-outbox-worker-'));
+  const options = { root, env: { LOCALAPPDATA: root } };
+  try {
+    await fs.writeFile(path.join(root, 'tracker-snapshot.v1.json'), JSON.stringify(snapshot()));
+    await fs.writeFile(path.join(root, 'managed-submission-receipts.json'), JSON.stringify([receipt()]));
+    const first = await runSubmissionSyncOnce(options);
+    assert.equal(first.authRequired, 1);
+    assert.equal(first.synced, 0);
+    const again = await runSubmissionSyncOnce(options);
+    assert.equal(again.authRequired, 1);
+    assert.equal((await readSubmissionSyncStatus({ ...options, opportunityId: receipt().opportunityId })).authRequired, 1);
+    const outbox = JSON.parse(await fs.readFile(path.join(root, 'submission-tracker-outbox.v1.json'), 'utf8'));
+    assert.equal(outbox.entries.length, 1);
+    assert.equal(outbox.entries[0].receipt.attemptId, receipt().attemptId);
+  } finally { await fs.rm(root, { recursive: true, force: true }); }
+});
+
+test('headless schedule projects a trusted receipt into the correct Google row and verifies readback once', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-sync-end-to-end-'));
+  const current = values();
+  const trusted = receipt();
+  let writes = 0;
+  const options = { root, env: { LOCALAPPDATA: root, TOKEN_CORRIDOR_GOOGLE_TOKEN: 'synthetic-only' },
+    timeZone: 'America/New_York', fetch: (async (_url: string, init?: RequestInit) => {
+      if (init?.method === 'POST') {
+        writes++;
+        const payload = JSON.parse(String(init.body));
+        for (const item of payload.data) {
+          const match = /!([A-Z]+)(\d+)$/.exec(item.range)!;
+          let index = 0;
+          for (const ch of match[1]) index = index * 26 + (ch.charCodeAt(0) - 64);
+          current[Number(match[2]) - 1][index - 1] = item.values[0][0];
+        }
+        return new Response('{}');
+      }
+      return new Response(JSON.stringify({ range: 'Applications!A1:I2', majorDimension: 'ROWS', values: current }));
+    }) as typeof fetch };
+  try {
+    await fs.writeFile(path.join(root, 'tracker-snapshot.v1.json'), JSON.stringify(snapshot()));
+    await fs.writeFile(path.join(root, 'managed-submission-receipts.json'), JSON.stringify([trusted]));
+    assert.equal((await readSubmissionSyncStatus({ ...options, opportunityId: trusted.opportunityId })).state, 'NO_RECEIPT');
+    assert.equal((await runSubmissionSyncOnce(options)).synced, 1);
+    assert.equal(current[1][2], 'Submitted');
+    assert.equal(current[1][5], true);
+    assert.equal(current[1][7], 'preserve user notes');
+    assert.equal(current[1][8], 'Employer Confirmed');
+    const matching = await readSubmissionSyncStatus({ ...options, opportunityId: trusted.opportunityId });
+    assert.equal(matching.state, 'SYNCED');
+    assert.equal(matching.opportunityId, trusted.opportunityId);
+    assert.equal((await readSubmissionSyncStatus({ ...options, opportunityId: 'different-employer' })).state, 'NO_RECEIPT');
+    assert.equal(writes, 1);
+    assert.equal((await runSubmissionSyncOnce(options)).synced, 1);
+    assert.equal(writes, 1);
+  } finally { await fs.rm(root, { recursive: true, force: true }); }
 });

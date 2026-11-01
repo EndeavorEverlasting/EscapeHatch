@@ -16,7 +16,7 @@ type SyncState = 'PENDING' | 'SYNCED' | 'AUTH_REQUIRED' | 'CONFLICT' | 'RETRY_RE
 type Target = { spreadsheetId: string; sheetName: string };
 type Entry = { receipt: SubmissionEvidence; target: Target | null; timeZone: string; expectedDate?: string; state: SyncState; updatedAt: string };
 type Outbox = { schema: 'escapehatch/submission-tracker-outbox/v1'; entries: Entry[] };
-export type SyncOptions = { root?: string; env?: NodeJS.ProcessEnv; fetch?: typeof fetch; timeZone?: string };
+export type SyncOptions = { root?: string; env?: NodeJS.ProcessEnv; fetch?: typeof fetch; timeZone?: string; opportunityId?: string };
 const fileName = 'submission-tracker-outbox.v1.json';
 const scopeRoot = (options: SyncOptions) => options.root || userDataRoot();
 async function readJson(file: string) {
@@ -82,6 +82,26 @@ function sheetDateDay(value: string | number | undefined): string | null {
   return !Number.isNaN(Date.parse(iso)) && new Date(iso + 'T00:00:00Z').toISOString().slice(0, 10) === iso ? iso : null;
 }
 function dateSerial(day: string) { return Math.round((Date.parse(day + 'T00:00:00Z') - SHEETS_EPOCH_UTC) / 86400000); }
+/** A=0 … AJ=35. Portal profile columns AE:AJ stay readable but are never written here. */
+export const TRACKER_WRITE_COLUMN_LIMIT = 36;
+export const TRACKER_VALUES_RANGE = 'A1:AJ1500';
+export function sheetColumnLetter(index: number) {
+  if (!Number.isInteger(index) || index < 0 || index >= TRACKER_WRITE_COLUMN_LIMIT) throw new Error('CONFLICT');
+  let n = index + 1, out = '';
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    out = String.fromCharCode(65 + rem) + out;
+    n = Math.floor((n - 1) / 26);
+  }
+  return out;
+}
+export function sheetColumnIndex(letters: string) {
+  if (!/^[A-Z]+$/.test(letters) || letters.length > 2) return -1;
+  let n = 0;
+  for (const ch of letters) n = n * 26 + (ch.charCodeAt(0) - 64);
+  return n - 1;
+}
+const EMPLOYER_CONFIRMED_PROOF = 'Employer Confirmed';
 /** Pure plan: fresh header mapping and unique row identity, never a remembered row number alone. */
 export function planSubmissionWrite(snapshot: TrackerSnapshot, receipt: SubmissionEvidence, values: unknown[][], timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone) {
   const bound = snapshot.applications.filter(row => trackerOpportunityId(row) === receipt.opportunityId && receiptMatches(receipt, row.applyUrl));
@@ -91,7 +111,9 @@ export function planSubmissionWrite(snapshot: TrackerSnapshot, receipt: Submissi
   if (matches.length !== 1) throw new Error('CONFLICT');
   const row = matches[0], headers = values[0].map(value => String(value).trim().toLowerCase());
   const status = headers.indexOf('status'), applied = headers.indexOf('applied?'), date = headers.indexOf('date applied');
-  if ([status, applied, date].some(index => index < 0) || new Set(headers.filter(Boolean)).size !== headers.filter(Boolean).length) throw new Error('CONFLICT');
+  const proof = headers.indexOf('submission proof');
+  if ([status, applied, date, proof].some(index => index < 0) || new Set(headers.filter(Boolean)).size !== headers.filter(Boolean).length) throw new Error('CONFLICT');
+  if ([status, applied, date, proof].some(index => index >= TRACKER_WRITE_COLUMN_LIMIT)) throw new Error('CONFLICT');
   const statusValue = row.status.trim().toLowerCase();
   // A verified receipt must never rewind an already-submitted application
   // because the applicant owes a questionnaire or the employer owns review.
@@ -111,16 +133,19 @@ export function planSubmissionWrite(snapshot: TrackerSnapshot, receipt: Submissi
   const get = (type: string) => parts.find(item => item.type === type)!.value;
   const day = `${get('year')}-${get('month')}-${get('day')}`;
   const quoted = "'" + snapshot.sheetName.replace(/'/g, "''") + "'!";
-  const update = (column: number, value: string | boolean | number) => ({ range: quoted + String.fromCharCode(65 + column) + row.sheetRow, values: [[value]] });
+  const update = (column: number, value: string | boolean | number) => ({ range: quoted + sheetColumnLetter(column) + row.sheetRow, values: [[value]] });
   const rawApplied = values[row.sheetRow - 1]?.[applied];
   const appliedValue = rawApplied === false ? true : rawApplied === '☐' ? '☑' :
     rawApplied === 'FALSE' ? 'TRUE' : rawApplied === '' ? '☑' : null;
   if (!done && appliedValue === null) throw new Error('CONFLICT');
   const existingDate = sheetDateDay(row.dateApplied);
   if (row.dateApplied && !existingDate) throw new Error('CONFLICT');
+  const existingProof = String(values[row.sheetRow - 1]?.[proof] ?? '').trim();
+  const needProof = existingProof.toLowerCase() !== EMPLOYER_CONFIRMED_PROOF.toLowerCase();
   const data = [...(done ? [] : [update(status, 'Submitted'), update(applied, appliedValue!)]),
-    ...(!existingDate ? [update(date, dateSerial(day))] : [])];
-  return { data, row, done, day };
+    ...(!existingDate ? [update(date, dateSerial(day))] : []),
+    ...(needProof ? [update(proof, EMPLOYER_CONFIRMED_PROOF)] : [])];
+  return { data, row, done: done && !needProof, day, proofColumn: proof };
 }
 async function syncOne(entry: Entry, options: SyncOptions, persistIntent: () => Promise<void>): Promise<SyncState> {
   const { receipt } = entry;
@@ -133,7 +158,7 @@ async function syncOne(entry: Entry, options: SyncOptions, persistIntent: () => 
   if (!auth) return 'AUTH_REQUIRED';
   const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 10000);
   const request = options.fetch || fetch;
-  const range = "'" + snapshot.sheetName.replace(/'/g, "''") + "'!A1:Z1500";
+  const range = "'" + snapshot.sheetName.replace(/'/g, "''") + "'!" + TRACKER_VALUES_RANGE;
   const base = 'https://sheets.googleapis.com/v4/spreadsheets/' + encodeURIComponent(snapshot.spreadsheetId) + '/values/';
   const headers = { authorization: 'Bearer ' + auth.token, 'content-type': 'application/json' };
   async function call(url: string, init: RequestInit = {}) {
@@ -148,8 +173,8 @@ async function syncOne(entry: Entry, options: SyncOptions, persistIntent: () => 
     const raw = await call(base + encodeURIComponent(range) + '?majorDimension=ROWS&valueRenderOption=UNFORMATTED_VALUE');
     if (raw.majorDimension !== 'ROWS' || !Array.isArray(raw.values) || typeof raw.range !== 'string' ||
         ![snapshot!.sheetName + '!', "'" + snapshot!.sheetName.replace(/'/g, "''") + "'!"].some(prefix => raw.range.startsWith(prefix))) throw new Error('CONFLICT');
-    const extent = /!A1:([A-Z])([1-9][0-9]*)$/.exec(raw.range);
-    if (!extent || Number(extent[2]) > 1500) throw new Error('CONFLICT');
+    const extent = /!A1:([A-Z]+)([1-9][0-9]*)$/.exec(raw.range);
+    if (!extent || sheetColumnIndex(extent[1]) < 0 || sheetColumnIndex(extent[1]) >= TRACKER_WRITE_COLUMN_LIMIT || Number(extent[2]) > 1500) throw new Error('CONFLICT');
     return raw.values as unknown[][];
   }
   try {
@@ -166,8 +191,8 @@ async function syncOne(entry: Entry, options: SyncOptions, persistIntent: () => 
     const after = await read(), verified = planSubmissionWrite(snapshot, receipt, after, entry.timeZone);
     if (!verified.done || verified.row.sheetRow !== plan.row.sheetRow) return 'CONFLICT';
     if (plan.data.some(item => {
-      const cell = /!([A-Z])(\d+)$/.exec(item.range)!;
-      const observed = after[Number(cell[2]) - 1]?.[cell[1].charCodeAt(0) - 65];
+      const cell = /!([A-Z]+)(\d+)$/.exec(item.range)!;
+      const observed = after[Number(cell[2]) - 1]?.[sheetColumnIndex(cell[1])];
       const expected = item.values[0][0];
       return typeof expected === 'number'
         ? sheetDateDay(typeof observed === 'number' || typeof observed === 'string' ? observed : undefined) !== plan.day
@@ -222,14 +247,38 @@ export async function retrySubmissionSync(options: SyncOptions = {}) {
   });
   return readSubmissionSyncStatus(options);
 }
+/** A dashboard count is not this job's receipt. Scope UI status to the bound opportunity. */
 export async function readSubmissionSyncStatus(options: SyncOptions = {}) {
   try {
     const box = await readOutbox(scopeRoot(options));
+    const scoped = options.opportunityId !== undefined;
+    const entries = scoped ? box.entries.filter(item => item.receipt.opportunityId === options.opportunityId) : box.entries;
     const counts = { pending: 0, synced: 0, authRequired: 0, conflicts: 0, retryRequired: 0 };
-    for (const item of box.entries) counts[item.state === 'SYNCED' ? 'synced' : item.state === 'AUTH_REQUIRED' ? 'authRequired' : item.state === 'CONFLICT' ? 'conflicts' : item.state === 'RETRY_REQUIRED' ? 'retryRequired' : 'pending']++;
-    return { state: counts.authRequired ? 'AUTH_REQUIRED' : counts.conflicts ? 'CONFLICT' : counts.retryRequired || counts.pending ? 'PENDING' : 'IDLE', ...counts };
-  } catch { return { state: 'RECOVERY_REQUIRED', pending: 0, synced: 0, authRequired: 0, conflicts: 0, retryRequired: 0 }; }
+    for (const item of entries) counts[item.state === 'SYNCED' ? 'synced' : item.state === 'AUTH_REQUIRED' ? 'authRequired' : item.state === 'CONFLICT' ? 'conflicts' : item.state === 'RETRY_REQUIRED' ? 'retryRequired' : 'pending']++;
+    return { opportunityId: options.opportunityId ?? null,
+      state: counts.authRequired ? 'AUTH_REQUIRED' : counts.conflicts ? 'CONFLICT' :
+      counts.retryRequired || counts.pending ? 'PENDING' : scoped ? (counts.synced ? 'SYNCED' : 'NO_RECEIPT') : 'IDLE', ...counts };
+  } catch { return { opportunityId: options.opportunityId ?? null, state: 'RECOVERY_REQUIRED', pending: 0, synced: 0, authRequired: 0, conflicts: 0, retryRequired: 0 }; }
 }
+
+/** One-shot, headless replay: suitable for both the running host and a scheduled task. */
+export async function runSubmissionSyncOnce(options: SyncOptions = {}) {
+  const root = scopeRoot(options);
+  const receipts = await readJson(path.join(root, 'managed-submission-receipts.json')).catch(error => {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return []; throw error;
+  });
+  if (!Array.isArray(receipts) || receipts.length > 1000) throw new Error('INVALID_RECEIPTS');
+  const existing = await readOutbox(root);
+  for (const value of receipts) {
+    const receipt = parseSubmissionEvidence(value);
+    if (!receipt) throw new Error('INVALID_RECEIPTS');
+    if (!existing.entries.some(entry => entry.receipt.attemptId === receipt.attemptId)) {
+      await enqueueSubmissionSync(receipt, { ...options, root });
+    }
+  }
+  return retrySubmissionSync({ ...options, root });
+}
+
 const startedRoots = new Set<string>();
 export function startSubmissionSync() {
   const root = userDataRoot();
@@ -237,19 +286,8 @@ export function startSubmissionSync() {
   let running = false;
   const tick = async () => {
     if (running) return; running = true;
-    try {
-      // Replay the canonical durable receipts after interrupted callback/process exit.
-      const receipts = await readJson(path.join(userDataRoot(), 'managed-submission-receipts.json')).catch(error => {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return []; throw error;
-      });
-      if (!Array.isArray(receipts) || receipts.length > 1000) throw new Error('INVALID_RECEIPTS');
-      const existing = await readOutbox(root);
-      for (const receipt of receipts) {
-        if (!parseSubmissionEvidence(receipt)) throw new Error('INVALID_RECEIPTS');
-        if (!existing.entries.some(entry => entry.receipt.attemptId === receipt.attemptId)) await enqueueSubmissionSync(receipt, { root });
-      }
-      await retrySubmissionSync();
-    } catch { /* Durable receipt/outbox remain; status never claims successful sync. */ }
+    try { await runSubmissionSyncOnce({ root }); }
+    catch { /* Durable receipt/outbox remain; status never claims successful sync. */ }
     finally { running = false; }
   };
   void tick();

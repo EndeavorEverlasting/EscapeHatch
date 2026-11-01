@@ -259,7 +259,7 @@ test('headless schedule projects a trusted receipt into the correct Google row a
         writes++;
         const payload = JSON.parse(String(init.body));
         for (const item of payload.data) {
-          const match = /!([A-Z])(\\d+)$/.exec(item.range)!;
+          const match = /!([A-Z])(\d+)$/.exec(item.range)!;
           current[Number(match[2]) - 1][match[1].charCodeAt(0) - 65] = item.values[0][0];
         }
         return new Response('{}');

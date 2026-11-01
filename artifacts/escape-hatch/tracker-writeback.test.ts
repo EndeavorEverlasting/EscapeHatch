@@ -247,3 +247,39 @@ test('headless replay recovers durable browser receipts without operator prompti
     assert.equal(outbox.entries[0].receipt.attemptId, receipt().attemptId);
   } finally { await fs.rm(root, { recursive: true, force: true }); }
 });
+
+test('headless schedule projects a trusted receipt into the correct Google row and verifies readback once', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-sync-end-to-end-'));
+  const current = values();
+  const trusted = receipt();
+  let writes = 0;
+  const options = { root, env: { LOCALAPPDATA: root, TOKEN_CORRIDOR_GOOGLE_TOKEN: 'synthetic-only' },
+    timeZone: 'America/New_York', fetch: (async (_url: string, init?: RequestInit) => {
+      if (init?.method === 'POST') {
+        writes++;
+        const payload = JSON.parse(String(init.body));
+        for (const item of payload.data) {
+          const match = /!([A-Z])(\\d+)$/.exec(item.range)!;
+          current[Number(match[2]) - 1][match[1].charCodeAt(0) - 65] = item.values[0][0];
+        }
+        return new Response('{}');
+      }
+      return new Response(JSON.stringify({ range: 'Applications!A1:H2', majorDimension: 'ROWS', values: current }));
+    }) as typeof fetch };
+  try {
+    await fs.writeFile(path.join(root, 'tracker-snapshot.v1.json'), JSON.stringify(snapshot()));
+    await fs.writeFile(path.join(root, 'managed-submission-receipts.json'), JSON.stringify([trusted]));
+    assert.equal((await readSubmissionSyncStatus({ ...options, opportunityId: trusted.opportunityId })).state, 'NO_RECEIPT');
+    assert.equal((await runSubmissionSyncOnce(options)).synced, 1);
+    assert.equal(current[1][2], 'Submitted');
+    assert.equal(current[1][5], true);
+    assert.equal(current[1][7], 'preserve user notes');
+    const matching = await readSubmissionSyncStatus({ ...options, opportunityId: trusted.opportunityId });
+    assert.equal(matching.state, 'SYNCED');
+    assert.equal(matching.opportunityId, trusted.opportunityId);
+    assert.equal((await readSubmissionSyncStatus({ ...options, opportunityId: 'different-employer' })).state, 'NO_RECEIPT');
+    assert.equal(writes, 1);
+    assert.equal((await runSubmissionSyncOnce(options)).synced, 1);
+    assert.equal(writes, 1);
+  } finally { await fs.rm(root, { recursive: true, force: true }); }
+});

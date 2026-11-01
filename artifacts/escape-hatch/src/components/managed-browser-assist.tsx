@@ -531,7 +531,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const persistedReceipt = parseSubmissionEvidence(completedApplication?.submissionEvidence);
   const liveReceipt = listenerConnected && listenerStatus?.opportunityId === completedApplication?.id &&
     listenerStatus.submission?.state === 'CONFIRMED'
-    ? parseSubmissionEvidence(listenerStatus.submission.receipt) : null;
+    ? parseSubmissionEvidence(listenerStatus?.submission?.receipt) : null;
   const hasMatchingReceipt = Boolean(completedApplication && [persistedReceipt, liveReceipt].some(receipt =>
     receipt?.opportunityId === completedApplication.id &&
     submissionMatchesApplication(receipt, completedApplication.url)));

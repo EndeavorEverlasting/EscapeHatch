@@ -177,6 +177,94 @@
           "isChromeChild": false,
           "isOwnedManagedProfile": true,
           "isForbiddenEphemeral": false,
+          "isPrivateSession": false,
+          "isSignedInPersistentProfile": true,
+          "looksLikeDefaultUserProfile": false,
+          "assistOriginPort": 21031
+        }
+      ]
+    },
+    {
+      "id": "prefer-signed-in-managed-over-incognito-managed",
+      "mode": "ATTACH_EXISTING",
+      "targetHostHint": "broadcastwell.com",
+      "expected": {
+        "ok": true,
+        "selectionReason": "attach_existing_owned_progress_session",
+        "selectedPid": 80001,
+        "mustNotSelectPid": 80002,
+        "mustIncludeSignals": [
+          "signed_in_persistent_profile"
+        ]
+      },
+      "afterProcesses": [
+        {
+          "pid": 80002,
+          "processName": "chrome",
+          "startTimeUtc": "2026-11-01T10:00:00.0000000Z",
+          "mainWindowHandle": 11,
+          "mainWindowTitle": "AI Automation Engineer - broadcastwell.com (Incognito)",
+          "visible": true,
+          "commandLine": "chrome.exe --incognito --user-data-dir=C:\\Users\\x\\AppData\\Local\\EscapeHatch\\managed-career-browser-origins\\21031 --remote-debugging-pipe",
+          "userDataDir": "C:\\Users\\x\\AppData\\Local\\EscapeHatch\\managed-career-browser-origins\\21031",
+          "hasRemoteDebugging": true,
+          "isBrowserRoot": true,
+          "isChromeChild": false,
+          "isOwnedManagedProfile": true,
+          "isForbiddenEphemeral": false,
+          "isPrivateSession": true,
+          "isSignedInPersistentProfile": false,
+          "looksLikeDefaultUserProfile": false,
+          "assistOriginPort": 21031
+        },
+        {
+          "pid": 80001,
+          "processName": "chrome",
+          "startTimeUtc": "2026-11-01T10:01:00.0000000Z",
+          "mainWindowHandle": 12,
+          "mainWindowTitle": "AI Automation Engineer - broadcastwell.com",
+          "visible": true,
+          "commandLine": "chrome.exe --user-data-dir=C:\\Users\\x\\AppData\\Local\\EscapeHatch\\managed-career-browser-origins\\21031 --remote-debugging-pipe",
+          "userDataDir": "C:\\Users\\x\\AppData\\Local\\EscapeHatch\\managed-career-browser-origins\\21031",
+          "hasRemoteDebugging": true,
+          "isBrowserRoot": true,
+          "isChromeChild": false,
+          "isOwnedManagedProfile": true,
+          "isForbiddenEphemeral": false,
+          "isPrivateSession": false,
+          "isSignedInPersistentProfile": true,
+          "looksLikeDefaultUserProfile": false,
+          "assistOriginPort": 21031
+        }
+      ]
+    },
+    {
+      "id": "locate-progress-reports-private-when-only-match",
+      "mode": "LOCATE_PROGRESS",
+      "targetHostHint": "broadcastwell.com",
+      "expected": {
+        "ok": true,
+        "selectionReason": "progress_window_private_session",
+        "selectedPid": 90001
+      },
+      "afterProcesses": [
+        {
+          "pid": 90001,
+          "processName": "chrome",
+          "startTimeUtc": "2026-11-01T11:00:00.0000000Z",
+          "mainWindowHandle": 21,
+          "mainWindowTitle": "AI Automation Engineer - broadcastwell.com (Incognito)",
+          "visible": true,
+          "commandLine": "chrome.exe --incognito --user-data-dir=C:\\Users\\x\\AppData\\Local\\EscapeHatch\\managed-career-browser-origins\\21031 --remote-debugging-pipe",
+          "userDataDir": "C:\\Users\\x\\AppData\\Local\\EscapeHatch\\managed-career-browser-origins\\21031",
+          "hasRemoteDebugging": true,
+          "isBrowserRoot": true,
+          "isChromeChild": false,
+          "isOwnedManagedProfile": true,
+          "isForbiddenEphemeral": false,
+          "isPrivateSession": true,
+          "isSignedInPersistentProfile": false,
+          "looksLikeDefaultUserProfile": false,
           "assistOriginPort": 21031
         }
       ]

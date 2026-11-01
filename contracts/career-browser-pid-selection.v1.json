@@ -21,6 +21,9 @@
     "never_relaunch_when_owned_progress_session_is_selectable",
     "never_bind_playwright_mcp_ephemeral_profile_as_career_session",
     "prefer_browser_root_pid_over_renderer_utility_gpu",
+    "prefer_signed_in_persistent_profiles_over_incognito",
+    "private_session_remains_attachable_when_it_holds_progress",
+    "locate_progress_answers_which_window_holds_application",
     "user_data_dir_is_primary_ownership_signal",
     "receipt_pid_alone_is_not_identity",
     "attach_only_refuses_launch_and_termination",
@@ -70,6 +73,11 @@
     "STATUS": {
       "definition": "Report live candidates, receipt, and whether attach is possible without relaunch.",
       "mutates_browser": false
+    },
+    "LOCATE_PROGRESS": {
+      "definition": "Answer which Chrome/Edge window most likely holds the in-progress application for a host hint. Prefers signed-in persistent profiles over incognito when both match; still reports a private session when that is where progress lives.",
+      "mutates_browser": false,
+      "required_input": "TargetHostHint"
     }
   },
   "scoring": {
@@ -79,20 +87,25 @@
       "remote_debugging_present": 20,
       "visible_top_level_window": 15,
       "assist_origin_port_folder_match": 15,
-      "target_host_or_title_hint": 15,
+      "target_host_or_title_hint": 25,
+      "signed_in_persistent_profile": 25,
+      "default_user_chrome_profile": 10,
       "new_pid_after_baseline": 30,
       "changed_window_after_baseline": 10
     },
     "penalties": {
       "forbidden_ephemeral_profile": -100,
+      "private_or_incognito_session": -35,
       "chrome_child_process": -40,
       "unknown_user_data_dir": -10
     },
     "minimum_bind_score": 50,
-    "attach_existing_does_not_require_new_pid_signal": true
+    "attach_existing_does_not_require_new_pid_signal": true,
+    "prefer_signed_in_over_incognito_when_both_eligible": true
   },
   "selection_order": [
     "fresh_bound_receipt_reproof",
+    "locate_progress_host_matched_prefer_signed_in",
     "attach_existing_owned_progress_session",
     "s2_minus_s1_new_pid",
     "owned_existing_fallback_when_no_new_pid",

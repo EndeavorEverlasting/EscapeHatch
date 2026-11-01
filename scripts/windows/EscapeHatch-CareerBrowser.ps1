@@ -4,7 +4,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('Status', 'CaptureBaseline', 'AttachExisting', 'AttachOnly', 'SelectAfterLaunch', 'BindReceipt')]
+    [ValidateSet('Status', 'LocateProgress', 'CaptureBaseline', 'AttachExisting', 'AttachOnly', 'SelectAfterLaunch', 'BindReceipt')]
     [string]$Action,
 
     [string]$RepoRoot = $null,
@@ -14,6 +14,7 @@ param(
     [string]$AfterPath = $null,
     [string]$ReceiptPath = $null,
     [switch]$IncludeNonOwnedChrome,
+    [switch]$PreferPrivateSessions,
     [switch]$Json
 )
 
@@ -60,6 +61,8 @@ if (-not $BaselinePath) { $BaselinePath = $paths.Baseline }
 if (-not $AfterPath) { $AfterPath = $paths.After }
 if (-not $ReceiptPath) { $ReceiptPath = $paths.Receipt }
 
+$preferSignedIn = -not $PreferPrivateSessions
+
 switch ($Action) {
     'Status' {
         $snap = Get-EhCareerBrowserProcessSnapshot -Label 'STATUS' -IncludeNonOwnedChrome:$IncludeNonOwnedChrome
@@ -67,7 +70,8 @@ switch ($Action) {
             -Mode 'ATTACH_EXISTING' `
             -AfterSnapshot $snap `
             -ExpectedAssistOriginPort $ExpectedAssistOriginPort `
-            -TargetHostHint $TargetHostHint
+            -TargetHostHint $TargetHostHint `
+            -PreferSignedInProfiles $preferSignedIn
         $receipt = $null
         if (Test-Path -LiteralPath $ReceiptPath) {
             try { $receipt = Get-Content -LiteralPath $ReceiptPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
@@ -79,14 +83,47 @@ switch ($Action) {
             liveProcessCount = $snap.processCount
             attachPossible = [bool]$selection.ok
             selectionReason = $selection.selectionReason
+            preferSignedInProfiles = $preferSignedIn
             selectedPid = if ($selection.selected) { $selection.selected.pid } else { $null }
             selectedScore = if ($selection.selected) { $selection.selected.score } else { $null }
             selectedUserDataDir = if ($selection.selected) { $selection.selected.process.userDataDir } else { $null }
+            selectedIsPrivateSession = if ($selection.selected) { [bool]$selection.selected.process.isPrivateSession } else { $null }
             receiptPath = $ReceiptPath
             receiptPresent = [bool]$receipt
             receiptPid = if ($receipt) { $receipt.pid } else { $null }
-            candidates = @($selection.candidates | Select-Object -First 8 pid, score, eligible, signals, @{n='userDataDir';e={$_.process.userDataDir}}, @{n='title';e={$_.process.mainWindowTitle}})
+            candidates = @($selection.candidates | Select-Object -First 8 pid, score, eligible, signals, @{n='isPrivateSession';e={$_.process.isPrivateSession}}, @{n='isSignedInPersistentProfile';e={$_.process.isSignedInPersistentProfile}}, @{n='userDataDir';e={$_.process.userDataDir}}, @{n='title';e={$_.process.mainWindowTitle}})
         })
+    }
+
+    'LocateProgress' {
+        if ([string]::IsNullOrWhiteSpace($TargetHostHint)) {
+            throw 'LocateProgress requires -TargetHostHint (example: broadcastwell.com).'
+        }
+        $snap = Get-EhCareerBrowserProcessSnapshot -Label 'LOCATE_PROGRESS' -IncludeNonOwnedChrome
+        $selection = Select-EhCareerBrowserTarget `
+            -Mode 'LOCATE_PROGRESS' `
+            -AfterSnapshot $snap `
+            -ExpectedAssistOriginPort $ExpectedAssistOriginPort `
+            -TargetHostHint $TargetHostHint `
+            -PreferSignedInProfiles $preferSignedIn `
+            -AllowSignedInOperatorProfiles
+        Write-EhResult ([ordered]@{
+            ok = [bool]$selection.ok
+            action = 'LocateProgress'
+            targetHostHint = $TargetHostHint
+            preferSignedInProfiles = $preferSignedIn
+            selectionReason = $selection.selectionReason
+            answer = $selection.answer
+            pid = if ($selection.selected) { $selection.selected.pid } else { $null }
+            score = if ($selection.selected) { $selection.selected.score } else { $null }
+            title = if ($selection.selected) { $selection.selected.process.mainWindowTitle } else { $null }
+            userDataDir = if ($selection.selected) { $selection.selected.process.userDataDir } else { $null }
+            isPrivateSession = if ($selection.selected) { [bool]$selection.selected.process.isPrivateSession } else { $null }
+            isSignedInPersistentProfile = if ($selection.selected) { [bool]$selection.selected.process.isSignedInPersistentProfile } else { $null }
+            signals = if ($selection.selected) { @($selection.selected.signals) } else { @() }
+            note = 'Broadcastwell-style work already started in private/incognito remains attachable; future work should prefer signed-in profiles.'
+        })
+        if (-not $selection.ok) { exit 2 }
     }
 
     'CaptureBaseline' {
@@ -108,7 +145,8 @@ switch ($Action) {
             -Mode 'ATTACH_EXISTING' `
             -AfterSnapshot $snap `
             -ExpectedAssistOriginPort $ExpectedAssistOriginPort `
-            -TargetHostHint $TargetHostHint
+            -TargetHostHint $TargetHostHint `
+            -PreferSignedInProfiles $preferSignedIn
         if (-not $selection.ok) {
             Write-EhResult ([ordered]@{
                 ok = $false
@@ -145,7 +183,8 @@ switch ($Action) {
             -Mode 'ATTACH_ONLY' `
             -AfterSnapshot $snap `
             -ExpectedAssistOriginPort $ExpectedAssistOriginPort `
-            -TargetHostHint $TargetHostHint
+            -TargetHostHint $TargetHostHint `
+            -PreferSignedInProfiles $preferSignedIn
         if (-not $selection.ok) {
             Write-EhResult ([ordered]@{
                 ok = $false
@@ -187,7 +226,8 @@ switch ($Action) {
             -AfterSnapshot $snap `
             -ExpectedAssistOriginPort $ExpectedAssistOriginPort `
             -TargetHostHint $TargetHostHint `
-            -PreferNewPidWhenPresent
+            -PreferNewPidWhenPresent `
+            -PreferSignedInProfiles $preferSignedIn
         if (-not $selection.ok) {
             Write-EhResult ([ordered]@{
                 ok = $false

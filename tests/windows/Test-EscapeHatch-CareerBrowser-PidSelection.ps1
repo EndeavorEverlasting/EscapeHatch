@@ -31,12 +31,19 @@ foreach ($case in @($fixture.cases)) {
         $baseline = New-SnapshotFromFixtureProcesses -Label 'baseline' -Processes $case.baselineProcesses
     }
 
+    $hostHint = $null
+    if ($case.PSObject.Properties['targetHostHint'] -and $case.targetHostHint) {
+        $hostHint = [string]$case.targetHostHint
+    }
     $result = Select-EhCareerBrowserTarget `
         -Mode ([string]$case.mode) `
         -AfterSnapshot $after `
         -BaselineSnapshot $baseline `
         -ExpectedAssistOriginPort 21031 `
-        -PreferNewPidWhenPresent:($case.mode -eq 'SELECT_AFTER_LAUNCH')
+        -TargetHostHint $hostHint `
+        -PreferNewPidWhenPresent:($case.mode -eq 'SELECT_AFTER_LAUNCH') `
+        -PreferSignedInProfiles $true `
+        -AllowSignedInOperatorProfiles:($case.mode -eq 'LOCATE_PROGRESS')
 
     $expected = $case.expected
     if ([bool]$result.ok -ne [bool]$expected.ok) {
@@ -83,6 +90,26 @@ if (-not $markers.isOwnedManagedProfile -or -not $markers.isBrowserRoot -or $mar
 $forbidden = Get-EhCareerBrowserCommandLineMarkers -CommandLine 'chrome.exe --user-data-dir=C:\Users\x\AppData\Local\ms-playwright-mcp\mcp-chrome-bce8a02'
 if (-not $forbidden.isForbiddenEphemeral) {
     $failures.Add('command-line marker parse failed to flag playwright mcp profile') | Out-Null
+} else {
+    $passed++
+}
+
+$incognito = Get-EhCareerBrowserCommandLineMarkers -CommandLine 'chrome.exe --incognito --user-data-dir=C:\Users\x\AppData\Local\EscapeHatch\managed-career-browser-origins\21031'
+if (-not $incognito.isPrivateSession -or $incognito.isSignedInPersistentProfile) {
+    $failures.Add('command-line marker parse failed to flag incognito private session') | Out-Null
+} else {
+    $passed++
+}
+
+$defaultChrome = Get-EhCareerBrowserCommandLineMarkers -CommandLine 'chrome.exe --user-data-dir="C:\Users\x\AppData\Local\Google\Chrome\User Data" --remote-debugging-port=9222'
+if (-not $defaultChrome.looksLikeDefaultUserProfile -or -not $defaultChrome.isSignedInPersistentProfile) {
+    $failures.Add("command-line marker parse failed to recognize signed-in default Chrome profile (ud=$($defaultChrome.userDataDir))") | Out-Null
+} else {
+    $passed++
+}
+$defaultChromeUnquoted = Get-EhCareerBrowserCommandLineMarkers -CommandLine 'chrome.exe --user-data-dir=C:\Users\x\AppData\Local\Google\Chrome\User Data --remote-debugging-port=9222'
+if (-not $defaultChromeUnquoted.looksLikeDefaultUserProfile) {
+    $failures.Add("unquoted User Data path parse failed (ud=$($defaultChromeUnquoted.userDataDir))") | Out-Null
 } else {
     $passed++
 }

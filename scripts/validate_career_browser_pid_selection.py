@@ -23,6 +23,9 @@ REQUIRED_INVARIANTS = {
     "never_relaunch_when_owned_progress_session_is_selectable",
     "never_bind_playwright_mcp_ephemeral_profile_as_career_session",
     "prefer_browser_root_pid_over_renderer_utility_gpu",
+    "prefer_signed_in_persistent_profiles_over_incognito",
+    "private_session_remains_attachable_when_it_holds_progress",
+    "locate_progress_answers_which_window_holds_application",
     "user_data_dir_is_primary_ownership_signal",
     "receipt_pid_alone_is_not_identity",
     "attach_only_refuses_launch_and_termination",
@@ -36,6 +39,7 @@ REQUIRED_MODES = {
     "ATTACH_EXISTING",
     "ATTACH_ONLY",
     "STATUS",
+    "LOCATE_PROGRESS",
 }
 
 REQUIRED_CASE_IDS = {
@@ -43,6 +47,8 @@ REQUIRED_CASE_IDS = {
     "select-after-launch-prefers-new-pid",
     "attach-only-fails-without-owned-session",
     "attach-existing-when-no-baseline-available",
+    "prefer-signed-in-managed-over-incognito-managed",
+    "locate-progress-reports-private-when-only-match",
 }
 
 REQUIRED_LIBRARY_MARKERS = {
@@ -51,8 +57,11 @@ REQUIRED_LIBRARY_MARKERS = {
     "Select-EhCareerBrowserTarget",
     "ATTACH_EXISTING",
     "ATTACH_ONLY",
+    "LOCATE_PROGRESS",
     "forbidden_ephemeral",
     "managed_career_user_data_dir",
+    "signed_in_persistent_profile",
+    "private_or_incognito_session",
     "Get-EhNewProcessIdsSinceBaseline",
 }
 
@@ -89,6 +98,10 @@ def validate_contract(contract: dict) -> None:
         scoring.get("attach_existing_does_not_require_new_pid_signal") is True,
         "scoring.attach_existing_does_not_require_new_pid_signal must be true",
     )
+    require(
+        scoring.get("prefer_signed_in_over_incognito_when_both_eligible") is True,
+        "scoring.prefer_signed_in_over_incognito_when_both_eligible must be true",
+    )
     family = contract.get("process_family") or {}
     require(
         "ms-playwright-mcp" in (family.get("forbidden_user_data_dir_markers") or []),
@@ -120,7 +133,7 @@ def validate_implementation_files() -> None:
     missing = [marker for marker in REQUIRED_LIBRARY_MARKERS if marker not in text]
     require(not missing, f"library missing markers: {missing}")
     cli = CLI.read_text(encoding="utf-8")
-    for action in ("AttachExisting", "AttachOnly", "CaptureBaseline", "SelectAfterLaunch", "Status"):
+    for action in ("AttachExisting", "AttachOnly", "CaptureBaseline", "SelectAfterLaunch", "Status", "LocateProgress"):
         require(action in cli, f"cli missing action {action}")
 
 

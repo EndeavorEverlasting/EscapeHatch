@@ -1,4 +1,4 @@
-# EscapeHatch career-browser PID/window selection.
+﻿# EscapeHatch career-browser PID/window selection.
 # Adapted from BlacksmithGuild S1/S2 baseline diff + AttachOnly existing-session semantics,
 # extended so already-open managed Chrome with application progress can be bound without relaunch.
 # Dot-source only. Does not launch or kill Chrome on import.
@@ -56,8 +56,11 @@ function Get-EhCareerBrowserCommandLineMarkers {
 
     $cmd = [string]$CommandLine
     $userDataDir = $null
-    if ($cmd -match '(?i)--user-data-dir=(?:"([^"]+)"|(\S+))') {
-        $userDataDir = if ($Matches[1]) { $Matches[1] } else { $Matches[2] }
+    # Quoted paths, or unquoted paths that may contain spaces (stop at next --flag).
+    if ($cmd -match '(?i)--user-data-dir="([^"]+)"') {
+        $userDataDir = $Matches[1]
+    } elseif ($cmd -match '(?i)--user-data-dir=(.+?)(?=\s+--|$)') {
+        $userDataDir = $Matches[1].Trim().Trim('"')
     }
 
     $remoteDebuggingPort = $null
@@ -99,6 +102,21 @@ function Get-EhCareerBrowserCommandLineMarkers {
         $assistOriginPort = [int]$Matches[1]
     }
 
+    # Private/ephemeral operator sessions: least saved identity. Prefer signed-in profiles when both exist.
+    $isPrivateSession = ($cmd -match '(?i)(--incognito|--guest|-inprivate)') `
+        -or ($userDataDir -and $userDataDir -match '(?i)(Guest Profile|System Profile)')
+    $looksLikeDefaultUserProfile = $false
+    if ($userDataDir -and -not $isPrivateSession) {
+        if ($userDataDir -match '(?i)\\Google\\Chrome\\User Data$' `
+                -or $userDataDir -match '(?i)\\Microsoft\\Edge\\User Data$' `
+                -or $userDataDir -match '(?i)\\Chromium\\User Data$') {
+            $looksLikeDefaultUserProfile = $true
+        }
+    }
+    $isSignedInPersistentProfile = (-not $isPrivateSession) -and (
+        $looksLikeDefaultUserProfile -or ($isOwned -and -not $isForbidden)
+    )
+
     return [pscustomobject][ordered]@{
         userDataDir = $userDataDir
         remoteDebuggingPort = $remoteDebuggingPort
@@ -108,6 +126,9 @@ function Get-EhCareerBrowserCommandLineMarkers {
         isOwnedManagedProfile = [bool]$isOwned
         isForbiddenEphemeral = [bool]$isForbidden
         assistOriginPort = $assistOriginPort
+        isPrivateSession = [bool]$isPrivateSession
+        isSignedInPersistentProfile = [bool]$isSignedInPersistentProfile
+        looksLikeDefaultUserProfile = [bool]$looksLikeDefaultUserProfile
     }
 }
 
@@ -136,6 +157,9 @@ function Get-EhCareerBrowserProcessRecord {
         isOwnedManagedProfile = $false
         isForbiddenEphemeral = $false
         assistOriginPort = $null
+        isPrivateSession = $false
+        isSignedInPersistentProfile = $false
+        looksLikeDefaultUserProfile = $false
     }
 
     try { $rec.startTimeUtc = $Process.StartTime.ToUniversalTime().ToString('o') } catch { }
@@ -169,6 +193,16 @@ function Get-EhCareerBrowserProcessRecord {
     $rec.isOwnedManagedProfile = $markers.isOwnedManagedProfile
     $rec.isForbiddenEphemeral = $markers.isForbiddenEphemeral
     $rec.assistOriginPort = $markers.assistOriginPort
+    $rec.isPrivateSession = $markers.isPrivateSession
+    $rec.isSignedInPersistentProfile = $markers.isSignedInPersistentProfile
+    $rec.looksLikeDefaultUserProfile = $markers.looksLikeDefaultUserProfile
+
+    # Title cues reinforce CLI private-session detection (Chrome/Edge UI).
+    $title = [string]$rec.mainWindowTitle
+    if ($title -match '(?i)(\(Incognito\)|InPrivate)') {
+        $rec.isPrivateSession = $true
+        $rec.isSignedInPersistentProfile = $false
+    }
 
     return [pscustomobject]$rec
 }
@@ -306,7 +340,10 @@ function Get-EhCareerBrowserCandidateScore {
         [bool]$IsNewAfterBaseline = $false,
         [bool]$WindowChangedAfterBaseline = $false,
         [Nullable[int]]$ExpectedAssistOriginPort = $null,
-        [string]$TargetHostHint = $null
+        [string]$TargetHostHint = $null,
+        [bool]$PreferSignedInProfiles = $true,
+        [bool]$AllowSignedInOperatorProfiles = $false,
+        [bool]$RequireHostHintMatch = $false
     )
 
     $signals = New-Object System.Collections.Generic.List[string]
@@ -320,6 +357,7 @@ function Get-EhCareerBrowserCandidateScore {
             signals = @('forbidden_ephemeral_profile')
             missing = @('owned_managed_profile')
             eligible = $false
+            hostMatched = $false
         }
     }
 
@@ -353,12 +391,28 @@ function Get-EhCareerBrowserCandidateScore {
         $score += 15; $signals.Add('assist_origin_port_folder_match') | Out-Null
     }
 
+    $hostMatched = $false
     if ($TargetHostHint) {
         $title = [string]$ProcessRecord.mainWindowTitle
         if ($title -and $title.IndexOf($TargetHostHint, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
-            $score += 15; $signals.Add('target_host_or_title_hint') | Out-Null
+            $score += 25; $signals.Add('target_host_or_title_hint') | Out-Null
+            $hostMatched = $true
         } else {
             $missing.Add('target_host_or_title_hint') | Out-Null
+        }
+    }
+
+    if ($PreferSignedInProfiles) {
+        if ($ProcessRecord.isPrivateSession) {
+            $score -= 35; $signals.Add('private_or_incognito_session') | Out-Null
+            $missing.Add('signed_in_persistent_profile') | Out-Null
+        } elseif ($ProcessRecord.isSignedInPersistentProfile) {
+            $score += 25; $signals.Add('signed_in_persistent_profile') | Out-Null
+            if ($ProcessRecord.looksLikeDefaultUserProfile) {
+                $score += 10; $signals.Add('default_user_chrome_profile') | Out-Null
+            }
+        } else {
+            $missing.Add('signed_in_persistent_profile') | Out-Null
         }
     }
 
@@ -369,7 +423,13 @@ function Get-EhCareerBrowserCandidateScore {
         $score += 10; $signals.Add('changed_window_after_baseline') | Out-Null
     }
 
-    $eligible = ($score -ge $script:EhCareerBrowserMinBindScore) -and (-not $ProcessRecord.isForbiddenEphemeral) -and $ProcessRecord.isOwnedManagedProfile
+    $profileOk = $ProcessRecord.isOwnedManagedProfile -or (
+        $AllowSignedInOperatorProfiles -and $ProcessRecord.isSignedInPersistentProfile -and -not $ProcessRecord.isPrivateSession
+    )
+    $eligible = ($score -ge $script:EhCareerBrowserMinBindScore) `
+        -and (-not $ProcessRecord.isForbiddenEphemeral) `
+        -and $profileOk `
+        -and ((-not $RequireHostHintMatch) -or $hostMatched)
 
     return [pscustomobject][ordered]@{
         pid = [int]$ProcessRecord.pid
@@ -377,6 +437,7 @@ function Get-EhCareerBrowserCandidateScore {
         signals = @($signals.ToArray())
         missing = @($missing.ToArray())
         eligible = [bool]$eligible
+        hostMatched = [bool]$hostMatched
         process = $ProcessRecord
     }
 }
@@ -384,14 +445,16 @@ function Get-EhCareerBrowserCandidateScore {
 function Select-EhCareerBrowserTarget {
     param(
         [Parameter(Mandatory = $true)]
-        [ValidateSet('ATTACH_EXISTING', 'ATTACH_ONLY', 'SELECT_AFTER_LAUNCH')]
+        [ValidateSet('ATTACH_EXISTING', 'ATTACH_ONLY', 'SELECT_AFTER_LAUNCH', 'LOCATE_PROGRESS')]
         [string]$Mode,
 
         [Parameter(Mandatory = $true)]$AfterSnapshot,
         $BaselineSnapshot = $null,
         [Nullable[int]]$ExpectedAssistOriginPort = $null,
         [string]$TargetHostHint = $null,
-        [switch]$PreferNewPidWhenPresent
+        [switch]$PreferNewPidWhenPresent,
+        [bool]$PreferSignedInProfiles = $true,
+        [switch]$AllowSignedInOperatorProfiles
     )
 
     $diff = $null
@@ -404,6 +467,7 @@ function Select-EhCareerBrowserTarget {
     }
 
     $preferDelta = $PreferNewPidWhenPresent -or ($Mode -eq 'SELECT_AFTER_LAUNCH')
+    $allowOperator = $AllowSignedInOperatorProfiles -or ($Mode -eq 'LOCATE_PROGRESS')
     $candidates = New-Object System.Collections.Generic.List[object]
 
     foreach ($proc in @($AfterSnapshot.processes)) {
@@ -412,7 +476,10 @@ function Select-EhCareerBrowserTarget {
             -IsNewAfterBaseline ($newPidSet.ContainsKey([int]$proc.pid)) `
             -WindowChangedAfterBaseline ($changedPidSet.ContainsKey([int]$proc.pid)) `
             -ExpectedAssistOriginPort $ExpectedAssistOriginPort `
-            -TargetHostHint $TargetHostHint
+            -TargetHostHint $TargetHostHint `
+            -PreferSignedInProfiles $PreferSignedInProfiles `
+            -AllowSignedInOperatorProfiles $allowOperator `
+            -RequireHostHintMatch $false
         $candidates.Add($scored) | Out-Null
     }
 
@@ -438,9 +505,31 @@ function Select-EhCareerBrowserTarget {
 
     if (-not $selected) {
         $existingEligible = @($ordered | Where-Object { $_.eligible })
+        if ($Mode -eq 'LOCATE_PROGRESS') {
+            # Prefer host-matched titles; else fall back to owned/signed-in career session.
+            $hostEligible = @($existingEligible | Where-Object { $_.hostMatched })
+            if ($hostEligible.Count -gt 0) {
+                $existingEligible = $hostEligible
+            } else {
+                $ownedEligible = @($existingEligible | Where-Object { $_.process.isOwnedManagedProfile -and $_.process.isBrowserRoot })
+                if ($ownedEligible.Count -gt 0) { $existingEligible = $ownedEligible }
+            }
+        }
         if ($existingEligible.Count -gt 0) {
             $selected = $existingEligible[0]
-            if ($Mode -in @('ATTACH_EXISTING', 'ATTACH_ONLY')) {
+            if ($Mode -eq 'LOCATE_PROGRESS') {
+                if ($selected.hostMatched -and $selected.process.isPrivateSession) {
+                    $selectionReason = 'progress_window_private_session'
+                } elseif ($selected.hostMatched -and $selected.process.looksLikeDefaultUserProfile) {
+                    $selectionReason = 'progress_window_signed_in_operator_chrome'
+                } elseif ($selected.hostMatched) {
+                    $selectionReason = 'progress_window_owned_managed_session'
+                } elseif ($selected.process.isOwnedManagedProfile) {
+                    $selectionReason = 'progress_window_owned_managed_fallback_no_title_host'
+                } else {
+                    $selectionReason = 'progress_window_signed_in_operator_chrome'
+                }
+            } elseif ($Mode -in @('ATTACH_EXISTING', 'ATTACH_ONLY')) {
                 $selectionReason = 'attach_existing_owned_progress_session'
             } elseif ($newPidSet.Count -eq 0) {
                 $selectionReason = 'owned_existing_fallback_when_no_new_pid'
@@ -450,16 +539,35 @@ function Select-EhCareerBrowserTarget {
         }
     }
 
-    if (-not $selected -and $Mode -eq 'ATTACH_ONLY') {
+    if (-not $selected -and $Mode -in @('ATTACH_ONLY', 'LOCATE_PROGRESS')) {
+        $failReason = if ($Mode -eq 'LOCATE_PROGRESS') { 'locate_progress_no_matching_window' } else { 'attach_only_no_owned_candidate' }
         return [pscustomobject][ordered]@{
             ok = $false
             mode = $Mode
-            selectionReason = 'attach_only_no_owned_candidate'
+            selectionReason = $failReason
             selected = $null
             candidates = @($ordered)
             diff = $diff
             mayLaunch = $false
             mayTerminate = $false
+            answer = if ($Mode -eq 'LOCATE_PROGRESS') {
+                "No visible Chrome/Edge window matched host hint '$TargetHostHint'."
+            } else { $null }
+        }
+    }
+
+    $answer = $null
+    if ($selected -and $Mode -eq 'LOCATE_PROGRESS') {
+        $p = $selected.process
+        $privacy = if ($p.isPrivateSession) { 'private/incognito (least saved identity)' } `
+            elseif ($p.looksLikeDefaultUserProfile) { 'signed-in operator Chrome profile' } `
+            elseif ($p.isOwnedManagedProfile) { 'EscapeHatch managed career profile' } `
+            else { 'browser profile' }
+        $titleText = if ([string]::IsNullOrWhiteSpace([string]$p.mainWindowTitle)) { '(title unavailable)' } else { [string]$p.mainWindowTitle }
+        if ($selected.hostMatched) {
+            $answer = "In-progress application for '$TargetHostHint' is most likely PID $($selected.pid) — `"$titleText`" ($privacy)."
+        } else {
+            $answer = "No window title contained '$TargetHostHint'. Best career-session candidate is PID $($selected.pid) — `"$titleText`" ($privacy)."
         }
     }
 
@@ -472,6 +580,7 @@ function Select-EhCareerBrowserTarget {
         diff = $diff
         mayLaunch = ($Mode -eq 'SELECT_AFTER_LAUNCH')
         mayTerminate = $false
+        answer = $answer
     }
 }
 

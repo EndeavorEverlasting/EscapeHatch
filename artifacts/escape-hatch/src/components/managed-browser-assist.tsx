@@ -526,12 +526,17 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
 
   const completedApplication = currentPage && applications.find(item =>
     item.id === currentPage.opportunityId && item.url === currentPage.applicationUrl && item.status === 'applied');
-  if (completedApplication && completedApplication.id !== dismissedOutcomeId) {
-    const receipt = parseSubmissionEvidence(listenerStatus?.submission?.receipt);
-    const captured = listenerConnected && listenerStatus?.opportunityId === completedApplication.id &&
-      listenerStatus.submission?.state === 'CONFIRMED' && receipt?.opportunityId === completedApplication.id &&
-      submissionMatchesApplication(receipt, completedApplication.url);
-    return <ApplicationOutcome application={completedApplication} receiptCaptured={Boolean(captured)}
+  // A stale Sheet status may say Applied. Only exact job-bound evidence unlocks
+  // the completed-outcome scene; aggregate sync counts and another job's receipt do not.
+  const persistedReceipt = parseSubmissionEvidence(completedApplication?.submissionEvidence);
+  const liveReceipt = listenerConnected && listenerStatus?.opportunityId === completedApplication?.id &&
+    listenerStatus.submission?.state === 'CONFIRMED'
+    ? parseSubmissionEvidence(listenerStatus.submission.receipt) : null;
+  const hasMatchingReceipt = Boolean(completedApplication && [persistedReceipt, liveReceipt].some(receipt =>
+    receipt?.opportunityId === completedApplication.id &&
+    submissionMatchesApplication(receipt, completedApplication.url)));
+  if (completedApplication && hasMatchingReceipt && completedApplication.id !== dismissedOutcomeId) {
+    return <ApplicationOutcome application={completedApplication} receiptCaptured={true} trackerSyncState={trackerSync?.state}
       onChooseAnother={() => {
         setDismissedOutcomeId(completedApplication.id);
         operatorSelected.current = true;
@@ -556,6 +561,11 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       </div>
 
       {continuityError && <p role="alert" className="mt-4 text-sm">{continuityError}</p>}
+      {completedApplication && !hasMatchingReceipt && <p role="alert" data-testid="unverified-applied-status"
+        className="mt-4 rounded-lg border border-border p-3 text-sm">
+        The tracker reports this job as applied, but EscapeHatch has no matching employer receipt for it.
+        Submission is not verified. Preserve the current employer tab; do not resubmit merely to test tracking.
+      </p>}
       <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_auto]">
         <div className="space-y-3">
           {applications.some((application) => application.url) && (
@@ -705,7 +715,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           <p className="mt-2" role="status" data-testid="submission-listener-status">{listenerStatus?.error || listenerStatus?.submission?.reason || 'Launch an application to connect tracking. Final submission stays yours.'}</p>
           {listenerStatus?.submission?.state === 'CONFIRMED' && listenerStatus.receipts?.some(receipt => !!receipt && typeof receipt === 'object' && 'opportunityId' in receipt && receipt.opportunityId === selectedOpportunityId) && <p className="mt-2 font-semibold">Employer confirmation received. This application is marked Applied in your local queue.</p>}
           <p className="mt-2 text-xs text-muted-foreground">A Submit or Next button can lead to more questions. EscapeHatch stays connected through verified same-job pages. Neither a click nor a processing message marks Applied; only an explicit employer receipt does. Receipt and tracker synchronization are independently verified.</p>
-          <p className="mt-2 text-sm" role="status">{trackerSync ? `Tracker synchronization: ${trackerSync.state}. Saved receipts: ${trackerSync.synced} synced, ${trackerSync.pending} pending, ${trackerSync.authRequired} need Google authorization, ${trackerSync.conflicts} have conflicts, ${trackerSync.retryRequired} need retry.` : 'External tracker synchronization has not been verified.'}</p>
+          <p className="mt-2 text-sm" role="status">{trackerSync ? `Tracker synchronization for this job: ${trackerSync.state}. This job's receipts: ${trackerSync.synced} synced, ${trackerSync.pending} pending, ${trackerSync.authRequired} need Google authorization, ${trackerSync.conflicts} have conflicts, ${trackerSync.retryRequired} need retry.` : 'External tracker synchronization has not been verified.'}</p>
           <button type="button" className={secondary} disabled={busy} onClick={() => { setBusy(true); void request('/submission-sync/retry', {}).then(result => { setRecordingMessage(''); if (result.trackerSync) setTrackerSync(result.trackerSync); }).catch(() => setRecordingMessage('Tracker sync did not complete. The saved receipt is preserved for retry.')).finally(() => setBusy(false)); }}>Retry tracker synchronization</button>
         </section>
         <div className="mt-4 flex flex-wrap gap-2">

@@ -366,7 +366,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             finalActionActivated: false,
             pendingManual: preparation?.pendingManual || [],
             listeners: listenerState,
-            trackerSync: await readSubmissionSyncStatus(),
+            trackerSync: await readSubmissionSyncStatus({ opportunityId: opportunityId || '' }),
           });
         }
         if (url.pathname === PREFIX + '/preferences' && req.method === 'GET') {
@@ -415,7 +415,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
         cache.busy = true;
         try {
           const payload = await readJson(req);
-          if (url.pathname === PREFIX + '/submission-sync/retry') return respond(res, 200, { ok: true, trackerSync: await retrySubmissionSync() });
+          if (url.pathname === PREFIX + '/submission-sync/retry') { await retrySubmissionSync(); return respond(res, 200, { ok: true, trackerSync: await readSubmissionSyncStatus({ opportunityId: opportunityId || '' }) }); }
           if (url.pathname === PREFIX + '/listeners/bind-existing') {
             if (!context) return respond(res, 409, { ok: false, error: 'managed_browser_context_unavailable' });
             if (typeof payload.opportunityId !== 'string' || !payload.opportunityId || payload.opportunityId.length > 256) throw new Error('Select a saved opportunity.');

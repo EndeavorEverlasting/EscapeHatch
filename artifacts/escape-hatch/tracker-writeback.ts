@@ -230,9 +230,10 @@ export async function readSubmissionSyncStatus(options: SyncOptions = {}) {
     const entries = scoped ? box.entries.filter(item => item.receipt.opportunityId === options.opportunityId) : box.entries;
     const counts = { pending: 0, synced: 0, authRequired: 0, conflicts: 0, retryRequired: 0 };
     for (const item of entries) counts[item.state === 'SYNCED' ? 'synced' : item.state === 'AUTH_REQUIRED' ? 'authRequired' : item.state === 'CONFLICT' ? 'conflicts' : item.state === 'RETRY_REQUIRED' ? 'retryRequired' : 'pending']++;
-    return { state: counts.authRequired ? 'AUTH_REQUIRED' : counts.conflicts ? 'CONFLICT' :
+    return { opportunityId: options.opportunityId ?? null,
+      state: counts.authRequired ? 'AUTH_REQUIRED' : counts.conflicts ? 'CONFLICT' :
       counts.retryRequired || counts.pending ? 'PENDING' : scoped ? (counts.synced ? 'SYNCED' : 'NO_RECEIPT') : 'IDLE', ...counts };
-  } catch { return { state: 'RECOVERY_REQUIRED', pending: 0, synced: 0, authRequired: 0, conflicts: 0, retryRequired: 0 }; }
+  } catch { return { opportunityId: options.opportunityId ?? null, state: 'RECOVERY_REQUIRED', pending: 0, synced: 0, authRequired: 0, conflicts: 0, retryRequired: 0 }; }
 }
 
 /** One-shot, headless replay: suitable for both the running host and a scheduled task. */

@@ -291,3 +291,21 @@ test('role-and-employer receipt is acknowledged by a read-only refresh without a
     assert.equal(await page.locator('button').count(), 0);
   } finally { await observer.dispose(); await page.close(); }
 });
+
+test('Broadcastwell-style static form copy and visible Submit are never an employer receipt', async () => {
+  const { page, observer } = await fixture('pending');
+  try {
+    // A visible, in-form acknowledgment sentence is not a post-submit state.
+    await page.locator('#root').evaluate(element => element.insertAdjacentHTML('beforeend',
+      '<p>Application received. HR handles application review and communication.</p>'));
+    await observer.arm();
+    assert.equal(observer.snapshot().state, 'ARMED');
+    await click(page);
+    await until(() => observer.snapshot().state === 'PENDING');
+    assert.equal(await page.locator('#submit').isVisible(), true);
+    assert.equal(observer.snapshot().receipt, null);
+    await observer.refresh();
+    assert.equal(observer.snapshot().state, 'PENDING');
+    assert.equal(observer.snapshot().receipt, null);
+  } finally { await page.close(); }
+});

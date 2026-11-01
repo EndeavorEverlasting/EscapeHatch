@@ -75,6 +75,16 @@ try {
     Assert-True ((Full-Path $uncRoot) -ceq [IO.Path]::GetPathRoot($uncRoot)) 'UNC root was changed'
     Assert-True ((Full-Path (Join-Path $fixture 'child\')) -ceq (Join-Path $fixture 'child')) 'non-root trailing separator not normalized'
 
+    Case 'Submission sync scheduled-task owner parses and test mode cannot mutate host tasks'
+    $syncOwner = Join-Path $repo 'scripts\windows\EscapeHatch-SubmissionSync.ps1'
+    Assert-True (Test-Path -LiteralPath $syncOwner -PathType Leaf) 'sync scheduler owner missing'
+    $syncTokens = $null; $syncErrors = $null
+    $null = [Management.Automation.Language.Parser]::ParseFile($syncOwner, [ref]$syncTokens, [ref]$syncErrors)
+    Assert-True ($syncErrors.Count -eq 0) 'sync scheduler script parser failed'
+    $syntheticSync = @(& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $syncOwner -Action Register -SourceRoot $repo -TestMode 2>&1)
+    Assert-True ($LASTEXITCODE -eq 0) 'sync scheduler synthetic probe failed'
+    Assert-True (($syntheticSync -join ' ') -match 'TEST_MODE_NO_MUTATION:Register') 'test mode did not prove non-mutation'
+
     Case 'Installer hashing works without Get-FileHash module discovery'
     $hashFunction = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'File-Hash' }, $true)
     Assert-True ($null -ne $hashFunction) 'hash owner missing'

@@ -21,7 +21,7 @@ test('existing-tab tracking and external sync status stay explicit without launc
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, browserOpen: true, state: 'application_form_open_review_required',
       currentPage: { opportunityId: job.id, applicationUrl: job.url, pageUrl: job.url + '/apply' },
       listeners: { recordingAnswers: false, savedAnswers: 0, opportunityId: job.id, error: '', receipts: [], submission: { state: armed ? 'ARMED' : 'DISARMED', reason: armed ? 'Listening for user submit on this application.' : 'Listener is off.' } },
-      trackerSync: { state: 'AUTH_REQUIRED', pending: 0, synced: 0, authRequired: 1, conflicts: 0, retryRequired: 0 } }) });
+      trackerSync: { opportunityId: job.id, state: 'AUTH_REQUIRED', pending: 0, synced: 0, authRequired: 1, conflicts: 0, retryRequired: 0 } }) });
   });
   await mockDocuments(page);
   await page.goto('/');
@@ -30,7 +30,7 @@ test('existing-tab tracking and external sync status stay explicit without launc
   await page.getByRole('button', { name: 'Track existing application tab' }).click();
   await expect(page.getByTestId('submission-listener-status')).toContainText('Listening for user submit');
   await expect(page.getByTestId('submission-listener-state')).toContainText('ARMED — observing form transitions for this job');
-  await expect(page.getByText(/Tracker synchronization: AUTH_REQUIRED/)).toBeVisible();
+  await expect(page.getByText(/Tracker synchronization for this job: AUTH_REQUIRED/)).toBeVisible();
   await page.getByRole('button', { name: 'Retry tracker synchronization' }).click();
   expect(actions).toContain('retry');
   expect(actions).not.toContain('launch');

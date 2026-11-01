@@ -9,7 +9,7 @@ import { emptyProfile, APPLICATIONS_KEY, PROFILE_KEY } from './src/lib/storage.t
 import { saveWorkspace, readWorkspace } from './workspace-file.ts';
 import { mergeConfirmedReceiptWorkspace, WORKSPACE_SCHEMA, type SavedWorkspace } from './src/lib/workspace-bootstrap.ts';
 import { reconcileSubmissionReceipts } from './src/lib/submission-reconciliation.ts';
-import { enqueueSubmissionSync, retrySubmissionSync, readSubmissionSyncStatus, planSubmissionWrite } from './tracker-writeback.ts';
+import { enqueueSubmissionSync, retrySubmissionSync, readSubmissionSyncStatus, planSubmissionWrite, runSubmissionSyncOnce } from './tracker-writeback.ts';
 
 const url = 'https://jobs.lever.co/synthetic/00000000-0000-0000-0000-000000000000';
 const values = () => [['Company', 'Role', 'Status', 'Priority', 'Apply Link', 'Applied?', 'Date Applied', 'Notes'], ['Synthetic', 'Role', 'Ready to Apply', 'Normal', url, false, '', 'preserve user notes']];
@@ -204,4 +204,82 @@ test('post-submission action ownership cannot be rewound by a late confirmed rec
   }, 'synthetic', new Date('2026-01-01'));
   const confirmation = { ...receipt(), opportunityId: trackerOpportunityId(snapshot.applications[0]) };
   assert.throws(() => planSubmissionWrite(snapshot, confirmation, unproven), /CONFLICT/);
+});
+
+test('sync status and queue evidence never borrow receipts from another opportunity', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-outbox-job-scoped-'));
+  const options = { root, env: { LOCALAPPDATA: root } };
+  try {
+    await fs.writeFile(path.join(root, 'tracker-snapshot.v1.json'), JSON.stringify(snapshot()));
+    const own = receipt();
+    await enqueueSubmissionSync(own, options);
+    await enqueueSubmissionSync({ ...own, opportunityId: 'other-employer-and-role',
+      attemptId: 'unrelated-attempt', applicationPath: '/other-job/application' }, options);
+    const ownState = await readSubmissionSyncStatus({ ...options, opportunityId: own.opportunityId });
+    const unrelatedState = await readSubmissionSyncStatus({ ...options, opportunityId: 'other-employer-and-role' });
+    const missing = await readSubmissionSyncStatus({ ...options, opportunityId: 'third-role-without-receipt' });
+    assert.equal(ownState.state, 'PENDING');
+    assert.equal(ownState.pending, 1);
+    assert.equal(ownState.opportunityId, own.opportunityId);
+    assert.equal(unrelatedState.opportunityId, 'other-employer-and-role');
+    assert.equal(unrelatedState.pending, 1);
+    assert.equal(missing.state, 'NO_RECEIPT');
+    assert.equal(missing.synced, 0);
+    assert.equal(missing.pending, 0);
+    assert.equal((await readSubmissionSyncStatus(options)).pending, 2);
+  } finally { await fs.rm(root, { recursive: true, force: true }); }
+});
+
+test('headless replay recovers durable browser receipts without operator prompting or a browser', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-outbox-worker-'));
+  const options = { root, env: { LOCALAPPDATA: root } };
+  try {
+    await fs.writeFile(path.join(root, 'tracker-snapshot.v1.json'), JSON.stringify(snapshot()));
+    await fs.writeFile(path.join(root, 'managed-submission-receipts.json'), JSON.stringify([receipt()]));
+    const first = await runSubmissionSyncOnce(options);
+    assert.equal(first.authRequired, 1);
+    assert.equal(first.synced, 0);
+    const again = await runSubmissionSyncOnce(options);
+    assert.equal(again.authRequired, 1);
+    assert.equal((await readSubmissionSyncStatus({ ...options, opportunityId: receipt().opportunityId })).authRequired, 1);
+    const outbox = JSON.parse(await fs.readFile(path.join(root, 'submission-tracker-outbox.v1.json'), 'utf8'));
+    assert.equal(outbox.entries.length, 1);
+    assert.equal(outbox.entries[0].receipt.attemptId, receipt().attemptId);
+  } finally { await fs.rm(root, { recursive: true, force: true }); }
+});
+
+test('headless schedule projects a trusted receipt into the correct Google row and verifies readback once', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-sync-end-to-end-'));
+  const current = values();
+  const trusted = receipt();
+  let writes = 0;
+  const options = { root, env: { LOCALAPPDATA: root, TOKEN_CORRIDOR_GOOGLE_TOKEN: 'synthetic-only' },
+    timeZone: 'America/New_York', fetch: (async (_url: string, init?: RequestInit) => {
+      if (init?.method === 'POST') {
+        writes++;
+        const payload = JSON.parse(String(init.body));
+        for (const item of payload.data) {
+          const match = /!([A-Z])(\d+)$/.exec(item.range)!;
+          current[Number(match[2]) - 1][match[1].charCodeAt(0) - 65] = item.values[0][0];
+        }
+        return new Response('{}');
+      }
+      return new Response(JSON.stringify({ range: 'Applications!A1:H2', majorDimension: 'ROWS', values: current }));
+    }) as typeof fetch };
+  try {
+    await fs.writeFile(path.join(root, 'tracker-snapshot.v1.json'), JSON.stringify(snapshot()));
+    await fs.writeFile(path.join(root, 'managed-submission-receipts.json'), JSON.stringify([trusted]));
+    assert.equal((await readSubmissionSyncStatus({ ...options, opportunityId: trusted.opportunityId })).state, 'NO_RECEIPT');
+    assert.equal((await runSubmissionSyncOnce(options)).synced, 1);
+    assert.equal(current[1][2], 'Submitted');
+    assert.equal(current[1][5], true);
+    assert.equal(current[1][7], 'preserve user notes');
+    const matching = await readSubmissionSyncStatus({ ...options, opportunityId: trusted.opportunityId });
+    assert.equal(matching.state, 'SYNCED');
+    assert.equal(matching.opportunityId, trusted.opportunityId);
+    assert.equal((await readSubmissionSyncStatus({ ...options, opportunityId: 'different-employer' })).state, 'NO_RECEIPT');
+    assert.equal(writes, 1);
+    assert.equal((await runSubmissionSyncOnce(options)).synced, 1);
+    assert.equal(writes, 1);
+  } finally { await fs.rm(root, { recursive: true, force: true }); }
 });

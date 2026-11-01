@@ -16,7 +16,7 @@ type SyncState = 'PENDING' | 'SYNCED' | 'AUTH_REQUIRED' | 'CONFLICT' | 'RETRY_RE
 type Target = { spreadsheetId: string; sheetName: string };
 type Entry = { receipt: SubmissionEvidence; target: Target | null; timeZone: string; expectedDate?: string; state: SyncState; updatedAt: string };
 type Outbox = { schema: 'escapehatch/submission-tracker-outbox/v1'; entries: Entry[] };
-export type SyncOptions = { root?: string; env?: NodeJS.ProcessEnv; fetch?: typeof fetch; timeZone?: string };
+export type SyncOptions = { root?: string; env?: NodeJS.ProcessEnv; fetch?: typeof fetch; timeZone?: string; opportunityId?: string };
 const fileName = 'submission-tracker-outbox.v1.json';
 const scopeRoot = (options: SyncOptions) => options.root || userDataRoot();
 async function readJson(file: string) {
@@ -222,14 +222,37 @@ export async function retrySubmissionSync(options: SyncOptions = {}) {
   });
   return readSubmissionSyncStatus(options);
 }
+/** A dashboard count is not this job's receipt. Scope UI status to the bound opportunity. */
 export async function readSubmissionSyncStatus(options: SyncOptions = {}) {
   try {
     const box = await readOutbox(scopeRoot(options));
+    const scoped = options.opportunityId !== undefined;
+    const entries = scoped ? box.entries.filter(item => item.receipt.opportunityId === options.opportunityId) : box.entries;
     const counts = { pending: 0, synced: 0, authRequired: 0, conflicts: 0, retryRequired: 0 };
-    for (const item of box.entries) counts[item.state === 'SYNCED' ? 'synced' : item.state === 'AUTH_REQUIRED' ? 'authRequired' : item.state === 'CONFLICT' ? 'conflicts' : item.state === 'RETRY_REQUIRED' ? 'retryRequired' : 'pending']++;
-    return { state: counts.authRequired ? 'AUTH_REQUIRED' : counts.conflicts ? 'CONFLICT' : counts.retryRequired || counts.pending ? 'PENDING' : 'IDLE', ...counts };
+    for (const item of entries) counts[item.state === 'SYNCED' ? 'synced' : item.state === 'AUTH_REQUIRED' ? 'authRequired' : item.state === 'CONFLICT' ? 'conflicts' : item.state === 'RETRY_REQUIRED' ? 'retryRequired' : 'pending']++;
+    return { state: counts.authRequired ? 'AUTH_REQUIRED' : counts.conflicts ? 'CONFLICT' :
+      counts.retryRequired || counts.pending ? 'PENDING' : scoped ? (counts.synced ? 'SYNCED' : 'NO_RECEIPT') : 'IDLE', ...counts };
   } catch { return { state: 'RECOVERY_REQUIRED', pending: 0, synced: 0, authRequired: 0, conflicts: 0, retryRequired: 0 }; }
 }
+
+/** One-shot, headless replay: suitable for both the running host and a scheduled task. */
+export async function runSubmissionSyncOnce(options: SyncOptions = {}) {
+  const root = scopeRoot(options);
+  const receipts = await readJson(path.join(root, 'managed-submission-receipts.json')).catch(error => {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return []; throw error;
+  });
+  if (!Array.isArray(receipts) || receipts.length > 1000) throw new Error('INVALID_RECEIPTS');
+  const existing = await readOutbox(root);
+  for (const value of receipts) {
+    const receipt = parseSubmissionEvidence(value);
+    if (!receipt) throw new Error('INVALID_RECEIPTS');
+    if (!existing.entries.some(entry => entry.receipt.attemptId === receipt.attemptId)) {
+      await enqueueSubmissionSync(receipt, { ...options, root });
+    }
+  }
+  return retrySubmissionSync({ ...options, root });
+}
+
 const startedRoots = new Set<string>();
 export function startSubmissionSync() {
   const root = userDataRoot();
@@ -237,19 +260,8 @@ export function startSubmissionSync() {
   let running = false;
   const tick = async () => {
     if (running) return; running = true;
-    try {
-      // Replay the canonical durable receipts after interrupted callback/process exit.
-      const receipts = await readJson(path.join(userDataRoot(), 'managed-submission-receipts.json')).catch(error => {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return []; throw error;
-      });
-      if (!Array.isArray(receipts) || receipts.length > 1000) throw new Error('INVALID_RECEIPTS');
-      const existing = await readOutbox(root);
-      for (const receipt of receipts) {
-        if (!parseSubmissionEvidence(receipt)) throw new Error('INVALID_RECEIPTS');
-        if (!existing.entries.some(entry => entry.receipt.attemptId === receipt.attemptId)) await enqueueSubmissionSync(receipt, { root });
-      }
-      await retrySubmissionSync();
-    } catch { /* Durable receipt/outbox remain; status never claims successful sync. */ }
+    try { await runSubmissionSyncOnce({ root }); }
+    catch { /* Durable receipt/outbox remain; status never claims successful sync. */ }
     finally { running = false; }
   };
   void tick();

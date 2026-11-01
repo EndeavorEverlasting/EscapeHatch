@@ -553,10 +553,10 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             assertInspectionScope(payload.opportunityId, payload.url, opportunityId, applicationUrl, page.url());
             return respond(res, 200, { ok: true, inspection: await inspectApplicationRequirements(page, opportunityId, applicationUrl) });
           }
-          
-          
-          
-          
+
+
+
+
           if (url.pathname === PREFIX + '/fill-taleo-date') {
             const field = typeof payload.field === 'string' ? payload.field : '';
             const month = typeof payload.month === 'string' ? payload.month : ''; // full name e.g. January
@@ -789,7 +789,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             if (!matched.ok) return respond(res, 409, { ok: false, error: 'option_not_found', selected: matched.selected });
             return respond(res, 200, { ok: true, label: labelText, option: optionText, selected: matched.selected });
           }
-          
+
           if (url.pathname === PREFIX + '/debug-click-date') {
             const field = typeof payload.field === 'string' ? payload.field : 'BeginDate';
             const probe = await page.evaluate((fieldName) => {

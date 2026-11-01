@@ -19,6 +19,7 @@
     "test:bootstrap:browser": "playwright test --config playwright.bootstrap.config.ts",
     "test:preview:browser": "playwright test --config playwright.preview.config.ts",
     "import:context": "tsx import-context.ts",
+    "sync:submissions": "node --experimental-strip-types submission-sync-worker.ts",
     "typecheck:bootstrap": "tsc --noEmit --strict --target ES2022 --module ESNext --moduleResolution bundler --allowImportingTsExtensions --resolveJsonModule --skipLibCheck browser-test-isolation.ts user-data.ts workspace-file.ts workspace-control.ts preference-file.ts import-context.ts tracker-control.ts tracker-refresh.ts opportunity-documents.ts tracker-writeback.ts extension-profile-host.ts native-messaging-host.ts",
     "test:native-profile": "node --experimental-strip-types --test extension-profile-host.test.ts",
     "test:native-profile:browser": "node --experimental-strip-types --test ../../tests/test_native_profile_browser.mjs"

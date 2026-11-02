@@ -75,6 +75,7 @@ const titles: Record<string, string> = {
   idle: 'Ready to launch',
   browser_open: 'Chrome opened — verify the application',
   application_open_review_required: 'Application opened — sign in if requested',
+  application_restored_review_required: 'Existing application recovered — review entered answers',
   application_form_open_review_required: 'Application form opened — ready to fill',
   browser_open_navigation_unverified: 'Chrome opened — verify the URL manually',
   fields_filled_review_required: 'Verified fields read back — review the page',
@@ -498,6 +499,8 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         ? 'Application navigation failed with a tunnel/proxy error and a VPN-like interface present. VPN interference is suspected, not proven. The VPN was not modified.'
         : result.state === 'browser_open_navigation_unverified'
           ? 'Chrome opened but application navigation was not verified. Check connectivity and the employer page; no form completion is claimed.'
+          : result.state === 'application_restored_review_required'
+            ? 'The existing application tab was recovered without reloading or changing its answers. Review your entries before filling; nothing was submitted.'
           : autoFillMessage || 'A separate managed Chrome window is opening. Authentication stays under your control.');
       if (action === 'prepare' && result.preparation) {
         setMessage(

@@ -13,14 +13,26 @@
     },
     "principal": "current-user / interactive / limited",
     "trigger": "five-minute repetition while signed in; first run one minute after registration",
-    "expected_action": "PowerShell -File scripts/windows/EscapeHatch-SubmissionSync.ps1 -Action Run -SourceRoot <selected-root>"
+    "expected_action": "pythonw.exe scripts/windows/submission_sync_silent_host.py --source-root <selected-root> --node <node.exe>",
+    "legacy_action": "PowerShell -File scripts/windows/EscapeHatch-SubmissionSync.ps1 -Action Run -SourceRoot <selected-root> (migrated by RepairSilence)"
   },
   "owner_surfaces": {
     "source": "scripts/windows/EscapeHatch-SubmissionSync.ps1",
-    "mutator": "scripts/windows/EscapeHatch-SubmissionSync.ps1 -Action Register|Unregister",
+    "mutator": "scripts/windows/EscapeHatch-SubmissionSync.ps1 -Action Register|Unregister|RepairSilence",
     "inspection": "scripts/windows/EscapeHatch-SubmissionSync.ps1 -Action Inspect -SourceRoot <selected-root>",
+    "scheduled_host": "scripts/windows/submission_sync_silent_host.py",
     "worker": "artifacts/escape-hatch/submission-sync-worker.ts",
-    "receipts": "harness/reports (owner-local); application submission telemetry is separately verified"
+    "silent_launch_bridge": "scripts/windows/submission-sync-silent-launch.cjs",
+    "automation_consumer": "contracts/automation-silent-background-consumer.v1.json",
+    "receipts": "harness/reports (owner-local); application submission telemetry is separately verified; Automation SilentBackground receipts under %LOCALAPPDATA%\\Automation\\SilentBackground\\receipts when pin resolves"
+  },
+  "silence_policy": {
+    "clock_owner": "Windows_Task_Scheduler",
+    "preserve_existing_clock": true,
+    "upstream": "EndeavorEverlasting/Automation#40 windows-silent-scheduled-task",
+    "scheduled_execute": "pythonw.exe",
+    "legacy_execute": "powershell.exe (RepairSilence migrates; never preferred)",
+    "child_guard": "Automation adapters/node/silent_background.cjs when pinned; else ProcessStartInfo CreateNoWindow / windowsHide"
   },
   "lifecycle_policy": {
     "register_unreg_only_by_explicit_installer": true,

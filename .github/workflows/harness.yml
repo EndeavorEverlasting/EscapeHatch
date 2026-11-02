@@ -113,6 +113,10 @@ jobs:
         shell: powershell
         run: ./tests/windows/Test-EscapeHatch-Install.ps1
 
+      - name: Regression guard for explicit completion and disputed receipts
+        shell: powershell
+        run: ./tests/windows/Test-EscapeHatch-CompleteApplication-Guard.ps1
+
   windows-lifecycle:
     runs-on: windows-latest
     timeout-minutes: 20

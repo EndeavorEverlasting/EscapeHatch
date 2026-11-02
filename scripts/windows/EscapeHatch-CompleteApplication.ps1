@@ -10,8 +10,12 @@
     4) Runs EscapeHatch-SubmissionSync once so local queue + Google Sheet update
     5) Prints a machine-readable completion receipt (no secrets)
 
-  Recovery only: -RecoverFromExistingProof ingests a private Framer 201 without clicking.
-  Agent trigger: checks existing synced receipts and recovers Framer 201 proof without duplicate clicks.
+  Recovery only: -RecoverFromExistingProof lists private historical attempt count;
+  it does not convert HTTP 201 into submission acceptance, write a receipt, or sync.
+  Any historical attempt (including SYNCED outbox history) blocks implicit replay.
+  After independent evidence establishes NOT accepted, the operator may explicitly
+  reconcile the complete comma-separated attempt-id set and authorize one new try.
+  An ambiguous attempt never automatically reloads, changes consent or retries.
 
   Never uses SetForegroundWindow or OS mouse. The user may keep working elsewhere.
 
@@ -30,7 +34,8 @@ param(
     [string]$ApplicationUrl = 'https://broadcastwell.com/careers/ai-automation-engineer',
     [string]$SourceRoot = '',
     [switch]$ConfirmedComplete,
-    [switch]$AllowDuplicateSubmit,
+    [switch]$ReconciledNotSubmitted,
+    [string]$ReconciledAttemptIds = '',
     [switch]$RecoverFromExistingProof
 )
 
@@ -73,19 +78,25 @@ function Save-Receipts([object[]]$Receipts) {
     Move-Item -LiteralPath $tmp -Destination $receiptsFile -Force
 }
 
-function Get-Framer201Proof {
-    if (-not (Test-Path -LiteralPath $proofDir)) { return $null }
+function Get-Framer201Proofs {
+    if (-not (Test-Path -LiteralPath $proofDir)) { return @() }
     $files = Get-ChildItem -LiteralPath $proofDir -Filter 'broadcastwell-framer-201-*.json' -ErrorAction SilentlyContinue |
         Sort-Object LastWriteTime -Descending
+    $matched = @()
     foreach ($file in $files) {
         $proof = Read-JsonFile $file.FullName
         if ($null -eq $proof) { continue }
         if ($proof.opportunityId -ne $OpportunityId) { continue }
+        if ([string]$proof.applicationUrl -ne $ApplicationUrl) { continue }
         if ([int]$proof.httpStatus -ne 201) { continue }
         if ("$($proof.evidenceCode)" -ne 'FRAMER_FORMS_HTTP_201') { continue }
-        return [pscustomobject]@{ Path = $file.FullName; Proof = $proof }
+        $matched += [pscustomobject]@{ Path = $file.FullName; Proof = $proof }
     }
-    return $null
+    return $matched
+}
+
+function Get-Framer201Proof {
+    return (Get-Framer201Proofs | Select-Object -First 1)
 }
 
 function New-ReceiptFromFramerProof($Proof, [string]$ProofPath) {
@@ -115,6 +126,13 @@ function Assert-Prerequisites {
     if ($status.currentPage.opportunityId -ne $OpportunityId) {
         throw ('OPPORTUNITY_NOT_BOUND: live=' + $status.currentPage.opportunityId)
     }
+    $expectedUrl = [Uri]$ApplicationUrl
+    $liveUrl = [Uri]([string]$status.currentPage.pageUrl)
+    if ($expectedUrl.Scheme -ne 'https' -or
+        -not [string]::Equals($expectedUrl.Host, $liveUrl.Host, [StringComparison]::OrdinalIgnoreCase) -or
+        -not [string]::Equals($expectedUrl.AbsolutePath.TrimEnd('/'), $liveUrl.AbsolutePath.TrimEnd('/'), [StringComparison]::Ordinal)) {
+        throw 'APPLICATION_URL_MISMATCH: exact job URL is not bound.'
+    }
     $syncInspect = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $syncScript -Action Inspect -SourceRoot $root
     if (("$syncInspect") -notmatch 'OWNED|REGISTERED') {
         # Register silently if absent.
@@ -124,20 +142,54 @@ function Assert-Prerequisites {
 }
 
 Write-Step 'START'
-# Idempotency is mandatory even if a caller supplies -AllowDuplicateSubmit.
-# A provider-confirmed, already-synced opportunity must never be submitted twice.
-if ($ConfirmedComplete) {
-    $priorOutbox = Read-JsonFile (Join-Path $userData 'submission-tracker-outbox.v1.json')
-    if ($priorOutbox -and $priorOutbox.entries) {
-        foreach ($priorEntry in @($priorOutbox.entries)) {
-            if ($priorEntry.state -eq 'SYNCED' -and
-                $priorEntry.receipt.opportunityId -eq $OpportunityId -and
-                $priorEntry.receipt.attemptId) {
-                Write-Step ('ALREADY_SYNCED_NO_SUBMIT attemptId=' + [string]$priorEntry.receipt.attemptId)
-                exit 0
-            }
+# Existing network receipts/outbox entries are evidence to investigate, not an
+# employer acceptance verdict; operator disputes veto stale replay (PR #174).
+$priorOutbox = Read-JsonFile (Join-Path $userData 'submission-tracker-outbox.v1.json')
+$priorReceipts = Read-JsonFile $receiptsFile
+$framer = Get-Framer201Proof
+$historicalAttempts = @()
+if ($priorOutbox -and $priorOutbox.entries) {
+    foreach ($item in @($priorOutbox.entries)) {
+        if ($item.receipt.opportunityId -eq $OpportunityId -and $item.receipt.attemptId) {
+            $historicalAttempts += [string]$item.receipt.attemptId
         }
     }
+}
+if ($priorReceipts) {
+    foreach ($item in @($priorReceipts)) {
+        if ($item.opportunityId -eq $OpportunityId -and $item.attemptId) {
+            $historicalAttempts += [string]$item.attemptId
+        }
+    }
+}
+if ($null -ne $framer) {
+    # The latest proof is useful for comparison, but an earlier form attempt
+    # cannot silently disappear from reconciliation.
+    foreach ($priorFramer in @(Get-Framer201Proofs)) {
+        $historicalAttempts += ('broadcastwell-framer-' + [string]$priorFramer.Proof.captured_at)
+    }
+}
+$historicalAttempts = @($historicalAttempts | Sort-Object -Unique)
+# Recovery does not synthesize a new confirmation or write provider status.
+if ($RecoverFromExistingProof) {
+    Write-Step ('RECOVERY_ONLY_NO_SUBMIT historicalAttempts=' + $historicalAttempts.Count)
+    exit 2
+}
+if ($historicalAttempts.Count -gt 0) {
+    if (-not $ReconciledNotSubmitted) {
+        Write-Step ('HISTORICAL_RECEIPT_RECONCILIATION_REQUIRED_NO_SUBMIT count=' + $historicalAttempts.Count)
+        exit 4
+    }
+    # Require every prior attempt to be accounted for, not merely the latest.
+    $cleared = @($ReconciledAttemptIds.Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ } | Sort-Object -Unique)
+    $missing = @($historicalAttempts | Where-Object { $cleared -notcontains $_ })
+    $extra = @($cleared | Where-Object { $historicalAttempts -notcontains $_ })
+    if ($missing.Count -gt 0 -or $extra.Count -gt 0) {
+        throw 'RECONCILIATION_ATTEMPT_SET_MISMATCH'
+    }
+    Write-Step 'EXISTING_ATTEMPTS_EXPLICITLY_RECONCILED_NOT_ACCEPTED'
+} elseif ($ReconciledNotSubmitted -or $ReconciledAttemptIds) {
+    throw 'RECONCILIATION_WITHOUT_HISTORICAL_ATTEMPT'
 }
 $status = Assert-Prerequisites
 Write-Step ('PREREQS_OK page=' + $status.currentPage.pageUrl)
@@ -147,69 +199,44 @@ if (-not $ConfirmedComplete) {
     exit 0
 }
 
-$framer = Get-Framer201Proof
-$receipt = $null
+# One terminal attempt per invocation; uncertain outcome means stop and reconcile.
 $beforeProofStamp = if ($null -ne $framer) { [string]$framer.Proof.captured_at } else { '' }
-
-if ($null -ne $framer -and -not $AllowDuplicateSubmit) {
-    Write-Step ('RECOVER_EXISTING_FRAMER_201 proof=' + $framer.Path)
-    $receipt = New-ReceiptFromFramerProof $framer.Proof $framer.Path
-} else {
-    Write-Step 'REARM_AND_SUBMIT_VIA_PLAYWRIGHT'
-    $arm = Invoke-Assist '/listeners' @{
-        opportunityId = $OpportunityId
-        trackSubmission = $true
-        recordAnswers = $true
-        employerName = $EmployerName
-    }
-    if ($arm.listeners.submission.state -ne 'ARMED') {
-        throw ('LISTENER_NOT_ARMED: ' + $arm.listeners.submission.state)
-    }
-    $submit = Invoke-Assist '/submit-authorized' @{
-        opportunityId = $OpportunityId
-        confirmedSubmit = $true
-    }
-    # Stale Framer token / swallowed second click: soft-reload, refill, re-arm, retry once.
-    if (-not ($submit.ok -and $submit.state -eq 'CONFIRMED') -and (
-            "$($submit.error)" -match 'framer_submit_not_' -or
-            "$($submit.error)" -match 'Invalid submission token' -or
-            $null -eq $submit.state -or $submit.state -eq 'PENDING'
-        )) {
-        Write-Step 'FRAMER_STALE_RELOAD_REFILL_RETRY'
-        Invoke-Assist '/launch' @{
-            opportunityId = $OpportunityId
-            url = $ApplicationUrl
-            employerName = $EmployerName
-        } | Out-Null
-        Start-Sleep -Seconds 2
-        try { Invoke-Assist '/fill' @{ opportunityId = $OpportunityId; url = $ApplicationUrl } | Out-Null } catch { }
-        try { Invoke-Assist '/resume' @{ opportunityId = $OpportunityId; url = $ApplicationUrl } | Out-Null } catch { }
-        try { Invoke-Assist '/toggle-labeled-checkbox' @{ label = 'Consent'; checked = $true } | Out-Null } catch { }
-        $arm = Invoke-Assist '/listeners' @{
-            opportunityId = $OpportunityId
-            trackSubmission = $true
-            recordAnswers = $true
-            employerName = $EmployerName
-        }
-        if ($arm.listeners.submission.state -ne 'ARMED') {
-            throw ('LISTENER_NOT_ARMED_AFTER_RELOAD: ' + $arm.listeners.submission.state)
-        }
-        $submit = Invoke-Assist '/submit-authorized' @{
-            opportunityId = $OpportunityId
-            confirmedSubmit = $true
-        }
-    }
+$submitStartedUtc = (Get-Date).ToUniversalTime().AddSeconds(-2)
+$receipt = $null
+Write-Step 'REARM_AND_SUBMIT_VIA_PLAYWRIGHT'
+$arm = Invoke-Assist '/listeners' @{
+    opportunityId = $OpportunityId
+    trackSubmission = $true
+    recordAnswers = $true
+    employerName = $EmployerName
+}
+if ($arm.listeners.submission.state -ne 'ARMED') {
+    throw ('LISTENER_NOT_ARMED: ' + $arm.listeners.submission.state)
+}
+$submit = Invoke-Assist '/submit-authorized' @{
+    opportunityId = $OpportunityId
+    confirmedSubmit = $true
+}
+# Never relaunch, toggle consent, refill, or retry after an ambiguous attempt.
     # Prefer a NEW Framer private proof, host CONFIRMED receipt, or listener CONFIRMED with Submit gone.
     Start-Sleep -Seconds 2
     $framer = Get-Framer201Proof
-    $freshFramer = $null -ne $framer -and [string]$framer.Proof.captured_at -ne $beforeProofStamp
-    if ($submit.state -eq 'CONFIRMED' -and $submit.listeners.submission.receipt) {
+    $freshFramer = $false
+    if ($null -ne $framer -and [string]$framer.Proof.captured_at -ne $beforeProofStamp) {
+        try {
+            $freshFramer = ([datetime]::ParseExact([string]$framer.Proof.captured_at,
+                'yyyyMMdd\THHmmss\Z', [Globalization.CultureInfo]::InvariantCulture).ToUniversalTime() -ge $submitStartedUtc)
+        } catch { $freshFramer = $false }
+    }
+    if ($submit.state -eq 'CONFIRMED' -and $submit.listeners.submission.receipt -and
+        ([datetime]$submit.listeners.submission.receipt.observedAt).ToUniversalTime() -ge $submitStartedUtc) {
         $receipt = $submit.listeners.submission.receipt
         Write-Step 'SUBMIT_AUTHORIZED_CONFIRMED'
     } elseif ($freshFramer) {
         $receipt = New-ReceiptFromFramerProof $framer.Proof $framer.Path
         Write-Step 'FRAMER_201_CAPTURED_AFTER_SUBMIT'
-    } elseif ($submit.listeners.submission.state -eq 'CONFIRMED' -and $submit.listeners.submission.receipt) {
+    } elseif ($submit.listeners.submission.state -eq 'CONFIRMED' -and $submit.listeners.submission.receipt -and
+              ([datetime]$submit.listeners.submission.receipt.observedAt).ToUniversalTime() -ge $submitStartedUtc) {
         # Accept only if Submit control is gone; Broadcastwell may keep Submit — require Framer proof instead.
         $observe = Invoke-Assist '/page-observe' @{}
         $buttons = @($observe.observation.buttons)
@@ -219,9 +246,8 @@ if ($null -ne $framer -and -not $AllowDuplicateSubmit) {
         $receipt = $submit.listeners.submission.receipt
         Write-Step 'LISTENER_CONFIRMED_SUBMIT_GONE'
     } else {
-        throw ('SUBMIT_NOT_CONFIRMED: state=' + $submit.state + ' framer201=missing')
+        throw ('SUBMIT_NOT_CONFIRMED_NO_RETRY: state=' + $submit.state + ' framer201=missing')
     }
-}
 
 # Durable local receipt archive (array)
 $existing = @()

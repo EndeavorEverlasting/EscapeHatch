@@ -182,7 +182,7 @@ test('production launch route reuses its context and leaves a busy legacy profil
   chromium.launchPersistentContext = (async (folder: string, options) => {
     assert.equal(options?.chromiumSandbox, true, 'managed employer browsing must keep Chromium sandboxing enabled');
     folders.push(folder);
-    return { pages: () => [page], on: () => {} };
+    return { pages: () => [page], newPage: async () => page, on: () => {} };
   }) as typeof originalLaunch;
   try {
     Object.assign(process.env, { ESCAPEHATCH_DATA_HOME: root,

@@ -1,0 +1,40 @@
+{
+  "schema": "escapehatch.scheduler-ownership.v1",
+  "id": "escapehatch-submission-sync",
+  "owner": "EndeavorEverlasting/EscapeHatch",
+  "task_scheduler": {
+    "platform": "windows",
+    "task_path": "\\",
+    "name_pattern": "EscapeHatch-SubmissionSync-*",
+    "name_derivation": {
+      "algorithm": "sha256",
+      "input": "lower-invariant normalized absolute SourceRoot",
+      "suffix": "first 12 hex characters"
+    },
+    "principal": "current-user / interactive / limited",
+    "trigger": "five-minute repetition while signed in; first run one minute after registration",
+    "expected_action": "PowerShell -File scripts/windows/EscapeHatch-SubmissionSync.ps1 -Action Run -SourceRoot <selected-root>"
+  },
+  "owner_surfaces": {
+    "source": "scripts/windows/EscapeHatch-SubmissionSync.ps1",
+    "mutator": "scripts/windows/EscapeHatch-SubmissionSync.ps1 -Action Register|Unregister",
+    "inspection": "scripts/windows/EscapeHatch-SubmissionSync.ps1 -Action Inspect -SourceRoot <selected-root>",
+    "worker": "artifacts/escape-hatch/submission-sync-worker.ts",
+    "receipts": "harness/reports (owner-local); application submission telemetry is separately verified"
+  },
+  "lifecycle_policy": {
+    "register_unreg_only_by_explicit_installer": true,
+    "reconciler_is_read_only": true,
+    "no_automatic_task_takeover": true,
+    "no_employer_browser_launch": true,
+    "no_submit_click": true,
+    "no_submission_accepted_inference": true,
+    "foreign_task_conflict": "FAIL_CLOSED"
+  },
+  "provenance": "Derived from main branch owner script on 2026-11-02; does not certify local Windows installation or last-run health.",
+  "integration": {
+    "consumer": "TokenCorridor / AwayWorks Workstation Scheduler Steward",
+    "host_index": "%LOCALAPPDATA%\\WorkstationCron\\host-index.v1.json",
+    "authority_rule": "The host index points to this owner; it does not invoke Register or Unregister."
+  }
+}

@@ -24,7 +24,10 @@ param(
     [Parameter(Mandatory = $true)][string]$OpportunityId,
     [string]$EmployerName = 'Broadcastwell',
     [string]$ApplicationUrl = 'https://broadcastwell.com/careers/ai-automation-engineer',
-    [string]$SourceRoot = ''
+    [string]$SourceRoot = '',
+    [switch]$ConfirmedComplete,
+    [switch]$ReconciledNotSubmitted,
+    [string]$ReconciledAttemptIds = ''
 )
 
 Set-StrictMode -Version Latest
@@ -36,12 +39,14 @@ $root = if ($SourceRoot) { [IO.Path]::GetFullPath($SourceRoot).TrimEnd('\', '/')
 $complete = Join-Path $PSScriptRoot 'EscapeHatch-CompleteApplication.ps1'
 if (-not (Test-Path -LiteralPath $complete)) { throw 'COMPLETE_APPLICATION_SCRIPT_MISSING' }
 
-Write-Host 'ESCAPEHATCH_AGENT_TRIGGER=complete-application'
-& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $complete `
-    -AssistOrigin $AssistOrigin `
-    -OpportunityId $OpportunityId `
-    -EmployerName $EmployerName `
-    -ApplicationUrl $ApplicationUrl `
-    -SourceRoot $root `
-    -ConfirmedComplete
+# Agent handoff is NOT authorization to perform a terminal employer action.
+$childArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $complete,
+    '-AssistOrigin', $AssistOrigin, '-OpportunityId', $OpportunityId,
+    '-EmployerName', $EmployerName, '-ApplicationUrl', $ApplicationUrl,
+    '-SourceRoot', $root)
+if ($ConfirmedComplete) { $childArgs += '-ConfirmedComplete' }
+if ($ReconciledNotSubmitted) { $childArgs += '-ReconciledNotSubmitted' }
+if ($ReconciledAttemptIds) { $childArgs += @('-ReconciledAttemptIds', $ReconciledAttemptIds) }
+Write-Host ('ESCAPEHATCH_AGENT_TRIGGER=' + $(if ($ConfirmedComplete) { 'authorized-completion' } else { 'preflight-only' }))
+& powershell.exe @childArgs
 exit $LASTEXITCODE

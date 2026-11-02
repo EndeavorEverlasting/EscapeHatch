@@ -19,10 +19,12 @@ def _discreet(kwargs: dict) -> dict:
         kwargs["creationflags"] = int(kwargs.get("creationflags") or 0) | getattr(
             subprocess, "CREATE_NO_WINDOW", 0x08000000
         )
-        info = kwargs.get("startupinfo") or subprocess.STARTUPINFO()
-        info.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        info.wShowWindow = subprocess.SW_HIDE
-        kwargs["startupinfo"] = info
+        startupinfo_cls = getattr(subprocess, "STARTUPINFO", None)
+        if startupinfo_cls is not None:
+            info = kwargs.get("startupinfo") or startupinfo_cls()
+            info.dwFlags |= getattr(subprocess, "STARTF_USESHOWWINDOW", 1)
+            info.wShowWindow = getattr(subprocess, "SW_HIDE", 0)
+            kwargs["startupinfo"] = info
     return kwargs
 
 

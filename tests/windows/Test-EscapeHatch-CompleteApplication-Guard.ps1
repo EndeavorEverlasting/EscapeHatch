@@ -52,6 +52,9 @@ try {
         '-OpportunityId', $id, '-EmployerName', 'Synthetic',
         '-ApplicationUrl', 'https://synthetic.invalid/role')
 
+    # Windows PowerShell 5.1 wraps child stderr as NativeCommandError; keep
+    # the child's nonzero exit as the assertion instead of promoting stderr.
+    $ErrorActionPreference = 'Continue'
     $output = (& $shell @baseArgs -ConfirmedComplete 2>&1 | Out-String)
     if ($LASTEXITCODE -ne 4 -or $output -notmatch 'HISTORICAL_RECEIPT_RECONCILIATION_REQUIRED_NO_SUBMIT') {
         throw ("Prior SYNCED evidence was not blocked before browser use: exit={0} output={1}" -f $LASTEXITCODE, $output)
@@ -64,6 +67,7 @@ try {
     if ($LASTEXITCODE -eq 0 -or $mismatch -notmatch 'RECONCILIATION_ATTEMPT_SET_MISMATCH') {
         throw 'Mismatched historical attempt set must fail closed'
     }
+    $ErrorActionPreference = 'Stop'
     if ([IO.File]::ReadAllText($outbox) -ne $before) {
         throw 'Preflight mutated historical outbox'
     }

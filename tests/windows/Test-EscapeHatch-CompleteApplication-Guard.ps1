@@ -46,6 +46,16 @@ try {
             receipt = @{ opportunityId = $id; attemptId = 'synthetic-prior-201' }
         })
     } | ConvertTo-Json -Depth 8))
+    # Two historical Framer attempts must both be considered. These are
+    # synthetic files only; no real employer call or applicant data is involved.
+    $proofDir = Join-Path $privateRoot 'proof'
+    New-Item -ItemType Directory -Path $proofDir -Force | Out-Null
+    foreach ($stamp in @('20260101T000000Z', '20260102T000000Z')) {
+        [IO.File]::WriteAllText((Join-Path $proofDir ('broadcastwell-framer-201-' + $stamp + '.json')),
+            (@{ opportunityId = $id; applicationUrl = 'https://synthetic.invalid/role';
+                httpStatus = 201; evidenceCode = 'FRAMER_FORMS_HTTP_201';
+                captured_at = $stamp } | ConvertTo-Json -Depth 6))
+    }
     $before = [IO.File]::ReadAllText($outbox)
     $shell = Join-Path $PSHOME 'powershell.exe'
     $baseArgs = @('-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', $runner,
@@ -66,6 +76,11 @@ try {
     $mismatch = (& $shell @baseArgs -ConfirmedComplete -ReconciledNotSubmitted -ReconciledAttemptIds wrong-attempt 2>&1 | Out-String)
     if ($LASTEXITCODE -eq 0 -or $mismatch -notmatch 'RECONCILIATION_ATTEMPT_SET_MISMATCH') {
         throw 'Mismatched historical attempt set must fail closed'
+    }
+    # An agent that reconciles only the latest Framer 201 cannot proceed.
+    $incomplete = (& $shell @baseArgs -ConfirmedComplete -ReconciledNotSubmitted -ReconciledAttemptIds 'synthetic-prior-201,broadcastwell-framer-20260102T000000Z' 2>&1 | Out-String)
+    if ($LASTEXITCODE -eq 0 -or $incomplete -notmatch 'RECONCILIATION_ATTEMPT_SET_MISMATCH') {
+        throw 'Earlier Framer evidence was omitted from reconciliation'
     }
     $ErrorActionPreference = 'Stop'
     if ([IO.File]::ReadAllText($outbox) -ne $before) {

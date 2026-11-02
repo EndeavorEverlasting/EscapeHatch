@@ -3,8 +3,8 @@
   Agent-trigger entrypoint for operator-cleared application completion.
 
   EscapeHatch agents and operators invoke THIS script after the user confirms the
-  managed form is ready. It always performs the focus-independent Submit click
-  path (never silently ingests a prior proof as a substitute for clicking).
+  managed form is ready. It skips a click if this opportunity already has a confirmed synced receipt.
+  A matching Framer HTTP 201 proof is recovered without a second click.
 
   Downstream:
     - managed-assist /listeners (ARMED)
@@ -43,6 +43,5 @@ Write-Host 'ESCAPEHATCH_AGENT_TRIGGER=complete-application'
     -EmployerName $EmployerName `
     -ApplicationUrl $ApplicationUrl `
     -SourceRoot $root `
-    -ConfirmedComplete `
-    -AllowDuplicateSubmit
+    -ConfirmedComplete
 exit $LASTEXITCODE

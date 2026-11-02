@@ -94,3 +94,6 @@ try {
     $env:LOCALAPPDATA = $oldLocal
     Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue
 }
+# The last synthetic child is expected to exit nonzero. Never propagate that
+# status as the harness verdict after all negative assertions passed.
+exit 0

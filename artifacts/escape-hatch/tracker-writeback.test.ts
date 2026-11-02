@@ -306,6 +306,12 @@ test('operator dispute and unchecked previously-submitted row veto stale receipt
   previouslyClaimed[1][8] = 'Employer Confirmed';
   assert.throws(() => planSubmissionWrite(snapshot(), receipt(), previouslyClaimed), /CONFLICT/);
 
+  const contradictoryProof = values();
+  contradictoryProof[1][2] = 'Verify Submission';
+  contradictoryProof[1][5] = false;
+  contradictoryProof[1][8] = 'Employer Confirmed';
+  assert.throws(() => planSubmissionWrite(snapshot(), receipt(), contradictoryProof), /CONFLICT/);
+
   const disputed = values();
   disputed[1][2] = 'Verify Submission';
   disputed[1][5] = false;

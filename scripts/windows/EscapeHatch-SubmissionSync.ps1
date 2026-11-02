@@ -74,9 +74,22 @@ function Test-OwnedAction {
         [string]::Equals($arg, $spec.Arguments, [StringComparison]::Ordinal)) {
         return $true
     }
-    # Legacy ownership (powershell host): recognized so RepairSilence can migrate.
-    if ([string]::Equals($exe, $psLegacy, [StringComparison]::OrdinalIgnoreCase) -and
-        [string]::Equals($arg, $legacyArgs, [StringComparison]::Ordinal)) {
+    # Legacy powershell host: owned when SourceRoot matches, even if -File points at
+    # another EscapeHatch checkout (broadcastwell / sprint worktree). Enables RepairSilence.
+    if ([string]::Equals($exe, $psLegacy, [StringComparison]::OrdinalIgnoreCase)) {
+        $rootToken = '-SourceRoot "' + $root + '"'
+        if ($arg -like '*-Action Run*' -and $arg.Contains($rootToken) -and
+            $arg -match '(?i)EscapeHatch-SubmissionSync\.ps1') {
+            return $true
+        }
+        if ([string]::Equals($arg, $legacyArgs, [StringComparison]::Ordinal)) {
+            return $true
+        }
+    }
+    # pythonw host from another checkout with the same SourceRoot.
+    if ($exe -match '(?i)[/\\]pythonw\.exe$' -and
+        $arg.Contains('--source-root "' + $root + '"') -and
+        $arg -match '(?i)submission_sync_silent_host\.py') {
         return $true
     }
     return $false

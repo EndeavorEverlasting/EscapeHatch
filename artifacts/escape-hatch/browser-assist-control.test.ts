@@ -16,9 +16,22 @@ import {
   reviewedContactFields,
   validateApplicationUrl,
   managedBrowserProfileDirectory,
+  findRestoredManagedApplicationPage,
   createManagedBrowserAssistPlugin,
   selectExistingApplicationPage,
 } from './browser-assist-control.ts';
+
+test('restart recovery chooses the exact restored tab without a navigation or terminal action', () => {
+  const jobUrl = 'https://example.com/careers/automation';
+  let navigated = false;
+  const other = { isClosed: () => false, url: () => 'https://example.com/other' };
+  const exact = { isClosed: () => false, url: () => jobUrl, goto: () => { navigated = true; } };
+  const context = { pages: () => [other, exact] };
+  assert.equal(findRestoredManagedApplicationPage(context as never, jobUrl), exact);
+  assert.equal(navigated, false);
+  assert.equal(findRestoredManagedApplicationPage({ pages: () => [other] } as never, jobUrl), null);
+  assert.throws(() => findRestoredManagedApplicationPage({ pages: () => [exact, exact] } as never, jobUrl), /Multiple restored application tabs/);
+});
 
 test('existing-tab selection is exact, unique and performs no navigation or form mutation', async () => {
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
@@ -162,14 +175,21 @@ test('production launch route reuses its context and leaves a busy legacy profil
   const originalLaunch = chromium.launchPersistentContext;
   const folders: string[] = [];
   const instances: string[] = [];
-  let currentUrl = 'about:blank';
-  const page = { isClosed: () => false, url: () => currentUrl, bringToFront: async () => {},
-    // Keep the fixture off every employer and exercise the guarded navigation-failure path.
-    goto: async (url: string) => { currentUrl = url; throw new Error('net::ERR_INTERNET_DISCONNECTED'); } };
+  const navigationCounts: number[] = [];
   chromium.launchPersistentContext = (async (folder: string, options) => {
     assert.equal(options?.chromiumSandbox, true, 'managed employer browsing must keep Chromium sandboxing enabled');
     folders.push(folder);
-    return { pages: () => [page], on: () => {} };
+    let currentUrl = 'about:blank';
+    const index = navigationCounts.push(0) - 1;
+    // Separate synthetic Chrome contexts per runtime port. Repeated launch of
+    // the exact restored job must not navigate and erase draft state.
+    const page = { isClosed: () => false, url: () => currentUrl, bringToFront: async () => {},
+      goto: async (url: string) => {
+        currentUrl = url;
+        navigationCounts[index] += 1;
+        throw new Error('net::ERR_INTERNET_DISCONNECTED');
+      } };
+    return { pages: () => [page], newPage: async () => page, on: () => {} };
   }) as typeof originalLaunch;
   try {
     Object.assign(process.env, { ESCAPEHATCH_DATA_HOME: root,
@@ -195,11 +215,12 @@ test('production launch route reuses its context and leaves a busy legacy profil
         await middleware(req, { set statusCode(value: number) { status = value; },
           setHeader: () => {}, end: (value: string) => { result = value; } }, () => assert.fail('launch route missed'));
         assert.equal(status, 200, result);
-        assert.equal(JSON.parse(result).state, 'browser_open_navigation_unverified');
+        assert.equal(JSON.parse(result).state, repeat === 0 ? 'browser_open_navigation_unverified' : 'application_open_review_required');
       }
     }
     assert.deepEqual(folders, [path.join(root, 'managed-career-browser-origins', '21041'),
       path.join(root, 'managed-career-browser-origins', '21042')]);
+    assert.deepEqual(navigationCounts, [1, 1], 'exact restored tabs must not be navigated twice');
     assert.equal(await fs.readFile(path.join(legacy, 'SingletonLock'), 'utf8'), 'separately-owned-browser');
     assert.deepEqual(await fs.readdir(legacy), ['SingletonLock']);
   } finally {

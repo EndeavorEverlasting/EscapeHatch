@@ -115,6 +115,20 @@ export function planSubmissionWrite(snapshot: TrackerSnapshot, receipt: Submissi
   if ([status, applied, date, proof].some(index => index < 0) || new Set(headers.filter(Boolean)).size !== headers.filter(Boolean).length) throw new Error('CONFLICT');
   if ([status, applied, date, proof].some(index => index >= TRACKER_WRITE_COLUMN_LIMIT)) throw new Error('CONFLICT');
   const statusValue = row.status.trim().toLowerCase();
+  const rawApplied = values[row.sheetRow - 1]?.[applied];
+  const existingProof = String(values[row.sheetRow - 1]?.[proof] ?? '').trim();
+  const proofState = existingProof.toLowerCase();
+  // An operator dispute/retraction is an explicit veto, even when an older
+  // receipt remains in the durable outbox. Never convert it into a new
+  // provider-confirmed submission by replaying previously accepted evidence.
+  // An unchecked Applied? with a retained completed status/dated proof is
+  // likewise a contradictory correction, not an invitation to repair the box.
+  if (proofState === 'disputed' || proofState === 'not submitted' ||
+      (!row.appliedCheckbox &&
+       (/^(?:submitted(?:\\s*[-–—]\\s*.+)?|applied)$/.test(statusValue) ||
+        (proofState === EMPLOYER_CONFIRMED_PROOF.toLowerCase() && !!row.dateApplied)))) {
+    throw new Error('CONFLICT');
+  }
   // A verified receipt must never rewind an already-submitted application
   // because the applicant owes a questionnaire or the employer owns review.
   // The Applied checkbox alone is not proof; this function is reached only
@@ -134,13 +148,11 @@ export function planSubmissionWrite(snapshot: TrackerSnapshot, receipt: Submissi
   const day = `${get('year')}-${get('month')}-${get('day')}`;
   const quoted = "'" + snapshot.sheetName.replace(/'/g, "''") + "'!";
   const update = (column: number, value: string | boolean | number) => ({ range: quoted + sheetColumnLetter(column) + row.sheetRow, values: [[value]] });
-  const rawApplied = values[row.sheetRow - 1]?.[applied];
   const appliedValue = rawApplied === false ? true : rawApplied === '☐' ? '☑' :
     rawApplied === 'FALSE' ? 'TRUE' : rawApplied === '' ? '☑' : null;
   if (!done && appliedValue === null) throw new Error('CONFLICT');
   const existingDate = sheetDateDay(row.dateApplied);
   if (row.dateApplied && !existingDate) throw new Error('CONFLICT');
-  const existingProof = String(values[row.sheetRow - 1]?.[proof] ?? '').trim();
   const needProof = existingProof.toLowerCase() !== EMPLOYER_CONFIRMED_PROOF.toLowerCase();
   const data = [...(done ? [] : [update(status, 'Submitted'), update(applied, appliedValue!)]),
     ...(!existingDate ? [update(date, dateSerial(day))] : []),
@@ -229,17 +241,20 @@ export async function retrySubmissionSync(options: SyncOptions = {}) {
     const box = await readOutbox(root);
     for (const entry of box.entries.filter(item => item.state !== 'SYNCED').sort((a, b) => Date.parse(a.updatedAt) - Date.parse(b.updatedAt)).slice(0, 10)) {
       try {
-        // A changed Google target blocks only its provider write; a confirmed
-        // submission still reconciles the original local queue.
-        const file = path.join(root, 'workspace.v1.json'), current = await readWorkspace(file);
-        if (current) {
-          const applications = parseApplicationsStorage(current.workspace.values[APPLICATIONS_KEY] || []);
-          if (!applications) throw new Error('INVALID_LOCAL_APPLICATIONS');
-          const reconciled = reconcileSubmissionReceipts(applications, [entry.receipt]);
-          if (reconciled !== applications) await saveWorkspace({ ...current.workspace, values: { ...current.workspace.values, [APPLICATIONS_KEY]: reconciled } }, current.revision, file);
-        }
+        // The provider must accept a current, undisputed submission writeback
+        // BEFORE an old receipt may promote local workspace status. A disputed
+        // Google row is never repaired by replaying the local outbox.
         entry.state = !entry.target || JSON.stringify(await currentBinding(root, options.env || process.env)) !== JSON.stringify(entry.target)
           ? 'CONFLICT' : await syncOne(entry, options, () => writeOutbox(root, box));
+        if (entry.state === 'SYNCED') {
+          const file = path.join(root, 'workspace.v1.json'), current = await readWorkspace(file);
+          if (current) {
+            const applications = parseApplicationsStorage(current.workspace.values[APPLICATIONS_KEY] || []);
+            if (!applications) throw new Error('INVALID_LOCAL_APPLICATIONS');
+            const reconciled = reconcileSubmissionReceipts(applications, [entry.receipt]);
+            if (reconciled !== applications) await saveWorkspace({ ...current.workspace, values: { ...current.workspace.values, [APPLICATIONS_KEY]: reconciled } }, current.revision, file);
+          }
+        }
       } catch { entry.state = 'RETRY_REQUIRED'; }
       entry.updatedAt = new Date().toISOString();
       await writeOutbox(root, box);

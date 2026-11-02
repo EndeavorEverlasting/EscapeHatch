@@ -81,8 +81,8 @@ if ($Action -eq 'Unregister') {
 if ($null -ne $existing) {
     if (-not $existing.Settings.Hidden) {
         # Registration is installer-authorized; retain the existing task and trigger.
-        $existing.Settings.Hidden = $true
-        Set-ScheduledTask -InputObject $existing -ErrorAction Stop | Out-Null
+        $settingsRepair = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 2) -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -Hidden
+        Set-ScheduledTask -TaskName $taskName -Settings $settingsRepair -ErrorAction Stop | Out-Null
         if (-not (Get-OwnedTask).Settings.Hidden) {
             throw 'SUBMISSION_SYNC_SILENT_SETTINGS_READBACK_FAILED'
         }

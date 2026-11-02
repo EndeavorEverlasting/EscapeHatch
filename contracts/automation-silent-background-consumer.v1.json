@@ -1,0 +1,56 @@
+{
+  "schema_version": "escapehatch.automation-silent-background-consumer/v1",
+  "product_owner": "EndeavorEverlasting/EscapeHatch",
+  "runtime": "Windows_Task_Scheduler",
+  "upstream": {
+    "owner": "EndeavorEverlasting/Automation",
+    "commit_sha": "3254c7fa946f91617e1f651784c4be33c3232e7e",
+    "pr": 40,
+    "capability_path": "capabilities/windows-silent-scheduled-task/capability.v1.json",
+    "node_adapter_path": "capabilities/windows-silent-scheduled-task/adapters/node/silent_background.cjs",
+    "admission": "MERGED_PR40_SILENT_BACKGROUND",
+    "live_apply": "AUTHORIZED_SILENCE_ONLY_REGISTER_SETTINGS"
+  },
+  "current_consumer": {
+    "task_name_pattern": "EscapeHatch-SubmissionSync-*",
+    "scheduler_contract": "contracts/submission-sync-scheduler.v1.json",
+    "launcher": "scripts/windows/EscapeHatch-SubmissionSync.ps1",
+    "silent_launch_bridge": "scripts/windows/submission-sync-silent-launch.cjs",
+    "resolver": "scripts/windows/lib/resolve-automation-silent-background.cjs",
+    "worker": "artifacts/escape-hatch/submission-sync-worker.ts",
+    "preserve_interval_minutes": 5,
+    "preserve_task_name_hash": true,
+    "unregister_on_silence_repair": false
+  },
+  "safety_invariants": [
+    "do not disable or unregister SubmissionSync to achieve silence",
+    "do not change five-minute repetition or task-name hash derivation",
+    "never open employer browser from scheduled ticks",
+    "never import mutable Automation main without pin match",
+    "do not claim SILENT_CERTIFIED from launcher metadata alone",
+    "ProcessStartInfo CreateNoWindow remains the local fallback when Automation pin is unavailable"
+  ],
+  "acceptance_gates": [
+    {
+      "id": "UPSTREAM_PIN",
+      "state": "PROVEN",
+      "evidence_required": "commit_sha matches local Automation checkout when sibling/AUTOMATION_ROOT set"
+    },
+    {
+      "id": "NODE_ADAPTER_WIRE",
+      "state": "PROVEN",
+      "evidence_required": "unit tests for resolver + silent launch bridge"
+    },
+    {
+      "id": "CLOCK_PRESERVED",
+      "state": "PROVEN",
+      "evidence_required": "Register silence path uses Set-ScheduledTask settings/action without new cadence"
+    },
+    {
+      "id": "SILENT_CERTIFIED",
+      "state": "NOT_IN_SCOPE",
+      "evidence_required": "due-time child-chain and fullscreen focus certification"
+    }
+  ],
+  "proof_ceiling": "Pinned Automation node adapter and Hidden+CreateNoWindow launch policy are proven offline. Live fullscreen silence is not certified by this contract."
+}

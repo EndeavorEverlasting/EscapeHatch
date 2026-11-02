@@ -19,6 +19,7 @@ class SubmissionSyncSilenceContract(unittest.TestCase):
         self.assertIn("$start.UseShellExecute = $false", ps)
         self.assertIn("$start.CreateNoWindow = $true", ps)
         self.assertIn("ProcessWindowStyle]::Hidden", ps)
+        self.assertIn("submission-sync-silent-launch.cjs", ps)
         self.assertIn("$child.WaitForExit()", ps)
         self.assertIn("exit $child.ExitCode", ps)
         self.assertNotIn("& $toolchain.NodePath --experimental-strip-types", ps)

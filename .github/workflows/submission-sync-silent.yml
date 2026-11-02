@@ -3,7 +3,12 @@ on:
   pull_request:
     paths:
       - "scripts/windows/EscapeHatch-SubmissionSync.ps1"
+      - "scripts/windows/submission-sync-silent-launch.cjs"
+      - "scripts/windows/lib/resolve-automation-silent-background.cjs"
+      - "contracts/automation-silent-background-consumer.v1.json"
+      - "contracts/submission-sync-scheduler.v1.json"
       - "tests/test_submission_sync_silent_contract.py"
+      - "tests/test_automation_silent_background_consumer.py"
       - ".github/workflows/submission-sync-silent.yml"
 permissions:
   contents: read
@@ -16,7 +21,7 @@ jobs:
         with:
           python-version: "3.13"
       - name: Submission sync silent contract
-        run: python -m unittest tests.test_submission_sync_silent_contract -v
+        run: python -m unittest tests.test_submission_sync_silent_contract tests.test_automation_silent_background_consumer -v
       - name: PowerShell syntax
         shell: powershell
         run: |

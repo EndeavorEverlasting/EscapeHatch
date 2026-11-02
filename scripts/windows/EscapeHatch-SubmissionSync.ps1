@@ -52,13 +52,19 @@ if ($TestMode) {
 }
 if ($Action -eq 'Run') {
     $toolchain = Get-EscapeHatchToolchain -SourceRoot $root
-    # Scheduled tasks have no foreground UI. The Node child must not create a console.
+    # Prefer Automation PR #40 SILENT_BACKGROUND bridge; keep CreateNoWindow fallback.
+    $silentLaunch = Join-Path $PSScriptRoot 'submission-sync-silent-launch.cjs'
     $start = New-Object System.Diagnostics.ProcessStartInfo
-    $start.FileName = [string]$toolchain.NodePath
-    $start.Arguments = '--experimental-strip-types "' + $worker + '"'
     $start.UseShellExecute = $false
     $start.CreateNoWindow = $true
     $start.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
+    if (Test-Path -LiteralPath $silentLaunch -PathType Leaf) {
+        $start.FileName = [string]$toolchain.NodePath
+        $start.Arguments = ('"' + $silentLaunch + '" --root "' + $root + '" --node "' + $toolchain.NodePath + '" --worker "' + $worker + '"')
+    } else {
+        $start.FileName = [string]$toolchain.NodePath
+        $start.Arguments = '--experimental-strip-types "' + $worker + '"'
+    }
     $child = [System.Diagnostics.Process]::Start($start)
     if ($null -eq $child) { throw 'SUBMISSION_SYNC_PROCESS_START_FAILED' }
     try {

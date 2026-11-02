@@ -10,8 +10,12 @@
     4) Runs EscapeHatch-SubmissionSync once so local queue + Google Sheet update
     5) Prints a machine-readable completion receipt (no secrets)
 
-  Recovery only: -RecoverFromExistingProof ingests a private Framer 201 without clicking.
-  Agent trigger: checks existing synced receipts and recovers Framer 201 proof without duplicate clicks.
+  Recovery only: -RecoverFromExistingProof lists private historical attempt count;
+  it does not convert HTTP 201 into submission acceptance, write a receipt, or sync.
+  Any historical attempt (including SYNCED outbox history) blocks implicit replay.
+  After independent evidence establishes NOT accepted, the operator may explicitly
+  reconcile the complete comma-separated attempt-id set and authorize one new try.
+  An ambiguous attempt never automatically reloads, changes consent or retries.
 
   Never uses SetForegroundWindow or OS mouse. The user may keep working elsewhere.
 

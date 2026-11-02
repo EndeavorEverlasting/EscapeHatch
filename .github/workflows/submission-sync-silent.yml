@@ -1,0 +1,25 @@
+name: EscapeHatch Silent Submission Sync Contract
+on:
+  pull_request:
+    paths:
+      - "scripts/windows/EscapeHatch-SubmissionSync.ps1"
+      - "tests/test_submission_sync_silent_contract.py"
+      - ".github/workflows/submission-sync-silent.yml"
+permissions:
+  contents: read
+jobs:
+  offline-checks:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Submission sync silent contract
+        run: python -m unittest tests.test_submission_sync_silent_contract -v
+      - name: PowerShell syntax
+        shell: powershell
+        run: |
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'scripts/windows/EscapeHatch-SubmissionSync.ps1'), [ref]$null, [ref]$errors)
+          if ($errors.Count) { throw "SubmissionSync syntax error: $($errors[0])" }

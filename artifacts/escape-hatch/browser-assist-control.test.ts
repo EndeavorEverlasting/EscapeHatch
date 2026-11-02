@@ -72,11 +72,19 @@ test('bind-existing endpoint recovers exact saved Lever tab, preserves entries a
     let middleware: Function = () => {};
     const plugin = createManagedBrowserAssistPlugin();
     (plugin.configureServer as Function)({ config: { server: { port: 21041 } }, middlewares: { use: (handler: Function) => { middleware = handler; } } });
-    const request = async (payload: object, origin = 'http://127.0.0.1:21041') => {
+    const request = async (payload: object, origin = 'http://127.0.0.1:21041', endpoint = '/listeners/bind-existing') => {
       let code = 0, body = '';
-      await middleware({ url: '/__escapehatch/managed-assist/listeners/bind-existing', method: 'POST', headers: { host: '127.0.0.1:21041', origin, 'content-type': 'application/json', 'x-escapehatch-operator-action': 'confirmed' }, socket: { remoteAddress: '127.0.0.1' }, async *[Symbol.asyncIterator]() { yield Buffer.from(JSON.stringify(payload)); } }, { set statusCode(value: number) { code = value; }, setHeader() {}, end(value: string) { body = value; } }, () => assert.fail('bind route missed'));
+      await middleware({ url: '/__escapehatch/managed-assist' + endpoint, method: 'POST', headers: { host: '127.0.0.1:21041', origin, 'content-type': 'application/json', 'x-escapehatch-operator-action': 'confirmed' }, socket: { remoteAddress: '127.0.0.1' }, async *[Symbol.asyncIterator]() { yield Buffer.from(JSON.stringify(payload)); } }, { set statusCode(value: number) { code = value; }, setHeader() {}, end(value: string) { body = value; } }, () => assert.fail('bind route missed'));
       return { code, body: JSON.parse(body) };
     };
+    // An ordinary Launch on a restored tab must not reload the user's edits or
+    // navigate the separate employer window. Re-arming remains a separate act.
+    const restored = await request({ opportunityId: job.id, url: target.url() }, undefined, '/launch');
+    assert.equal(restored.code, 200, JSON.stringify(restored.body));
+    assert.equal(restored.body.state, 'application_restored_review_required');
+    assert.equal(await target.locator('input').inputValue(), 'operator entry');
+    assert.equal(unrelated.url(), job.url.replace('11111111-', '22222222-') + '/apply');
+    assert.equal((await listeners.status()).submission, null, 'restore must not auto-arm observation');
     const payload = { opportunityId: job.id, url: job.url, livePageUrl: target.url() };
     assert.equal((await request(payload, 'https://foreign.example.com')).code, 403);
     assert.equal((await request({ ...payload, opportunityId: 'wrong-job' })).code, 422);

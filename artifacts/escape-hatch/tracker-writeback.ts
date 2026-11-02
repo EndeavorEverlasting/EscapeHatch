@@ -126,7 +126,7 @@ export function planSubmissionWrite(snapshot: TrackerSnapshot, receipt: Submissi
   if (proofState === 'disputed' || proofState === 'not submitted' ||
       (!row.appliedCheckbox &&
        (/^(?:submitted(?:\s*[-–—]\s*.+)?|applied)$/.test(statusValue) ||
-        (proofState === EMPLOYER_CONFIRMED_PROOF.toLowerCase() && !!row.dateApplied)))) {
+        proofState === EMPLOYER_CONFIRMED_PROOF.toLowerCase()))) {
     throw new Error('CONFLICT');
   }
   // A verified receipt must never rewind an already-submitted application

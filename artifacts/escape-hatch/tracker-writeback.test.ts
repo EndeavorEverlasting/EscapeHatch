@@ -150,7 +150,7 @@ test('receipt survives restart and missing auth; local workspace reconciles with
     const status = await retrySubmissionSync(options);
     assert.equal(status.authRequired, 1);
     const workspace = await readWorkspace(path.join(root, 'workspace.v1.json'));
-    assert.equal(workspace!.workspace.values[APPLICATIONS_KEY]![0].status, 'applied');
+    assert.equal(workspace!.workspace.values[APPLICATIONS_KEY]![0].status, 'preparing'); // provider acceptance not yet verified
     assert.equal(workspace!.workspace.values[APPLICATIONS_KEY]![0].notes, 'keep');
     assert.equal((await readSubmissionSyncStatus({ root })).authRequired, 1);
     const changed = { ...snapshot(), spreadsheetId: 'other_spreadsheet_id' };
@@ -295,6 +295,61 @@ test('headless replay recovers durable browser receipts without operator prompti
     const outbox = JSON.parse(await fs.readFile(path.join(root, 'submission-tracker-outbox.v1.json'), 'utf8'));
     assert.equal(outbox.entries.length, 1);
     assert.equal(outbox.entries[0].receipt.attemptId, receipt().attemptId);
+  } finally { await fs.rm(root, { recursive: true, force: true }); }
+});
+
+test('operator dispute and unchecked previously-submitted row veto stale receipts', () => {
+  const previouslyClaimed = values();
+  previouslyClaimed[1][2] = 'Submitted';
+  previouslyClaimed[1][5] = false;
+  previouslyClaimed[1][6] = '01/02/2026';
+  previouslyClaimed[1][8] = 'Employer Confirmed';
+  assert.throws(() => planSubmissionWrite(snapshot(), receipt(), previouslyClaimed), /CONFLICT/);
+
+  const disputed = values();
+  disputed[1][2] = 'Verify Submission';
+  disputed[1][5] = false;
+  disputed[1][8] = 'Disputed';
+  assert.throws(() => planSubmissionWrite(snapshot(), receipt(), disputed), /CONFLICT/);
+
+  const explicitlyNotSubmitted = values();
+  explicitlyNotSubmitted[1][8] = 'Not Submitted';
+  assert.throws(() => planSubmissionWrite(snapshot(), receipt(), explicitlyNotSubmitted), /CONFLICT/);
+});
+
+test('scheduled replay cannot overwrite a disputed sheet or promote the local workspace', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-sync-operator-dispute-'));
+  const current = values(), trusted = receipt();
+  current[1][2] = 'Verify Submission';
+  current[1][5] = false;
+  current[1][8] = 'Disputed';
+  let writes = 0;
+  const options = { root, env: { LOCALAPPDATA: root, TOKEN_CORRIDOR_GOOGLE_TOKEN: 'synthetic-only' },
+    fetch: (async (_url: string, init?: RequestInit) => {
+      if (init?.method === 'POST') { writes++; throw new Error('Forbidden disputed write'); }
+      return new Response(JSON.stringify({ range: 'Applications!A1:I2', majorDimension: 'ROWS', values: current }));
+    }) as typeof fetch };
+  try {
+    await fs.writeFile(path.join(root, 'tracker-snapshot.v1.json'), JSON.stringify(snapshot()));
+    await saveWorkspace({ schema: 'escapehatch-local-workspace/v1', values: {
+      [PROFILE_KEY]: emptyProfile, [APPLICATIONS_KEY]: [{
+        id: trusted.opportunityId, company: 'Synthetic', role: 'Role', url,
+        status: 'preparing', priority: 'normal', notes: 'keep', nextAction: 'review', updatedAt: '2026-01-01',
+      }],
+    } }, null, path.join(root, 'workspace.v1.json'));
+    await enqueueSubmissionSync(trusted, options);
+    const first = await retrySubmissionSync(options);
+    assert.equal(first.conflicts, 1);
+    assert.equal(first.synced, 0);
+    assert.equal(writes, 0);
+    const workspace = await readWorkspace(path.join(root, 'workspace.v1.json'));
+    assert.equal(workspace!.workspace.values[APPLICATIONS_KEY]![0].status, 'preparing');
+    assert.equal(workspace!.workspace.values[APPLICATIONS_KEY]![0].notes, 'keep');
+    await runSubmissionSyncOnce(options);
+    assert.equal(writes, 0);
+    assert.equal(current[1][2], 'Verify Submission');
+    assert.equal(current[1][5], false);
+    assert.equal(current[1][8], 'Disputed');
   } finally { await fs.rm(root, { recursive: true, force: true }); }
 });
 

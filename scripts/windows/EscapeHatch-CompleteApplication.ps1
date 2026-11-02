@@ -11,7 +11,7 @@
     5) Prints a machine-readable completion receipt (no secrets)
 
   Recovery only: -RecoverFromExistingProof ingests a private Framer 201 without clicking.
-  Agent trigger: EscapeHatch-AgentCompleteApplication.ps1 always clicks.
+  Agent trigger: checks existing synced receipts and recovers Framer 201 proof without duplicate clicks.
 
   Never uses SetForegroundWindow or OS mouse. The user may keep working elsewhere.
 
@@ -124,6 +124,21 @@ function Assert-Prerequisites {
 }
 
 Write-Step 'START'
+# Idempotency is mandatory even if a caller supplies -AllowDuplicateSubmit.
+# A provider-confirmed, already-synced opportunity must never be submitted twice.
+if ($ConfirmedComplete) {
+    $priorOutbox = Read-JsonFile (Join-Path $userData 'submission-tracker-outbox.v1.json')
+    if ($priorOutbox -and $priorOutbox.entries) {
+        foreach ($priorEntry in @($priorOutbox.entries)) {
+            if ($priorEntry.state -eq 'SYNCED' -and
+                $priorEntry.receipt.opportunityId -eq $OpportunityId -and
+                $priorEntry.receipt.attemptId) {
+                Write-Step ('ALREADY_SYNCED_NO_SUBMIT attemptId=' + [string]$priorEntry.receipt.attemptId)
+                exit 0
+            }
+        }
+    }
+}
 $status = Assert-Prerequisites
 Write-Step ('PREREQS_OK page=' + $status.currentPage.pageUrl)
 
@@ -136,7 +151,7 @@ $framer = Get-Framer201Proof
 $receipt = $null
 $beforeProofStamp = if ($null -ne $framer) { [string]$framer.Proof.captured_at } else { '' }
 
-if ($RecoverFromExistingProof -and $null -ne $framer -and -not $AllowDuplicateSubmit) {
+if ($null -ne $framer -and -not $AllowDuplicateSubmit) {
     Write-Step ('RECOVER_EXISTING_FRAMER_201 proof=' + $framer.Path)
     $receipt = New-ReceiptFromFramerProof $framer.Proof $framer.Path
 } else {

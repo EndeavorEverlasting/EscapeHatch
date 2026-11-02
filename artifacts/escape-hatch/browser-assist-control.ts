@@ -61,6 +61,13 @@ export function managedBrowserProfileDirectory(origin: string, env: NodeJS.Proce
   return path.join(userDataRoot(env), 'managed-career-browser-origins', port);
 }
 
+/** Reuse exactly one still-open restored tab without navigating or editing it. */
+export function findRestoredManagedApplicationPage(context: BrowserContext, jobUrl: string): Page | null {
+  const matches = context.pages().filter(candidate => !candidate.isClosed() && candidate.url() === jobUrl);
+  if (matches.length > 1) throw new Error('Multiple restored application tabs match; choose one before continuing.');
+  return matches[0] || null;
+}
+
 /** Recover a known tab without issuing navigation, form writes or terminal actions. */
 export function selectExistingApplicationPage(context: BrowserContext, savedUrl: unknown, livePageUrl: unknown): Page {
   const saved = new URL(validateApplicationUrl(savedUrl));
@@ -489,13 +496,17 @@ export function createManagedBrowserAssistPlugin(): Plugin {
                 void listeners.dispose();
               });
             }
-            if (!page || page.isClosed()) page = context.pages()[0] || await context.newPage();
+            const restoredPage = findRestoredManagedApplicationPage(context, jobUrl);
+            if (restoredPage) page = restoredPage;
+            else if (!page || page.isClosed() || page.url() !== 'about:blank') page = await context.newPage();
             await page.bringToFront();
             state = 'browser_open';
             try {
-              await page.goto(jobUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+              if (!restoredPage) await page.goto(jobUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
               state = 'application_open_review_required';
-              if (await openApplicationForm(page)) state = 'application_form_open_review_required';
+              // Do not click a restored page or overwrite its draft during recovery.
+              // Explicit Fill remains available after inspection.
+              if (!restoredPage && await openApplicationForm(page)) state = 'application_form_open_review_required';
             } catch (error) {
               // Network interface naming is only suggestive, never proof of VPN causality.
               const activeNames = Object.entries(networkInterfaces())

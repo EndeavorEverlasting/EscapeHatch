@@ -16,9 +16,22 @@ import {
   reviewedContactFields,
   validateApplicationUrl,
   managedBrowserProfileDirectory,
+  findRestoredManagedApplicationPage,
   createManagedBrowserAssistPlugin,
   selectExistingApplicationPage,
 } from './browser-assist-control.ts';
+
+test('restart recovery chooses the exact restored tab without a navigation or terminal action', () => {
+  const jobUrl = 'https://example.com/careers/automation';
+  let navigated = false;
+  const other = { isClosed: () => false, url: () => 'https://example.com/other' };
+  const exact = { isClosed: () => false, url: () => jobUrl, goto: () => { navigated = true; } };
+  const context = { pages: () => [other, exact] };
+  assert.equal(findRestoredManagedApplicationPage(context as never, jobUrl), exact);
+  assert.equal(navigated, false);
+  assert.equal(findRestoredManagedApplicationPage({ pages: () => [other] } as never, jobUrl), null);
+  assert.throws(() => findRestoredManagedApplicationPage({ pages: () => [exact, exact] } as never, jobUrl), /Multiple restored application tabs/);
+});
 
 test('existing-tab selection is exact, unique and performs no navigation or form mutation', async () => {
   const browser = await chromium.launch({ channel: 'chrome', headless: true });

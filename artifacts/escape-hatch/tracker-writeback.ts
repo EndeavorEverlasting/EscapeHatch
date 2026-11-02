@@ -125,7 +125,7 @@ export function planSubmissionWrite(snapshot: TrackerSnapshot, receipt: Submissi
   // likewise a contradictory correction, not an invitation to repair the box.
   if (proofState === 'disputed' || proofState === 'not submitted' ||
       (!row.appliedCheckbox &&
-       (/^(?:submitted(?:\\s*[-–—]\\s*.+)?|applied)$/.test(statusValue) ||
+       (/^(?:submitted(?:\s*[-–—]\s*.+)?|applied)$/.test(statusValue) ||
         (proofState === EMPLOYER_CONFIRMED_PROOF.toLowerCase() && !!row.dateApplied)))) {
     throw new Error('CONFLICT');
   }

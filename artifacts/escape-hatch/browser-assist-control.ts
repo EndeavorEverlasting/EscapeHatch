@@ -539,7 +539,9 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               applicationOrigin === 'https://www.broadcastwell.com';
             const exactInlineForm = inlineBroadcastwell &&
               new URL(page.url()).pathname === '/careers/ai-automation-engineer';
-            if (opportunityId && (restoredPage !== null || state === 'application_form_open_review_required' || exactInlineForm)) {
+            // Restoring a page never implicitly records answers or arms Submit observation.
+            // The existing bind-existing action re-arms only after explicit page review.
+            if (opportunityId && !restoredPage && (state === 'application_form_open_review_required' || exactInlineForm)) {
               await listeners.attach(page, { opportunityId, applicationUrl: page.url(), opportunityUrl: jobUrl,
                 employerName: typeof payload.employerName === 'string' ? payload.employerName.slice(0, 160) : '' });
               await listeners.arm();

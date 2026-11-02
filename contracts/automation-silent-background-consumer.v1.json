@@ -14,13 +14,16 @@
   "current_consumer": {
     "task_name_pattern": "EscapeHatch-SubmissionSync-*",
     "scheduler_contract": "contracts/submission-sync-scheduler.v1.json",
-    "launcher": "scripts/windows/EscapeHatch-SubmissionSync.ps1",
+    "installer_mutator": "scripts/windows/EscapeHatch-SubmissionSync.ps1",
+    "scheduled_host": "scripts/windows/submission_sync_silent_host.py",
+    "scheduled_execute": "pythonw.exe",
     "silent_launch_bridge": "scripts/windows/submission-sync-silent-launch.cjs",
     "resolver": "scripts/windows/lib/resolve-automation-silent-background.cjs",
     "worker": "artifacts/escape-hatch/submission-sync-worker.ts",
     "preserve_interval_minutes": 5,
     "preserve_task_name_hash": true,
-    "unregister_on_silence_repair": false
+    "unregister_on_silence_repair": false,
+    "repair_action": "RepairSilence"
   },
   "safety_invariants": [
     "do not disable or unregister SubmissionSync to achieve silence",
@@ -28,7 +31,8 @@
     "never open employer browser from scheduled ticks",
     "never import mutable Automation main without pin match",
     "do not claim SILENT_CERTIFIED from launcher metadata alone",
-    "ProcessStartInfo CreateNoWindow remains the local fallback when Automation pin is unavailable"
+    "Task Scheduler Execute must be pythonw.exe; powershell.exe is legacy-only during RepairSilence migration",
+    "ProcessStartInfo CreateNoWindow / windowsHide remains the local fallback when Automation pin is unavailable"
   ],
   "acceptance_gates": [
     {

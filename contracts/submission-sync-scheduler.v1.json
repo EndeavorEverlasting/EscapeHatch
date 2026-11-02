@@ -13,7 +13,8 @@
     },
     "principal": "current-user / interactive / limited",
     "trigger": "five-minute repetition while signed in; first run one minute after registration",
-    "expected_action": "PowerShell -File scripts/windows/EscapeHatch-SubmissionSync.ps1 -Action Run -SourceRoot <selected-root>"
+    "expected_action": "pythonw.exe scripts/windows/submission_sync_silent_host.py --source-root <selected-root> --node <node.exe>",
+    "legacy_action": "PowerShell -File scripts/windows/EscapeHatch-SubmissionSync.ps1 -Action Run -SourceRoot <selected-root> (migrated by RepairSilence)"
   },
   "owner_surfaces": {
     "source": "scripts/windows/EscapeHatch-SubmissionSync.ps1",

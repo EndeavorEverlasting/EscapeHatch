@@ -3,7 +3,9 @@ on:
   pull_request:
     paths:
       - "scripts/windows/EscapeHatch-SubmissionSync.ps1"
+      - "scripts/windows/submission_sync_silent_host.py"
       - "scripts/windows/submission-sync-silent-launch.cjs"
+      - "scripts/windows/submission_sync_silent_host.py"
       - "scripts/windows/lib/resolve-automation-silent-background.cjs"
       - "contracts/automation-silent-background-consumer.v1.json"
       - "contracts/submission-sync-scheduler.v1.json"

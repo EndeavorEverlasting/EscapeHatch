@@ -21,6 +21,13 @@ class AutomationSilentBackgroundConsumer(unittest.TestCase):
         self.assertEqual(
             data["current_consumer"]["preserve_interval_minutes"], 5
         )
+        self.assertEqual(
+            data["current_consumer"]["scheduled_execute"], "pythonw.exe"
+        )
+        self.assertEqual(
+            data["current_consumer"]["scheduled_host"],
+            "scripts/windows/submission_sync_silent_host.py",
+        )
 
     def test_scheduler_contract_points_at_automation_consumer(self):
         data = json.loads(

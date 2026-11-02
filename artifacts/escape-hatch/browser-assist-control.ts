@@ -61,6 +61,21 @@ export function managedBrowserProfileDirectory(origin: string, env: NodeJS.Proce
   return path.join(userDataRoot(env), 'managed-career-browser-origins', port);
 }
 
+/** Reuse only one exact tab after Chrome restores its persistent profile.
+ * Never guess an ATS step or navigate away from unfinished operator answers. */
+export function selectRestoredLaunchPage(context: BrowserContext, jobUrl: string): Page | null {
+  const target = new URL(validateApplicationUrl(jobUrl));
+  const matches = context.pages().filter(candidate => {
+    if (candidate.isClosed()) return false;
+    try {
+      const live = new URL(candidate.url());
+      return live.origin === target.origin && live.pathname === target.pathname && live.search === target.search;
+    } catch { return false; }
+  });
+  if (matches.length > 1) throw new Error('More than one exact application tab is open; bind the intended tab explicitly.');
+  return matches[0] || null;
+}
+
 /** Recover a known tab without issuing navigation, form writes or terminal actions. */
 export function selectExistingApplicationPage(context: BrowserContext, savedUrl: unknown, livePageUrl: unknown): Page {
   const saved = new URL(validateApplicationUrl(savedUrl));
@@ -489,20 +504,33 @@ export function createManagedBrowserAssistPlugin(): Plugin {
                 void listeners.dispose();
               });
             }
-            if (!page || page.isClosed()) page = context.pages()[0] || await context.newPage();
-            await page.bringToFront();
-            state = 'browser_open';
-            try {
-              await page.goto(jobUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-              state = 'application_open_review_required';
-              if (await openApplicationForm(page)) state = 'application_form_open_review_required';
-            } catch (error) {
-              // Network interface naming is only suggestive, never proof of VPN causality.
-              const activeNames = Object.entries(networkInterfaces())
-                .filter(([, addresses]) => addresses?.some(addr => addr.family === 'IPv4' && !addr.internal))
-                .map(([name]) => name);
-              networkDiagnosis = diagnoseNavigationFailure(error, activeNames);
-              state = 'browser_open_navigation_unverified';
+            const restoredPage = selectRestoredLaunchPage(context, jobUrl);
+            if (restoredPage) {
+              // This tab may contain unsaved edits. An explicit Launch is not permission
+              // to reload, re-apply values, advance the form or discard its history.
+              page = restoredPage;
+              await page.bringToFront();
+              state = 'application_restored_review_required';
+            } else {
+              // New work gets a blank page; NEVER navigate a different live employer
+              // tab (including one held in the Vite hot-reload cache).
+              const blankPages = context.pages().filter(candidate =>
+                !candidate.isClosed() && candidate.url() === 'about:blank');
+              page = blankPages.length === 1 ? blankPages[0] : await context.newPage();
+              await page.bringToFront();
+              state = 'browser_open';
+              try {
+                await page.goto(jobUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+                state = 'application_open_review_required';
+                if (await openApplicationForm(page)) state = 'application_form_open_review_required';
+              } catch (error) {
+                // Network interface naming is only suggestive, never proof of VPN causality.
+                const activeNames = Object.entries(networkInterfaces())
+                  .filter(([, addresses]) => addresses?.some(addr => addr.family === 'IPv4' && !addr.internal))
+                  .map(([name]) => name);
+                networkDiagnosis = diagnoseNavigationFailure(error, activeNames);
+                state = 'browser_open_navigation_unverified';
+              }
             }
             // Inline applications have no separate "Apply" entry transition.
             // Attach before the operator's Submit, then only report ARMED after
@@ -511,7 +539,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               applicationOrigin === 'https://www.broadcastwell.com';
             const exactInlineForm = inlineBroadcastwell &&
               new URL(page.url()).pathname === '/careers/ai-automation-engineer';
-            if (opportunityId && (state === 'application_form_open_review_required' || exactInlineForm)) {
+            if (opportunityId && (restoredPage !== null || state === 'application_form_open_review_required' || exactInlineForm)) {
               await listeners.attach(page, { opportunityId, applicationUrl: page.url(), opportunityUrl: jobUrl,
                 employerName: typeof payload.employerName === 'string' ? payload.employerName.slice(0, 160) : '' });
               await listeners.arm();

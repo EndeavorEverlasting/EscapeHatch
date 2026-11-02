@@ -52,8 +52,21 @@ if ($TestMode) {
 }
 if ($Action -eq 'Run') {
     $toolchain = Get-EscapeHatchToolchain -SourceRoot $root
-    & $toolchain.NodePath --experimental-strip-types $worker
-    exit $LASTEXITCODE
+    # Scheduled tasks have no foreground UI. The Node child must not create a console.
+    $start = New-Object System.Diagnostics.ProcessStartInfo
+    $start.FileName = [string]$toolchain.NodePath
+    $start.Arguments = '--experimental-strip-types "' + $worker + '"'
+    $start.UseShellExecute = $false
+    $start.CreateNoWindow = $true
+    $start.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
+    $child = [System.Diagnostics.Process]::Start($start)
+    if ($null -eq $child) { throw 'SUBMISSION_SYNC_PROCESS_START_FAILED' }
+    try {
+        $child.WaitForExit()
+        exit $child.ExitCode
+    } finally {
+        $child.Dispose()
+    }
 }
 $existing = Get-OwnedTask
 if ($Action -eq 'Inspect') {

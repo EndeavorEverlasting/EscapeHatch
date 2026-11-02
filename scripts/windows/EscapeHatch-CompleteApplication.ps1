@@ -74,10 +74,11 @@ function Save-Receipts([object[]]$Receipts) {
     Move-Item -LiteralPath $tmp -Destination $receiptsFile -Force
 }
 
-function Get-Framer201Proof {
-    if (-not (Test-Path -LiteralPath $proofDir)) { return $null }
+function Get-Framer201Proofs {
+    if (-not (Test-Path -LiteralPath $proofDir)) { return @() }
     $files = Get-ChildItem -LiteralPath $proofDir -Filter 'broadcastwell-framer-201-*.json' -ErrorAction SilentlyContinue |
         Sort-Object LastWriteTime -Descending
+    $matched = @()
     foreach ($file in $files) {
         $proof = Read-JsonFile $file.FullName
         if ($null -eq $proof) { continue }
@@ -85,9 +86,13 @@ function Get-Framer201Proof {
         if ([string]$proof.applicationUrl -ne $ApplicationUrl) { continue }
         if ([int]$proof.httpStatus -ne 201) { continue }
         if ("$($proof.evidenceCode)" -ne 'FRAMER_FORMS_HTTP_201') { continue }
-        return [pscustomobject]@{ Path = $file.FullName; Proof = $proof }
+        $matched += [pscustomobject]@{ Path = $file.FullName; Proof = $proof }
     }
-    return $null
+    return $matched
+}
+
+function Get-Framer201Proof {
+    return (Get-Framer201Proofs | Select-Object -First 1)
 }
 
 function New-ReceiptFromFramerProof($Proof, [string]$ProofPath) {
@@ -154,7 +159,11 @@ if ($priorReceipts) {
     }
 }
 if ($null -ne $framer) {
-    $historicalAttempts += ('broadcastwell-framer-' + [string]$framer.Proof.captured_at)
+    # The latest proof is useful for comparison, but an earlier form attempt
+    # cannot silently disappear from reconciliation.
+    foreach ($priorFramer in @(Get-Framer201Proofs)) {
+        $historicalAttempts += ('broadcastwell-framer-' + [string]$priorFramer.Proof.captured_at)
+    }
 }
 $historicalAttempts = @($historicalAttempts | Sort-Object -Unique)
 # Recovery does not synthesize a new confirmation or write provider status.

@@ -500,7 +500,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         : result.state === 'browser_open_navigation_unverified'
           ? 'Chrome opened but application navigation was not verified. Check connectivity and the employer page; no form completion is claimed.'
           : result.state === 'application_restored_review_required'
-            ? 'The existing application tab was recovered without reloading or changing its answers. Review your entries before filling; nothing was submitted.'
+            ? 'An existing application tab was preserved without reloading or changing its answers. Review the page, then use Track existing application tab to re-arm observation before Submit. EscapeHatch did not submit.'
           : autoFillMessage || 'A separate managed Chrome window is opening. Authentication stays under your control.');
       if (action === 'prepare' && result.preparation) {
         setMessage(

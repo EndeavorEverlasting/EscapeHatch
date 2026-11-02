@@ -79,7 +79,15 @@ if ($Action -eq 'Unregister') {
     exit 0
 }
 if ($null -ne $existing) {
-    Write-Host 'ESCAPEHATCH_SUBMISSION_SYNC_TASK=REGISTERED_EXISTING'
+    if (-not $existing.Settings.Hidden) {
+        # Registration is installer-authorized; retain the existing task and trigger.
+        $existing.Settings.Hidden = $true
+        Set-ScheduledTask -InputObject $existing -ErrorAction Stop | Out-Null
+        if (-not (Get-OwnedTask).Settings.Hidden) {
+            throw 'SUBMISSION_SYNC_SILENT_SETTINGS_READBACK_FAILED'
+        }
+    }
+    Write-Host 'ESCAPEHATCH_SUBMISSION_SYNC_TASK=REGISTERED_EXISTING_SILENT'
     exit 0
 }
 $null = Get-EscapeHatchToolchain -SourceRoot $root
@@ -89,7 +97,8 @@ $principal = New-ScheduledTaskPrincipal -UserId ([Security.Principal.WindowsIden
 $taskAction = New-ScheduledTaskAction -Execute $ps -Argument $argsExpected
 # Five-minute retry while signed in. An offline miss is recovered at next logon.
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration (New-TimeSpan -Days 3650)
-$settings = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 2) -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+$settings = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 2) -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -Hidden
 Register-ScheduledTask -TaskName $taskName -Action $taskAction -Trigger $trigger -Settings $settings -Principal $principal -ErrorAction Stop | Out-Null
-$null = Get-OwnedTask
-Write-Host 'ESCAPEHATCH_SUBMISSION_SYNC_TASK=REGISTERED'
+$registered = Get-OwnedTask
+if (-not $registered.Settings.Hidden) { throw 'SUBMISSION_SYNC_SILENT_SETTINGS_READBACK_FAILED' }
+Write-Host 'ESCAPEHATCH_SUBMISSION_SYNC_TASK=REGISTERED_SILENT'

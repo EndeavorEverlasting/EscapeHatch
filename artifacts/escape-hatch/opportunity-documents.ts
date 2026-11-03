@@ -88,6 +88,32 @@ export class OpportunityDocumentStore {
    * The page inventory and required-field gate remain the caller's authority:
    * this method cannot certify employer acceptance or final-review readiness.
    */
+  /** Reuse an already reviewed, exact-hash PDF inside this same private store.
+   * Do not replace divergent target materials or mint review from unreviewed sources.
+   * Caller must authenticate applicant ownership and the source/target workflow. */
+  async reuseReviewed(
+    sourceId: string, sourceUrl: string, targetId: string, targetUrl: string,
+    kind: DocumentKind, expectedSourceSha256?: string,
+  ): Promise<DocumentPackage> {
+    if (sourceId === targetId && sourceUrl === targetUrl) throw new Error('Source and target must differ.');
+    if (kind !== 'resume' && kind !== 'cover') throw new Error('Unsupported document kind.');
+    const source = await this.read(sourceId, sourceUrl);
+    const selected = source.documents[kind];
+    if (!selected?.reviewedAt) throw new Error('A reviewed source document is required.');
+    if (expectedSourceSha256 && expectedSourceSha256 !== selected.sha256) {
+      throw new Error('Reviewed source document changed; preserve existing materials.');
+    }
+    const bytes = await this.file(sourceId, sourceUrl, kind, selected.sha256);
+    if (!bytes) throw new Error('Reviewed source document is missing.');
+    const target = await this.read(targetId, targetUrl);
+    const prior = target.documents[kind];
+    if (prior && prior.sha256 !== selected.sha256) {
+      throw new Error('Target already contains a different document; preserve it for review.');
+    }
+    await this.stage(targetId, targetUrl, kind, bytes, selected.source ?? { provider: 'local' }, prior?.sha256 ?? null);
+    return this.review(targetId, targetUrl, kind, selected.sha256);
+  }
+
   async forCurrentEmployerForm(
     id: string, url: string, requestedKinds: readonly DocumentKind[], requireReview = true,
   ): Promise<{ resume: PrivatePdf | null; cover: PrivatePdf | null; reviewPolicy: string }> {

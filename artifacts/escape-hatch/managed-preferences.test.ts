@@ -148,9 +148,19 @@ test('explicit preferences survive process-independent disk reads; invalid impor
     const data = syntheticPreferences();
     await savePreferences(data, file);
     assert.deepEqual(await readPreferences(file), data);
-    const invalid = { ...data, preferences: { ...data.preferences, 'unknown.question': data.preferences['identity.first_name'] } };
-    await assert.rejects(savePreferences(invalid, file));
-    assert.deepEqual(await readPreferences(file), data);
+    const withUnknown = { ...data, preferences: { ...data.preferences, 'unknown.question': data.preferences['identity.first_name'] } };
+    // Forward-compatible private profiles may include IDs this checkout has not registered yet.
+    // Skip unknown keys; do not reject the whole durable preference file.
+    const parsedUnknown = parsePreferences(withUnknown);
+    assert.ok(parsedUnknown);
+    assert.equal(parsedUnknown?.preferences['unknown.question'], undefined);
+    assert.equal(parsedUnknown?.preferences['identity.first_name']?.value, 'Synthetic');
+    await savePreferences(withUnknown, file);
+    assert.equal((await readPreferences(file)).preferences['unknown.question'], undefined);
+    assert.equal((await readPreferences(file)).preferences['identity.first_name']?.value, 'Synthetic');
+    const malformedKnown = { ...data, preferences: { ...data.preferences, 'identity.first_name': { ...data.preferences['identity.first_name'], value: '' } } };
+    await assert.rejects(savePreferences(malformedKnown, file));
+    assert.equal((await readPreferences(file)).preferences['identity.first_name']?.value, 'Synthetic');
     assert.equal(parsePreferences({ ...data, schema_version: 'wrong' }), null);
     assert.equal(optionMatches('Male', 'Female'), false);
     assert.equal(internationalPhone('(555) 012-3456', 'United States'), '+15550123456');

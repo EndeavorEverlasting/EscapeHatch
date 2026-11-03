@@ -50,7 +50,11 @@ export function parsePreferences(input: unknown): Preferences | null {
     }
   }
   for (const [id, entry] of Object.entries(data.preferences)) {
-    if (!known.has(id) || !entry || typeof entry !== 'object' || entry.scope !== 'profile_preference' || entry.source !== 'user' ||
+    // Unknown taxonomy IDs are skipped, not fatal: a newer private profile must
+    // remain readable when this checkout's taxonomy lags an installed source.
+    // Malformed known entries still fail closed so corrupted values are never promoted.
+    if (!known.has(id)) continue;
+    if (!entry || typeof entry !== 'object' || entry.scope !== 'profile_preference' || entry.source !== 'user' ||
         typeof entry.value !== 'string' || !entry.value.trim() || entry.value.length > 512 ||
         typeof entry.updated_at !== 'string' || Number.isNaN(Date.parse(entry.updated_at))) return null;
     clean.preferences[id] = { scope: 'profile_preference', value: entry.value.trim(), source: 'user', updated_at: entry.updated_at };

@@ -3,6 +3,7 @@ import { Link } from 'wouter';
 import { FolderInput, Layers, ListChecks, Volume2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { projectMascotGuidance } from '@/lib/mascot-guidance';
+import { ProfilePieceBoard } from './profile-piece-board';
 import type { Profile, Application } from '@/lib/storage';
 
 /** A quiet, user-triggered original two-note chirp; never an automatic notification. */
@@ -41,7 +42,7 @@ export function GuidedStart({ profile, applications, focusOpportunity }: { profi
     { title: 'Assemble this application', description: 'Inspect the employer’s form, add its documents, and resolve its questions.', href: '/assist', icon: ListChecks },
   ];
   return <Dialog open={tutorialOpen} onOpenChange={setTutorialOpen}><section className="guided-start mb-7" aria-label="Start here">
-    <div className="max-w-2xl"><h2 className="font-display text-3xl sm:text-4xl">{guidance.essentialMissing.length ? 'Start with what you already have.' : 'Your next application starts here.'}</h2>
+    <div className="max-w-2xl"><h2 className="font-display text-3xl sm:text-4xl">{guidance.essentialMissing.length ? 'Start with what you already have.' : focusOpportunity ? 'Make your next move tangible.' : 'Your next application starts here.'}</h2>
       <p className="mt-3 text-sm leading-6 text-muted-foreground">Your sources become reviewed facts. Each opportunity becomes its own workbench. You stay in control of what reaches an employer.</p></div>
     <div className="mascot-guidance mt-5 flex flex-col gap-4 rounded-2xl border border-primary/25 bg-primary/5 p-4 sm:flex-row sm:items-center sm:p-5" data-testid="mascot-guidance">
       <img src="/escapehatch-mascot.webp" alt="" aria-hidden="true" decoding="async" width={100} height={100} className="mascot-guidance-art h-20 w-20 shrink-0 self-start object-contain sm:h-24 sm:w-24" data-testid="mascot-tutorial-avatar" />
@@ -56,9 +57,10 @@ export function GuidedStart({ profile, applications, focusOpportunity }: { profi
         </div>
       </div>
     </div>
-    <ol className="mt-6 grid gap-4 md:grid-cols-3">{steps.map((step, index) => <li key={step.href} className={index === guidance.nextStep ? 'guide-step guide-step-current' : 'guide-step'}>
+    <ProfilePieceBoard profile={profile} />
+    <ol className="mt-6 grid gap-4 md:grid-cols-3" aria-label="Application journey">{steps.map((step, index) => <li key={step.href} className={index === guidance.nextStep ? 'guide-step guide-step-current' : 'guide-step'}>
       <step.icon size={24} aria-hidden="true" className="text-primary" />
-      <p className="mt-4 text-xs font-bold text-muted-foreground">Step {index + 1}{index === guidance.nextStep ? ' · Suggested next' : ''}</p>
+      <p className="mt-4 text-xs font-bold text-muted-foreground">Step {index + 1}{index === guidance.nextStep ? ' · Next action' : index < guidance.nextStep ? ' · Revisit anytime' : ' · Available'}</p>
       <h3 className="mt-2 text-base font-bold">{step.title}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{step.description}</p>
       <Link href={step.href} className="mt-4 inline-flex min-h-11 items-center font-bold text-primary underline underline-offset-4">{index === guidance.nextStep ? 'Start this step' : 'Open step'}</Link>
     </li>)}</ol>

@@ -4,7 +4,7 @@ import path from 'node:path';
 import { envelopeDigest, parseEnvelope, openProjection } from './private-sync-crypto.ts';
 export async function readCarrier(folder: string, key: Uint8Array) {
   if (!path.isAbsolute(folder)) throw new Error('ABSOLUTE_PATH_REQUIRED');
-  const files = await fs.readdir(folder);
+  const files = await fs.readdir(folder).catch(e => { if (e.code === 'ENOENT') return []; throw e; });
   const found = [];
   for (const file of files.filter(f => f.endsWith('.ehsync'))) {
     const envelope = parseEnvelope(JSON.parse(await fs.readFile(path.join(folder, file), 'utf8')));

@@ -104,6 +104,11 @@ test('live tracker selection makes current employer the first puzzle, without fi
   await expect(page.getByTestId('home-next-company-role')).toContainText('Current Employer');
   await expect(page.getByTestId('mascot-chirp-message')).toContainText('Current Employer');
   await expect(page.getByTestId('mascot-next-action')).toHaveAttribute('href', /\/assist\?opportunityId=tracker-/);
+  const journey = page.locator('.guided-journey');
+  await expect(journey).not.toHaveAttribute('open');
+  await journey.locator('summary').click();
+  await expect(journey).toHaveAttribute('open', '');
+  await expect(page.getByText('Bring your career sources')).toBeVisible();
   await expect(page.getByTestId('button-birdsong-control')).toHaveAttribute('aria-pressed', 'false');
 });
 

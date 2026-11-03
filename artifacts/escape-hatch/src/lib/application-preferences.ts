@@ -14,8 +14,10 @@ export function parsePreferences(input: unknown): Preferences | null {
   if (data.schema_version !== PREFERENCE_SCHEMA || typeof data.exported_at !== 'string' || Number.isNaN(Date.parse(data.exported_at)) ||
       !data.preferences || typeof data.preferences !== 'object' || Array.isArray(data.preferences) ||
       new TextEncoder().encode(JSON.stringify(data)).length > 65536) return null;
-  const known = new Set(questions.map(q => q.id));
-  if (data.optional_omissions !== undefined && (!Array.isArray(data.optional_omissions) || data.optional_omissions.length > 100 || data.optional_omissions.some(id => typeof id !== 'string' || !known.has(id)))) return null;
+  // Preserve future taxonomy IDs as inert private data. Never auto-fill unknown IDs.
+  const safeId = (id: unknown): id is string => typeof id === 'string' && id.length <= 160 &&
+    /^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+$/.test(id);
+  if (data.optional_omissions !== undefined && (!Array.isArray(data.optional_omissions) || data.optional_omissions.length > 100 || data.optional_omissions.some(id => !safeId(id)))) return null;
   const clean = emptyPreferences();
   if (data.optional_omissions) clean.optional_omissions = [...new Set(data.optional_omissions)];
   clean.exported_at = data.exported_at;
@@ -45,15 +47,15 @@ export function parsePreferences(input: unknown): Preferences | null {
       // Skip stale/invalid discovered rows instead of poisoning the whole profile.
       // Taxonomy alias growth can make a prior free-text question match a known ID;
       // those answers belong in preferences, not discovered_answers.
-      if (!item || typeof item.question !== 'string' || !safeDiscoveredQuestion(item.question) || key !== normalizeQuestion(item.question) || typeof item.value !== 'string' || item.value.length > 512 || !['user', 'observed_question'].includes(item.source) || typeof item.accepted !== 'boolean' || (item.source === 'observed_question' ? item.value !== '' || item.accepted : !item.value.trim()) || typeof item.updated_at !== 'string' || Number.isNaN(Date.parse(item.updated_at))) continue;
+      if (!item || typeof item.question !== 'string' || !(safeDiscoveredQuestion(item.question) || matchQuestion(item.question)) || key !== normalizeQuestion(item.question) || typeof item.value !== 'string' || item.value.length > 512 || !['user', 'observed_question'].includes(item.source) || typeof item.accepted !== 'boolean' || (item.source === 'observed_question' ? item.value !== '' || item.accepted : !item.value.trim()) || typeof item.updated_at !== 'string' || Number.isNaN(Date.parse(item.updated_at))) continue;
       clean.discovered_answers[key] = { question: item.question, value: item.value.trim(), source: item.source, updated_at: item.updated_at, accepted: item.accepted };
     }
   }
   for (const [id, entry] of Object.entries(data.preferences)) {
-    // Unknown taxonomy IDs are skipped, not fatal: a newer private profile must
-    // remain readable when this checkout's taxonomy lags an installed source.
-    // Malformed known entries still fail closed so corrupted values are never promoted.
-    if (!known.has(id)) continue;
+    // Unknown but structurally valid taxonomy IDs are retained for future builds;
+    // they are never eligible for automated form fill until the taxonomy recognizes them.
+    // This prevents a routine UI save from silently erasing newly captured answers.
+    if (!safeId(id)) return null;
     if (!entry || typeof entry !== 'object' || entry.scope !== 'profile_preference' || entry.source !== 'user' ||
         typeof entry.value !== 'string' || !entry.value.trim() || entry.value.length > 512 ||
         typeof entry.updated_at !== 'string' || Number.isNaN(Date.parse(entry.updated_at))) return null;

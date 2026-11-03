@@ -1,6 +1,10 @@
 """Offline guard for EscapeHatch background submission receipt sync."""
 from pathlib import Path
+import json
+import tempfile
 import unittest
+
+from scripts.windows.submission_sync_silent_host import needs_sync_worker
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -46,6 +50,66 @@ class SubmissionSyncSilenceContract(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("runSubmissionSyncOnce", worker)
         self.assertNotIn("page.click(", worker)
+
+
+class SubmissionSyncIdleAdmission(unittest.TestCase):
+    """A scheduled clock stays installed; only actionable private work starts Node."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="eh-silent-idle-")
+        self.root = Path(self.temp.name)
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def store(self, file, value):
+        (self.root / file).write_text(json.dumps(value), encoding="utf-8")
+
+    def outbox(self, *states):
+        self.store("submission-tracker-outbox.v1.json", {
+            "schema": "escapehatch/submission-tracker-outbox/v1",
+            "entries": [
+                {"receipt": {"attemptId": f"attempt-{index}"}, "state": state}
+                for index, state in enumerate(states)
+            ],
+        })
+
+    def test_empty_synced_or_conflict_only_skips_node(self):
+        self.assertFalse(needs_sync_worker(self.root))
+        self.outbox("SYNCED", "CONFLICT")
+        self.assertFalse(needs_sync_worker(self.root))
+        self.store("managed-submission-receipts.json", [
+            {"attemptId": "attempt-0"}, {"attemptId": "attempt-1"},
+        ])
+        self.assertFalse(needs_sync_worker(self.root))
+
+    def test_active_and_unqueued_receipts_wake_node(self):
+        for state in ("PENDING", "AUTH_REQUIRED", "RETRY_REQUIRED"):
+            with self.subTest(state=state):
+                self.outbox(state)
+                self.assertTrue(needs_sync_worker(self.root))
+        self.outbox("SYNCED")
+        self.store("managed-submission-receipts.json", [
+            {"attemptId": "attempt-0"}, {"attemptId": "new-attempt"},
+        ])
+        self.assertTrue(needs_sync_worker(self.root))
+
+    def test_corrupt_unknown_or_duplicate_state_never_looks_idle(self):
+        self.store("submission-tracker-outbox.v1.json", [])
+        self.assertTrue(needs_sync_worker(self.root))
+        self.store("submission-tracker-outbox.v1.json", {"schema": "wrong", "entries": []})
+        self.assertTrue(needs_sync_worker(self.root))
+        self.outbox("UNRECOGNIZED")
+        self.assertTrue(needs_sync_worker(self.root))
+        (self.root / "submission-tracker-outbox.v1.json").write_text("{malformed", encoding="utf-8")
+        self.assertTrue(needs_sync_worker(self.root))
+        (self.root / "submission-tracker-outbox.v1.json").write_bytes(b"x" * (2 * 1024 * 1024 + 1))
+        self.assertTrue(needs_sync_worker(self.root))
+        self.outbox("SYNCED", "SYNCED")
+        self.store("managed-submission-receipts.json", [{"attemptId": "attempt-0"}])
+        self.assertFalse(needs_sync_worker(self.root))
+        self.store("managed-submission-receipts.json", [{"attemptId": "attempt-0"}, {"bad": "receipt"}])
+        self.assertTrue(needs_sync_worker(self.root))
 
 
 if __name__ == "__main__":

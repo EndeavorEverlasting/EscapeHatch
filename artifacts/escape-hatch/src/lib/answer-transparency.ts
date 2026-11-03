@@ -1,5 +1,15 @@
 import { questions, type Preferences } from './application-preferences.ts';
 
+// A stale or concurrent read must not replace edits made after its request began.
+export function canReplaceEditorFromDisk(
+  requestVersion: number,
+  latestRequestVersion: number,
+  editVersionAtStart: number,
+  currentEditVersion: number,
+): boolean {
+  return requestVersion === latestRequestVersion && editVersionAtStart === currentEditVersion;
+}
+
 // This is an explicit user-facing projection of the private local store, not an
 // employer-side form readback. Unknown IDs are deliberately not displayed.
 export type SavedAnswerReviewRow = {

@@ -65,11 +65,23 @@ class SubmissionSyncIdleAdmission(unittest.TestCase):
     def store(self, file, value):
         (self.root / file).write_text(json.dumps(value), encoding="utf-8")
 
+    def receipt(self, attempt_id):
+        return {
+            "opportunityId": "synthetic-opportunity",
+            "sessionId": "synthetic-session",
+            "attemptId": attempt_id,
+            "applicationOrigin": "https://example.test",
+            "applicationPath": "/apply",
+            "observedAt": "2026-11-02T00:00:00Z",
+            "source": "same_session_page_confirmation",
+            "evidenceCode": "APPLICATION_RECEIVED_AFTER_USER_SUBMIT",
+        }
+
     def outbox(self, *states):
         self.store("submission-tracker-outbox.v1.json", {
             "schema": "escapehatch/submission-tracker-outbox/v1",
             "entries": [
-                {"receipt": {"attemptId": f"attempt-{index}"}, "state": state}
+                {"receipt": self.receipt(f"attempt-{index}"), "state": state}
                 for index, state in enumerate(states)
             ],
         })
@@ -79,7 +91,7 @@ class SubmissionSyncIdleAdmission(unittest.TestCase):
         self.outbox("SYNCED", "CONFLICT")
         self.assertFalse(needs_sync_worker(self.root))
         self.store("managed-submission-receipts.json", [
-            {"attemptId": "attempt-0"}, {"attemptId": "attempt-1"},
+            self.receipt("attempt-0"), self.receipt("attempt-1"),
         ])
         self.assertFalse(needs_sync_worker(self.root))
 
@@ -90,7 +102,7 @@ class SubmissionSyncIdleAdmission(unittest.TestCase):
                 self.assertTrue(needs_sync_worker(self.root))
         self.outbox("SYNCED")
         self.store("managed-submission-receipts.json", [
-            {"attemptId": "attempt-0"}, {"attemptId": "new-attempt"},
+            self.receipt("attempt-0"), self.receipt("new-attempt"),
         ])
         self.assertTrue(needs_sync_worker(self.root))
 
@@ -106,9 +118,18 @@ class SubmissionSyncIdleAdmission(unittest.TestCase):
         (self.root / "submission-tracker-outbox.v1.json").write_bytes(b"x" * (2 * 1024 * 1024 + 1))
         self.assertTrue(needs_sync_worker(self.root))
         self.outbox("SYNCED", "SYNCED")
-        self.store("managed-submission-receipts.json", [{"attemptId": "attempt-0"}])
+        self.store("managed-submission-receipts.json", [self.receipt("attempt-0")])
         self.assertFalse(needs_sync_worker(self.root))
-        self.store("managed-submission-receipts.json", [{"attemptId": "attempt-0"}, {"bad": "receipt"}])
+        self.store("submission-tracker-outbox.v1.json", {
+            "schema": "escapehatch/submission-tracker-outbox/v1",
+            "entries": [
+                {"receipt": self.receipt("attempt-0"), "state": "SYNCED"},
+                {"receipt": self.receipt("attempt-0"), "state": "SYNCED"},
+            ],
+        })
+        self.assertTrue(needs_sync_worker(self.root))
+        self.outbox("SYNCED")
+        self.store("managed-submission-receipts.json", [self.receipt("attempt-0"), {"bad": "receipt"}])
         self.assertTrue(needs_sync_worker(self.root))
 
 

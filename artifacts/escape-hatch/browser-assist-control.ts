@@ -310,7 +310,7 @@ export async function attachPdfs(page: Page, resume: ReturnType<typeof parsePriv
       const cognizantTalent = current.origin === 'https://careers.cognizant.com' &&
         /^\/us-en\/talent-community\/?$/.test(current.pathname);
       if (cognizantTalent && inputs.length === 1 &&
-          await page.getByText('Resume', { exact: true }).count() === 1) {
+          await page.getByText(/^Resume\s*\*?$/i).count() === 1) {
         try {
           await inputs[0].setInputFiles(file, { timeout: 5000 });
           outcome[kind] = 'attached_to_input_review_required';
@@ -598,7 +598,8 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               try {
                 await page.goto(jobUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
                 state = 'application_open_review_required';
-                if (await openApplicationForm(page)) state = 'application_form_open_review_required';
+                if (!talentCommunity && await openApplicationForm(page)) state = 'application_form_open_review_required';
+                // A community enrollment must not click a site Apply/Join control while opening.
               } catch (error) {
                 // Network interface naming is only suggestive, never proof of VPN causality.
                 const activeNames = Object.entries(networkInterfaces())
@@ -682,7 +683,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             const anonymousTalentResume = activeForm.origin === 'https://careers.cognizant.com' &&
               /^\/us-en\/talent-community\/?$/.test(activeForm.pathname) &&
               await page!.locator('input[type="file"]').count() === 1 &&
-              await page!.getByText('Resume', { exact: true }).count() === 1;
+              await page!.getByText(/^Resume\s*\*?$/i).count() === 1;
             const requestedKinds = (['resume', 'cover'] as const).filter(kind =>
               formRequirements.requirements.some(field => field.kind === kind) ||
               (kind === 'resume' && anonymousTalentResume));

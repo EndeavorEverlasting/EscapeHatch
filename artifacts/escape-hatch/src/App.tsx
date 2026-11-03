@@ -100,6 +100,7 @@ import {
   isSubmittedLocked,
   mergeTrackerIntoApplications,
   selectNextActionableOpportunity,
+  selectNextHomeApplication,
   trackerRowToApplication,
   type TrackerConnectionState,
   type TrackerSnapshot,
@@ -611,12 +612,9 @@ function HomePage({ profile, answers, applications, setApplications }: { profile
   const staleMeta = tracker.status === 'STALE' ? tracker : null;
   const nextTracker = liveSnapshot ? selectNextActionableOpportunity(liveSnapshot) : null;
   const nextTrackerApp = nextTracker ? trackerRowToApplication(nextTracker) : null;
-  const nextLocked = nextTracker ? isSubmittedLocked(nextTracker) : false;
   const active = applications.filter((application) => application.status !== 'closed');
-  const next = nextTrackerApp ||
-    active.find((application) => application.status !== 'applied' && application.nextAction.trim()) ||
-    active.find((application) => application.status !== 'applied') ||
-    active[0];
+  const next = selectNextHomeApplication(nextTrackerApp, applications);
+  const nextLocked = Boolean(next && nextTracker && nextTrackerApp && next.id === nextTrackerApp.id && isSubmittedLocked(nextTracker));
   const [appliedUndo, setAppliedUndo] = useState<{ applicationId: string; company: string; previousStatus: ApplicationStatus } | null>(null);
   useEffect(() => {
     if (!appliedUndo) return;
@@ -659,7 +657,7 @@ function HomePage({ profile, answers, applications, setApplications }: { profile
         { label: 'Reusable answers', value: String(answers.length), caption: 'answers ready to borrow', href: '/answers', testId: 'link-stat-2' },
       ];
   return <div>
-    <GuidedStart profile={profile} applications={applications} focusOpportunity={next?.status === 'applied' ? undefined : next} />
+    <GuidedStart profile={profile} applications={applications} focusOpportunity={next || undefined} />
     <PageIntro eyebrow="Your cockpit" title={profile.first_name ? `Keep going, ${displayName(profile)}.` : 'Make room for momentum.'} description="A small, private place to move one good opportunity forward at a time." />
     <section className="mb-6 rounded-2xl border border-border bg-card p-5 shadow-sm" data-testid="tracker-connection-panel" data-tracker-status={tracker.status}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -693,9 +691,9 @@ function HomePage({ profile, answers, applications, setApplications }: { profile
         {appliedUndo && <div role="status" aria-live="polite" data-testid="home-applied-undo-notice" className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary-foreground/20 bg-primary-foreground/10 px-4 py-3 text-sm"><span>Marked {appliedUndo.company} applied.</span><Button type="button" variant="quiet" onClick={undoMarkApplied} data-testid="button-undo-mark-applied">Undo</Button></div>}
       </section>
       <section className="animate-rise-delay-1 rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
-        <div className="flex items-start justify-between"><div><p className="font-mono-app text-[10px] uppercase tracking-[.18em] text-muted-foreground">profile readiness</p><p className="mt-5 font-display text-5xl">{completion}<span className="text-2xl text-muted-foreground">%</span></p></div><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/20 text-accent-foreground"><UserRound size={19} /></div></div>
+        <div className="flex items-start justify-between"><div><p className="font-mono-app text-[10px] uppercase tracking-[.18em] text-muted-foreground">reusable profile coverage</p><p className="mt-5 font-display text-5xl">{completion}<span className="text-2xl text-muted-foreground">%</span></p></div><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/20 text-accent-foreground"><UserRound size={19} /></div></div>
         <div className="mt-6 h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-accent transition-all duration-500" style={{ width: `${Math.max(completion, 2)}%` }} /></div>
-        <p className="mt-4 text-sm leading-6 text-muted-foreground">{completion === 100 ? 'Ready when you are.' : 'Complete the reusable details once. Reuse them everywhere.'}</p>
+        <p className="mt-4 text-sm leading-6 text-muted-foreground">{completion === 100 ? 'Your reusable details are filled. Employer forms are verified separately.' : 'Complete reusable details once. Employer requirements are separate.'}</p>
         <Link href="/profile" data-testid="link-home-profile" className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-primary hover:underline">{completion === 100 ? 'Review profile' : 'Finish profile'} <ArrowRight size={15} /></Link>
       </section>
     </div>

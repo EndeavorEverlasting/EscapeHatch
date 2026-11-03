@@ -164,7 +164,7 @@ export function WorkspaceStartup({ children }: { children: ReactNode }) {
   const syntheticNotice = syntheticWorkspace ? <aside role="note" data-testid="synthetic-workspace-warning" className="border-b border-amber-600 bg-amber-50 px-6 py-3 font-bold text-amber-950">
     Synthetic test workspace — disposable sample data. Do not use this window for real job applications. Open the normal EscapeHatch launcher for your saved work.
   </aside> : null;
-  if (ready) return <>{syntheticNotice}{managed && <><aside className="border-b border-border bg-card px-6 py-2 text-sm" role={blocked.current ? 'alert' : 'status'}>{message}</aside><ExtensionWorkspaceStatus /></>}{children}</>;
+  if (ready) return <>{syntheticNotice}{managed && <><aside className="fixed bottom-3 left-3 z-50 max-w-[min(24rem,calc(100vw-1.5rem))] rounded-lg border border-border bg-card/95 px-3 py-2 text-xs shadow-lg backdrop-blur-md lg:left-[260px]" role={blocked.current ? 'alert' : 'status'}>{message}</aside><ExtensionWorkspaceStatus /></>}{children}</>;
   return <>{syntheticNotice}<main className="mx-auto max-w-2xl px-6 py-16">
     <p className="text-primary">EscapeHatch · Your private workspace</p>
     <h1 className="my-5 font-display text-4xl">{needsContext ? 'Bring your work with you.' : conflicts ? 'Review your saved copies.' : 'Recover your workspace.'}</h1>

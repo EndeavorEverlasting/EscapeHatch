@@ -49,6 +49,27 @@ def _read_private_json(file: Path) -> object | None:
         return None
 
 
+
+def _valid_receipt_header(value: object) -> bool:
+    """Conservative admission check, not a replacement for Node's full validation."""
+    if not isinstance(value, dict):
+        return False
+    for name in ("opportunityId", "sessionId", "attemptId"):
+        identity = value.get(name)
+        if not isinstance(identity, str) or not 0 < len(identity) < 256:
+            return False
+    return (
+        value.get("source") == "same_session_page_confirmation"
+        and value.get("evidenceCode") == "APPLICATION_RECEIVED_AFTER_USER_SUBMIT"
+        and isinstance(value.get("applicationOrigin"), str)
+        and value["applicationOrigin"].startswith("https://")
+        and isinstance(value.get("applicationPath"), str)
+        and value["applicationPath"].startswith("/")
+        and isinstance(value.get("observedAt"), str)
+        and bool(value["observedAt"])
+    )
+
+
 def needs_sync_worker(data_root: Path) -> bool:
     """Fail active on unknown state; only verified quiescence skips the Node worker.
 
@@ -70,7 +91,7 @@ def needs_sync_worker(data_root: Path) -> bool:
             return True
         queued: set[str] = set()
         for entry in entries:
-            if not isinstance(entry, dict) or not isinstance(entry.get("receipt"), dict):
+            if not isinstance(entry, dict) or not _valid_receipt_header(entry.get("receipt")):
                 return True
             attempt = entry["receipt"].get("attemptId")
             if not isinstance(attempt, str) or not attempt or attempt in queued:
@@ -79,7 +100,7 @@ def needs_sync_worker(data_root: Path) -> bool:
             if entry.get("state") not in ("SYNCED", "CONFLICT"):
                 return True  # PENDING, AUTH_REQUIRED, RETRY_REQUIRED or unknown.
         for receipt in receipts:
-            if not isinstance(receipt, dict) or not isinstance(receipt.get("attemptId"), str):
+            if not _valid_receipt_header(receipt):
                 return True
             if receipt["attemptId"] not in queued:
                 return True

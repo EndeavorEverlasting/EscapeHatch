@@ -28,6 +28,8 @@ COMPONENTS = {
     "repo_resolver": "scripts/resolve_repo.ps1",
     "application_form_taxonomy": "harness/contracts/application-form-taxonomy.v1.json",
     "application_preference_cache": "harness/contracts/application-preference-cache.v1.json",
+    "employer_facing_document_url_contract": "contracts/employer-facing-document-url.v1.json",
+    "employer_facing_document_url_validator": "scripts/validate_employer_facing_document_url.py",
     "application_form_workflow": "harness/workflows/APPLICATION_FORM_INTAKE.md",
     "resume_presentation_contract": "contracts/resume-presentation.v1.json",
     "local_runtime_lifecycle_contract": "contracts/local-runtime-lifecycle.v1.json",
@@ -47,6 +49,7 @@ VALIDATION_ORDER = [
     "python scripts/validate_product_version.py",
     "python scripts/validate_repository_promotion.py",
     "python scripts/validate_application_harness.py",
+    "python scripts/validate_employer_facing_document_url.py",
     "python scripts/validate_application_companion.py",
     "python scripts/validate_resume_presentation.py",
     "python scripts/validate_resume_presentation_visual.py",
@@ -75,6 +78,8 @@ REQUIRED_REGISTRY = {
     "Windows repo resolver": "scripts/resolve_repo.ps1",
     "Application form taxonomy": "harness/contracts/application-form-taxonomy.v1.json",
     "Application preference-cache policy": "harness/contracts/application-preference-cache.v1.json",
+    "Employer-facing document URL policy": "contracts/employer-facing-document-url.v1.json",
+    "Employer-facing document URL validator": "scripts/validate_employer_facing_document_url.py",
     "Application form intake workflow": "harness/workflows/APPLICATION_FORM_INTAKE.md",
     "Application mapping skill": "skills/application-form-mapping/SKILL.md",
     "Application automation report": "harness/reports/APPLICATION_FORM_AUTOMATION_STATE.md",
@@ -201,7 +206,7 @@ def validate_resolver() -> None:
 
 def validate_ci() -> None:
     text = read(".github/workflows/harness.yml")
-    for marker in ("name: Harness Validation","push:","pull_request:","name: Validate governance","run: python scripts/validate_governance.py","name: Validate product version","run: python scripts/validate_product_version.py","name: Test product version","run: python tests/test_product_version.py","name: Validate repository promotion","run: python scripts/validate_repository_promotion.py","name: Test promotion guard","run: python tests/test_repository_promotion.py","name: Validate application harness","run: python scripts/validate_application_harness.py","name: Validate application companion","run: python scripts/validate_application_companion.py","name: Validate resume presentation","run: python scripts/validate_resume_presentation.py","name: Validate harness","run: python scripts/validate_harness.py","name: Validate career-state contract","run: python scripts/validate_career_state.py","name: Validate local runtime lifecycle","run: python scripts/validate_local_runtime_lifecycle.py","git diff --check","windows-location:","scripts/resolve_repo.ps1 -ResolveOnly","WINDOWS_REPO_ROOT=PASS"):
+    for marker in ("name: Harness Validation","push:","pull_request:","name: Validate governance","run: python scripts/validate_governance.py","name: Validate product version","run: python scripts/validate_product_version.py","name: Test product version","run: python tests/test_product_version.py","name: Validate repository promotion","run: python scripts/validate_repository_promotion.py","name: Test promotion guard","run: python tests/test_repository_promotion.py","name: Validate application harness","run: python scripts/validate_application_harness.py","name: Validate employer-facing document URL policy","run: python scripts/validate_employer_facing_document_url.py","name: Validate application companion","run: python scripts/validate_application_companion.py","name: Validate resume presentation","run: python scripts/validate_resume_presentation.py","name: Validate harness","run: python scripts/validate_harness.py","name: Validate career-state contract","run: python scripts/validate_career_state.py","name: Validate local runtime lifecycle","run: python scripts/validate_local_runtime_lifecycle.py","git diff --check","windows-location:","scripts/resolve_repo.ps1 -ResolveOnly","WINDOWS_REPO_ROOT=PASS"):
         if marker not in text:
             raise HarnessError(f"CI missing active marker: {marker}")
     # Promotion workflow must exist and have correct triggers

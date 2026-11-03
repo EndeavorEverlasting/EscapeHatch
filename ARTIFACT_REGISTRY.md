@@ -102,6 +102,11 @@ user-owned and untracked. Installation receipt/shortcut removal never deletes th
 | Managed prepare synthetic proof script | `scripts/proof_managed_prepare_synthetic.mjs` | tracked operator/agent proof driver | exercise product control plane only; never terminal submit | same as receipt above |
 | Application form taxonomy | `harness/contracts/application-form-taxonomy.v1.json` | tracked versioned harness contract | add/reuse semantic question IDs and generic aliases only | `python scripts/validate_application_harness.py` |
 | Application preference-cache policy | `harness/contracts/application-preference-cache.v1.json` | tracked versioned harness contract | update persistence/privacy/precedence policy; never add real values | `python scripts/validate_application_harness.py` |
+| EscapeHatch user-data resolver | `scripts/resolve_escapehatch_user_data.py` | tracked discoverability tool | resolve OS-private DATA_HOME and preference store path without printing values | `python scripts/resolve_escapehatch_user_data.py` |
+| Managed application prepare workflow | `scripts/prepare_managed_application.mjs` | tracked operator workflow | launch/fill/arm/readiness for a saved opportunity; default stop before Submit | `node scripts/prepare_managed_application.mjs --company <Name>` |
+| Managed application prepare launcher | `scripts/windows/EscapeHatch-Prepare-Application.ps1` | tracked Windows launcher | ensure runtime then run prepare workflow | `powershell -File scripts/windows/EscapeHatch-Prepare-Application.ps1 -Company <Name>` |
+| Employer-facing document URL policy | `contracts/employer-facing-document-url.v1.json` | tracked versioned product contract | forbid Google Drive/Docs links in employer resume/CV/transcript/cover URL fields | `python scripts/validate_employer_facing_document_url.py` |
+| Employer-facing document URL validator | `scripts/validate_employer_facing_document_url.py` | tracked contract validator | update with private-cloud URL forbid hosts and fill-path owners | `python scripts/validate_employer_facing_document_url.py` |
 | Application form intake workflow | `harness/workflows/APPLICATION_FORM_INTAKE.md` | tracked workflow | update when form-mapping procedure changes | `python scripts/validate_harness.py` |
 | Application mapping skill | `skills/application-form-mapping/SKILL.md` | tracked scoped skill | update repeatable question-mapping procedure | `python scripts/validate_harness.py` |
 | Application automation report | `harness/reports/APPLICATION_FORM_AUTOMATION_STATE.md` | tracked operator report | update coverage/gaps without selected answers | `python scripts/validate_harness.py` |
@@ -203,6 +208,16 @@ The following are intentionally **not** tracked repository artifacts:
 | Source resume references (do not mutate) | user | operator folder `Source Resumes Not to Mutate but to Generate/` is gitignored; visual reverse-engineering reads only; generator writes elsewhere |
 | Visual resume PDF (optional projection) | user | may follow `contracts/resume-presentation-visual.v1.json`; marked not-for-ATS-submission; keep under `private/` or `Outputs/resume-visual/` |
 | Live ATS/application evidence | user/operator | keep local unless sanitized into an approved fixture/report |
+
+
+## Context boundaries and private-profile handoff registration (2026-10-31)
+
+| Artifact | Path | Policy | Update trigger | Validation |
+| --- | --- | --- | --- | --- |
+| Self-contained context-boundary handoff | `docs/agent/CONTEXT_BOUNDARY_AND_PRIVATE_PROFILE_HANDOFF_2026-10-31.md` | Tracked and sanitized; no private profile bytes/URLs, applicant values or personal developer rules | Private author-voice correction, user/developer/repo boundary or local-agent continuity changes | `python scripts/validate_agent_context_boundaries.py` |
+| Agent context boundary contract | `harness/contracts/agent-context-boundaries.v1.json` | Tracked schema/owner routing; local EscapeHatch harness must be independently discoverable | Cross-harness contexts, local profile ownership or policy-adapter changes | `python scripts/validate_agent_context_boundaries.py` |
+| Agent context boundary validator | `scripts/validate_agent_context_boundaries.py` | Tracked stdlib validator with synthetic leak-negative self-test | Contract or handoff changes | `python scripts/validate_agent_context_boundaries.py --self-test` and `python scripts/validate_agent_context_boundaries.py` |
+
 
 ## Validation output
 

@@ -333,6 +333,10 @@ def emit_receipt(receipt: dict, run_id: str | None = None) -> None:
 
 
 
+MANAGED_BROWSER_WORKFLOW = ROOT / ".github" / "workflows" / "managed-browser-assist.yml"
+MANAGED_BROWSER_CHECK_NAME = "managed-browser-assist"
+
+
 def observed_browser_check(payload: dict, candidate_sha: str, job_name: str) -> tuple[int, str]:
     """Real provider check-run evidence, never the simulated cmd_check success list.
 
@@ -347,29 +351,97 @@ def observed_browser_check(payload: dict, candidate_sha: str, job_name: str) -> 
     ]
     if not matching:
         if any(isinstance(run, dict) and run.get("name") == job_name for run in payload["check_runs"]):
-            return 1, "browser job belongs to another commit SHA"
-        return 2, "required browser job not yet reported for exact head"
+            return 1, f"{job_name}: browser job belongs to another commit SHA"
+        return 2, f"{job_name}: required browser job not yet reported for exact head"
     latest = max(matching, key=lambda run: int(run.get("id") or 0))
     if latest.get("status") != "completed":
-        return 2, "browser job has not completed"
+        return 2, f"{job_name}: browser job has not completed"
     if latest.get("conclusion") != "success":
-        return 1, "browser job concluded " + str(latest.get("conclusion") or "unknown")
-    return 0, "browser job completed successfully on exact candidate"
+        return 1, f"{job_name}: browser job concluded " + str(latest.get("conclusion") or "unknown")
+    return 0, f"{job_name}: browser job completed successfully on exact candidate"
 
 
-def cmd_verify_browser(args: argparse.Namespace) -> int:
-    required = [item for item in load_required_checks(destination=args.target)
+def load_managed_browser_path_triggers() -> set[str]:
+    """Exact path entries that activate Managed Browser Assist Validation (from its workflow)."""
+    text = MANAGED_BROWSER_WORKFLOW.read_text(encoding="utf-8")
+    paths: set[str] = set()
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("- \"") and stripped.endswith("\""):
+            paths.add(stripped[3:-1])
+        elif stripped.startswith("- '") and stripped.endswith("'"):
+            paths.add(stripped[3:-1])
+    return paths
+
+
+def path_activates_managed_browser(changed_paths: list[str]) -> bool:
+    triggers = load_managed_browser_path_triggers()
+    for path in changed_paths:
+        if path.replace("\\", "/").lstrip("./") in triggers:
+            return True
+    return False
+
+
+def managed_browser_activated_on_head(payload: dict, candidate_sha: str) -> bool:
+    runs = payload.get("check_runs") if isinstance(payload, dict) else None
+    if not isinstance(runs, list):
+        return False
+    for run in runs:
+        if not isinstance(run, dict):
+            continue
+        if run.get("head_sha") != candidate_sha:
+            continue
+        if run.get("name") == MANAGED_BROWSER_CHECK_NAME:
+            return True
+    return False
+
+
+def resolve_browser_promotion_jobs(
+    destination: str,
+    payload: dict,
+    candidate_sha: str,
+    changed_paths: list[str] | None = None,
+) -> list[str]:
+    """Always require Web Cockpit; require Managed Browser Assist when paths or activation demand it."""
+    required = [item for item in load_required_checks(destination=destination)
                 if item["workflow"] == "Web Cockpit Validation"]
     if len(required) != 1:
         raise GuardError("exactly one required Web Cockpit browser job must exist in promotion manifest")
+    jobs = [required[0]["job"]]
+    paths = changed_paths or []
+    if path_activates_managed_browser(paths) or managed_browser_activated_on_head(payload, candidate_sha):
+        jobs.append(MANAGED_BROWSER_CHECK_NAME)
+    return jobs
+
+
+def load_changed_paths(path_file: str | None) -> list[str]:
+    if not path_file or not str(path_file).strip():
+        return []
+    text = Path(path_file).read_text(encoding="utf-8")
+    return [line.strip() for line in text.splitlines() if line.strip()]
+
+
+def cmd_verify_browser(args: argparse.Namespace) -> int:
     try:
         with open(args.checks_file, encoding="utf-8") as source:
             payload = json.load(source)
     except (OSError, json.JSONDecodeError) as exc:
         raise GuardError("cannot read actual provider check-runs: " + str(exc)) from exc
-    status, reason = observed_browser_check(payload, args.candidate_sha, required[0]["job"])
-    print(f"BROWSER_PROMOTION_GATE: {'PASS' if status == 0 else 'PENDING' if status == 2 else 'BLOCKED'} — {reason}")
-    return status
+    changed_paths = load_changed_paths(getattr(args, "changed_paths_file", None))
+    jobs = resolve_browser_promotion_jobs(args.target, payload, args.candidate_sha, changed_paths)
+    worst_status = 0
+    reasons: list[str] = []
+    for job_name in jobs:
+        status, reason = observed_browser_check(payload, args.candidate_sha, job_name)
+        reasons.append(reason)
+        if status == 1:
+            worst_status = 1
+            break
+        if status == 2 and worst_status != 1:
+            worst_status = 2
+    label = "PASS" if worst_status == 0 else "PENDING" if worst_status == 2 else "BLOCKED"
+    print(f"BROWSER_PROMOTION_GATE: {label} — " + "; ".join(reasons))
+    return worst_status
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -390,6 +462,11 @@ def build_parser() -> argparse.ArgumentParser:
     browser_p.add_argument("--candidate-sha", required=True)
     browser_p.add_argument("--checks-file", required=True)
     browser_p.add_argument("--target", default="main")
+    browser_p.add_argument(
+        "--changed-paths-file",
+        default="",
+        help="Newline-separated PR paths; when they match Managed Browser Assist triggers, that job is required",
+    )
     browser_p.set_defaults(func=cmd_verify_browser)
 
     sub.add_parser("self-test", help="Run fault-injection proofs for blocking paths").set_defaults(func=cmd_self_test)

@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test';
 import { matchQuestion, normalizeQuestion, discoveredValue, optionMatches, reusableValue, isRoutineApplicantPrivacyAcknowledgement, type Preferences } from './src/lib/application-preferences.ts';
+import { assertEmployerFacingDocumentUrl } from './src/lib/employer-facing-document-url.ts';
 
 export type FillOutcome = { filled: string[]; skipped: string[] };
 
@@ -176,6 +177,12 @@ export async function fillSavedPreferences(page: Page, preferences: Preferences,
     // Conditional detail is applicable only when a clearance is held. Never invent a clearance.
     if (id === 'employment.clearance_details' && reusableValue('employment.current_clearance', preferences) === 'No') value = 'N/A';
     if (!value) { result.skipped.push(id + ':missing_or_current_confirmation_required'); continue; }
+    try {
+      assertEmployerFacingDocumentUrl(descriptor.prompts.join(' '), value);
+    } catch {
+      result.skipped.push(id + ':private_cloud_document_url_forbidden');
+      continue;
+    }
     try {
       if (!await control.isVisible() || !await control.isEnabled() || await control.getAttribute('readonly') !== null) {
         result.skipped.push(id + ':unavailable'); continue;

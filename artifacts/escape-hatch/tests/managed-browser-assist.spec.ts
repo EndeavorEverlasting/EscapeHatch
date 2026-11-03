@@ -282,7 +282,7 @@ test('reusable role list and binary dropdowns persist through the preferences AP
   await page.getByLabel('gender', { exact: true }).selectOption('Male');
   await page.getByLabel('race / ethnicity', { exact: true }).selectOption('Hispanic or Latino');
   await page.getByRole('button', { name: 'Save Preferences', exact: true }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'Preferences saved on this computer' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Shared EscapeHatch profile saved' })).toBeVisible();
   expect(saved.job_titles).toEqual(['Synthetic Role']);
   expect((saved.preferences as Record<string, { value: string }>)['eeo.gender'].value).toBe('Male');
   expect((saved.preferences as Record<string, { value: string }>)['eeo.race_ethnicity'].value).toBe('Hispanic or Latino');

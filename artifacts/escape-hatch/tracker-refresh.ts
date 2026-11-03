@@ -29,7 +29,8 @@ const required = ['company', 'role', 'status', 'priority', 'applyUrl', 'appliedC
 export function createTrackerSnapshotFromValues(values: unknown, target: TrackerTarget, authPath: string, capturedAt: Date): TrackerSnapshot {
   if (!validTarget(target) || Number.isNaN(capturedAt.getTime())) fail('INVALID_TARGET');
   if (!Array.isArray(values) || values.length < 1 || values.length >= ROW_LIMIT) fail('INCOMPLETE_RESPONSE');
-  if (!values.every(row => Array.isArray(row) && row.length <= 26 && row.every(cell => ['string', 'number', 'boolean'].includes(typeof cell)))) fail('INVALID_ROWS');
+  // A–AJ covers legacy A:Z fields plus Submission Proof (AD) and portal-profile AE:AJ.
+  if (!values.every(row => Array.isArray(row) && row.length <= 36 && row.every(cell => ['string', 'number', 'boolean'].includes(typeof cell)))) fail('INVALID_ROWS');
   const heading = values[0] as (string | number | boolean)[];
   const seen = new Set<string>();
   const columns = heading.map(cell => {
@@ -172,7 +173,7 @@ async function refreshTrackerSnapshotNow(snapshotFile: string, options: RefreshO
   let response: Response | undefined;
   try {
     if (auth.token.length > 16384 || /[\r\n]/.test(auth.token)) fail('AUTH_REQUIRED');
-    const range = `'${current.sheetName.replace(/'/g, "''")}'!A1:Z${ROW_LIMIT}`;
+    const range = `'${current.sheetName.replace(/'/g, "''")}'!A1:AJ${ROW_LIMIT}`;
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(current.spreadsheetId)}/values/${encodeURIComponent(range)}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE`;
     response = await (options.fetch || fetch)(url, { headers: { authorization: `Bearer ${auth.token}` }, signal: controller.signal, redirect: 'error' });
     if (response.status === 401 || response.status === 403) return { ok: false, refreshed: false, error: 'AUTH_REQUIRED' };
@@ -183,7 +184,16 @@ async function refreshTrackerSnapshotNow(snapshotFile: string, options: RefreshO
     const prefixes = [`'${sheet.replace(/'/g, "''")}'!`, `${sheet}!`];
     const prefix = prefixes.find(value => raw.range.startsWith(value));
     const extent = prefix && /^A1:([A-Z]+)([1-9][0-9]*)$/.exec(raw.range.slice(prefix.length));
-    if (!extent || extent[1].length > 1 || extent[1] > 'Z' || Number(extent[2]) > ROW_LIMIT) fail('INCOMPLETE_RESPONSE');
+    const columnIndex = (letters: string) => {
+      if (!letters || letters.length > 2) return -1;
+      let n = 0;
+      for (const ch of letters) {
+        if (ch < 'A' || ch > 'Z') return -1;
+        n = n * 26 + (ch.charCodeAt(0) - 64);
+      }
+      return n - 1;
+    };
+    if (!extent || columnIndex(extent[1]) < 0 || columnIndex(extent[1]) > 35 || Number(extent[2]) > ROW_LIMIT) fail('INCOMPLETE_RESPONSE');
     const snapshot = createTrackerSnapshotFromValues(raw.values, current, auth.source, (options.now || (() => new Date()))());
     if (controller.signal.aborted) fail('TIMEOUT');
     if (await readBoundedFile(snapshotFile, MAX_BYTES) !== previous) return { ok: false, refreshed: false, error: 'SOURCE_CHANGED_RETRY' };

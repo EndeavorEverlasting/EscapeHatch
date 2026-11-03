@@ -161,7 +161,10 @@ test('unanswered encountered question persists without fill until explicit user 
     assert.equal(data.discovered_answers?.[key]?.source,'user');
     await fillSavedPreferences(page,data);
     assert.equal(await page.getByLabel('Preferred working environment').inputValue(),'Remote');
-    assert.equal(parsePreferences({...data,discovered_answers:{[key]:{...data.discovered_answers![key],source:'observed_question',accepted:true}}}),null);
+    // Invalid discovered rows are skipped so a stale taxonomy alias cannot poison the whole profile.
+    const cleaned = parsePreferences({...data,discovered_answers:{[key]:{...data.discovered_answers![key],source:'observed_question',accepted:true}}});
+    assert.ok(cleaned);
+    assert.equal(cleaned.discovered_answers?.[key], undefined);
     await stop();
   } finally {await browser.close();}
 });

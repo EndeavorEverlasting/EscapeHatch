@@ -116,7 +116,7 @@ in the launch terminal) with its own worktree and installed dependencies.
 
 ## Reusable answers and local persistence
 
-The managed assist page includes Save/Export/Import/Clear Preferences. Explicit choices use the existing `escapehatch-application-question-preferences/v1` schema and canonical question taxonomy. The local file adapter defaults to `private/application-question-preferences.json`; `ESCAPEHATCH_PREFERENCES_FILE` selects a shared private file across worktrees/ports. Never commit that file, exported answers, or raw employer forms. Invalid imports preserve saved data. Clearing removes the saved file; imported data is staged for review until Save.
+The managed assist page includes Save/Export/Import/Clear Preferences. Explicit choices use the existing `escapehatch-application-question-preferences/v1` schema and canonical question taxonomy. The canonical OS-private store is `%LOCALAPPDATA%\EscapeHatch\application-question-preferences.json` (or `ESCAPEHATCH_DATA_HOME` / `ESCAPEHATCH_PREFERENCES_FILE`). Discover it with `python scripts/resolve_escapehatch_user_data.py` or `EscapeHatch-Runtime.ps1 -Action Status`. That one file is the shared owner across managed Chrome, the cockpit, native messaging, and the extension bridge for the signed-in OS user. Never commit that file, exported answers, or raw employer forms. Invalid imports preserve saved data. Clearing removes the saved file; imported data is staged for review until Save. Use `identity.website` for portfolio / LinkedIn-or-portfolio fields and `identity.linkedin` only for LinkedIn-specific fields.
 
 Fill approved profile and answers reads the saved file on each action. Recognized text/native-select/radio fields use exact normalized question aliases and explicit option equivalents. Unknown/ambiguous fields, missing answers, unsupported controls, existing values, and changed origins are skipped. No agreement checkbox, signature, Submit, or Next is activated. Citizenship, current clearance and conditional clearance-detail prompts are registered in the taxonomy. No-clearance detail becomes N/A only from an explicit saved No. Sponsorship is an explicit reusable preference until changed; other per-application legal/current facts retain their confirmation gates. Race/ethnicity is never inferred from a name; an absent matching option remains unresolved.
 
@@ -157,8 +157,8 @@ origin changes, and is disabled when editing/importing preferences to avoid repl
 edits. It never clicks an employer control or stores raw form contents. The optional MV3 metadata
 listener is a different lane and is not silently upgraded by this managed-runtime change.
 
-The preferences destination defaults to `<running-checkout>/private/application-question-preferences.json`;
-`ESCAPEHATCH_PREFERENCES_FILE` overrides it. Import Preferences stages a valid JSON export; Save
+The preferences destination defaults to the OS-private EscapeHatch user-data root above;
+`ESCAPEHATCH_PREFERENCES_FILE` overrides the exact file. Import Preferences stages a valid JSON export; Save
 Preferences persists it. Resume source review and PDF attachment selection are separate workflows.
 
 ## Work, education, posting context, and operator professional titles

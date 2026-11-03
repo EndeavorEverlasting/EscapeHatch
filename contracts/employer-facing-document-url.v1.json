@@ -1,0 +1,36 @@
+{
+  "schema": "escapehatch/employer-facing-document-url/v1",
+  "version": 1,
+  "owner": "contracts/employer-facing-document-url.v1.json",
+  "purpose": "Prevent agents and fill paths from placing private-cloud document links into employer-visible resume/CV/transcript/cover URL fields.",
+  "document_url_field_label_pattern": "\\b(resume|résumé|cv|curriculum\\s*vitae|transcript|cover[\\s-]?letter)\\b",
+  "forbidden_url_host_suffixes": [
+    "drive.google.com",
+    "docs.google.com",
+    "sheets.google.com",
+    "drive.usercontent.google.com",
+    "docs.googleusercontent.com"
+  ],
+  "allowed_examples": [
+    "https://www.perezparallax.dev/static/resume/current.pdf",
+    "applicant-controlled public HTTPS PDF resume URLs when the employer field asks for a PDF"
+  ],
+  "forbidden_examples": [
+    "https://drive.google.com/file/d/<id>/view",
+    "https://docs.google.com/document/d/<id>/edit",
+    "https://drive.google.com/uc?id=<id>&export=download",
+    "https://www.perezparallax.dev/static/resume/current.html when the employer field asks for a PDF"
+  ],
+  "pdf_labeled_field_rule": "When the field label mentions PDF, the URL path must end with .pdf. Leave the optional field blank rather than pasting an HTML resume page.",
+  "runtime_enforcement": {
+    "pure_module": "artifacts/escape-hatch/src/lib/employer-facing-document-url.ts",
+    "fill_path": "artifacts/escape-hatch/managed-form.ts",
+    "manual_type_path": "artifacts/escape-hatch/browser-assist-control.ts#type-labeled",
+    "prepare_path": "scripts/prepare_managed_application.mjs",
+    "error_code": "private_cloud_document_url_forbidden",
+    "pdf_error_code": "employer_facing_document_url_must_be_pdf"
+  },
+  "privacy": {
+    "rule": "Employer ATS fields must not receive Google Drive/Docs links that require the employer's Google account access or expose private Drive ACL assumptions."
+  }
+}

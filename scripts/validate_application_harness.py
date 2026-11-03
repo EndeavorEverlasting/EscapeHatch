@@ -113,6 +113,33 @@ def validate_preferences(data: dict) -> None:
     for required in ("Save Preferences","Export Preferences","Import Preferences","Clear Preferences"):
         if required not in controls:
             raise ContractError(f"missing preference control: {required}")
+    canonical = storage.get("canonical_store")
+    if not isinstance(canonical, dict):
+        raise ContractError("canonical_store required for cross-browser preference durability")
+    if canonical.get("owner") != "os_private_user_data":
+        raise ContractError("canonical_store.owner must be os_private_user_data")
+    if canonical.get("filename") != "application-question-preferences.json":
+        raise ContractError("canonical_store.filename mismatch")
+    if "%LOCALAPPDATA%\\EscapeHatch\\application-question-preferences.json" not in str(canonical.get("windows_default", "")):
+        raise ContractError("canonical_store.windows_default must name LOCALAPPDATA EscapeHatch path")
+    order = canonical.get("resolution_order")
+    if not isinstance(order, list) or "ESCAPEHATCH_PREFERENCES_FILE" not in str(order[0] if order else ""):
+        raise ContractError("canonical_store.resolution_order must prefer ESCAPEHATCH_PREFERENCES_FILE")
+    shared = set(canonical.get("shared_across") or [])
+    for required in {"managed_browser_assist", "native_messaging_host", "extension_bridge", "isolated_worktrees"}:
+        if required not in shared:
+            raise ContractError(f"canonical_store.shared_across missing {required}")
+    not_sot = set(canonical.get("not_source_of_truth") or [])
+    for required in {"chrome.storage.local alone", "per-checkout private/application-question-preferences.json", "repository-tracked files"}:
+        if required not in not_sot:
+            raise ContractError(f"canonical_store.not_source_of_truth missing {required}")
+    semantics = canonical.get("field_semantics") or {}
+    if "identity.website" not in semantics or "identity.linkedin" not in semantics:
+        raise ContractError("canonical_store.field_semantics must distinguish website vs linkedin")
+    discoverability = set(canonical.get("discoverability") or [])
+    for required in {"python scripts/resolve_escapehatch_user_data.py", "EscapeHatch-Runtime.ps1 -Action Status"}:
+        if required not in discoverability:
+            raise ContractError(f"canonical_store.discoverability missing {required}")
     portability = data.get("portability", {})
     if portability.get("export_schema") != "escapehatch-application-question-preferences/v1":
         raise ContractError("preference export schema mismatch")

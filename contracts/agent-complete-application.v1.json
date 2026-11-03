@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "escapehatch/contracts/agent-complete-application.v1.json",
+  "title": "EscapeHatch agent complete-application trigger",
+  "description": "Canonical agent/operator trigger after the user confirms the managed application form is ready. Invokes the repository CompleteApplication runner, which rearms listeners, clicks Submit via managed-assist, persists receipts, and runs SubmissionSync so local queue + Google Sheet update.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "trigger", "entrypoint", "preconditions", "effects"],
+  "properties": {
+    "schema": { "const": "escapehatch/agent-complete-application/v1" },
+    "trigger": {
+      "type": "string",
+      "const": "operator_form_cleared_for_submit",
+      "description": "Fires only after the user is satisfied with populated answers on the bound managed page."
+    },
+    "entrypoint": {
+      "type": "string",
+      "const": "scripts/windows/EscapeHatch-AgentCompleteApplication.ps1"
+    },
+    "completeApplication": {
+      "type": "string",
+      "const": "scripts/windows/EscapeHatch-CompleteApplication.ps1"
+    },
+    "submissionSync": {
+      "type": "string",
+      "const": "scripts/windows/EscapeHatch-SubmissionSync.ps1"
+    },
+    "assistRoutes": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [
+        "/__escapehatch/managed-assist/listeners",
+        "/__escapehatch/managed-assist/submit-authorized",
+        "/__escapehatch/managed-assist/status"
+      ]
+    },
+    "preconditions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [
+        "managed_browser_open",
+        "opportunity_bound",
+        "user_confirmed_form_ready",
+        "google_connector_present",
+        "submission_sync_task_registered"
+      ]
+    },
+    "effects": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [
+        "playwright_submit_click",
+        "submission_listener_armed_then_confirmed",
+        "managed_submission_receipt_written",
+        "submission_tracker_outbox_updated",
+        "google_sheet_applied_and_submission_proof",
+        "workspace_application_status_applied"
+      ]
+    },
+    "broadcastwellProof": {
+      "type": "string",
+      "const": "FRAMER_FORMS_HTTP_201",
+      "description": "Broadcastwell keeps Submit visible; employer acceptance is Framer forms HTTP 201, never static Application received copy alone."
+    }
+  }
+}

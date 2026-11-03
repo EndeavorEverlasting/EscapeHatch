@@ -63,7 +63,7 @@ test('real request is fixed to existing binding and only a validated response up
     const url = new URL(String(input));
     assert.equal(url.hostname, 'sheets.googleapis.com');
     assert.equal(url.searchParams.get('valueRenderOption'), 'FORMATTED_VALUE');
-    assert.equal(decodeURIComponent(url.pathname), `/v4/spreadsheets/${target.spreadsheetId}/values/'Applications'' history'!A1:Z1500`);
+    assert.equal(decodeURIComponent(url.pathname), `/v4/spreadsheets/${target.spreadsheetId}/values/'Applications'' history'!A1:AJ1500`);
     assert.equal(init?.redirect, 'error');
     assert.equal((init?.headers as Record<string, string>).authorization, 'Bearer synthetic-secret');
     assert.ok(init?.signal);

@@ -359,6 +359,8 @@ jobs:
           fi
           # Actual browser CI must complete on the exact PR head before any merge.
           # Synthetic green receipts from cmd_check are NOT substitute evidence.
+          # Path-activated Managed Browser Assist is required when PR files match its triggers.
+          gh api repos/${{ github.repository }}/pulls/${pr}/files --paginate --jq '.[].filename' > /tmp/pr-changed-paths.txt
           browser_gate_code=2
           for attempt in $(seq 1 36); do
             if ! gh api repos/${{ github.repository }}/commits/${expected_head_sha}/check-runs > /tmp/check-runs-final.json; then
@@ -366,7 +368,7 @@ jobs:
               exit 1
             fi
             set +e
-            python scripts/promotion_guard.py verify-browser --candidate-sha "$expected_head_sha" --checks-file /tmp/check-runs-final.json --target main
+            python scripts/promotion_guard.py verify-browser --candidate-sha "$expected_head_sha" --checks-file /tmp/check-runs-final.json --changed-paths-file /tmp/pr-changed-paths.txt --target main
             browser_gate_code=$?
             set -e
             if [ "$browser_gate_code" -eq 0 ]; then

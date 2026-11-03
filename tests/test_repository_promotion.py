@@ -54,9 +54,13 @@ class RepositoryPromotionTests(unittest.TestCase):
         self.assertNotIn("paths:", pr_part)
         workflow = (ROOT / ".github/workflows/promotion.yml").read_text(encoding="utf-8")
         self.assertIn("verify-browser --candidate-sha", workflow)
+        self.assertIn("--changed-paths-file", workflow)
         self.assertIn("ready_for_review", workflow)
         self.assertIn("BROWSER_GATE_FAILED: no promotion", workflow)
         self.assertIn("BROWSER_GATE_TIMEOUT: no promotion", workflow)
+        managed = (ROOT / ".github/workflows/managed-browser-assist.yml").read_text(encoding="utf-8")
+        self.assertIn("name: managed-browser-assist", managed)
+        self.assertIn("paths:", managed)
 
     def test_browser_check_fail_closed_against_real_provider_payload(self):
         name = "web-cockpit-browser"
@@ -72,6 +76,40 @@ class RepositoryPromotionTests(unittest.TestCase):
         self.assertEqual(verify({"not_check_runs": []}, sha, name)[0], 1)
         # A recent failing rerun must not be masked by an older green attempt.
         self.assertEqual(verify({"check_runs": [run, dict(run, id=11, conclusion="failure")]}, sha, name)[0], 1)
+
+    def test_managed_browser_assist_blocks_when_path_activated_even_if_web_cockpit_green(self):
+        sha = "a" * 40
+        cockpit = dict(name="web-cockpit-browser", head_sha=sha, id=10, status="completed", conclusion="success")
+        managed_fail = dict(
+            name="managed-browser-assist", head_sha=sha, id=11, status="completed", conclusion="failure",
+        )
+        payload = {"check_runs": [cockpit, managed_fail]}
+        jobs = self.guard.resolve_browser_promotion_jobs(
+            "main", payload, sha,
+            changed_paths=["artifacts/escape-hatch/src/lib/application-puzzle.ts"],
+        )
+        self.assertEqual(jobs, ["web-cockpit-browser", "managed-browser-assist"])
+        status, reason = self.guard.observed_browser_check(payload, sha, "managed-browser-assist")
+        self.assertEqual(status, 1)
+        self.assertIn("managed-browser-assist", reason)
+        # Workflow path list includes README.md — that alone requires Managed Browser Assist.
+        readme_paths = self.guard.resolve_browser_promotion_jobs(
+            "main", {"check_runs": [cockpit]}, sha, changed_paths=["README.md"],
+        )
+        self.assertIn("managed-browser-assist", readme_paths)
+        docs_only = self.guard.resolve_browser_promotion_jobs(
+            "main", {"check_runs": [cockpit]}, sha, changed_paths=["docs/unrelated.md"],
+        )
+        self.assertEqual(docs_only, ["web-cockpit-browser"])
+        # Activation on head alone (check present) still requires the job.
+        activated = self.guard.resolve_browser_promotion_jobs(
+            "main", payload, sha, changed_paths=["docs/unrelated.md"],
+        )
+        self.assertIn("managed-browser-assist", activated)
+        self.assertTrue(self.guard.path_activates_managed_browser(
+            ["artifacts/escape-hatch/application-requirements.ts"],
+        ))
+        self.assertFalse(self.guard.path_activates_managed_browser(["docs/unrelated.md"]))
 
     def test_contract_is_provider_agnostic_and_bound(self):
         # Provider-agnostic at contract, bound to one concrete adapter at runtime

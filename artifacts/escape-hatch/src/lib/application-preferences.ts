@@ -42,7 +42,10 @@ export function parsePreferences(input: unknown): Preferences | null {
     if (!data.discovered_answers || typeof data.discovered_answers !== 'object' || Array.isArray(data.discovered_answers) || Object.keys(data.discovered_answers).length > 100) return null;
     clean.discovered_answers = {};
     for (const [key, item] of Object.entries(data.discovered_answers)) {
-      if (!item || typeof item.question !== 'string' || !safeDiscoveredQuestion(item.question) || key !== normalizeQuestion(item.question) || typeof item.value !== 'string' || item.value.length > 512 || !['user', 'observed_question'].includes(item.source) || typeof item.accepted !== 'boolean' || (item.source === 'observed_question' ? item.value !== '' || item.accepted : !item.value.trim()) || typeof item.updated_at !== 'string' || Number.isNaN(Date.parse(item.updated_at))) return null;
+      // Skip stale/invalid discovered rows instead of poisoning the whole profile.
+      // Taxonomy alias growth can make a prior free-text question match a known ID;
+      // those answers belong in preferences, not discovered_answers.
+      if (!item || typeof item.question !== 'string' || !safeDiscoveredQuestion(item.question) || key !== normalizeQuestion(item.question) || typeof item.value !== 'string' || item.value.length > 512 || !['user', 'observed_question'].includes(item.source) || typeof item.accepted !== 'boolean' || (item.source === 'observed_question' ? item.value !== '' || item.accepted : !item.value.trim()) || typeof item.updated_at !== 'string' || Number.isNaN(Date.parse(item.updated_at))) continue;
       clean.discovered_answers[key] = { question: item.question, value: item.value.trim(), source: item.source, updated_at: item.updated_at, accepted: item.accepted };
     }
   }

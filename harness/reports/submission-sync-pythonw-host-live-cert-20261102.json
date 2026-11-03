@@ -1,0 +1,29 @@
+{
+  "schema": "escapehatch.submission-sync.pythonw-host.live-cert.v1",
+  "ok": true,
+  "certified_utc": "2026-11-02T15:36:40Z",
+  "task_name": "EscapeHatch-SubmissionSync-15111647d9fb",
+  "proof_level": "workstation_scheduled_tick_window_title_delta",
+  "before": {
+    "execute": "powershell.exe",
+    "classification": "CONSOLE_RISK / HIDDEN_POWERSHELL"
+  },
+  "after": {
+    "execute": "pythonw.exe",
+    "arguments_host": "submission_sync_silent_host.py",
+    "hidden": true,
+    "inspect": "OWNED_PYTHONW",
+    "repair_action": "RepairSilence",
+    "clock_preserved": true,
+    "task_name_preserved": true
+  },
+  "observation": {
+    "schtasks_run": true,
+    "console_like_window_title_delta": 0,
+    "last_result": 2,
+    "last_result_note": "Worker nonzero is functional, not a flash signal; SilentBackground receipt status=NONZERO"
+  },
+  "automation_pin": "3254c7fa946f91617e1f651784c4be33c3232e7e",
+  "proof_ceiling": "No new console window titles on /Run. Fullscreen focus preservation not separately instrumented in this receipt.",
+  "mutated_scheduler": "silence_repair_only_no_unregister"
+}

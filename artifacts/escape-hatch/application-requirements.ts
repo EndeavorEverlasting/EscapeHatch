@@ -85,3 +85,13 @@ export async function inspectRequiredFieldBlockers(page: Page, opportunityId: st
   try { return unresolvedCurrentPageRequirements(await inspectApplicationRequirements(page, opportunityId, applicationUrl)); }
   catch { return ['required_field_inventory_unverified']; }
 }
+
+/** Fail closed before any authorized terminal Submit click. */
+export function assertSubmitFormComplete(blockers: string[]): void {
+  if (!Array.isArray(blockers)) throw new Error('submit_readiness_unverified');
+  if (blockers.length > 0) {
+    const error = new Error('submit_blocked_incomplete_form');
+    (error as Error & { blockers: string[] }).blockers = blockers.slice(0, 40);
+    throw error;
+  }
+}

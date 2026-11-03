@@ -173,3 +173,7 @@ Resume an existing real application and hydrate previously approved answers from
 
 ### Résumé graph (P00/P01/P04)
 Never replace a persistent platform resume with a job derivative. Unknown slot => review. See `harness/contracts/resume-selection-graph.v1.json`. Operator controls Submit.
+
+### Self-contained agent context routing and private-profile continuation (2026-10-31)
+
+A local agent must be able to execute EscapeHatch work using this repository alone: read this `AGENTS.md`, `harness/WORKFLOWS.md`, `ARTIFACT_REGISTRY.md`, `docs/agent/TRIFECTA.md`, and the existing local contracts/validators. TokenCorridor is an optional upstream prompt/reference system, never a prerequisite to start or complete an EscapeHatch sprint. Keep applicant-private answers, personal developer/agent preferences, and product/repository doctrine in separate owner-scoped stores; do not publish actual applicant data in tracked source. On 2026-10-31 the operator requested a private, owner-safe author-voice/profile recovery plus durable local-agent handoff: start at `docs/agent/CONTEXT_BOUNDARY_AND_PRIVATE_PROFILE_HANDOFF_2026-10-31.md` and `harness/contracts/agent-context-boundaries.v1.json`, continue existing private profile issue #146 under parent #69, and validate with `python scripts/validate_agent_context_boundaries.py --self-test` followed by `python scripts/validate_agent_context_boundaries.py`. The private source is recorded; installed workspace persistence and employer form behavior must be verified separately. Preserve current browser edits and operator-only Submit.

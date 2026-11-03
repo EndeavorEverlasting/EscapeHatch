@@ -2,10 +2,20 @@ import { useEffect, useState } from 'react';
 import { emptyPreferences, parsePreferences, questions, preferenceChoices, expandProfessionalTitles, suggestProfessionalTitles, type Preferences } from '@/lib/application-preferences';
 
 const API = '/__escapehatch/managed-assist/preferences';
+type PreferenceStoreMeta = { dataHome: string; preferenceStore: string; source: string; exists: boolean };
+function preferenceFieldLabel(id: string, fallback: string) {
+  if (id === 'identity.title') return 'Salutation (Mr., Ms., Dr.)';
+  if (id === 'identity.job_title') return 'Target opportunity title';
+  if (id === 'identity.professional_title') return 'Selected professional title';
+  if (id === 'identity.website') return 'Portfolio website';
+  if (id === 'identity.linkedin') return 'LinkedIn profile';
+  return fallback;
+}
 export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '', reviewedExperience = '', refresh = 0, onEdit }: { onLoad?: (data: Preferences) => void; currentRole?: string; currentPosting?: string; reviewedExperience?: string; refresh?: number; onEdit?: () => void }) {
   const [data, setData] = useState<Preferences>(emptyPreferences);
   const [newTitle, setNewTitle] = useState('');
   const [message, setMessage] = useState('Loading saved preferences…');
+  const [store, setStore] = useState<PreferenceStoreMeta | null>(null);
   const [ready, setReady] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -17,7 +27,14 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
       const json = await response.json();
       const parsed = parsePreferences(json.preferences);
       if (!response.ok || !parsed) throw new Error();
-      setData(parsed); onLoad?.(parsed); setReady(true); setMessage('Saved on this computer. Reused until you edit or clear them.');
+      const meta = json.store && typeof json.store.preferenceStore === 'string'
+        ? { dataHome: String(json.store.dataHome || ''), preferenceStore: String(json.store.preferenceStore), source: String(json.store.source || 'platform_default'), exists: json.store.exists === true }
+        : null;
+      setStore(meta);
+      setData(parsed); onLoad?.(parsed); setReady(true);
+      setMessage(meta?.exists
+        ? 'Shared EscapeHatch profile found on this computer. Reused across browsers until you edit or clear it.'
+        : 'No shared profile file yet. Save Preferences to create the EscapeHatch profile on this computer.');
     } catch { setMessage('Saved preferences are unavailable. Start EscapeHatch with its local launcher; existing data was preserved.'); }
   }
   useEffect(() => { if (!dirty) void load(); else setMessage('New recorded answers are saved on disk. Save or reload your edits before reloading them here.'); }, [refresh]);
@@ -31,7 +48,7 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
       });
       if (!response.ok) throw new Error();
       await load(); setDirty(false); setClearRequested(false); setRemovedQuestions([]);
-      setMessage(clear ? 'Saved preferences cleared on this computer.' : 'Preferences saved on this computer. Fill will reuse these explicit answers.');
+      setMessage(clear ? 'Shared EscapeHatch profile cleared on this computer.' : 'Shared EscapeHatch profile saved. Fill will reuse these explicit answers across browsers on this account.');
     } catch { setMessage('Save failed. Your edits remain here; no successful persistence is claimed.'); }
     finally { setBusy(false); }
   }
@@ -42,7 +59,22 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
   }
   return <section className="mb-6 rounded-2xl border border-border bg-card p-5" data-testid="application-preferences">
     <h2 className="font-display text-2xl">Reusable application answers</h2>
-    <p className="mt-2 text-sm text-muted-foreground">Save your own answers once. Leave unknown facts blank. Review the employer form before submitting. Agreements and certifications stay manual.</p>
+    <p className="mt-2 max-w-prose text-sm leading-6 text-muted-foreground">Save your own answers once. Leave unknown facts blank. Review the employer form before submitting. Agreements and certifications stay manual.</p>
+    <aside className="preference-store-rail mt-4 border-l-4 border-primary/70 bg-primary/[0.04] py-3 pl-4 pr-3" aria-label="Shared EscapeHatch profile location" data-testid="preference-store-rail">
+      <p className="text-sm font-semibold text-foreground">Shared profile on this computer</p>
+      <p className="mt-1 text-sm leading-6 text-muted-foreground">
+        {store?.exists
+          ? 'One EscapeHatch profile file is ready for managed Chrome, the cockpit, and the paired extension on this user account.'
+          : 'EscapeHatch will create one shared profile file for this user account when you save.'}
+      </p>
+      <p className="mt-2 text-xs tracking-wide text-muted-foreground">
+        Status: <span className="font-medium text-foreground">{store ? (store.exists ? 'Present' : 'Not created yet') : 'Checking…'}</span>
+      </p>
+      {store?.preferenceStore && <details className="mt-2 text-xs text-muted-foreground">
+        <summary className="cursor-pointer select-none font-medium text-foreground/90">Exact store path</summary>
+        <p className="mt-2 break-all font-mono text-[0.7rem] leading-5 text-muted-foreground" data-testid="preference-store-path">{store.preferenceStore}</p>
+      </details>}
+    </aside>
     <fieldset disabled={!ready || busy}>
       <section className="mt-4 rounded-xl border border-border p-4" aria-label="Applicant privacy acknowledgements">
         <h3 className="font-display text-xl">Applicant privacy acknowledgements</h3>
@@ -56,7 +88,7 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
       </section>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {questions.filter(q => q.automation_policy === 'fill_if_explicit_preference' && q.confirmation_policy === 'until_changed' && q.id !== 'identity.full_name' && !q.id.startsWith('experience.') && !['education.institution', 'education.credential', 'education.field_of_study', 'education.dates', 'education.details'].includes(q.id)).map(q => {
-          const label = q.id === 'identity.title' ? 'Salutation (Mr., Ms., Dr.)' : q.id === 'identity.job_title' ? 'Target opportunity title' : q.id === 'identity.professional_title' ? 'Selected professional title' : q.aliases[0];
+          const label = preferenceFieldLabel(q.id, q.aliases[0]);
           const value = data.preferences[q.id]?.value || '';
           const choices = q.id === 'identity.job_title' ? [...new Set([...(data.job_titles || []), ...(value ? [value] : [])])] : q.id === 'identity.professional_title' ? [...new Set([...(data.professional_titles || []), ...(value ? [value] : [])])] : preferenceChoices[q.id];
           const change = (value: string) => {

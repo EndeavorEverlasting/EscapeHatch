@@ -11,7 +11,7 @@ Use this workflow when an application page contains reusable identity, demograph
 - Harness artifact registry: `ARTIFACT_REGISTRY.md`
 - Product career state: `contracts/career-state.v1.schema.json`
 
-The taxonomy owns semantic question IDs. It does not own real user answers. Real preferences remain user-owned local state. The managed app may use the registered private local-file adapter; browser storage remains the extension adapter.
+The taxonomy owns semantic question IDs. It does not own real user answers. Real preferences remain user-owned local state in the canonical OS-private store (`%LOCALAPPDATA%\EscapeHatch\application-question-preferences.json`, overridable by `ESCAPEHATCH_DATA_HOME` / `ESCAPEHATCH_PREFERENCES_FILE`). Discover the path with `python scripts/resolve_escapehatch_user_data.py` or Runtime Status — never print preference values. Browser storage is a projection/adapter, not a competing authority.
 
 ## Order-independent intake
 

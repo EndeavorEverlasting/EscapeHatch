@@ -432,7 +432,7 @@
   "required_checks_manifest": {
     "policy_version": "1",
     "owner_path": "contracts/repository-promotion.v1.json#required_checks_manifest",
-    "description": "Explicit repository-owned required-check names for each destination. Query conclusions for exact candidate SHA; require every named check; do not infer readiness from whichever checks happen to be visible, aggregate green badge, or check counts. Renamed/missing check is blocking contract mismatch until policy deliberately updated.",
+    "description": "Explicit repository-owned required-check names for each destination. Query conclusions for exact candidate SHA; require every named check; do not infer readiness from whichever checks happen to be visible, aggregate green badge, or check counts. Renamed/missing check is blocking contract mismatch until policy deliberately updated. Duplicate required-check evidence without provider attempt identity is ambiguous and blocks promotion regardless of input order; resolve attempts in the provider adapter before evaluating normalized checks.",
     "destinations": {
       "main": {
         "branch": "main",

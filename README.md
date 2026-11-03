@@ -12,6 +12,16 @@ The [Windows preview package workflow](.github/workflows/windows-preview-package
 
 **Current distribution gate:** Signed packaging and Chrome Web Store enrollment are not yet a verified single-download consumer journey. The 1.5.0 candidate bundles Node/npm and registers an owned per-user native host. Review the private workspace fields and approved answers in the extension once, then connect that Chrome profile. Later opens refresh the approved projection; changed source requires review again. Known answers appear inside the extension module. Phone authority requires separate approval. A different Chrome profile or conflicting saved information is rejected. The new nativeMessaging permission requires browser approval. The [execution record](docs/agent/P04_ONE_DOWNLOAD_EXTENSION_AND_PRIVATE_PROFILE_BOOTSTRAP_2026-10-28.md) distinguishes local package/runtime tests from installed-user proof. Chrome Web Store publication and browser approval remain separate from creating an extension ZIP.
 
+## Linux Mint: inspect, install, and launch
+
+A Linux-native, user-scoped [bootstrap](Get-EscapeHatch.sh) is now under review. Download and inspect `Get-EscapeHatch.sh`, then use `bash Get-EscapeHatch.sh --check` to verify Git, Python 3, npm and Node.js 22.16+ without changing files. Use `bash Get-EscapeHatch.sh --install` to approve clone/dependency installation and launch. After installation: `--start`, `--status`, `--stop`, and explicit clean-checkout `--update` are available. A user-owned **EscapeHatch** app-menu launcher is registered under Linux Mint after an approved install; run `bash Get-EscapeHatch.sh --shortcut` to repair its menu entry without modifying other desktop launchers.
+
+The Mint launcher retains local-only `127.0.0.1` binding and an identity-verified graceful shutdown; it does not use sudo, reset existing work, or auto-update. **This is feature-branch groundwork, not yet an approved Linux Mint release**. Linux process tests are not proof of the physical Mint desktop/browser journey. See the [Linux and mobile platform gates](docs/LINUX_MINT_AND_MOBILE_ENTRYPOINTS.md).
+
+## Phones and Android
+
+The repository contains an Android Application Assist companion project, but phone installation and cross-device cockpit access remain separately gated. Android's Share/deep-link handoff is not desktop Chrome managed-automation parity. **Do not expose the local cockpit to phones by changing `HOST` to `0.0.0.0` or publishing an unauthenticated tunnel.** Private career state requires consented synchronization and an authenticated, scoped mobile access path. Follow the [mobile architecture and release criteria](docs/LINUX_MINT_AND_MOBILE_ENTRYPOINTS.md).
+
 ## Use EscapeHatch
 
 1. Launch the local cockpit and paste a public HTTPS employer job URL.

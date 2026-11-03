@@ -106,3 +106,24 @@ test('live tracker selection makes current employer the first puzzle, without fi
   await expect(page.getByTestId('mascot-next-action')).toHaveAttribute('href', /\/assist\?opportunityId=tracker-/);
   await expect(page.getByTestId('button-birdsong-control')).toHaveAttribute('aria-pressed', 'false');
 });
+
+
+test('Today puzzle uses inspectable local slots, not an invented employer readiness score', async ({ page }) => {
+  await page.goto('/');
+  const board = page.getByTestId('profile-puzzle-board');
+  await expect(board).toBeVisible();
+  await expect(board.locator('.profile-puzzle-tile')).toHaveCount(8);
+  await expect(page.getByTestId('profile-puzzle-count')).toContainText('0 / 8 saved locally');
+  const first = page.getByTestId('profile-puzzle-piece-first_name');
+  await expect(first).toHaveAttribute('data-piece-state', 'missing');
+  await expect(first).toHaveAttribute('aria-pressed', 'false');
+  await first.focus();
+  await page.keyboard.press('Enter');
+  await expect(first).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('profile-puzzle-selection')).toContainText('First name: still available to fill.');
+  await expect(board.getByRole('link', { name: 'Review this detail' })).toHaveAttribute('href', '/profile');
+  await expect(board).toContainText('a complete board never means ready to submit');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(first).toHaveCSS('animation-name', 'none');
+});
+

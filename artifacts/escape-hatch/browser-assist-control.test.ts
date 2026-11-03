@@ -7,7 +7,7 @@ import { chromium } from '@playwright/test';
 import { ADAPTER_EVIDENCE_SCHEMA } from './application-navigation-policy.ts';
 import { ManagedListeners } from './managed-listeners.ts';
 import { OpportunityDocumentStore } from './opportunity-documents.ts';
-import { saveWorkspace } from './workspace-file.ts';
+import { readWorkspace, saveWorkspace } from './workspace-file.ts';
 import { WORKSPACE_SCHEMA } from './src/lib/workspace-bootstrap.ts';
 import { APPLICATIONS_KEY } from './src/lib/storage.ts';
 import {
@@ -476,7 +476,8 @@ test('managed enrollment reuses existing reviewed Cognizant resume, never job st
     assert.equal(transfer.result.employerUploadObserved, false);
     assert.equal((await store.forUpload(COGNIZANT_TALENT_ID, COGNIZANT_TALENT_URL)).resume?.name, 'synthetic.pdf');
     assert.equal((await store.read(sourceJob.id, sourceJob.url)).documents.resume?.sha256, sha);
-    assert.equal((await readWorkspace())?.workspace.values[APPLICATIONS_KEY]?.[0]?.status, 'applied');
+    const preservedApplications = (await readWorkspace())?.workspace.values[APPLICATIONS_KEY] as typeof sourceJob[] | undefined;
+    assert.equal(preservedApplications?.[0]?.status, 'applied');
     assert.equal((await request('/talent-community/cognizant/reuse-resume',
       { sourceOpportunityId: sourceJob.id, sourceUrl: sourceJob.url })).status, 200,
       'same reviewed bytes reuse idempotently');

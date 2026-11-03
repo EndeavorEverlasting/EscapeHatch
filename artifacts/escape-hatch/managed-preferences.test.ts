@@ -9,7 +9,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { DatabaseSync } from 'node:sqlite';
 import { chromium } from '@playwright/test';
-import { emptyPreferences, parsePreferences, optionMatches, matchQuestion, normalizeQuestion, expandProfessionalTitles, suggestProfessionalTitles } from './src/lib/application-preferences.ts';
+import { emptyPreferences, parsePreferences, optionMatches, matchQuestion, reusableValue, normalizeQuestion, expandProfessionalTitles, suggestProfessionalTitles } from './src/lib/application-preferences.ts';
 import { savePreferences, readPreferences, clearPreferences, updatePreferences } from './preference-file.ts';
 import { fillSavedPreferences, openApplicationForm, internationalPhone, captureMilitaryAnswers } from './managed-form.ts';
 import { attachPdfs, parsePrivatePdf } from './browser-assist-control.ts';
@@ -378,4 +378,28 @@ test('full name and exact decorated EEO metadata fill without changing existing 
     assert.equal(await page.locator('[name="gender"]').first().isChecked(), true);
     assert.equal(await page.evaluate(() => (window as unknown as { submitted?: boolean }).submitted), undefined);
   } finally { await browser.close(); }
+});
+
+test('talent-community preferences reuse approved values; marketing consent is not fillable', () => {
+  const expected = [
+    ['Spoken proficient languages*', 'talent_community.spoken_languages'],
+    ['Writing proficient languages*', 'talent_community.written_languages'],
+    ['What are your primary areas of interest?*', 'talent_community.primary_areas'],
+    ['Which industries do you have experience in or would like to explore?*', 'talent_community.industry_preferences'],
+    ['Are you interested in a new graduate role?', 'talent_community.new_graduate_interest'],
+  ] as const;
+  const prefs = emptyPreferences();
+  for (const [label, id] of expected) {
+    assert.equal(matchQuestion(label, 'Cognizant'), id);
+    assert.equal(reusableValue(id, prefs), null);
+    prefs.preferences[id] = { scope: 'profile_preference', source: 'user',
+      value: 'Synthetic reviewed option', updated_at: prefs.exported_at };
+    assert.equal(reusableValue(id, prefs), 'Synthetic reviewed option');
+  }
+  const consent = 'talent_community.marketing_consent';
+  prefs.preferences[consent] = { scope: 'profile_preference', source: 'user',
+    value: 'Yes', updated_at: prefs.exported_at };
+  assert.equal(reusableValue(consent, prefs), null);
+  assert.equal(matchQuestion('I confirm that I have read the Talent Search Privacy Notice and would like to join the Cognizant Talent Community'), consent);
+  assert.ok(parsePreferences(prefs));
 });

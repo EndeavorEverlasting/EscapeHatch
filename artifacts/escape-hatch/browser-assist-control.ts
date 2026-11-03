@@ -832,7 +832,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             if (!labelText || labelText.length > 120) return respond(res, 422, { ok: false, error: 'label_required' });
             // A programmatic label-toggle cannot authorize newsletter enrollment,
             // marketing/data-sharing consent, privacy/legal acknowledgement, or certification.
-            if (isProtectedEnrollmentConsentLabel(labelText)) {
+            if (isCognizantTalentCommunity(page.url()) || isProtectedEnrollmentConsentLabel(labelText)) {
               return respond(res, 409, { ok: false, error: 'protected_consent_operator_only' });
             }
             const escaped = labelText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

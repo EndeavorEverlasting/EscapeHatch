@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { emptyPreferences, parsePreferences, questions, preferenceChoices, expandProfessionalTitles, suggestProfessionalTitles, type Preferences } from '@/lib/application-preferences';
+import { savedAnswerReviewRows, unrecognizedSavedAnswerCount, hasTalentCommunityAnswers, talentCommunityAnswerHandoff, canReplaceEditorFromDisk } from '@/lib/answer-transparency';
 
 const API = '/__escapehatch/managed-assist/preferences';
 type PreferenceStoreMeta = { dataHome: string; preferenceStore: string; source: string; exists: boolean };
@@ -13,6 +14,10 @@ function preferenceFieldLabel(id: string, fallback: string) {
 }
 export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '', reviewedExperience = '', refresh = 0, onEdit }: { onLoad?: (data: Preferences) => void; currentRole?: string; currentPosting?: string; reviewedExperience?: string; refresh?: number; onEdit?: () => void }) {
   const [data, setData] = useState<Preferences>(emptyPreferences);
+  // Separate the durable disk snapshot from unsaved edits in the form below.
+  const [savedData, setSavedData] = useState<Preferences>(emptyPreferences);
+  const [showAllSavedAnswers, setShowAllSavedAnswers] = useState(false);
+  const [copyStatus, setCopyStatus] = useState('');
   const [newTitle, setNewTitle] = useState('');
   const [message, setMessage] = useState('Loading saved preferences…');
   const [store, setStore] = useState<PreferenceStoreMeta | null>(null);
@@ -21,7 +26,16 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
   const [busy, setBusy] = useState(false);
   const [clearRequested, setClearRequested] = useState(false);
   const [removedQuestions, setRemovedQuestions] = useState<string[]>([]);
-  async function load() {
+  const editVersion = useRef(0);
+  const loadVersion = useRef(0);
+  function markEdited() {
+    editVersion.current++;
+    setDirty(true);
+    onEdit?.();
+  }
+  async function load(): Promise<boolean> {
+    const requestVersion = ++loadVersion.current;
+    const priorEdits = editVersion.current;
     try {
       const response = await fetch(API, { credentials: 'same-origin' });
       const json = await response.json();
@@ -30,12 +44,24 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
       const meta = json.store && typeof json.store.preferenceStore === 'string'
         ? { dataHome: String(json.store.dataHome || ''), preferenceStore: String(json.store.preferenceStore), source: String(json.store.source || 'platform_default'), exists: json.store.exists === true }
         : null;
+      if (requestVersion !== loadVersion.current) return false; // ignore stale overlapping fetches
       setStore(meta);
-      setData(parsed); onLoad?.(parsed); setReady(true);
+      setSavedData(parsed); setReady(true);
+      // A person can edit while a background refresh is pending. A disk read
+      // may refresh the review snapshot but must never replace those edits.
+      if (!canReplaceEditorFromDisk(requestVersion, loadVersion.current, priorEdits, editVersion.current)) {
+        setMessage('Disk snapshot refreshed. Unsaved answers in the editor were preserved.');
+        return false;
+      }
+      setData(parsed); onLoad?.(parsed);
       setMessage(meta?.exists
         ? 'Shared EscapeHatch profile found on this computer. Reused across browsers until you edit or clear it.'
         : 'No shared profile file yet. Save Preferences to create the EscapeHatch profile on this computer.');
-    } catch { setMessage('Saved preferences are unavailable. Start EscapeHatch with its local launcher; existing data was preserved.'); }
+      return true;
+    } catch {
+      if (requestVersion === loadVersion.current) setMessage('Saved preferences are unavailable. Start EscapeHatch with its local launcher; existing data was preserved.');
+      return false;
+    }
   }
   useEffect(() => { if (!dirty) void load(); else setMessage('New recorded answers are saved on disk. Save or reload your edits before reloading them here.'); }, [refresh]);
   async function save(clear = false) {
@@ -47,8 +73,13 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
         body: JSON.stringify(clear ? {} : { preferences: { ...data, exported_at: new Date().toISOString() }, removedQuestions }),
       });
       if (!response.ok) throw new Error();
-      await load(); setDirty(false); setClearRequested(false); setRemovedQuestions([]);
-      setMessage(clear ? 'Shared EscapeHatch profile cleared on this computer.' : 'Shared EscapeHatch profile saved. Fill will reuse these explicit answers across browsers on this account.');
+      const readbackOk = await load();
+      if (!readbackOk) {
+        setMessage('Save request completed, but profile readback was not verified. Your editor state is preserved; retry refresh before relying on it.');
+        return;
+      }
+      setDirty(false); setClearRequested(false); setRemovedQuestions([]);
+      setMessage(clear ? 'Shared EscapeHatch profile cleared on this computer.' : 'Shared EscapeHatch profile saved and read back. Fill will reuse these explicit answers across browsers on this account.');
     } catch { setMessage('Save failed. Your edits remain here; no successful persistence is claimed.'); }
     finally { setBusy(false); }
   }
@@ -56,6 +87,16 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = 'escapehatch-application-preferences.json'; a.click(); URL.revokeObjectURL(url);
+  }
+  const recorded = savedAnswerReviewRows(savedData);
+  const visibleRecorded = showAllSavedAnswers ? recorded : recorded.slice(0, 8);
+  async function copyTalentCommunityAnswers() {
+    try {
+      await navigator.clipboard.writeText(talentCommunityAnswerHandoff(savedData));
+      setCopyStatus('Saved talent-community answers copied. Paste only where you choose.');
+    } catch {
+      setCopyStatus('Clipboard unavailable. Review the saved answers here or use Export Preferences.');
+    }
   }
   return <section className="mb-6 rounded-2xl border border-border bg-card p-5" data-testid="application-preferences">
     <h2 className="font-display text-2xl">Reusable application answers</h2>
@@ -75,13 +116,51 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
         <p className="mt-2 break-all font-mono text-[0.7rem] leading-5 text-muted-foreground" data-testid="preference-store-path">{store.preferenceStore}</p>
       </details>}
     </aside>
+
+    {ready && <section className="mt-4 rounded-xl border border-border bg-secondary/20 p-4" aria-label="Exact saved answers" data-testid="saved-answer-review">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="font-display text-xl">What EscapeHatch actually remembers</h3>
+          <p className="mt-1 text-sm text-muted-foreground">Exact answers from your private local profile, with their saved times. These are not proof of which choices an employer received or accepted.</p>
+        </div>
+        <button type="button" className="rounded border border-border px-3 py-2 text-sm" disabled={busy || dirty} onClick={() => void load()}>Refresh from disk</button>
+      </div>
+      <p className="mt-3 text-sm font-medium">{recorded.length} recorded answers
+        {unrecognizedSavedAnswerCount(savedData) > 0 && <span className="ml-2 text-muted-foreground">· {unrecognizedSavedAnswerCount(savedData)} unrecognized IDs retained privately, not used for automatic filling</span>}
+      </p>
+      {dirty && <p className="mt-2 text-sm text-muted-foreground">Edits below have not been saved. This review shows the last disk snapshot.</p>}
+      {recorded.length ? <ul className="mt-3 grid gap-2" data-testid="saved-answer-rows">
+        {visibleRecorded.map(answer => <li key={answer.id} className="rounded-lg border border-border bg-card p-3" data-testid="saved-answer-row">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-sm font-semibold">{answer.label}</span>
+            <code className="break-all text-xs text-muted-foreground">{answer.id}</code>
+          </div>
+          <p className="mt-2 whitespace-pre-wrap break-words text-sm" data-testid="saved-answer-value">{answer.value}</p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {answer.source === 'saved_preference' ? 'Saved user preference' : answer.source === 'approved_question_memory' ? 'Approved question memory' : 'Question memory awaiting approval'}
+            {' · '}Saved {new Date(answer.updatedAt).toLocaleString()}
+            {' · '}{answer.reusable ? 'Eligible for matching-field reuse' : 'Review needed before reuse'}
+          </p>
+        </li>)}
+      </ul> : <p className="mt-3 text-sm text-muted-foreground">No saved answers were found in this local preference store.</p>}
+      {recorded.length > 8 && <button type="button" className="mt-3 text-sm underline" onClick={() => setShowAllSavedAnswers(value => !value)}>
+        {showAllSavedAnswers ? 'Show latest 8 answers' : 'Show all ' + recorded.length + ' saved answers'}
+      </button>}
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <button type="button" disabled={!hasTalentCommunityAnswers(savedData)} className="rounded border border-primary px-3 py-2 text-sm font-medium text-primary disabled:opacity-50" onClick={() => void copyTalentCommunityAnswers()}>
+          Copy talent-community answers for handoff
+        </button>
+        <span className="text-xs text-muted-foreground">Copies only the three talent-community fields, on your explicit click. Nothing is uploaded or shared automatically.</span>
+      </div>
+      <p role="status" className="mt-2 text-sm">{copyStatus}</p>
+    </section>}
     <fieldset disabled={!ready || busy}>
       <section className="mt-4 rounded-xl border border-border p-4" aria-label="Applicant privacy acknowledgements">
         <h3 className="font-display text-xl">Applicant privacy acknowledgements</h3>
         <label className="mt-3 flex items-start gap-2 text-sm">
           <input type="checkbox" data-testid="applicant-privacy-acknowledgement-toggle"
             checked={data.application_privacy_acknowledgement_enabled === true}
-            onChange={event => { setDirty(true); onEdit?.(); setData(current => ({ ...current, application_privacy_acknowledgement_enabled: event.target.checked })); }} />
+            onChange={event => { markEdited(); setData(current => ({ ...current, application_privacy_acknowledgement_enabled: event.target.checked })); }} />
           Reuse my approval for routine applicant privacy notices during job applications
         </label>
         <p className="mt-2 text-xs text-muted-foreground">Off until you enable and save it. EscapeHatch checks only clearly identified application privacy acknowledgements, verifies the result, and leaves optional marketing/data sharing, contracts, certifications, signatures, and final submission for your own review. You can turn this off or clear it at any time.</p>
@@ -93,7 +172,7 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
           const choices = q.id === 'identity.job_title' ? [...new Set([...(data.job_titles || []), ...(value ? [value] : [])])] : q.id === 'identity.professional_title' ? [...new Set([...(data.professional_titles || []), ...(value ? [value] : [])])] : preferenceChoices[q.id];
           const change = (value: string) => {
             setRemovedQuestions(current => value.trim() ? current.filter(id => id !== q.id) : [...new Set([...current, q.id])]);
-            setDirty(true); onEdit?.();
+            markEdited();
             setData(current => { const preferences = { ...current.preferences };
               if (value.trim()) preferences[q.id] = { scope: 'profile_preference', source: 'user', value, updated_at: new Date().toISOString() };
               else delete preferences[q.id];
@@ -110,7 +189,7 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
         })}
       </div>
       <label className="mt-4 flex items-start gap-2 text-sm"><input type="checkbox" checked={data.optional_omissions?.includes('identity.pronouns') || false}
-        onChange={event => { const omit = event.target.checked; setDirty(true); onEdit?.(); setData(current => ({ ...current,
+        onChange={event => { const omit = event.target.checked; markEdited(); setData(current => ({ ...current,
           optional_omissions: omit ? [...new Set([...(current.optional_omissions || []), 'identity.pronouns'])] : (current.optional_omissions || []).filter(id => id !== 'identity.pronouns') })); }} />Leave pronoun fields blank when optional; use my saved answer when required</label>
       {!!Object.keys(data.discovered_answers || {}).length && <section className="mt-5 rounded-lg border border-border p-4" aria-label="Questions remembered from applications">
         <h3 className="font-display text-xl">Questions remembered from applications</h3>
@@ -123,11 +202,11 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
         {Object.entries(data.discovered_answers || {}).map(([key, answer]) => <div key={key} className="mt-3">
           <label className="block text-sm">{answer.question}<textarea aria-label={'Saved answer: ' + answer.question} value={answer.value}
             rows={4} className="mt-1 block w-full rounded border border-input bg-background p-2" maxLength={512}
-            onChange={event => { const value = event.target.value; setDirty(true); onEdit?.(); setData(current => ({ ...current,
+            onChange={event => { const value = event.target.value; markEdited(); setData(current => ({ ...current,
               discovered_answers: { ...current.discovered_answers, [key]: { ...answer, value, source: value.trim() ? 'user' : 'observed_question',
                 accepted: !!value.trim(), updated_at: new Date().toISOString() } } })); }} /></label>
           <label className="mt-1 flex gap-2 text-xs"><input type="checkbox" checked={answer.accepted} disabled={!answer.value.trim()}
-            onChange={event => { const accepted = event.target.checked; setDirty(true); onEdit?.(); setData(current => ({ ...current,
+            onChange={event => { const accepted = event.target.checked; markEdited(); setData(current => ({ ...current,
               discovered_answers: { ...current.discovered_answers, [key]: { ...answer, accepted, updated_at: new Date().toISOString() } } })); }} />Reuse this exact answer on later applications</label>
         </div>)}
       </section>}
@@ -148,7 +227,7 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
               <button type="button" aria-label={'Choose professional title: ' + item.title} aria-pressed={selected}
                 className={'mt-3 rounded-lg border px-3 py-2 text-sm font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ' + (selected ? 'border-primary bg-primary text-primary-foreground' : 'border-primary text-primary hover:bg-primary/10')}
                 onClick={() => {
-                  setDirty(true); onEdit?.(); setData(current => ({ ...current, preferences: { ...current.preferences, 'identity.professional_title': { scope: 'profile_preference', source: 'user', value: item.title, updated_at: new Date().toISOString() } } }));
+                  markEdited(); setData(current => ({ ...current, preferences: { ...current.preferences, 'identity.professional_title': { scope: 'profile_preference', source: 'user', value: item.title, updated_at: new Date().toISOString() } } }));
                   setMessage('Title selected. Save Preferences to keep this choice.');
                 }}>{selected ? 'Selected' : 'Choose this title'}</button>
             </div>;
@@ -162,7 +241,7 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
           <input type="checkbox" data-testid="vpn-recovery-assist-toggle"
             checked={data.vpn_recovery_assist_enabled !== false}
             onChange={event => {
-              setDirty(true); onEdit?.();
+              markEdited();
               setData(current => ({ ...current, vpn_recovery_assist_enabled: event.target.checked }));
             }} />
           Offer VPN compatibility recovery when an employer application is blocked
@@ -180,17 +259,17 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
           const variants = expandProfessionalTitles(newTitle.split(';'));
           const titles = [...new Set([...(data.professional_titles || []), ...variants])];
           if (!variants.length || titles.length > 100) { setMessage('Use up to four titles separated by semicolons; the saved list supports 100 choices.'); return; }
-          setDirty(true); onEdit?.(); setData(current => ({ ...current, professional_titles: titles }));
+          markEdited(); setData(current => ({ ...current, professional_titles: titles }));
           setMessage('Title combinations added. Select the professional title you want to use, then Save Preferences.');
         }}>Add title combinations</button>
         <p>Enter up to four professional titles separated by semicolons to generate selectable combinations.</p>
         <button type="button" disabled={!newTitle.trim()} onClick={() => {
-          const title = newTitle.trim(); setDirty(true); onEdit?.();
+          const title = newTitle.trim(); markEdited();
           setData(current => ({ ...current, professional_titles: [...new Set([...(current.professional_titles || []), title])], preferences: { ...current.preferences, 'identity.professional_title': { scope: 'profile_preference', source: 'user', value: title, updated_at: new Date().toISOString() } } }));
           setNewTitle(''); setMessage('Professional title added and selected. Save Preferences to keep it.');
         }}>Add professional title</button>
         {currentRole && <button type="button" onClick={() => {
-          setDirty(true); onEdit?.();
+          markEdited();
           setData(current => ({ ...current, job_titles: [...new Set([...(current.job_titles || []), currentRole])],
             preferences: { ...current.preferences, 'identity.job_title': { scope: 'profile_preference', source: 'user', value: currentRole, updated_at: new Date().toISOString() } } }));
           setMessage('Role added and selected. Choose Save Preferences to keep it.');
@@ -203,7 +282,7 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
           try {
             if (file.size > 65536) throw new Error();
             const parsed = parsePreferences(JSON.parse(await file.text())); if (!parsed) throw new Error();
-            setData(parsed); setDirty(true); onEdit?.(); setMessage('Import staged for review. Choose Save Preferences to persist it.');
+            setData(parsed); markEdited(); setMessage('Import staged for review. Choose Save Preferences to persist it.');
           } catch { setMessage('Invalid preference export; current preferences preserved.'); }
           event.target.value = '';
         }} /></label>

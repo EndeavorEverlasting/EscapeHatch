@@ -10,6 +10,7 @@ import { spawn } from 'node:child_process';
 import { DatabaseSync } from 'node:sqlite';
 import { chromium } from '@playwright/test';
 import { emptyPreferences, parsePreferences, optionMatches, matchQuestion, reusableValue, normalizeQuestion, expandProfessionalTitles, suggestProfessionalTitles } from './src/lib/application-preferences.ts';
+import { savedAnswerReviewRows, talentCommunityAnswerHandoff, hasTalentCommunityAnswers, unrecognizedSavedAnswerCount } from './src/lib/answer-transparency.ts';
 import { savePreferences, readPreferences, clearPreferences, updatePreferences } from './preference-file.ts';
 import { fillSavedPreferences, openApplicationForm, internationalPhone, captureMilitaryAnswers } from './managed-form.ts';
 import { attachPdfs, parsePrivatePdf } from './browser-assist-control.ts';
@@ -149,14 +150,15 @@ test('explicit preferences survive process-independent disk reads; invalid impor
     await savePreferences(data, file);
     assert.deepEqual(await readPreferences(file), data);
     const withUnknown = { ...data, preferences: { ...data.preferences, 'unknown.question': data.preferences['identity.first_name'] } };
-    // Forward-compatible private profiles may include IDs this checkout has not registered yet.
-    // Skip unknown keys; do not reject the whole durable preference file.
+    // Unknown IDs must remain inert but DURABLE across a future/older taxonomy mismatch.
     const parsedUnknown = parsePreferences(withUnknown);
     assert.ok(parsedUnknown);
-    assert.equal(parsedUnknown?.preferences['unknown.question'], undefined);
+    assert.equal(parsedUnknown?.preferences['unknown.question']?.value, 'Synthetic');
     assert.equal(parsedUnknown?.preferences['identity.first_name']?.value, 'Synthetic');
-    await savePreferences(withUnknown, file);
-    assert.equal((await readPreferences(file)).preferences['unknown.question'], undefined);
+    await savePreferences({ ...withUnknown, optional_omissions: ['unknown.question'] }, file);
+    assert.equal((await readPreferences(file)).preferences['unknown.question']?.value, 'Synthetic');
+    assert.deepEqual((await readPreferences(file)).optional_omissions, ['unknown.question']);
+    assert.equal(reusableValue('unknown.question', await readPreferences(file)), null);
     assert.equal((await readPreferences(file)).preferences['identity.first_name']?.value, 'Synthetic');
     const malformedKnown = { ...data, preferences: { ...data.preferences, 'identity.first_name': { ...data.preferences['identity.first_name'], value: '' } } };
     await assert.rejects(savePreferences(malformedKnown, file));
@@ -412,4 +414,47 @@ test('talent-community preferences reuse approved values; marketing consent is n
   assert.equal(reusableValue(consent, prefs), null);
   assert.equal(matchQuestion('I confirm that I have read the Talent Search Privacy Notice and would like to join the Cognizant Talent Community'), consent);
   assert.ok(parsePreferences(prefs));
+});
+
+test('saved-answer review makes Cognizant selections explicit without implying employer acceptance', () => {
+  const data = emptyPreferences();
+  data.preferences['talent_community.primary_areas'] = { scope: 'profile_preference', source: 'user', value: 'Technology', updated_at: '2026-11-03T21:00:00Z' };
+  data.preferences['talent_community.industry_preferences'] = { scope: 'profile_preference', source: 'user', value: 'Healthcare', updated_at: '2026-11-03T21:02:00Z' };
+  data.preferences['talent_community.new_graduate_interest'] = { scope: 'profile_preference', source: 'user', value: 'No', updated_at: '2026-11-03T21:03:00Z' };
+  data.preferences['identity.email'] = { scope: 'profile_preference', source: 'user', value: 'synthetic@example.test', updated_at: '2026-11-03T21:01:00Z' };
+  data.preferences['future.taxonomy'] = { scope: 'profile_preference', source: 'user', value: 'Retain privately', updated_at: '2026-11-03T21:04:00Z' };
+  const parsed = parsePreferences(data);
+  assert.ok(parsed);
+  assert.equal(unrecognizedSavedAnswerCount(parsed), 1);
+  const rows = savedAnswerReviewRows(parsed);
+  assert.equal(rows.some(row => row.id === 'future.taxonomy'), false);
+  assert.equal(rows[0].id, 'talent_community.new_graduate_interest');
+  assert.equal(rows.find(row => row.id === 'talent_community.industry_preferences')?.value, 'Healthcare');
+  assert.equal(rows.find(row => row.id === 'identity.email')?.value, 'synthetic@example.test');
+  assert.equal(rows.find(row => row.id === 'talent_community.primary_areas')?.source, 'saved_preference');
+  assert.equal(hasTalentCommunityAnswers(parsed), true);
+  const handoff = talentCommunityAnswerHandoff(parsed);
+  assert.match(handoff, /Preferred industries/);
+  assert.match(handoff, /Healthcare/);
+  assert.match(handoff, /New-graduate opportunities/);
+  assert.match(handoff, /Not proof of employer-side form selection or acceptance/);
+  assert.doesNotMatch(handoff, /synthetic@example\.test|Retain privately/);
+  assert.equal(hasTalentCommunityAnswers(emptyPreferences()), false);
+  assert.match(talentCommunityAnswerHandoff(emptyPreferences()), /\[not recorded\]/);
+});
+
+test('newly recognized historical question memory survives parsing but is not auto-approved', () => {
+  const data = emptyPreferences();
+  const question = 'Primary areas of interest';
+  const normalized = normalizeQuestion(question);
+  // If the taxonomy learns this prompt, it must not silently erase stored
+  // user text or elevate the discovered answer into an approved preference.
+  data.discovered_answers = {
+    [normalized]: { question, value: 'Technology', source: 'user', accepted: false, updated_at: data.exported_at },
+  };
+  const parsed = parsePreferences(data);
+  assert.ok(parsed);
+  assert.equal(parsed.discovered_answers?.[normalized]?.value, 'Technology');
+  const review = savedAnswerReviewRows(parsed);
+  assert.equal(review.find(row => row.id === 'discovered:' + normalized)?.reusable, false);
 });

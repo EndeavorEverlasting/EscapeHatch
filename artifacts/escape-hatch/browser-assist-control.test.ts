@@ -6,14 +6,21 @@ import { tmpdir } from 'node:os';
 import { chromium } from '@playwright/test';
 import { ADAPTER_EVIDENCE_SCHEMA } from './application-navigation-policy.ts';
 import { ManagedListeners } from './managed-listeners.ts';
-import { saveWorkspace } from './workspace-file.ts';
+import { OpportunityDocumentStore } from './opportunity-documents.ts';
+import { readWorkspace, saveWorkspace } from './workspace-file.ts';
 import { WORKSPACE_SCHEMA } from './src/lib/workspace-bootstrap.ts';
 import { APPLICATIONS_KEY } from './src/lib/storage.ts';
 import {
   parseNavigationAuthorization,
+  attachPdfs,
   parsePrivatePdf,
   parseTrustedAdapterRegistry,
   reviewedContactFields,
+  derivedContactPreferenceValues,
+  COGNIZANT_TALENT_ID,
+  COGNIZANT_TALENT_URL,
+  isCognizantTalentCommunity,
+  isProtectedEnrollmentConsentLabel,
   validateApplicationUrl,
   managedBrowserProfileDirectory,
   createManagedBrowserAssistPlugin,
@@ -349,4 +356,140 @@ test('trusted adapter registry never accepts page-authored schemas', () => {
   assert.throws(() => parseTrustedAdapterRegistry({
     schema: 'page-invented/v1', adapterId: 'x', atsProvider: 'y', evidence: [],
   }), /schema|evidence/i);
+});
+
+
+test('talent-community composite fields derive only from complete approved contact data', () => {
+  const current = {
+    'identity.first_name': { value: 'Alex' }, 'identity.last_name': { value: 'Example' },
+    'identity.city': { value: 'Example City' }, 'identity.region': { value: 'NY' },
+    'identity.country': { value: 'US' },
+  };
+  assert.deepEqual(derivedContactPreferenceValues(current), {
+    'identity.full_name': 'Alex Example', 'identity.location_summary': 'Example City, NY, US',
+  });
+  assert.deepEqual(derivedContactPreferenceValues({ ...current,
+    'identity.full_name': { value: 'Reviewed Legal Name' },
+    'identity.location_summary': { value: 'Reviewed Location' },
+  }), {}, 'explicit values take precedence');
+  assert.deepEqual(derivedContactPreferenceValues({ ...current, 'identity.region': { value: '' } }),
+    { 'identity.full_name': 'Alex Example' }, 'partial locations stay blank');
+});
+
+// Real Chromium on synthetic routed HTML; zero employer traffic, no personal data.
+test('Cognizant anonymous Resume input is unique and exact-origin bound', async () => {
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const sample = '<!doctype html><h2>Resume</h2><input type="file" id="anonymous" />';
+  const resume = { name: 'synthetic.pdf', mimeType: 'application/pdf' as const,
+    buffer: Buffer.from('%PDF-1.4\nsynthetic fixture\n') };
+  try {
+    await page.route('https://careers.cognizant.com/**', route => route.fulfill({
+      status: 200, contentType: 'text/html', body: sample,
+    }));
+    await page.goto('https://careers.cognizant.com/us-en/talent-community/');
+    const attached = await attachPdfs(page, resume, null);
+    assert.equal(attached.resume, 'attached_to_input_review_required');
+    assert.equal(await page.locator('#anonymous').evaluate(element =>
+      (element as HTMLInputElement).files?.length), 1);
+
+    await page.setContent(sample + '<input type="file" id="second" />');
+    const duplicate = await attachPdfs(page, resume, null);
+    assert.equal(duplicate.resume, 'manual_required');
+    assert.equal(await page.locator('#anonymous').evaluate(element =>
+      (element as HTMLInputElement).files?.length), 0);
+
+    await page.route('https://example.org/**', route => route.fulfill({
+      status: 200, contentType: 'text/html', body: sample,
+    }));
+    await page.goto('https://example.org/us-en/talent-community/');
+    const wrongOrigin = await attachPdfs(page, resume, null);
+    assert.equal(wrongOrigin.resume, 'manual_required');
+    assert.equal(await page.locator('#anonymous').evaluate(element =>
+      (element as HTMLInputElement).files?.length), 0);
+  } finally {
+    await browser.close();
+  }
+});
+
+test('community profile identity and protected consent remain separate from job application', () => {
+  assert.ok(isCognizantTalentCommunity(COGNIZANT_TALENT_URL));
+  assert.ok(isCognizantTalentCommunity(COGNIZANT_TALENT_URL.slice(0, -1)));
+  for (const url of ['https://careers.cognizant.com/us-en/jobs/example',
+    'https://careers.cognizant.com/ca-en/talent-community/',
+    COGNIZANT_TALENT_URL + '?return=job', 'https://fake-cognizant.test/us-en/talent-community/']) {
+    assert.equal(isCognizantTalentCommunity(url), false);
+  }
+  for (const label of ['I want to join the Talent Community', 'Consent to receiving updates via email and SMS',
+    'I have read the Talent Search Privacy Notice', 'Marketing opt-in', 'I certify this information is accurate']) {
+    assert.equal(isProtectedEnrollmentConsentLabel(label), true, label);
+  }
+  assert.equal(isProtectedEnrollmentConsentLabel('Show additional work history'), false);
+});
+
+test('managed enrollment reuses existing reviewed Cognizant resume, never job status or private values', async () => {
+  const root = await fs.mkdtemp(path.join(tmpdir(), 'eh-community-scope-'));
+  const before = { ...process.env };
+  const instanceId = 'talent-scope-' + Date.now();
+  const symbol = Symbol.for('escapehatch.managed-browser.' + instanceId);
+  const sourceJob = { id: 'synthetic-submitted-cognizant', company: 'Cognizant',
+    role: 'Synthetic Role', url: 'https://careers.cognizant.com/us-en/jobs/synthetic',
+    status: 'applied' as const, priority: 'normal' as const, notes: 'Preserve history',
+    nextAction: 'Await recruiter', updatedAt: new Date().toISOString() };
+  try {
+    Object.assign(process.env, { ESCAPEHATCH_DATA_HOME: root,
+      ESCAPEHATCH_REPO_FINGERPRINT: 'a'.repeat(64), ESCAPEHATCH_SHUTDOWN_TOKEN: 'synthetic-only',
+      ESCAPEHATCH_STARTED_AT_UTC: new Date().toISOString(), PORT: '21041',
+      ESCAPEHATCH_INSTANCE_ID: instanceId });
+    await saveWorkspace({ schema: WORKSPACE_SCHEMA, values: { [APPLICATIONS_KEY]: [sourceJob] } }, null);
+    const store = new OpportunityDocumentStore();
+    const selected = await store.stage(sourceJob.id, sourceJob.url, 'resume', {
+      name: 'synthetic.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\ncontrolled fixture') });
+    const sha = selected.documents.resume!.sha256;
+    await store.review(sourceJob.id, sourceJob.url, 'resume', sha);
+    let middleware: Function = () => {};
+    const plugin = createManagedBrowserAssistPlugin();
+    (plugin.configureServer as Function)({ config: { server: { port: 21041 } },
+      middlewares: { use: (handler: Function) => { middleware = handler; } } });
+    const request = async (endpoint: string, payload: object) => {
+      let status = 0, body = '';
+      await middleware({ url: '/__escapehatch/managed-assist' + endpoint, method: 'POST',
+        headers: { host: '127.0.0.1:21041', origin: 'http://127.0.0.1:21041',
+          'content-type': 'application/json', 'x-escapehatch-operator-action': 'confirmed' },
+        socket: { remoteAddress: '127.0.0.1' }, async *[Symbol.asyncIterator]() {
+          yield Buffer.from(JSON.stringify(payload)); },
+      }, { set statusCode(value: number) { status = value; }, setHeader() {},
+        end(value: string) { body = value; } }, () => assert.fail('community route missed'));
+      return { status, result: JSON.parse(body) };
+    };
+    assert.equal((await request('/launch', { opportunityId: sourceJob.id, url: COGNIZANT_TALENT_URL })).status, 409,
+      'submitted job ID is not a community profile identifier');
+    assert.equal((await request('/talent-community/cognizant/reuse-resume',
+      { sourceOpportunityId: 'unknown', sourceUrl: sourceJob.url })).status, 409);
+    const transfer = await request('/talent-community/cognizant/reuse-resume',
+      { sourceOpportunityId: sourceJob.id, sourceUrl: sourceJob.url, sourceSha256: sha });
+    assert.equal(transfer.status, 200, JSON.stringify(transfer.result));
+    assert.equal(transfer.result.scope.opportunityId, COGNIZANT_TALENT_ID);
+    assert.equal(transfer.result.resume.sha256, sha);
+    assert.equal(transfer.result.enrollmentSubmitted, false);
+    assert.equal(transfer.result.employerUploadObserved, false);
+    assert.equal((await store.forUpload(COGNIZANT_TALENT_ID, COGNIZANT_TALENT_URL)).resume?.name, 'synthetic.pdf');
+    assert.equal((await store.read(sourceJob.id, sourceJob.url)).documents.resume?.sha256, sha);
+    const preservedApplications = (await readWorkspace())?.workspace.values[APPLICATIONS_KEY] as typeof sourceJob[] | undefined;
+    assert.equal(preservedApplications?.[0]?.status, 'applied');
+    assert.equal((await request('/talent-community/cognizant/reuse-resume',
+      { sourceOpportunityId: sourceJob.id, sourceUrl: sourceJob.url })).status, 200,
+      'same reviewed bytes reuse idempotently');
+    await store.stage(COGNIZANT_TALENT_ID, COGNIZANT_TALENT_URL, 'resume', {
+      name: 'another.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\nchanged fixture') });
+    assert.equal((await request('/talent-community/cognizant/reuse-resume',
+      { sourceOpportunityId: sourceJob.id, sourceUrl: sourceJob.url })).status, 422,
+      'never overwrite a different already staged community resume');
+  } finally {
+    delete (globalThis as Record<symbol, unknown>)[symbol];
+    for (const key of Object.keys(process.env)) if (!(key in before)) delete process.env[key];
+    Object.assign(process.env, before);
+    await fs.rm(root, { recursive: true, force: true });
+  }
 });

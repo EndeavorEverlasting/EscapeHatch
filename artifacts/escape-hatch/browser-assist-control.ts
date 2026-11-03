@@ -34,6 +34,21 @@ import {
 } from './managed-preparation-driver.ts';
 
 const PREFIX = '/__escapehatch/managed-assist';
+/** Separate enrollment target, never an alias for a submitted Cognizant job. */
+export const COGNIZANT_TALENT_ID = 'talent-community:cognizant:us-en';
+export const COGNIZANT_TALENT_URL = 'https://careers.cognizant.com/us-en/talent-community/';
+export function isCognizantTalentCommunity(value: unknown): boolean {
+  try {
+    if (typeof value !== 'string') return false;
+    const url = new URL(value);
+    return url.origin === 'https://careers.cognizant.com' &&
+      /^\/us-en\/talent-community\/?$/.test(url.pathname) && !url.search && !url.hash;
+  } catch { return false; }
+}
+export function isProtectedEnrollmentConsentLabel(value: unknown): boolean {
+  const text = typeof value === 'string' ? value : '';
+  return /\b(?:consent|opt[ -]?in|talent community|join|subscribe|newsletter|marketing|email and sms|privacy notice|data sharing|share my information|signature|certif(?:y|ication)|attest(?:ation)?|terms|legal)\b/i.test(text);
+}
 const MAX_BODY = 15 * 1024 * 1024;
 const MAX_PDF = 5 * 1024 * 1024;
 const ACTION_HEADER = 'x-escapehatch-operator-action';
@@ -132,6 +147,22 @@ export function reviewedContactFields(value: unknown): Record<string, string> {
     if (typeof text === 'string' && text.trim() && text.length <= 512) safe[key] = text.trim();
   }
   return safe;
+}
+
+// Presentation-only composites are built from complete, reviewed granular answers.
+export function derivedContactPreferenceValues(
+  preferences: Record<string, { value: string }>,
+): Record<string, string> {
+  const value = (id: string) => typeof preferences[id]?.value === 'string'
+    ? preferences[id].value.trim() : '';
+  const result: Record<string, string> = {};
+  const first = value('identity.first_name'), last = value('identity.last_name');
+  if (first && last && !value('identity.full_name')) result['identity.full_name'] = first + ' ' + last;
+  const location = ['identity.city', 'identity.region', 'identity.country'].map(value);
+  if (location.every(Boolean) && !value('identity.location_summary')) {
+    result['identity.location_summary'] = location.join(', ');
+  }
+  return result;
 }
 
 export function parseNavigationAuthorization(
@@ -272,6 +303,20 @@ export async function attachPdfs(page: Page, resume: ReturnType<typeof parsePriv
         });
         if ((kind === 'resume' ? /\b(resume|r[ée]sum[ée]|cv)\b/i : /\b(cover[\s_-]*letter)\b/i).test(attrs)) matches.push(input);
       } catch { /* page changed; leave control unmodified */ }
+    }
+    if (matches.length === 0 && kind === 'resume') {
+      // Only a unique Resume uploader on the exact Cognizant talent-community route.
+      const current = new URL(page.url());
+      const cognizantTalent = current.origin === 'https://careers.cognizant.com' &&
+        /^\/us-en\/talent-community\/?$/.test(current.pathname);
+      if (cognizantTalent && inputs.length === 1 &&
+          await page.getByText(/^Resume\s*\*?$/i).count() === 1) {
+        try {
+          await inputs[0].setInputFiles(file, { timeout: 5000 });
+          outcome[kind] = 'attached_to_input_review_required';
+        } catch { outcome[kind] = 'manual_required'; }
+        continue;
+      }
     }
     if (matches.length === 0) {
       // Portal-based uploaders leave their anonymous file inputs under body. Bind the chooser
@@ -431,6 +476,33 @@ export function createManagedBrowserAssistPlugin(): Plugin {
         try {
           const payload = await readJson(req);
           if (url.pathname === PREFIX + '/submission-sync/retry') return respond(res, 200, { ok: true, trackerSync: await retrySubmissionSync() });
+          if (url.pathname === PREFIX + '/talent-community/cognizant/reuse-resume') {
+            // A private materials transfer, not a new application or an employer upload.
+            // The selected submitted Cognizant job must exist in this runtime's workspace.
+            const sourceId = payload.sourceOpportunityId, sourceUrl = payload.sourceUrl;
+            if (typeof sourceId !== 'string' || typeof sourceUrl !== 'string') {
+              return respond(res, 422, { ok: false, error: 'saved_cognizant_source_required' });
+            }
+            const workspace = await readWorkspace();
+            const records = workspace?.workspace.values[APPLICATIONS_KEY];
+            const source = Array.isArray(records) ? records.find(item =>
+              item?.id === sourceId && item?.url === sourceUrl &&
+              typeof item?.company === 'string' && /\bcognizant\b/i.test(item.company) &&
+              ['applied', 'follow_up', 'closed'].includes(item.status)
+            ) : null;
+            if (!source) return respond(res, 409, { ok: false, error: 'submitted_cognizant_source_not_verified' });
+            const sourceSha = typeof payload.sourceSha256 === 'string' &&
+              /^[a-f0-9]{64}$/.test(payload.sourceSha256) ? payload.sourceSha256 : undefined;
+            const target = await documentStore.reuseReviewed(
+              source.id, source.url, COGNIZANT_TALENT_ID, COGNIZANT_TALENT_URL, 'resume', sourceSha);
+            const resume = target.documents.resume;
+            return respond(res, 200, {
+              ok: true, scope: { opportunityId: COGNIZANT_TALENT_ID, url: COGNIZANT_TALENT_URL },
+              resume: resume ? { sha256: resume.sha256, reviewed: Boolean(resume.reviewedAt), size: resume.size } : null,
+              jobApplicationUnchanged: true, employerUploadObserved: false, enrollmentSubmitted: false,
+            });
+          }
+
           if (url.pathname === PREFIX + '/listeners/bind-existing') {
             if (!context) return respond(res, 409, { ok: false, error: 'managed_browser_context_unavailable' });
             if (typeof payload.opportunityId !== 'string' || !payload.opportunityId || payload.opportunityId.length > 256) throw new Error('Select a saved opportunity.');
@@ -482,6 +554,10 @@ export function createManagedBrowserAssistPlugin(): Plugin {
           }
           if (url.pathname === PREFIX + '/launch') {
             const jobUrl = validateApplicationUrl(payload.url);
+            const talentCommunity = isCognizantTalentCommunity(jobUrl);
+            if (talentCommunity !== (payload.opportunityId === COGNIZANT_TALENT_ID)) {
+              return respond(res, 409, { ok: false, error: 'talent_community_scope_mismatch' });
+            }
             applicationOrigin = new URL(jobUrl).origin;
             applicationUrl = jobUrl;
             opportunityId = typeof payload.opportunityId === 'string' && payload.opportunityId.length <= 128
@@ -522,7 +598,8 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               try {
                 await page.goto(jobUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
                 state = 'application_open_review_required';
-                if (await openApplicationForm(page)) state = 'application_form_open_review_required';
+                if (!talentCommunity && await openApplicationForm(page)) state = 'application_form_open_review_required';
+                // A community enrollment must not click a site Apply/Join control while opening.
               } catch (error) {
                 // Network interface naming is only suggestive, never proof of VPN causality.
                 const activeNames = Object.entries(networkInterfaces())
@@ -541,7 +618,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               new URL(page.url()).pathname === '/careers/ai-automation-engineer';
             // Restoring a page never implicitly records answers or arms Submit observation.
             // The existing bind-existing action re-arms only after explicit page review.
-            if (opportunityId && !restoredPage && (state === 'application_form_open_review_required' || exactInlineForm)) {
+            if (opportunityId && !talentCommunity && !restoredPage && (state === 'application_form_open_review_required' || exactInlineForm)) {
               await listeners.attach(page, { opportunityId, applicationUrl: page.url(), opportunityUrl: jobUrl,
                 employerName: typeof payload.employerName === 'string' ? payload.employerName.slice(0, 160) : '' });
               await listeners.arm();
@@ -602,8 +679,14 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             // Only the CURRENT employer page determines which documents are requested.
             // Missing or unreviewed optional cover letters cannot block preparation.
             const formRequirements = await inspectApplicationRequirements(page!, opportunityId, applicationUrl);
+            const activeForm = new URL(page!.url());
+            const anonymousTalentResume = activeForm.origin === 'https://careers.cognizant.com' &&
+              /^\/us-en\/talent-community\/?$/.test(activeForm.pathname) &&
+              await page!.locator('input[type="file"]').count() === 1 &&
+              await page!.getByText(/^Resume\s*\*?$/i).count() === 1;
             const requestedKinds = (['resume', 'cover'] as const).filter(kind =>
-              formRequirements.requirements.some(field => field.kind === kind));
+              formRequirements.requirements.some(field => field.kind === kind) ||
+              (kind === 'resume' && anonymousTalentResume));
             const requiredKinds = (['resume', 'cover'] as const).filter(kind =>
               formRequirements.requirements.some(field => field.kind === kind && field.requirement === 'required'));
             const packageFiles = await documentStore.forCurrentEmployerForm(
@@ -617,6 +700,9 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               if (!merged.preferences[id]) {
                 merged.preferences[id] = { scope: 'profile_preference', source: 'user', value, updated_at: now };
               }
+            }
+            for (const [id, value] of Object.entries(derivedContactPreferenceValues(merged.preferences))) {
+              merged.preferences[id] = { scope: 'profile_preference', source: 'user', value, updated_at: now };
             }
             const approvedPreferences = withCareerPreferences(merged, payload.careerProfile, payload.targetRole);
             if (!payload.adapterRegistry) {
@@ -727,6 +813,9 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               const id = 'identity.' + (ids[key] || key);
               if (!merged.preferences[id]) merged.preferences[id] = { scope: 'profile_preference', source: 'user', value, updated_at: now };
             }
+            for (const [id, value] of Object.entries(derivedContactPreferenceValues(merged.preferences))) {
+              merged.preferences[id] = { scope: 'profile_preference', source: 'user', value, updated_at: now };
+            }
             const outcome = await fillSavedPreferences(page, withCareerPreferences(merged, payload.careerProfile, payload.targetRole), typeof payload.employerName === 'string' ? payload.employerName.slice(0, 160) : '');
             state = fieldProgressState(outcome);
             return respond(res, 200, { ok: true, state, ...outcome, authCheckpoint, evidenceSummary: evidenceDescription(state), requiresOperatorSubmission: true });
@@ -741,6 +830,11 @@ export function createManagedBrowserAssistPlugin(): Plugin {
           if (url.pathname === PREFIX + '/toggle-labeled-checkbox') {
             const labelText = typeof payload.label === 'string' ? payload.label.trim() : '';
             if (!labelText || labelText.length > 120) return respond(res, 422, { ok: false, error: 'label_required' });
+            // A programmatic label-toggle cannot authorize newsletter enrollment,
+            // marketing/data-sharing consent, privacy/legal acknowledgement, or certification.
+            if (isCognizantTalentCommunity(page.url()) || isProtectedEnrollmentConsentLabel(labelText)) {
+              return respond(res, 409, { ok: false, error: 'protected_consent_operator_only' });
+            }
             const escaped = labelText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const box = page.getByRole('checkbox', { name: new RegExp(escaped, 'i') });
             const byLabel = page.locator('label').filter({ hasText: new RegExp('^' + escaped + '$', 'i') });

@@ -110,3 +110,31 @@ test('current employer form can require no uploads; optional cover drafts never 
     await assert.rejects(store.forCurrentEmployerForm(id, url, ['unknown' as 'resume'], true), /Unrecognized/);
   } finally { await fs.rm(root, { recursive: true, force: true }); }
 });
+
+test('reviewed resume reuse preserves source, digest and independent enrollment scope', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-talent-reuse-'));
+  const store = new OpportunityDocumentStore(root);
+  const job = 'https://jobs.example.test/cognizant-role';
+  const talent = 'https://careers.cognizant.com/us-en/talent-community/';
+  try {
+    const source = await store.stage('submitted-job', job, 'resume', pdf('reviewed.pdf', 'approved'));
+    const sha = source.documents.resume!.sha256;
+    await assert.rejects(store.reuseReviewed('submitted-job', job, 'community', talent, 'resume'),
+      /reviewed source/i);
+    await store.review('submitted-job', job, 'resume', sha);
+    await assert.rejects(store.reuseReviewed('submitted-job', job, 'community', talent, 'resume', 'f'.repeat(64)),
+      /changed/);
+    const reused = await store.reuseReviewed('submitted-job', job, 'community', talent, 'resume', sha);
+    assert.equal(reused.documents.resume?.sha256, sha);
+    assert.ok(reused.documents.resume?.reviewedAt);
+    assert.deepEqual((await store.forUpload('community', talent)).resume?.buffer,
+      (await store.forUpload('submitted-job', job)).resume?.buffer);
+    assert.equal((await store.read('submitted-job', job)).documents.resume?.sha256, sha);
+    const repeated = await store.reuseReviewed('submitted-job', job, 'community', talent, 'resume', sha);
+    assert.equal(repeated.documents.resume?.sha256, sha, 'idempotent same-hash reuse');
+    await store.stage('community', talent, 'resume', pdf('different.pdf', 'edited locally'));
+    await assert.rejects(store.reuseReviewed('submitted-job', job, 'community', talent, 'resume', sha),
+      /different document/);
+    assert.equal((await store.read('community', talent)).documents.resume?.name, 'different.pdf');
+  } finally { await fs.rm(root, { recursive: true, force: true }); }
+});

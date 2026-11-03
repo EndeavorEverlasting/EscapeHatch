@@ -22,6 +22,14 @@ const headers: Record<string, keyof TrackerRow> = {
   'date applied': 'dateApplied', 'follow-up due': 'followUp', 'follow up due': 'followUp', 'follow-up': 'followUp',
   'next action': 'nextAction', 'notes': 'notes', 'source link': 'sourceLink', 'resume doc': 'resumeDoc',
   'resume pdf': 'resumePdf', 'audited on': 'auditedOn',
+  'talent community status': 'talentCommunityStatus',
+  'talent community confirmed on': 'talentCommunityConfirmedOn',
+  'talent community evidence': 'talentCommunityEvidence',
+  'talent community answer evidence': 'talentCommunityAnswerEvidence',
+  'internal employer profile status': 'internalEmployerProfileStatus',
+  'internal profile completed on': 'internalProfileCompletedOn',
+  'internal profile evidence': 'internalProfileEvidence',
+  'employer profile key': 'employerProfileKey',
 };
 const required = ['company', 'role', 'status', 'priority', 'applyUrl', 'appliedCheckbox'] as const;
 
@@ -29,8 +37,9 @@ const required = ['company', 'role', 'status', 'priority', 'applyUrl', 'appliedC
 export function createTrackerSnapshotFromValues(values: unknown, target: TrackerTarget, authPath: string, capturedAt: Date): TrackerSnapshot {
   if (!validTarget(target) || Number.isNaN(capturedAt.getTime())) fail('INVALID_TARGET');
   if (!Array.isArray(values) || values.length < 1 || values.length >= ROW_LIMIT) fail('INCOMPLETE_RESPONSE');
-  // A–AJ covers legacy A:Z fields plus Submission Proof (AD) and portal-profile AE:AJ.
-  if (!values.every(row => Array.isArray(row) && row.length <= 36 && row.every(cell => ['string', 'number', 'boolean'].includes(typeof cell)))) fail('INVALID_ROWS');
+  // Read A–AR: prior role/portal columns A–AJ and independent profile milestones AK–AR.
+  // Legacy A–AJ snapshots remain valid. This read width grants NO new write authority.
+  if (!values.every(row => Array.isArray(row) && row.length <= 44 && row.every(cell => ['string', 'number', 'boolean'].includes(typeof cell)))) fail('INVALID_ROWS');
   const heading = values[0] as (string | number | boolean)[];
   const seen = new Set<string>();
   const columns = heading.map(cell => {
@@ -173,7 +182,7 @@ async function refreshTrackerSnapshotNow(snapshotFile: string, options: RefreshO
   let response: Response | undefined;
   try {
     if (auth.token.length > 16384 || /[\r\n]/.test(auth.token)) fail('AUTH_REQUIRED');
-    const range = `'${current.sheetName.replace(/'/g, "''")}'!A1:AJ${ROW_LIMIT}`;
+    const range = `'${current.sheetName.replace(/'/g, "''")}'!A1:AR${ROW_LIMIT}`;
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(current.spreadsheetId)}/values/${encodeURIComponent(range)}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE`;
     response = await (options.fetch || fetch)(url, { headers: { authorization: `Bearer ${auth.token}` }, signal: controller.signal, redirect: 'error' });
     if (response.status === 401 || response.status === 403) return { ok: false, refreshed: false, error: 'AUTH_REQUIRED' };
@@ -193,7 +202,7 @@ async function refreshTrackerSnapshotNow(snapshotFile: string, options: RefreshO
       }
       return n - 1;
     };
-    if (!extent || columnIndex(extent[1]) < 0 || columnIndex(extent[1]) > 35 || Number(extent[2]) > ROW_LIMIT) fail('INCOMPLETE_RESPONSE');
+    if (!extent || columnIndex(extent[1]) < 0 || columnIndex(extent[1]) > 43 || Number(extent[2]) > ROW_LIMIT) fail('INCOMPLETE_RESPONSE');
     const snapshot = createTrackerSnapshotFromValues(raw.values, current, auth.source, (options.now || (() => new Date()))());
     if (controller.signal.aborted) fail('TIMEOUT');
     if (await readBoundedFile(snapshotFile, MAX_BYTES) !== previous) return { ok: false, refreshed: false, error: 'SOURCE_CHANGED_RETRY' };

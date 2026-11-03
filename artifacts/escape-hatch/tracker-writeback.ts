@@ -82,7 +82,9 @@ function sheetDateDay(value: string | number | undefined): string | null {
   return !Number.isNaN(Date.parse(iso)) && new Date(iso + 'T00:00:00Z').toISOString().slice(0, 10) === iso ? iso : null;
 }
 function dateSerial(day: string) { return Math.round((Date.parse(day + 'T00:00:00Z') - SHEETS_EPOCH_UTC) / 86400000); }
-/** A=0 … AJ=35. Portal profile columns AE:AJ stay readable but are never written here. */
+/** Submission writer is capped at A:AJ (36 columns). Existing portal AE:AJ and
+ * new talent-community/internal-profile AK:AR are read-only to this writer.
+ * A job receipt must never mutate an employer-profile completion field. */
 export const TRACKER_WRITE_COLUMN_LIMIT = 36;
 export const TRACKER_VALUES_RANGE = 'A1:AJ1500';
 export function sheetColumnLetter(index: number) {

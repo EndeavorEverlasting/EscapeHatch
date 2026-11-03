@@ -183,3 +183,35 @@ test('explicit next-action owner preserves submission and avoids duplicate appli
   assert.equal(metrics.inProcess, 3);
   assert.equal(metrics.submittedStatus, 1);
 });
+
+test('employer community and internal-profile milestones are independent of job submission and count companies once', () => {
+  const primary = row({
+    sheetRow: 41, company: 'Synthetic Cognizant', role: 'Team Lead', status: 'Submitted',
+    appliedCheckbox: true, applyUrl: 'https://example.test/submitted',
+    talentCommunityStatus: 'Confirmed', talentCommunityConfirmedOn: '11/03/2026',
+    talentCommunityEvidence: "Employer Thank you screenshot", employerProfileKey: 'synthetic:us:community',
+    talentCommunityAnswerEvidence: 'Local saved IDs observed; answer values not independently read',
+    internalEmployerProfileStatus: 'Not Assessed',
+  });
+  const otherRole = row({ ...primary, sheetRow: 42, role: 'Other Role', status: 'Ready to Apply', appliedCheckbox: false });
+  const unproved = row({ sheetRow: 43, company: 'Another', role: 'Role', status: 'Saved',
+    talentCommunityStatus: 'Confirmed', talentCommunityConfirmedOn: '11/03/2026',
+    talentCommunityEvidence: '', internalEmployerProfileStatus: 'Completed',
+    internalProfileCompletedOn: '', internalProfileEvidence: '' });
+  const internal = row({ sheetRow: 44, company: 'Separate', role: 'Role', status: 'Saved',
+    internalEmployerProfileStatus: 'Completed', internalProfileCompletedOn: '11/03/2026',
+    internalProfileEvidence: 'Account profile readback' });
+  const rows = [primary, otherRole, unproved, internal];
+  const metrics = computeTrackerMetrics(rows);
+  assert.equal(metrics.submittedStatus, 1);
+  assert.equal(metrics.talentCommunitiesConfirmed, 1, 'unique profile key and required proof');
+  assert.equal(metrics.internalProfilesCompleted, 1, 'separate completion evidence required');
+  const projected = trackerRowToApplication(primary);
+  assert.equal(projected.status, 'applied', 'community does not alter the submitted job');
+  assert.match(projected.notes, /Talent community: Confirmed/);
+  assert.match(projected.notes, /Internal employer profile: Not Assessed/);
+  assert.doesNotMatch(projected.notes, /Local saved IDs observed/, 'answer evidence is not pasted into role notes');
+  const restored = parseTrackerSnapshot(snapshot(rows));
+  assert.equal(restored?.applications[0].talentCommunityStatus, 'Confirmed');
+  assert.equal(restored?.metrics.talentCommunitiesConfirmed, 1);
+});

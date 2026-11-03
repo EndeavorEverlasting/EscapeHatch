@@ -28,6 +28,16 @@ export type TrackerRow = {
   resumeDoc?: string;
   resumePdf?: string;
   auditedOn?: string;
+  // Employer account/community milestones belong to the employer, not this job
+  // submission. Never infer one state from the other.
+  talentCommunityStatus?: string;
+  talentCommunityConfirmedOn?: string;
+  talentCommunityEvidence?: string;
+  talentCommunityAnswerEvidence?: string; // locator/coverage, never raw answer values
+  internalEmployerProfileStatus?: string;
+  internalProfileCompletedOn?: string;
+  internalProfileEvidence?: string;
+  employerProfileKey?: string;
 };
 
 export type TrackerMetrics = {
@@ -37,6 +47,8 @@ export type TrackerMetrics = {
   inProcess: number;
   submittedStatus: number;
   highPriority: number;
+  talentCommunitiesConfirmed: number; // unique enrollment profile keys with dated evidence
+  internalProfilesCompleted: number;  // unique employers with dated completion evidence
 };
 
 export type TrackerSnapshot = {
@@ -97,6 +109,18 @@ export function trackerOpportunityId(row: TrackerRow): string {
 }
 
 export function computeTrackerMetrics(rows: TrackerRow[]): TrackerMetrics {
+  // A talent-community enrollment is employer/profile-scoped and may be shared
+  // across several roles. Count it once; never use the job's Applied checkbox.
+  const confirmedCommunityKeys = new Set(rows
+    .filter(row => row.talentCommunityStatus?.trim().toLowerCase() === 'confirmed' &&
+      Boolean(row.talentCommunityConfirmedOn?.trim()) && Boolean(row.talentCommunityEvidence?.trim()))
+    .map(row => (row.employerProfileKey?.trim() || row.company.trim().toLowerCase()))
+    .filter(Boolean));
+  const completedInternalEmployers = new Set(rows
+    .filter(row => row.internalEmployerProfileStatus?.trim().toLowerCase() === 'completed' &&
+      Boolean(row.internalProfileCompletedOn?.trim()) && Boolean(row.internalProfileEvidence?.trim()))
+    .map(row => row.company.trim().toLowerCase())
+    .filter(Boolean));
   return {
     trackedRoles: rows.length,
     appliedOrSubmittedCheckbox: rows.filter((row) => row.appliedCheckbox).length,
@@ -109,6 +133,8 @@ export function computeTrackerMetrics(rows: TrackerRow[]): TrackerMetrics {
     }).length,
     submittedStatus: rows.filter((row) => row.status.toLowerCase().startsWith('submit')).length,
     highPriority: rows.filter((row) => row.priority.toLowerCase().startsWith('high')).length,
+    talentCommunitiesConfirmed: confirmedCommunityKeys.size,
+    internalProfilesCompleted: completedInternalEmployers.size,
   };
 }
 
@@ -167,6 +193,8 @@ export function trackerRowToApplication(row: TrackerRow, capturedAt?: string): A
       row.appliedCheckbox ? 'Applied? checkbox marked (not independent submit proof)' : 'Applied? unchecked',
       packageBits.join(' · '),
       row.followUp ? `Follow-up: ${row.followUp}` : null,
+      row.talentCommunityStatus ? `Talent community: ${row.talentCommunityStatus}${row.talentCommunityConfirmedOn ? ' · ' + row.talentCommunityConfirmedOn : ''} (not job-submission state)` : null,
+      row.internalEmployerProfileStatus ? `Internal employer profile: ${row.internalEmployerProfileStatus} (independent of talent community)` : null,
       row.notes || null,
     ].filter(Boolean).join('\n'),
     nextAction: row.nextAction?.trim() ||

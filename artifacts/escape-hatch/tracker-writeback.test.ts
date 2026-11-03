@@ -73,8 +73,8 @@ test('canonical tracker glyphs, Research status and date-validated serial surviv
   assert.throws(() => planSubmissionWrite(current, evidence, unchecked), /CONFLICT/);
 });
 
-test('Submission Proof AD writes Employer Confirmed and never clobbers portal AE:AJ cells', () => {
-  const heading = Array.from({ length: 36 }, (_, i) => {
+test('Submission Proof AD writes Employer Confirmed and never clobbers portal or community AE:AR cells', () => {
+  const heading = Array.from({ length: 44 }, (_, i) => {
     if (i === 0) return 'Company';
     if (i === 1) return 'Role';
     if (i === 2) return 'Status';
@@ -90,9 +90,15 @@ test('Submission Proof AD writes Employer Confirmed and never clobbers portal AE
     if (i === 33) return 'Portal Evidence';
     if (i === 34) return 'Portal Photo';
     if (i === 35) return 'Portal Notes';
+    if (i >= 36) return [
+      'Talent Community Status', 'Talent Community Confirmed On',
+      'Talent Community Evidence', 'Talent Community Answer Evidence',
+      'Internal Employer Profile Status', 'Internal Profile Completed On',
+      'Internal Profile Evidence', 'Employer Profile Key',
+    ][i - 36];
     return `Pad ${i}`;
   });
-  const row = Array.from({ length: 36 }, (_, i) => {
+  const row = Array.from({ length: 44 }, (_, i) => {
     if (i === 0) return 'Synthetic';
     if (i === 1) return 'Role';
     if (i === 2) return 'Research';
@@ -102,6 +108,7 @@ test('Submission Proof AD writes Employer Confirmed and never clobbers portal AE
     if (i === 6) return '';
     if (i === 7) return 'historic audit note';
     if (i === 29) return '';
+    if (i >= 36) return `community-${i}`;
     if (i >= 30) return `portal-${i}`;
     return '';
   });
@@ -110,8 +117,9 @@ test('Submission Proof AD writes Employer Confirmed and never clobbers portal AE
   const evidence = { ...receipt(), opportunityId: trackerOpportunityId(current.applications[0]) };
   const planned = planSubmissionWrite(current, evidence, cells, 'America/New_York');
   assert.ok(planned.data.some(item => item.range === "'Applications'!AD2" && item.values[0][0] === 'Employer Confirmed'));
-  assert.equal(planned.data.some(item => /!(AE|AF|AG|AH|AI|AJ)2$/.test(item.range)), false);
+  assert.equal(planned.data.some(item => /!A[E-R]2$/.test(item.range)), false);
   for (let i = 30; i <= 35; i++) assert.equal(cells[1][i], `portal-${i}`);
+  for (let i = 36; i <= 43; i++) assert.equal(cells[1][i], `community-${i}`);
   assert.equal(cells[1][7], 'historic audit note');
   assert.throws(() => planSubmissionWrite(current, evidence, [heading.slice(0, 29), row.slice(0, 29)]), /CONFLICT/);
 });

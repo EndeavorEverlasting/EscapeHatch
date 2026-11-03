@@ -58,12 +58,15 @@ export function GuidedStart({ profile, applications, focusOpportunity }: { profi
       </div>
     </div>
     <ProfilePieceBoard profile={profile} />
-    <ol className="mt-6 grid gap-4 md:grid-cols-3" aria-label="Application journey">{steps.map((step, index) => <li key={step.href} className={index === guidance.nextStep ? 'guide-step guide-step-current' : 'guide-step'}>
+    <details className="guided-journey mt-5" open={!focusOpportunity || guidance.essentialMissing.length > 0}>
+      <summary className="min-h-11 cursor-pointer rounded-lg border border-border bg-card/70 px-4 py-3 text-sm font-bold text-primary">Explore your application path · sources, opportunities, and application assembly</summary>
+    <ol className="mt-4 grid gap-4 md:grid-cols-3" aria-label="Application journey">{steps.map((step, index) => <li key={step.href} className={index === guidance.nextStep ? 'guide-step guide-step-current' : 'guide-step'}>
       <step.icon size={24} aria-hidden="true" className="text-primary" />
       <p className="mt-4 text-xs font-bold text-muted-foreground">Step {index + 1}{index === guidance.nextStep ? ' · Next action' : index < guidance.nextStep ? ' · Revisit anytime' : ' · Available'}</p>
       <h3 className="mt-2 text-base font-bold">{step.title}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{step.description}</p>
       <Link href={step.href} className="mt-4 inline-flex min-h-11 items-center font-bold text-primary underline underline-offset-4">{index === guidance.nextStep ? 'Start this step' : 'Open step'}</Link>
     </li>)}</ol>
+    </details>
     <details className="mt-4 text-sm"><summary className="min-h-11 cursor-pointer py-3 font-bold">How does EscapeHatch work?</summary><p className="max-w-2xl leading-6 text-muted-foreground">You can add career sources before saving a job. Nothing from a dropped file is approved until you review it. In Application Assist, choose a saved opportunity and inspect its current form to see what it asks for. Save and review the exact documents for that job, then prepare the form. Sign-in, sensitive declarations, and final Submit stay with you. Revisit this guide from Today at any time.</p></details>
     <DialogContent aria-describedby="mascot-tutorial-description" className="max-w-xl" data-testid="mascot-tutorial-overlay">
         <div className="flex items-center gap-4 pr-6">

@@ -58,10 +58,10 @@ def needs_sync_worker(data_root: Path) -> bool:
     try:
         outbox = _read_private_json(data_root / "submission-tracker-outbox.v1.json")
         receipts = _read_private_json(data_root / "managed-submission-receipts.json")
-        entries = [] if outbox is None else outbox.get("entries")
         if outbox is not None and (not isinstance(outbox, dict) or
                                     outbox.get("schema") != "escapehatch/submission-tracker-outbox/v1"):
             return True
+        entries = [] if outbox is None else outbox.get("entries")
         if not isinstance(entries, list) or len(entries) > 1000:
             return True
         if receipts is None:
@@ -84,7 +84,7 @@ def needs_sync_worker(data_root: Path) -> bool:
             if receipt["attemptId"] not in queued:
                 return True
         return False
-    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+    except (OSError, ValueError, TypeError, UnicodeError):
         return True  # Malformed/unreadable state must never be mistaken for IDLE.
 
 

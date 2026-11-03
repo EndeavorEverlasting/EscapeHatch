@@ -1,0 +1,1 @@
+/** Immutable encrypted capsule carrier. */

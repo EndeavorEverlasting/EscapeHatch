@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { emptyPreferences, parsePreferences, questions, preferenceChoices, expandProfessionalTitles, suggestProfessionalTitles, type Preferences } from '@/lib/application-preferences';
-import { savedAnswerReviewRows, unrecognizedSavedAnswerCount, hasTalentCommunityAnswers, talentCommunityAnswerHandoff } from '@/lib/answer-transparency';
+import { savedAnswerReviewRows, unrecognizedSavedAnswerCount, hasTalentCommunityAnswers, talentCommunityAnswerHandoff, canReplaceEditorFromDisk } from '@/lib/answer-transparency';
 
 const API = '/__escapehatch/managed-assist/preferences';
 type PreferenceStoreMeta = { dataHome: string; preferenceStore: string; source: string; exists: boolean };
@@ -49,7 +49,7 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
       setSavedData(parsed); setReady(true);
       // A person can edit while a background refresh is pending. A disk read
       // may refresh the review snapshot but must never replace those edits.
-      if (priorEdits !== editVersion.current) {
+      if (!canReplaceEditorFromDisk(requestVersion, loadVersion.current, priorEdits, editVersion.current)) {
         setMessage('Disk snapshot refreshed. Unsaved answers in the editor were preserved.');
         return false;
       }

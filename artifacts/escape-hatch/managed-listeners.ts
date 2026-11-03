@@ -5,7 +5,7 @@ import { DatabaseSync } from 'node:sqlite';
 import type { Page } from '@playwright/test';
 import { updatePreferences } from './preference-file.ts';
 import { installAnswerMemory, mergeCapturedAnswer, mergeQuestionCatalog, scanQuestionCatalog } from './managed-answer-memory.ts';
-import { installManagedSubmissionObserver, type ManagedSubmissionReceipt } from './managed-submission-observer.ts';
+import { installManagedSubmissionObserver, type ManagedSubmissionReceipt, type SubmissionSnapshot } from './managed-submission-observer.ts';
 import { parseSubmissionEvidence } from './src/lib/submission-reconciliation.ts';
 import { userDataRoot, legacyPrivateRoots } from './user-data.ts';
 
@@ -88,6 +88,8 @@ export class ManagedListeners {
   readonly implementationVersion = 4;
   private stopMemory: (() => Promise<void>) | null = null;
   private observer: Awaited<ReturnType<typeof installManagedSubmissionObserver>> | null = null;
+  // Retain confirmed proof for the UI after retiring the page observer.
+  private confirmedSubmission: SubmissionSnapshot | null = null;
   private serial: Promise<void> = Promise.resolve();
   private generation = 0;
   private savedAnswers = 0;
@@ -103,6 +105,23 @@ export class ManagedListeners {
     this.preferencesPath = preferencesPath;
     this.recoverLegacy = receiptsPath === submissionReceiptFile() && !process.env.ESCAPEHATCH_DATA_HOME;
     this.onReceipt = onReceipt;
+  }
+
+  /** Receipt durability, not tracker sync, ends this opportunity's live observation.
+   * Other opportunities' outbox entries remain independently owned by SubmissionSync.
+   */
+  private async retireConfirmedListener(receipt: ManagedSubmissionReceipt, generation: number) {
+    const observer = this.observer;
+    if (generation !== this.generation || !observer) return;
+    const terminal = observer.snapshot();
+    if (terminal.state !== 'CONFIRMED' || terminal.receipt?.attemptId !== receipt.attemptId) return;
+    this.confirmedSubmission = terminal;
+    this.generation++; // Invalidate late answer-capture callbacks from this opportunity.
+    this.recording = false;
+    try { await this.stopMemory?.(); this.stopMemory = null; }
+    catch { this.error = 'Employer receipt saved, but answer-listener cleanup needs review.'; }
+    try { await observer.dispose(); this.observer = null; }
+    catch { this.error = 'Employer receipt saved, but submission-listener cleanup needs review.'; }
   }
 
   async attach(page: Page, scope: ListenerScope, recording = true) {
@@ -152,6 +171,8 @@ export class ManagedListeners {
               await fs.rename(temporary, this.receiptsPath);
             }
           } finally { try { await fs.rm(temporary, { force: true }); } finally { try { lock.exec('ROLLBACK'); } finally { lock.close(); } } }
+          // Do not leave an application listener or answer capture active after durable proof.
+          await this.retireConfirmedListener(receipt, generation);
           // Durable evidence precedes provider reconciliation; replay can recover
           // a process interruption between these two independently proven steps.
           try { await this.onReceipt?.(receipt); }
@@ -163,12 +184,14 @@ export class ManagedListeners {
   }
 
   async arm() {
+    if (this.confirmedSubmission) return this.status(); // A new job needs a fresh exact binding.
     try { if (!this.observer) throw new Error('No bound submission observer.'); if ((await this.observer.arm()).state === 'ARMED') this.error = ''; }
     catch { this.error = 'Submission tracking could not arm on this page. Review the current application before trying again.'; }
     return this.status();
   }
   async disarm() { await this.observer?.disarm(); return this.status(); }
   async refresh() {
+    if (this.confirmedSubmission) return this.status();
     if (!this.observer || typeof this.observer.refresh !== 'function') {
       throw new Error('This legacy observer cannot replay its confirmation scan. Preserve evidence; do not resubmit.');
     }
@@ -188,7 +211,7 @@ export class ManagedListeners {
     await this.serial;
     if (this.recoverLegacy) await migrateSubmissionReceipts(this.receiptsPath);
     return { recordingAnswers: this.recording && !!this.stopMemory, savedAnswers: this.savedAnswers,
-      submission: this.observer?.snapshot() || null, opportunityId: this.scope?.opportunityId || '', error: this.error,
+      submission: this.confirmedSubmission || this.observer?.snapshot() || null, opportunityId: this.scope?.opportunityId || '', error: this.error,
       receipts: await readSubmissionReceipts(this.receiptsPath) };
   }
   async dispose() {
@@ -199,5 +222,6 @@ export class ManagedListeners {
     this.stopMemory = null;
     this.observer = null;
     this.scope = null;
+    this.confirmedSubmission = null;
   }
 }

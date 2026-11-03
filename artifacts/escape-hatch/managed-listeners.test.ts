@@ -58,6 +58,11 @@ test('listeners save explicit answers and a durable receipt only after confirmed
     for (let i = 0; i < 50 && !status.receipts.length; i++) { await new Promise(resolve => setTimeout(resolve, 20)); status = await listeners.status(); }
     assert.equal(status.submission?.state, 'CONFIRMED');
     assert.equal((await readSubmissionReceipts(receiptsFile)).length, 1);
+    // Confirmation is durable, but the application-specific listener is retired.
+    assert.equal(status.recordingAnswers, false);
+    assert.equal(status.submission?.receipt?.opportunityId, 'synthetic');
+    assert.equal((await listeners.arm()).submission?.state, 'CONFIRMED');
+    assert.equal((await listeners.refresh()).submission?.state, 'CONFIRMED');
     await listeners.dispose();
     assert.equal((await readSubmissionReceipts(receiptsFile))[0].opportunityId, 'synthetic');
     await fs.writeFile(receiptsFile, '[{"observedAt":"invalid"}]');

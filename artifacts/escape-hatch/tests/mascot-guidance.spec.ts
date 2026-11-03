@@ -126,4 +126,3 @@ test('Today puzzle uses inspectable local slots, not an invented employer readin
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect(first).toHaveCSS('animation-name', 'none');
 });
-

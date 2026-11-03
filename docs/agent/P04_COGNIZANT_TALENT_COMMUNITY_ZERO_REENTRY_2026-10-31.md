@@ -39,10 +39,10 @@
 
 # P04 + Trifecta — Cognizant talent-community zero-reentry
 
-**Date:** 2026-10-31  
-**Parent:** [EscapeHatch application-autofill Issue #69](https://github.com/EndeavorEverlasting/EscapeHatch/issues/69)  
-**Canonical implementation owner:** [`docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md`](../APPLICATION_ASSIST_AUTOPILOT_PLAN.md)  
-**Target form:** https://careers.cognizant.com/us-en/talent-community/  
+**Date:** 2026-10-31
+**Parent:** [EscapeHatch application-autofill Issue #69](https://github.com/EndeavorEverlasting/EscapeHatch/issues/69)
+**Canonical implementation owner:** [`docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md`](../APPLICATION_ASSIST_AUTOPILOT_PLAN.md)
+**Target form:** https://careers.cognizant.com/us-en/talent-community/
 **Status at handoff:** Bounded synthetic mapper evaluated; implementation package staged outside repository because connected GitHub source/issue writes were blocked by provider safety checks. No commit, merge, installed-runtime or employer-form proof is claimed.
 
 ## Operator objective and authorization

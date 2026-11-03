@@ -7,6 +7,7 @@ import {
   mergeTrackerIntoApplications,
   parseTrackerSnapshot,
   selectNextActionableOpportunity,
+  selectNextHomeApplication,
   trackerOpportunityId,
   trackerRowToApplication,
   type TrackerRow,
@@ -214,4 +215,23 @@ test('employer community and internal-profile milestones are independent of job 
   const restored = parseTrackerSnapshot(snapshot(rows));
   assert.equal(restored?.applications[0].talentCommunityStatus, 'Confirmed');
   assert.equal(restored?.metrics.talentCommunitiesConfirmed, 1);
+});
+
+test('Today never resurrects a locally submitted opportunity from an older Ready tracker suggestion', () => {
+  const formerlyReady = trackerRowToApplication(row({
+    sheetRow: 48, company: 'Synthetic Past Employer', role: 'Lead', status: 'Ready to Apply',
+    priority: 'High', applyUrl: 'https://jobs.example.test/old',
+  }));
+  const trulyReady = trackerRowToApplication(row({
+    sheetRow: 49, company: 'Synthetic New Employer', role: 'Engineer', status: 'Ready to Apply',
+    priority: 'Medium', applyUrl: 'https://jobs.example.test/new',
+  }));
+  const submittedLocal = { ...formerlyReady, status: 'applied' as const };
+  const followUpLocal = { ...formerlyReady, status: 'follow_up' as const };
+  assert.equal(selectNextHomeApplication(formerlyReady, [submittedLocal, trulyReady])?.id, trulyReady.id);
+  assert.equal(selectNextHomeApplication(formerlyReady, [followUpLocal])?.id, null);
+  assert.equal(selectNextHomeApplication(formerlyReady, [{ ...formerlyReady, status: 'closed' }])?.id, null);
+  assert.equal(selectNextHomeApplication(formerlyReady, [formerlyReady])?.id, formerlyReady.id);
+  assert.equal(selectNextHomeApplication(null, [submittedLocal])?.id, null);
+  assert.equal(selectNextHomeApplication(formerlyReady, [{ ...formerlyReady, reconciliationConflict: 'opportunity_url_changed' }])?.id, null);
 });

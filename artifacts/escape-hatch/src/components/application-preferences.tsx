@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { emptyPreferences, parsePreferences, questions, preferenceChoices, expandProfessionalTitles, suggestProfessionalTitles, type Preferences } from '@/lib/application-preferences';
+import { savedAnswerReviewRows, unrecognizedSavedAnswerCount, hasTalentCommunityAnswers, talentCommunityAnswerHandoff } from '@/lib/answer-transparency';
 
 const API = '/__escapehatch/managed-assist/preferences';
 type PreferenceStoreMeta = { dataHome: string; preferenceStore: string; source: string; exists: boolean };
@@ -13,6 +14,10 @@ function preferenceFieldLabel(id: string, fallback: string) {
 }
 export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '', reviewedExperience = '', refresh = 0, onEdit }: { onLoad?: (data: Preferences) => void; currentRole?: string; currentPosting?: string; reviewedExperience?: string; refresh?: number; onEdit?: () => void }) {
   const [data, setData] = useState<Preferences>(emptyPreferences);
+  // Separate the durable disk snapshot from unsaved edits in the form below.
+  const [savedData, setSavedData] = useState<Preferences>(emptyPreferences);
+  const [showAllSavedAnswers, setShowAllSavedAnswers] = useState(false);
+  const [copyStatus, setCopyStatus] = useState('');
   const [newTitle, setNewTitle] = useState('');
   const [message, setMessage] = useState('Loading saved preferences…');
   const [store, setStore] = useState<PreferenceStoreMeta | null>(null);
@@ -31,7 +36,7 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
         ? { dataHome: String(json.store.dataHome || ''), preferenceStore: String(json.store.preferenceStore), source: String(json.store.source || 'platform_default'), exists: json.store.exists === true }
         : null;
       setStore(meta);
-      setData(parsed); onLoad?.(parsed); setReady(true);
+      setData(parsed); setSavedData(parsed); onLoad?.(parsed); setReady(true);
       setMessage(meta?.exists
         ? 'Shared EscapeHatch profile found on this computer. Reused across browsers until you edit or clear it.'
         : 'No shared profile file yet. Save Preferences to create the EscapeHatch profile on this computer.');
@@ -57,6 +62,16 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = 'escapehatch-application-preferences.json'; a.click(); URL.revokeObjectURL(url);
   }
+  const recorded = savedAnswerReviewRows(savedData);
+  const visibleRecorded = showAllSavedAnswers ? recorded : recorded.slice(0, 8);
+  async function copyTalentCommunityAnswers() {
+    try {
+      await navigator.clipboard.writeText(talentCommunityAnswerHandoff(savedData));
+      setCopyStatus('Saved talent-community answers copied. Paste only where you choose.');
+    } catch {
+      setCopyStatus('Clipboard unavailable. Review the saved answers here or use Export Preferences.');
+    }
+  }
   return <section className="mb-6 rounded-2xl border border-border bg-card p-5" data-testid="application-preferences">
     <h2 className="font-display text-2xl">Reusable application answers</h2>
     <p className="mt-2 max-w-prose text-sm leading-6 text-muted-foreground">Save your own answers once. Leave unknown facts blank. Review the employer form before submitting. Agreements and certifications stay manual.</p>
@@ -75,6 +90,44 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
         <p className="mt-2 break-all font-mono text-[0.7rem] leading-5 text-muted-foreground" data-testid="preference-store-path">{store.preferenceStore}</p>
       </details>}
     </aside>
+
+    {ready && <section className="mt-4 rounded-xl border border-border bg-secondary/20 p-4" aria-label="Exact saved answers" data-testid="saved-answer-review">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="font-display text-xl">What EscapeHatch actually remembers</h3>
+          <p className="mt-1 text-sm text-muted-foreground">Exact answers from your private local profile, with their saved times. These are not proof of which choices an employer received or accepted.</p>
+        </div>
+        <button type="button" className="rounded border border-border px-3 py-2 text-sm" disabled={busy || dirty} onClick={() => void load()}>Refresh from disk</button>
+      </div>
+      <p className="mt-3 text-sm font-medium">{recorded.length} recorded answers
+        {unrecognizedSavedAnswerCount(savedData) > 0 && <span className="ml-2 text-muted-foreground">· {unrecognizedSavedAnswerCount(savedData)} unrecognized IDs retained privately, not used for automatic filling</span>}
+      </p>
+      {dirty && <p className="mt-2 text-sm text-muted-foreground">Edits below have not been saved. This review shows the last disk snapshot.</p>}
+      {recorded.length ? <ul className="mt-3 grid gap-2" data-testid="saved-answer-rows">
+        {visibleRecorded.map(answer => <li key={answer.id} className="rounded-lg border border-border bg-card p-3" data-testid="saved-answer-row">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-sm font-semibold">{answer.label}</span>
+            <code className="break-all text-xs text-muted-foreground">{answer.id}</code>
+          </div>
+          <p className="mt-2 whitespace-pre-wrap break-words text-sm" data-testid="saved-answer-value">{answer.value}</p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {answer.source === 'saved_preference' ? 'Saved user preference' : answer.source === 'approved_question_memory' ? 'Approved question memory' : 'Question memory awaiting approval'}
+            {' · '}Saved {new Date(answer.updatedAt).toLocaleString()}
+            {' · '}{answer.reusable ? 'Eligible for matching-field reuse' : 'Review needed before reuse'}
+          </p>
+        </li>)}
+      </ul> : <p className="mt-3 text-sm text-muted-foreground">No saved answers were found in this local preference store.</p>}
+      {recorded.length > 8 && <button type="button" className="mt-3 text-sm underline" onClick={() => setShowAllSavedAnswers(value => !value)}>
+        {showAllSavedAnswers ? 'Show latest 8 answers' : 'Show all ' + recorded.length + ' saved answers'}
+      </button>}
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <button type="button" disabled={!hasTalentCommunityAnswers(savedData)} className="rounded border border-primary px-3 py-2 text-sm font-medium text-primary disabled:opacity-50" onClick={() => void copyTalentCommunityAnswers()}>
+          Copy talent-community answers for handoff
+        </button>
+        <span className="text-xs text-muted-foreground">Copies only the three talent-community fields, on your explicit click. Nothing is uploaded or shared automatically.</span>
+      </div>
+      <p role="status" className="mt-2 text-sm">{copyStatus}</p>
+    </section>}
     <fieldset disabled={!ready || busy}>
       <section className="mt-4 rounded-xl border border-border p-4" aria-label="Applicant privacy acknowledgements">
         <h3 className="font-display text-xl">Applicant privacy acknowledgements</h3>

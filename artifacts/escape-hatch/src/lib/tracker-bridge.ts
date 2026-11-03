@@ -288,3 +288,22 @@ export function connectionFromSnapshot(
   }
   return { status: 'CONNECTED', snapshot };
 }
+
+/**
+ * Today's suggested new-application action must respect more advanced local
+ * evidence, even when the tracker source still advertises the same row as Ready.
+ * Never resurface submitted, follow-up, closed, or conflicting work as an
+ * unsent application puzzle.
+ */
+export function selectNextHomeApplication(
+  suggested: Application | null,
+  existing: readonly Application[],
+): Application | null {
+  const eligible = (item: Application) =>
+    (item.status === 'saved' || item.status === 'preparing') &&
+    !item.submissionEvidence && !item.reconciliationConflict;
+  const reconciled = suggested ? existing.find(item => item.id === suggested.id) || suggested : null;
+  if (reconciled && eligible(reconciled)) return reconciled;
+  return existing.find(item => eligible(item) && item.nextAction.trim()) ||
+    existing.find(eligible) || null;
+}

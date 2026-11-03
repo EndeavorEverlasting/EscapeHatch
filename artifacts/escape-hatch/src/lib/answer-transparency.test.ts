@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { emptyPreferences, parsePreferences, reusableValue, normalizeQuestion } from './application-preferences.ts';
-import { savedAnswerReviewRows, talentCommunityAnswerHandoff, hasTalentCommunityAnswers, unrecognizedSavedAnswerCount } from './answer-transparency.ts';
+import { savedAnswerReviewRows, talentCommunityAnswerHandoff, hasTalentCommunityAnswers, unrecognizedSavedAnswerCount, canReplaceEditorFromDisk } from './answer-transparency.ts';
 
 test('saved Cognizant answers are visible with exact value, source and date; copy is limited to three fields', () => {
   const data = emptyPreferences();
@@ -53,4 +53,12 @@ test('historical question memory stays review-only across new aliases', () => {
   const row = savedAnswerReviewRows(parsed).find(item => item.id === 'discovered:' + key);
   assert.equal(row?.value, 'Applied mathematics');
   assert.equal(row?.reusable, false);
+});
+
+test('disk refresh never overwrites an intervening user edit or newer refresh', () => {
+  assert.equal(canReplaceEditorFromDisk(1, 1, 0, 0), true);
+  assert.equal(canReplaceEditorFromDisk(1, 1, 0, 1), false);
+  assert.equal(canReplaceEditorFromDisk(1, 2, 0, 0), false);
+  assert.equal(canReplaceEditorFromDisk(2, 2, 7, 7), true);
+  assert.equal(canReplaceEditorFromDisk(2, 2, 7, 8), false);
 });

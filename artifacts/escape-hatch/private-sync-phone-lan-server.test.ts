@@ -80,6 +80,10 @@ test('phone LAN server serves apk/offer/capsule and never pairing codes', async 
     assert.match(index, /Download EscapeHatchAssist-debug\.apk/);
     assert.doesNotMatch(index, /pairingCode|pairing-code\.local/i);
 
+    const apkHead = await fetch(`http://127.0.0.1:${port}/apk`, { method: 'HEAD' });
+    assert.equal(apkHead.status, 200);
+    assert.equal(apkHead.headers.get('content-length'), String(apkBytes.byteLength));
+
     const apk = await fetch(`http://127.0.0.1:${port}/apk`);
     assert.equal(apk.status, 200);
     assert.equal(Buffer.compare(Buffer.from(await apk.arrayBuffer()), apkBytes), 0);

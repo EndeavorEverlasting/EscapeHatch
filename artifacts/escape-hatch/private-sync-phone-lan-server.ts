@@ -80,26 +80,51 @@ const server = http.createServer(async (req, res) => {
     res.end();
     return;
   }
-  if (req.method !== 'GET') {
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
     deny(res, 405, 'METHOD_NOT_ALLOWED');
     return;
   }
+  const headOnly = req.method === 'HEAD';
   const url = new URL(req.url || '/', `http://127.0.0.1:${port}`);
   try {
     if (url.pathname === '/' || url.pathname === '/index.html') {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', ...cors });
-      res.end(installPage);
+      if (!headOnly) res.end(installPage);
+      else res.end();
       return;
     }
     if (url.pathname === '/apk') {
       const apk = path.join(carrier, 'EscapeHatchAssist-debug.apk');
       await fs.access(apk);
+      if (headOnly) {
+        const st = await fs.stat(apk);
+        res.writeHead(200, {
+          'content-type': 'application/vnd.android.package-archive',
+          'content-length': String(st.size),
+          'content-disposition': 'attachment; filename="EscapeHatchAssist-debug.apk"',
+          'cache-control': 'no-store',
+          ...cors,
+        });
+        res.end();
+        return;
+      }
       await fileResponse(res, apk, 'application/vnd.android.package-archive', 'EscapeHatchAssist-debug.apk');
       return;
     }
     if (url.pathname === '/offer') {
       const offer = path.join(carrier, 'pairing-offer.json');
       await fs.access(offer);
+      if (headOnly) {
+        const st = await fs.stat(offer);
+        res.writeHead(200, {
+          'content-type': 'application/json; charset=utf-8',
+          'content-length': String(st.size),
+          'cache-control': 'no-store',
+          ...cors,
+        });
+        res.end();
+        return;
+      }
       await fileResponse(res, offer, 'application/json; charset=utf-8', 'pairing-offer.json');
       return;
     }
@@ -109,12 +134,30 @@ const server = http.createServer(async (req, res) => {
         deny(res, 404, 'CAPSULE_MISSING');
         return;
       }
+      if (headOnly) {
+        const st = await fs.stat(capsule);
+        res.writeHead(200, {
+          'content-type': 'application/octet-stream',
+          'content-length': String(st.size),
+          'content-disposition': `attachment; filename="${path.basename(capsule)}"`,
+          'cache-control': 'no-store',
+          ...cors,
+        });
+        res.end();
+        return;
+      }
       await fileResponse(res, capsule, 'application/octet-stream', path.basename(capsule));
       return;
     }
     if (url.pathname === '/health') {
-      res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', ...cors });
-      res.end(JSON.stringify({ ok: true, carrier, serves: ['apk', 'offer', 'capsule'], pairingCode: 'never' }));
+      const body = JSON.stringify({ ok: true, carrier, serves: ['apk', 'offer', 'capsule'], pairingCode: 'never' });
+      res.writeHead(200, {
+        'content-type': 'application/json; charset=utf-8',
+        'content-length': String(Buffer.byteLength(body)),
+        ...cors,
+      });
+      if (!headOnly) res.end(body);
+      else res.end();
       return;
     }
     deny(res, 404, 'NOT_FOUND');

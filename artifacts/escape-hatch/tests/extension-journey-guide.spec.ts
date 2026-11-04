@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 
 const popup = readFileSync(new URL('../../../browser/application-assist/popup.html', import.meta.url), 'utf8').replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
 const guide = readFileSync(new URL('../../../browser/application-assist/journey-guide.js', import.meta.url), 'utf8');
-type Scenario = { saved?: boolean; initialReadError?: boolean; invalidSaved?: boolean; setError?: boolean; readbackError?: boolean; mismatch?: boolean; delayWrite?: boolean; phone?: boolean };
+type Scenario = { saved?: boolean; initialReadError?: boolean; initialSyncReadError?: boolean; invalidSaved?: boolean; setError?: boolean; readbackError?: boolean; mismatch?: boolean; delayWrite?: boolean; phone?: boolean };
 
 /** Actual popup DOM/CSS + guide script; Chrome storage and session controls stay synthetic. */
 async function mount(page: Page, scenario: Scenario = {}) {
@@ -13,12 +13,9 @@ async function mount(page: Page, scenario: Scenario = {}) {
     const state = { reads: 0, writes: 0, saved: scenario.saved as unknown, actions: [] as string[], scroll: [] as string[], resolveWrite: undefined as undefined | (() => void) };
     (window as any).__guideTest = state;
     Object.defineProperty(window, 'chrome', { configurable: true, value: { storage: { local: {
-      get: async () => {
-        state.reads++;
-        if ((state.reads === 1 && scenario.initialReadError) || (state.reads > 1 && scenario.readbackError)) throw new Error('synthetic read error');
-        if (scenario.invalidSaved) return { [key]: 'invalid' };
-        if (state.saved === undefined) return {};
-        return { [key]: scenario.mismatch && state.reads > 1 ? !state.saved : state.saved };
+      get: () => {
+        if (scenario.initialSyncReadError) throw new Error('synthetic synchronous API error');
+        return readSaved();
       },
       set: async (value: Record<string, boolean>) => {
         state.writes++;
@@ -27,6 +24,13 @@ async function mount(page: Page, scenario: Scenario = {}) {
         state.saved = value[key];
       },
     } } } });
+    async function readSaved() {
+        state.reads++;
+        if ((state.reads === 1 && scenario.initialReadError) || (state.reads > 1 && scenario.readbackError)) throw new Error('synthetic read error');
+        if (scenario.invalidSaved) return { [key]: 'invalid' };
+        if (state.saved === undefined) return {};
+        return { [key]: scenario.mismatch && state.reads > 1 ? !state.saved : state.saved };
+    }
     Element.prototype.scrollIntoView = function (options) { state.scroll.push((options as ScrollIntoViewOptions)?.behavior || 'auto'); };
     (window as any).EscapeHatchAssistModality = { invokeSemantic: (action: string) => {
       state.actions.push(action);
@@ -58,7 +62,7 @@ test('missing preference shows guide while saved quiet mode restores without a w
   await expect(page.locator('#materialsReviewHint')).toContainText('Materials desk');
 });
 
-for (const scenario of [{ initialReadError: true }, { invalidSaved: true }]) {
+for (const scenario of [{ initialReadError: true }, { initialSyncReadError: true }, { invalidSaved: true }]) {
   test(`unknown saved preference cannot be overwritten: ${Object.keys(scenario)[0]}`, async ({ page }) => {
     await mount(page, { saved: false, ...scenario });
     await expect(page.locator('#guideToggle')).toBeDisabled();
@@ -145,5 +149,23 @@ test('hidden and disabled controls are never reported as focused or activated', 
   await page.locator('#workspaceStatus').evaluate(region => { region.hidden = true; });
   await page.locator('#guideFind').click();
   await expect(page.locator('#guideStatus')).toContainText('hidden or unavailable');
+  expect(await page.evaluate(() => (window as any).__guideTest.actions)).toEqual([]);
+});
+
+
+test('unavailable phone Fill never falls back to Start or claims the requested command is reachable', async ({ page }) => {
+  await mount(page, { phone: true });
+  await page.locator('#phoneSheet [data-action="fill_allowed"]').evaluate(button => { (button as HTMLButtonElement).disabled = true; });
+  await page.locator('#guideScenes button').nth(4).click();
+  await page.locator('#guideFind').click();
+  await expect(page.locator('#guideStatus')).toContainText('Fill Allowed Fields is unavailable');
+  await expect(page.locator('#guideStatus')).not.toContainText('Related region focused');
+  await expect(page.locator('#guideFind')).toBeFocused();
+  await expect(page.locator('#phoneSheet [data-action="start_assist"]')).not.toBeFocused();
+  expect(await page.evaluate(() => (window as any).__guideTest.actions)).toEqual([]);
+  await page.locator('#phoneSheet [data-action="fill_allowed"]').evaluate(button => button.remove());
+  await page.locator('#guideFind').click();
+  await expect(page.locator('#guideStatus')).toContainText('Fill Allowed Fields is unavailable');
+  await expect(page.locator('#phoneSheet [data-action="start_assist"]')).not.toBeFocused();
   expect(await page.evaluate(() => (window as any).__guideTest.actions)).toEqual([]);
 });

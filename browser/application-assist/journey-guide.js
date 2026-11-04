@@ -127,7 +127,11 @@
     destination.scrollIntoView?.({ block: "center", behavior: root.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     const selector = "button:not([disabled]), input:not([disabled]), select:not([disabled])";
     const sheetAction = id === "phoneSheet" ? destination.querySelector('[data-action="' + (current.id === "fill" ? "fill_allowed" : "start_assist") + '"]:not([disabled])') : null;
-    const control = sheetAction || (destination.matches(selector) ? destination : Array.from(destination.querySelectorAll(selector)).find(visible));
+    if (id === "phoneSheet" && !visible(sheetAction)) {
+      guideStatus.textContent = (current.id === "fill" ? "Fill Allowed Fields" : "Start Assist") + " is unavailable in the command sheet. Review the session status; no other command was focused or triggered.";
+      return;
+    }
+    const control = id === "phoneSheet" ? sheetAction : (destination.matches(selector) ? destination : Array.from(destination.querySelectorAll(selector)).find(visible));
     const focusTarget = visible(control) ? control : destination;
     if (focusTarget === destination && !destination.matches(selector) && !destination.hasAttribute("tabindex")) {
       destination.setAttribute("tabindex", "-1");
@@ -142,7 +146,7 @@
   });
 
   // A fresh install is guide-on; previous user choice survives extension upgrades.
-  root.chrome.storage.local.get(KEY).then(saved => {
+  Promise.resolve().then(() => root.chrome.storage.local.get(KEY)).then(saved => {
     if (!saved || (Object.hasOwn(saved, KEY) && typeof saved[KEY] !== "boolean")) {
       guideStatus.textContent = "The saved guide preference is invalid. This temporary guide stays visible; reopen the popup after recovering the setting.";
       render();

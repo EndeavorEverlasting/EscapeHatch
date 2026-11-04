@@ -7,6 +7,7 @@ on:
       - "docs/agent/P04_SECURE_MULTIDEVICE_PROFILE_SYNC_2026-11-03.md"
       - "Outputs/prompt-parallel-dispatch/runs/escapehatch-secure-device-sync-20261103/**"
       - ".github/workflows/private-profile-sync-security.yml"
+      - "scripts/validate_secure_profile_sync_dispatch.py"
   push:
     paths:
       - "artifacts/escape-hatch/private-sync-*.ts"
@@ -29,6 +30,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
+      - name: Validate P04 dispatch ownership and live-proof boundary
+        working-directory: .
+        run: python scripts/validate_secure_profile_sync_dispatch.py
       - run: npm install --no-audit --no-fund
       - name: Execute synthetic AEAD and forbidden-field regression
         run: node --experimental-strip-types --test private-sync-crypto.test.ts
@@ -45,6 +49,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
+      - name: Validate P04 dispatch ownership and live-proof boundary
+        working-directory: .
+        run: python scripts/validate_secure_profile_sync_dispatch.py
       - run: npm install --no-audit --no-fund
       - name: Execute synthetic two-device encrypted sync regression
         run: node --experimental-strip-types --test private-sync-device.test.ts

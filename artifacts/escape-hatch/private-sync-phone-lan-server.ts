@@ -59,20 +59,28 @@ async function fileResponse(res: http.ServerResponse, filePath: string, contentT
   res.end(body);
 }
 
-const installPage = `<!doctype html>
+function installPageHtml(lanBase: string, apkBytes: number | null): string {
+  const apkHint =
+    apkBytes && apkBytes > 0
+      ? `${(apkBytes / (1024 * 1024)).toFixed(1)}&nbsp;MB — Keystore build; refuse a ~5.5&nbsp;MB stale copy`
+      : 'download size shown after APK is staged on the PC';
+  const hostForApp = lanBase.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  return `<!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>EscapeHatch phone install</title>
 <body style="font:16px/1.45 Georgia,serif;max-width:36rem;margin:2rem;background:#0b1210;color:#e8efe9">
 <h1 style="font:700 1.5rem system-ui,sans-serif">Install companion</h1>
 <p>Ciphertext-only LAN handoff. Pairing codes stay on the desktop—never on this page.</p>
+<p style="font:600 0.95rem system-ui,sans-serif;color:#c8f542">LAN host for Assist: <code style="color:#e8efe9">${hostForApp}</code></p>
 <ol>
-<li><a href="/apk" style="color:#c8f542">Download EscapeHatchAssist-debug.apk</a> and allow install from this browser.</li>
-<li>Open Assist → Pair → enter this PC&apos;s Wi-Fi host (shown in the QR / address bar) and <strong>Fetch sealed offer from PC</strong>, then type the desktop TEMP pairing code.</li>
+<li><a href="/apk" style="color:#c8f542">Download EscapeHatchAssist-debug.apk</a> (${apkHint}) and allow install from this browser.</li>
+<li>Open Assist → Pair → paste <code>${hostForApp}</code> → <strong>Fetch sealed offer from PC</strong> → type the desktop TEMP pairing code.</li>
 <li>Import → same host → <strong>Fetch capsule from PC</strong> (or download <a href="/offer" style="color:#c8f542">offer</a> / <a href="/capsule" style="color:#c8f542">capsule</a> here).</li>
-<li>Save proof JSON back to OneDrive EscapeHatchPrivateSync.</li>
+<li>Save proof JSON back to OneDrive EscapeHatchPrivateSync as <code>escapehatch-phone-sync-proof.json</code>.</li>
 </ol>
-<p style="color:#9aab9e">No answer values are served here.</p>
+<p style="color:#9aab9e">No answer values are served here. This is for a phone—not a smart TV/display.</p>
 </body></html>`;
+}
 
 const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
@@ -88,8 +96,23 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://127.0.0.1:${port}`);
   try {
     if (url.pathname === '/' || url.pathname === '/index.html') {
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', ...cors });
-      if (!headOnly) res.end(installPage);
+      const apkPath = path.join(carrier, 'EscapeHatchAssist-debug.apk');
+      let apkBytes: number | null = null;
+      try {
+        apkBytes = (await fs.stat(apkPath)).size;
+      } catch {
+        apkBytes = null;
+      }
+      const hostHeader = String(req.headers.host || `127.0.0.1:${port}`);
+      const lanBase = `http://${hostHeader}`;
+      const html = installPageHtml(lanBase, apkBytes);
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'content-length': String(Buffer.byteLength(html)),
+        'cache-control': 'no-store',
+        ...cors,
+      });
+      if (!headOnly) res.end(html);
       else res.end();
       return;
     }
@@ -150,7 +173,20 @@ const server = http.createServer(async (req, res) => {
       return;
     }
     if (url.pathname === '/health') {
-      const body = JSON.stringify({ ok: true, carrier, serves: ['apk', 'offer', 'capsule'], pairingCode: 'never' });
+      const apkPath = path.join(carrier, 'EscapeHatchAssist-debug.apk');
+      let apkBytes: number | null = null;
+      try {
+        apkBytes = (await fs.stat(apkPath)).size;
+      } catch {
+        apkBytes = null;
+      }
+      const body = JSON.stringify({
+        ok: true,
+        carrier,
+        serves: ['apk', 'offer', 'capsule'],
+        apkBytes,
+        pairingCode: 'never',
+      });
       res.writeHead(200, {
         'content-type': 'application/json; charset=utf-8',
         'content-length': String(Buffer.byteLength(body)),

@@ -35,6 +35,15 @@
         android:minHeight="48dp"
         android:text="@string/capsule_save_proof" />
 
+    <Button
+        android:id="@+id/copyProof"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:enabled="false"
+        android:minHeight="48dp"
+        android:text="@string/capsule_copy_proof" />
+
     <TextView
         android:id="@+id/capsuleStatus"
         android:layout_width="match_parent"

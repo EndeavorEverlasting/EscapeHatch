@@ -40,7 +40,10 @@
     <string name="capsule_auth_failed">Capsule authentication failed.</string>
     <string name="capsule_projection_invalid">Capsule projection invalid or empty.</string>
     <string name="capsule_save_proof">Save proof to OneDrive</string>
-    <string name="capsule_proof_hint">Next: Save proof to OneDrive EscapeHatchPrivateSync so desktop can confirm the digest match.</string>
+    <string name="capsule_copy_proof">Copy proof JSON</string>
+    <string name="capsule_proof_hint">Next: Save proof into OneDrive EscapeHatchPrivateSync (or Copy proof JSON and paste a new file there). Desktop confirms the digest—no answer values leave this screen.</string>
     <string name="capsule_proof_saved">Proof saved. Desktop will match digests when that file syncs.</string>
+    <string name="capsule_proof_copied">Value-free proof copied. Paste into EscapeHatchPrivateSync as escapehatch-phone-sync-proof.json.</string>
+    <string name="capsule_proof_copy_failed">Could not copy proof.</string>
     <string name="capsule_proof_save_cancelled">Proof save cancelled.</string>
 </resources>

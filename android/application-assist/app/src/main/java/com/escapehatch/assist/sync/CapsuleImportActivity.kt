@@ -1,5 +1,8 @@
 package com.escapehatch.assist.sync
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Button
@@ -19,6 +22,7 @@ import java.time.Instant
 class CapsuleImportActivity : AppCompatActivity() {
     private lateinit var status: TextView
     private lateinit var saveProof: Button
+    private lateinit var copyProof: Button
     private var proofJson: String? = null
     private val importer by lazy {
         PrivateSyncCapsuleImport(
@@ -62,11 +66,22 @@ class CapsuleImportActivity : AppCompatActivity() {
         setContentView(R.layout.activity_capsule_import)
         status = findViewById(R.id.capsuleStatus)
         saveProof = findViewById(R.id.saveProof)
+        copyProof = findViewById(R.id.copyProof)
         findViewById<Button>(R.id.chooseCapsule).setOnClickListener {
             openCapsule.launch(arrayOf("application/json", "text/*", "*/*"))
         }
         saveProof.setOnClickListener {
             createProof.launch(PhoneSyncProofReceipt.SUGGESTED_FILE_NAME)
+        }
+        copyProof.setOnClickListener {
+            val payload = proofJson
+            if (payload.isNullOrBlank()) {
+                status.text = getString(R.string.capsule_proof_copy_failed)
+                return@setOnClickListener
+            }
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboard.setPrimaryClip(ClipData.newPlainText("escapehatch-phone-sync-proof", payload))
+            status.text = getString(R.string.capsule_proof_copied)
         }
     }
 
@@ -83,6 +98,7 @@ class CapsuleImportActivity : AppCompatActivity() {
                             createdAtIso = Instant.now().toString(),
                         )
                     saveProof.isEnabled = true
+                    copyProof.isEnabled = true
                     getString(
                         R.string.capsule_imported,
                         result.entryCount,
@@ -99,6 +115,7 @@ class CapsuleImportActivity : AppCompatActivity() {
         if (result.state != CapsuleImportState.IMPORTED) {
             proofJson = null
             saveProof.isEnabled = false
+            copyProof.isEnabled = false
         }
     }
 }

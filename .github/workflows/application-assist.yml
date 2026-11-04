@@ -152,12 +152,11 @@ jobs:
         uses: android-actions/setup-android@v3
         with:
           packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
-      - name: Set up supported Gradle version
+      - name: Set up Gradle (uses committed wrapper)
         uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.7'
       - name: Compile Android companion from canonical VERSION
-        run: gradle --no-daemon --project-dir android/application-assist :app:assembleDebug
+        run: ./gradlew --no-daemon :app:assembleDebug :app:testDebugUnitTest
+        working-directory: android/application-assist
       - name: Keep a synthetic debug-build receipt
         uses: actions/upload-artifact@v4
         with:

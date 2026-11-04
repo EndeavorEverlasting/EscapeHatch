@@ -19,9 +19,15 @@ object LanHostProbe {
         }
     }
 
+    fun isHealthyBase(raw: String): Boolean {
+        val base = LanSealedFetch.normalizeBaseUrl(raw) ?: return false
+        val hostPort = base.removePrefix("http://").removePrefix("https://")
+        return probeHealth(hostPort)
+    }
+
     fun discoverBlocking(): String? {
         val candidates = linkedSetOf<String>()
-        // Emulator loopback to host machine.
+        // Emulator loopback to host machine (must win over a stale host Wi‑Fi IP).
         candidates.add("10.0.2.2:${LanSealedFetch.PHONE_PROOF_PORT}")
         candidates.add("127.0.0.1:${LanSealedFetch.PHONE_PROOF_PORT}")
         for (addr in localIpv4Addresses()) {

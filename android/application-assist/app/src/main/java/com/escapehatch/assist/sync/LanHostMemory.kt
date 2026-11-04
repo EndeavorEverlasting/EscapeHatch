@@ -21,19 +21,17 @@ object LanHostMemory {
     }
 
     fun bind(editText: EditText, context: Context) {
-        val remembered = read(context)
-        if (!remembered.isNullOrBlank() && editText.text.isNullOrBlank()) {
-            editText.setText(remembered)
-            return
-        }
         if (!editText.text.isNullOrBlank()) return
-        // Auto-fill when the PC LAN :18765 health endpoint is reachable on Wi‑Fi.
+        val remembered = read(context)
+        // Prefer a live /health host. Stale remembered IPs (e.g. host LAN from an
+        // emulator session) must not block rediscovery of 10.0.2.2 / current Wi‑Fi PC.
         LanHostProbe.discoverAsync { found ->
-            if (found.isNullOrBlank()) return@discoverAsync
+            val live = found ?: remembered?.takeIf { LanHostProbe.isHealthyBase(it) }
+            if (live.isNullOrBlank()) return@discoverAsync
             editText.post {
                 if (editText.text.isNullOrBlank()) {
-                    editText.setText(found)
-                    write(context, found)
+                    editText.setText(live)
+                    write(context, live)
                 }
             }
         }

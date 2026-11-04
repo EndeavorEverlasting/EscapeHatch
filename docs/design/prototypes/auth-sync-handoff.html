@@ -177,6 +177,7 @@
     </div>
   </div>
   <script>
+    const STATUS_URL = 'http://127.0.0.1:18766/';
     const rail = document.getElementById('rail');
     const railTitle = document.getElementById('railTitle');
     const railSub = document.getElementById('railSub');
@@ -184,6 +185,7 @@
     const pair = document.getElementById('pair');
     const fine = document.getElementById('fine');
     const pairSheet = document.getElementById('pairSheet');
+    let live = null;
 
     function morph(title, sub, state) {
       const run = () => {
@@ -195,23 +197,63 @@
       else run();
     }
 
-    connect.addEventListener('click', () => {
-      morph('Opening Google…', 'Browser handoff in progress', 'idle');
-      fine.textContent = 'Complete sign-in in the browser window. This panel will unlock when EscapeHatch receives the token.';
-      connect.disabled = true;
-      // Prototype only: simulate NordVPN-like return after a short beat.
-      setTimeout(() => {
-        morph('Vault sealed', 'Google connected · drive.file · ciphertext only', 'ready');
+    function applyLive(report) {
+      live = report;
+      const digest = report.projectionDigest
+        ? report.projectionDigest.slice(0, 12) + '…'
+        : 'no digest';
+      if (report.vaultPresent && report.status === 'SYNCED') {
+        morph(
+          'Vault sealed',
+          `${report.keyBackend} · ${report.carrierKind} · ${report.reusableAnswerCount} answers · ${digest}`,
+          'ready',
+        );
         connect.hidden = true;
         pair.hidden = false;
-        fine.textContent = 'Connected. Pair a phone when you are ready—or continue on this device.';
+        fine.textContent =
+          'Live desktop vault is sealed (ciphertext carrier). Pair a phone when you are ready—Google Drive OAuth remains a separate product beat when you choose it.';
+        return;
+      }
+      if (report.vaultPresent) {
+        morph('Vault present', `${report.status} · ${report.keyBackend} · ${report.carrierKind}`, 'ready');
+        pair.hidden = false;
+      }
+    }
+
+    async function refreshLive() {
+      try {
+        const res = await fetch(STATUS_URL, { cache: 'no-store' });
+        if (!res.ok) throw new Error('status ' + res.status);
+        applyLive(await res.json());
+      } catch {
+        fine.textContent =
+          'Live status server offline (127.0.0.1:18766). Corridor UI still works as a prototype; start private-sync-status-server for live rail data.';
+      }
+    }
+
+    connect.addEventListener('click', () => {
+      morph('Opening Google…', 'Browser handoff in progress', 'idle');
+      fine.textContent =
+        'Product path: browser OAuth returns here. This click still simulates the handoff until EscapeHatch-owned Google client config is installed.';
+      connect.disabled = true;
+      setTimeout(() => {
+        morph('Vault sealed', 'Google connected · drive.file · ciphertext only (simulated)', 'ready');
+        connect.hidden = true;
+        pair.hidden = false;
+        fine.textContent = 'Simulated Google return complete. Live DPAPI/OneDrive state is separate—refresh pulls the real rail.';
+        refreshLive();
       }, 1400);
     });
 
     pair.addEventListener('click', () => {
       pairSheet.classList.add('open');
       morph('Pairing ready', 'Show code on desktop · confirm on phone', 'ready');
+      const digest = live?.projectionDigest || '(start status server for digest)';
+      fine.textContent = 'Desktop target digest: ' + digest;
     });
+
+    refreshLive();
+    setInterval(refreshLive, 8000);
   </script>
 </body>
 </html>

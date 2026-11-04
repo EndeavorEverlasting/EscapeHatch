@@ -29,6 +29,8 @@ const server = http.createServer(async (_req, res) => {
     res.writeHead(200, {
       'content-type': 'application/json; charset=utf-8',
       'cache-control': 'no-store',
+      // Local design prototypes (file:// or other loopback ports) may read status.
+      'access-control-allow-origin': '*',
     });
     res.end(body);
   } catch (error) {

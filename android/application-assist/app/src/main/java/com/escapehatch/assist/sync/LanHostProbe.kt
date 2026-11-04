@@ -1,16 +1,21 @@
 package com.escapehatch.assist.sync
 
+import java.net.DatagramPacket
+import java.net.DatagramSocket
 import java.net.HttpURLConnection
 import java.net.Inet4Address
+import java.net.InetSocketAddress
 import java.net.NetworkInterface
 import java.net.URL
 import java.util.concurrent.Executors
 
 /**
  * Best-effort discovery of the EscapeHatch phone-proof LAN host (:18765).
+ * Prefers UDP beacon :18767 (`EHPHONESYNC/1 <port>`), then HTTP /health sweep.
  * Never reads or stores pairing codes — only /health with pairingCode=never.
  */
 object LanHostProbe {
+    const val BEACON_PORT = 18767
     private val executor = Executors.newSingleThreadExecutor()
 
     fun discoverAsync(onResult: (String?) -> Unit) {
@@ -25,7 +30,16 @@ object LanHostProbe {
         return probeHealth(hostPort)
     }
 
+    /** Parse value-free beacon body; returns HTTP port or null. */
+    fun parseBeaconPayload(text: String): Int? {
+        val m = Regex("""^EHPHONESYNC/1\s+(\d{2,5})\s*$""").matchEntire(text.trim()) ?: return null
+        val port = m.groupValues[1].toIntOrNull() ?: return null
+        return if (port == LanSealedFetch.PHONE_PROOF_PORT) port else null
+    }
+
     fun discoverBlocking(): String? {
+        listenBeacon()?.let { return it }
+
         val candidates = linkedSetOf<String>()
         // Emulator loopback to host machine (must win over a stale host Wi‑Fi IP).
         candidates.add("10.0.2.2:${LanSealedFetch.PHONE_PROOF_PORT}")
@@ -59,6 +73,45 @@ object LanHostProbe {
             }
         }
         return null
+    }
+
+    private fun listenBeacon(timeoutMs: Int = 1600): String? {
+        var socket: DatagramSocket? = null
+        return try {
+            socket =
+                DatagramSocket(null).apply {
+                    reuseAddress = true
+                    soTimeout = timeoutMs
+                    bind(InetSocketAddress(BEACON_PORT))
+                }
+            val buf = ByteArray(256)
+            val packet = DatagramPacket(buf, buf.size)
+            val deadline = System.currentTimeMillis() + timeoutMs
+            while (System.currentTimeMillis() < deadline) {
+                try {
+                    socket.receive(packet)
+                } catch (_: Exception) {
+                    break
+                }
+                val text = String(packet.data, 0, packet.length, Charsets.UTF_8)
+                val httpPort = parseBeaconPayload(text) ?: continue
+                val host = packet.address?.hostAddress ?: continue
+                if (host.startsWith("127.") || host == "::1") continue
+                val hostPort = "$host:$httpPort"
+                if (probeHealth(hostPort)) {
+                    return LanSealedFetch.normalizeBaseUrl(hostPort)
+                }
+            }
+            null
+        } catch (_: Exception) {
+            null
+        } finally {
+            try {
+                socket?.close()
+            } catch (_: Exception) {
+                /* ignore */
+            }
+        }
     }
 
     private fun localIpv4Addresses(): List<String> {

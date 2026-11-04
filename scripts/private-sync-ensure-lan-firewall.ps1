@@ -1,22 +1,26 @@
-# Ensure Private-profile inbound TCP 18765 for EscapeHatch phone LAN install.
-# Safe: allow only that port; never opens pairing codes. May require elevation.
+# Ensure Private-profile inbound TCP 18765 + UDP 18767 for EscapeHatch phone LAN install/beacon.
+# Safe: allow only those ports; never opens pairing codes. May require elevation.
 param(
   [switch]$Elevated
 )
 $ErrorActionPreference = 'Stop'
-$ruleName = 'EscapeHatch phone proof LAN 18765'
-$existing = Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
-if ($existing) {
-  if (-not $existing.Enabled) {
-    Enable-NetFirewallRule -DisplayName $ruleName
+
+function Ensure-Rule([string]$Name, [string]$Protocol, [int]$Port) {
+  $existing = Get-NetFirewallRule -DisplayName $Name -ErrorAction SilentlyContinue
+  if ($existing) {
+    if (-not $existing.Enabled) {
+      Enable-NetFirewallRule -DisplayName $Name
+    }
+    Write-Output "firewall=exists name=$Name enabled=$([bool](Get-NetFirewallRule -DisplayName $Name).Enabled)"
+    return
   }
-  Write-Output "firewall=exists enabled=$([bool](Get-NetFirewallRule -DisplayName $ruleName).Enabled)"
-  exit 0
+  New-NetFirewallRule -DisplayName $Name -Direction Inbound -Protocol $Protocol -LocalPort $Port -Action Allow -Profile Private | Out-Null
+  Write-Output "firewall=created name=$Name proto=$Protocol port=$Port"
 }
 
 try {
-  New-NetFirewallRule -DisplayName $ruleName -Direction Inbound -Protocol TCP -LocalPort 18765 -Action Allow -Profile Private | Out-Null
-  Write-Output 'firewall=created'
+  Ensure-Rule 'EscapeHatch phone proof LAN 18765' 'TCP' 18765
+  Ensure-Rule 'EscapeHatch phone proof beacon UDP 18767' 'UDP' 18767
   exit 0
 } catch {
   if ($Elevated) {

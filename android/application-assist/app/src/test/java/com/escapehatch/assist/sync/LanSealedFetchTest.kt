@@ -29,4 +29,12 @@ class LanSealedFetchTest {
     fun defaultPortFilledForBarePrivateHost() {
         assertEquals("http://192.168.1.80:18765", LanSealedFetch.normalizeBaseUrl("192.168.1.80"))
     }
+
+    @Test
+    fun parsesValueFreeLanBeacon() {
+        assertEquals(18765, LanHostProbe.parseBeaconPayload("EHPHONESYNC/1 18765"))
+        assertNull(LanHostProbe.parseBeaconPayload("EHPHONESYNC/1 80"))
+        assertNull(LanHostProbe.parseBeaconPayload("pairing-code.local.txt"))
+        assertNull(LanHostProbe.parseBeaconPayload(""))
+    }
 }

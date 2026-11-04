@@ -7,10 +7,14 @@
  *   node --experimental-strip-types private-sync-phone-lan-server.ts [carrierAbsPath] [port]
  */
 import { spawnSync } from 'node:child_process';
+import dgram from 'node:dgram';
 import fs from 'node:fs/promises';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
+
+/** UDP discovery beacon port — value-free; pairs with Android LanHostProbe. */
+const BEACON_PORT = 18767;
 
 const carrierArg = process.argv[2];
 const port = Number(process.argv[3] || 18765);
@@ -371,14 +375,48 @@ function pickLanIpv4(): string {
   return flat[0]?.address || '0.0.0.0';
 }
 
+function startLanBeacon(httpPort: number, lanIp: string): void {
+  // Send-only on the Wi‑Fi/LAN address (ephemeral source port) so broadcasts
+  // do not egress a VPN/tunnel iface and so phones can bind BEACON_PORT.
+  const sock = dgram.createSocket({ type: 'udp4', reuseAddr: true });
+  const payload = Buffer.from(`EHPHONESYNC/1 ${httpPort}`, 'utf8');
+  const parts = lanIp.split('.');
+  const targets: string[] = [];
+  if (parts.length === 4) targets.push(`${parts[0]}.${parts[1]}.${parts[2]}.255`);
+  targets.push('255.255.255.255');
+  sock.on('error', () => {
+    /* beacon is best-effort */
+  });
+  sock.bind(0, lanIp, () => {
+    try {
+      sock.setBroadcast(true);
+    } catch {
+      /* ignore */
+    }
+    const tick = () => {
+      for (const target of targets) {
+        try {
+          sock.send(payload, 0, payload.length, BEACON_PORT, target);
+        } catch {
+          /* ignore */
+        }
+      }
+    };
+    tick();
+    setInterval(tick, 2000);
+  });
+}
+
 server.listen(port, '0.0.0.0', () => {
   const lan = pickLanIpv4();
+  startLanBeacon(port, lan);
   process.stdout.write(
     JSON.stringify({
       state: 'LISTENING',
       port,
       bind: '0.0.0.0',
       lan: `http://${lan}:${port}/`,
+      beaconUdp: BEACON_PORT,
       carrier,
       pairingCode: 'never_served',
     }) + '\n',

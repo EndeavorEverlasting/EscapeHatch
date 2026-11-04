@@ -224,7 +224,8 @@
     "merged": false,
     "installed": false,
     "provider_synced": false,
-    "paired_device_count": 0
+    "paired_device_count": 2,
+    "paired_device_note": "desktop live + alternate Windows data-home digest match; phone unproven; Drive OAuth client config missing"
   },
   "autonomy_gap": "Real local agent and provider credentials are unavailable to this GitHub-only session; CI synthetic lanes are autonomously dispatched by the PR workflow. Do not request operator downloads."
 }

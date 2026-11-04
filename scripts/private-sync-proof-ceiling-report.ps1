@@ -49,22 +49,26 @@ $report = [ordered]@{
     desktopDigest = $status.projectionDigest
     desktopCount = $status.reusableAnswerCount
     cognizantFieldIds = @($status.cognizantTalentCommunityFieldsPresent)
-    laptopPeer = (($ledger.devices | Where-Object { $_.id -in @('laptop','laptop-sim') -and $_.digestMatch }).Count -gt 0)
-    laptopIsPhysicalSecondHost = [bool]($ledger.devices | Where-Object { $_.id -eq 'laptop' -and $_.proof -eq 'SECOND_WINDOWS_HOST' })
-    androidPhoneProven = [bool]($ledger.devices | Where-Object { $_.id -eq 'android-phone' -and $_.status -eq 'PROVEN' })
+    # Wrap Where-Object in @() — a single PSCustomObject has no .Count and was falsely reporting laptopPeer=false.
+    laptopPeer = (@($ledger.devices | Where-Object { $_.id -in @('laptop', 'laptop-sim') -and $_.digestMatch }).Count -gt 0)
+    laptopIsPhysicalSecondHost = (@($ledger.devices | Where-Object { $_.id -eq 'laptop' -and $_.proof -eq 'SECOND_WINDOWS_HOST' }).Count -gt 0)
+    androidPhoneProven = (@($ledger.devices | Where-Object { $_.id -eq 'android-phone' -and $_.status -eq 'PROVEN' }).Count -gt 0)
     threeOfThree = [bool]$ledger.threeOfThree
   }
   runtime = [ordered]@{
     lan18765 = $lanOk
     phoneProofFilePresent = $phoneProof
-    physicalAdbDeviceCount = $physical.Count
+    physicalAdbDeviceCount = @($physical).Count
     offerPresent = (Test-Path (Join-Path $Carrier 'pairing-offer.json'))
     prDraftExpected = $true
+    nordLynxUp = [bool]((Get-NetAdapter -Name 'NordLynx' -ErrorAction SilentlyContinue).Status -eq 'Up')
   }
   firstUnprovenGate = if ($ledger.threeOfThree) {
     'none'
-  } elseif (-not ($ledger.devices | Where-Object { $_.id -eq 'android-phone' -and $_.status -eq 'PROVEN' })) {
+  } elseif (-not (@($ledger.devices | Where-Object { $_.id -eq 'android-phone' -and $_.status -eq 'PROVEN' }).Count -gt 0)) {
     'physical-android-phone-pair-import-send-proof'
+  } elseif (-not (@($ledger.devices | Where-Object { $_.id -eq 'laptop' -and $_.proof -eq 'SECOND_WINDOWS_HOST' }).Count -gt 0)) {
+    'optional-physical-windows-laptop-peer'
   } else {
     'unknown'
   }

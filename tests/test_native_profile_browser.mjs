@@ -154,7 +154,13 @@ test('real Chrome native host hydrates the extension module and survives reopen 
     assert.equal(reopened[syncKey].ownerId, initial[syncKey].ownerId);
     const cockpit = await first.context.newPage();
     await cockpit.goto(`http://127.0.0.1:${port}/`);
-    await cockpit.getByRole('complementary', { name: 'Extension workspace' }).getByRole('status').filter({ hasText: 'Extension workspace is current' }).waitFor({ timeout: 20000 });
+    // The normal workflow is extension-free. This isolated test profile is not
+    // necessarily Chrome's last-used installation profile, so deployment
+    // diagnosis must not stand in for the actual native transport proof below.
+    const companion = cockpit.getByTestId('companion-setup');
+    await companion.locator('summary').click();
+    await companion.getByText('The companion is optional for managed-browser preparation.').waitFor({ timeout: 20000 });
+    assert.equal(await companion.getByRole('link', { name: 'Continue in Browser assist' }).getAttribute('href'), '/assist');
     const wake = await cockpit.evaluate(extensionId => new Promise(resolve => chrome.runtime.sendMessage(extensionId, { type: 'workspace-refresh' }, resolve)), first.id);
     assert.equal(wake.ok, true);
     assert.equal(wake.status, 'ALREADY_CURRENT');

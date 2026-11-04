@@ -363,3 +363,12 @@ routes. Restoring the canonical import resolves those paths: all 19 controller
 tests PASS locally, including preserved browser entries. The full 50-case
 bootstrap unit suite also PASS. This correction does not broaden preparation or
 submission authority.
+
+The host-recovery lane additionally owns `tests/test_native_profile_browser.mjs`
+for convergence with the new optional, collapsed companion panel. Its synthetic
+browser still proves real native hydration, reopen, exact wake response and
+cross-profile isolation; the UI assertion now expands Companion setup and
+checks the extension-free Assist route. The local native-browser run correctly
+SKIPPED because the existing native host belongs to the selected installation;
+it was preserved. Windows CI must supply this proof. The complete managed-assist
+suite passed 148 checks with one host-symlink capability skip.

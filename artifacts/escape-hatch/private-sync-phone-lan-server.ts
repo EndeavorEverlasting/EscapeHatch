@@ -82,6 +82,20 @@ function installPageHtml(lanBase: string, apkBytes: number | null): string {
 </body></html>`;
 }
 
+function accessLog(req: http.IncomingMessage, pathname: string) {
+  // Path + remote only — never pairing codes or preference values.
+  const remote = req.socket.remoteAddress || 'unknown';
+  process.stdout.write(
+    JSON.stringify({
+      t: new Date().toISOString(),
+      event: 'lan_access',
+      method: req.method,
+      path: pathname,
+      remote,
+    }) + '\n',
+  );
+}
+
 const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.writeHead(204, cors);
@@ -94,6 +108,7 @@ const server = http.createServer(async (req, res) => {
   }
   const headOnly = req.method === 'HEAD';
   const url = new URL(req.url || '/', `http://127.0.0.1:${port}`);
+  accessLog(req, url.pathname);
   try {
     if (url.pathname === '/' || url.pathname === '/index.html') {
       const apkPath = path.join(carrier, 'EscapeHatchAssist-debug.apk');

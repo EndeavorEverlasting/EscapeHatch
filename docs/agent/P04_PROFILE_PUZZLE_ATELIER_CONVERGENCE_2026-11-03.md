@@ -226,3 +226,61 @@ Website W1 successor:
 - `artifacts/escape-hatch/src/lib/journey-wayfinding.test.ts`
 - `artifacts/escape-hatch/tests/journey-wayfinding.spec.ts`
 - `docs/agent/P04_PROFILE_PUZZLE_ATELIER_CONVERGENCE_2026-11-03.md`
+
+
+## Website W1 integration and installed observation
+
+PR #187 merged as `5cdb7d3f0ab8f3016431a497ade91f3f435586e9` through provider
+promotion. Main source matched the validated candidate. The selected checkout
+was fast-forwarded, preserving the same untracked work and owned running process.
+On normal installed Chrome, opening Your journey displayed the atlas; selecting
+the opportunity scene changed its visible heading and description. Materials and
+the operator-only final-submit explanation were present. This is desktop pointer
+navigation evidence; installed keyboard/mobile, actual employer behavior and all
+parent gates remain independent. No employer form was launched or changed.
+
+## Remaining PR #152 lanes: bounded repair and proof
+
+W2's original guide could destroy focused scene buttons, overwrite an unknown
+preference after initial read failure, misreport saved-state preservation after
+uncertain writes, and point phone guidance at a hidden or wrong command. The
+repaired existing guide retains stable buttons, gates writes on known saved
+state, distinguishes failed writes from unverified readback, and targets only the
+requested visible/enabled phone action. An unavailable Fill action never falls
+back to Start. Informative regions can receive temporary focus; guide navigation
+never invokes employer controls. The original Materials/session markup remains.
+
+W3 reuses the approved bundled 48x48 mascot PNG offline. The installer checks its
+signature/IHDR/dimensions and creates a single-entry ICO only for new shortcut
+creation. Existing icons and customized shortcuts are preserved. This bounded
+header guard is not a general PNG decoder or CRC certification. Generated user
+assets and shortcut files stay out of Git.
+
+Two isolated native implementation lanes were reconciled with current main and
+rejoined by the coordinator. Coordinator tests: 3 pure guide tests, 17 Chromium
+checks (12 guide plus 5 website journey), 6 source-delivery tests including actual
+Windows COM readback in temporary roots, 6 modality contract tests, and parent/
+journey/harness validators PASS. The worker also reran the 18-case Windows
+installer suite on the reconciled floor with the live runtime untouched. The
+second review caught the wrong-phone-command fallback and added its negative
+control plus synchronous storage-read failure coverage.
+
+These are source and controlled-runtime checks. No existing extension was
+reloaded/installed, no live shortcut was replaced, and no actual applicant state
+or employer page was mutated. Real extension enrollment/rendering, confirmed
+applicant owner/workspace admission, fresh tracker, approved role documents and
+real ATS preparation remain unproven. The existing owner connection was requested
+from the operator; it cannot be inferred from launcher health or contact matches.
+
+### Companion/icon changed-file inventory
+
+- `ARTIFACT_REGISTRY.md`
+- `Outputs/prompt-parallel-dispatch/runs/escapehatch-companion-artwork-20261104/manifest.json`
+- `Outputs/prompt-parallel-dispatch/runs/escapehatch-companion-artwork-20261104/native-execution-receipt.json`
+- `browser/application-assist/journey-guide.js`
+- `browser/application-assist/popup.html`
+- `tests/test_extension_journey_guide.mjs`
+- `artifacts/escape-hatch/tests/extension-journey-guide.spec.ts`
+- `scripts/windows/EscapeHatch-Install.ps1`
+- `tests/test_escapehatch_installer_source_delivery.py`
+- `docs/agent/P04_PROFILE_PUZZLE_ATELIER_CONVERGENCE_2026-11-03.md`

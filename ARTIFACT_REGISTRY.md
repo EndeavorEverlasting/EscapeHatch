@@ -267,3 +267,15 @@ and the owning application-parent/journey validators. The existing scene registr
 remains the sole journey authority. Synthetic `journey-{desktop,mobile}.png`
 screenshots are ignored Playwright output, replaceable on rerun, and prove only
 the inspected local layouts.
+
+
+## Optional companion and mascot icon convergence (2026-11-04)
+
+`Outputs/prompt-parallel-dispatch/runs/escapehatch-companion-artwork-20261104/manifest.json`
+and `native-execution-receipt.json` retain sanitized native lane ownership,
+public source commits and actual returned proof. Producer: convergence coordinator;
+trigger: W2/W3 implementation/rejoin; retention: tracked with this fixed run.
+No private state, generated user icon, shortcut bytes or applicant screenshot is
+included. Canonical dispatch validation remains UNPROVEN while its owner schema
+and runner are absent. Behavioral validation uses the existing installer source-
+delivery/Windows regression tests and the isolated extension-journey Chromium spec.

@@ -61,6 +61,25 @@ $proof = [ordered]@{
 }
 $proof | ConvertTo-Json -Depth 5 | Set-Content -Path $receipt -Encoding utf8
 
+# Best-effort QR for LAN install page (USB-free). Never embeds the pairing code.
+$lanIp = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object {
+    $_.IPAddress -like '192.168.*' -and $_.InterfaceAlias -match 'Wi-?Fi|WLAN'
+  } | Select-Object -First 1 -ExpandProperty IPAddress)
+if (-not $lanIp) {
+  $lanIp = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object {
+      $_.IPAddress -notmatch '^(127\.|169\.254\.|10\.5\.)'
+    } | Select-Object -First 1 -ExpandProperty IPAddress)
+}
+$lanUrl = if ($lanIp) { "http://${lanIp}:8765/" } else { $null }
+$qrPath = Join-Path $od 'phone-install-qr.png'
+if ($lanUrl) {
+  try {
+    python -c "import qrcode; qrcode.make(r'$lanUrl').save(r'$($qrPath.Replace('\','\\'))')"
+  } catch {
+    Write-Output "qr_skip=$($_.Exception.Message)"
+  }
+}
+
 Write-Output "receipt=$receipt"
 Write-Output "digest=$($status.projectionDigest)"
 Write-Output "count=$($status.reusableAnswerCount)"
@@ -68,6 +87,8 @@ Write-Output "cognizant=$($status.cognizantTalentCommunityFieldsPresent -join ',
 Write-Output "offer=$($proof.pairingOfferPath)"
 Write-Output "codePath=$codeLocal"
 Write-Output "apk=$apk"
+Write-Output "lanUrl=$lanUrl"
+Write-Output "qrPath=$qrPath"
 
 $deadline = (Get-Date).AddMinutes(20)
 while ((Get-Date) -lt $deadline) {

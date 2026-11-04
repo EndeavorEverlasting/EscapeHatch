@@ -25,6 +25,7 @@ import { emptyPreferences } from './src/lib/application-preferences.ts';
 import { observePrivateSyncStatus } from './private-sync-status.ts';
 import { exportPairingOffer } from './private-sync-device.ts';
 import { resolveFolderCarrierPath } from './private-sync-config.ts';
+import { maybePushPrivateSyncAfterPreferenceWrite } from './private-sync-after-write.ts';
 import { prepareToFinalReview, type PreparationResult } from './application-autopilot-executor.ts';
 import os from 'node:os';
 import {
@@ -562,8 +563,11 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             await selected.bringToFront();
             return respond(res, 200, { ok: true, state, currentPage: { opportunityId, applicationUrl, pageUrl: selected.url() }, requiresOperatorSubmission: true, listeners: status });
           }
-          if (url.pathname === PREFIX + '/preferences') return respond(res, 200, { ok: true,
-            preferences: await updatePreferences(current => mergePreferenceEdits(current, payload.preferences, payload.removedQuestions)) });
+          if (url.pathname === PREFIX + '/preferences') {
+            const preferences = await updatePreferences(current => mergePreferenceEdits(current, payload.preferences, payload.removedQuestions));
+            const privateSync = await maybePushPrivateSyncAfterPreferenceWrite();
+            return respond(res, 200, { ok: true, preferences, privateSync });
+          }
           if (url.pathname === PREFIX + '/preferences/clear') { await listeners.setRecording(false); await clearPreferences(); return respond(res, 200, { ok: true }); }
           if (url.pathname === PREFIX + '/private-sync/pair') {
             if (process.env.ESCAPEHATCH_EXPERIMENTAL_SYNC !== '1') {

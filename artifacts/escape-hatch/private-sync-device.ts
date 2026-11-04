@@ -107,9 +107,14 @@ export async function importPairingOffer(o: Options, offer: Omit<PairingOffer, '
 }
 export async function bindFolderCarrier(o: Options, principal = 'local-folder') {
   const p = paths(o);
-  const config: CarrierConfig = { schema: 'escapehatch/private-sync-carrier-config/v1', kind: 'folder', principal };
+  const config: CarrierConfig = {
+    schema: 'escapehatch/private-sync-carrier-config/v1',
+    kind: 'folder',
+    principal,
+    folderPath: p.carrier,
+  };
   await writeCarrierConfig(p.config, config);
-  return { state: 'CARRIER_BOUND_FOLDER', principal };
+  return { state: 'CARRIER_BOUND_FOLDER', principal, folderPath: p.carrier };
 }
 export async function bindDriveCarrier(o: Options, input: { principal: string; folderId: string; tokenFile?: string }) {
   const p = paths(o);

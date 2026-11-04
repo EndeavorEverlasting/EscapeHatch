@@ -14,10 +14,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { observePrivateSyncStatus } from './private-sync-status.ts';
 import { exportPairingOffer } from './private-sync-device.ts';
+import { resolveFolderCarrierPath } from './private-sync-config.ts';
 
 const carrierArg = process.argv[2];
 const port = Number(process.argv[3] || 18766);
-const carrier = carrierArg && path.isAbsolute(carrierArg) ? carrierArg : undefined;
+let carrier = carrierArg && path.isAbsolute(carrierArg) ? carrierArg : undefined;
 const here = path.dirname(fileURLToPath(import.meta.url));
 const corridorHtml = path.resolve(here, '../../docs/design/prototypes/auth-sync-handoff.html');
 
@@ -61,13 +62,17 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (url.pathname === '/pair' && req.method === 'POST') {
+      const dataHome = process.env.ESCAPEHATCH_DATA_HOME;
       if (!carrier) {
-        json(res, 422, { error: 'CARRIER_REQUIRED', detail: 'Start status server with an absolute carrier path.' });
+        carrier = (await resolveFolderCarrierPath(dataHome || '')) || undefined;
+      }
+      if (!carrier) {
+        json(res, 422, { error: 'CARRIER_REQUIRED', detail: 'Bind folder carrier with folderPath or pass absolute carrier argv.' });
         return;
       }
       const offer = await exportPairingOffer({
         carrier,
-        dataHome: process.env.ESCAPEHATCH_DATA_HOME,
+        dataHome,
       });
       const { pairingCode, ...sealed } = offer;
       const offerPath = path.join(carrier, 'pairing-offer.json');

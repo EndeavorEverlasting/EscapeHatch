@@ -8,7 +8,13 @@ import { homedir } from 'node:os';
 
 export const CARRIER_CONFIG_SCHEMA = 'escapehatch/private-sync-carrier-config/v1';
 export type CarrierConfig =
-  | { schema: typeof CARRIER_CONFIG_SCHEMA; kind: 'folder'; principal: string }
+  | {
+      schema: typeof CARRIER_CONFIG_SCHEMA;
+      kind: 'folder';
+      principal: string;
+      /** Absolute ciphertext folder (e.g. OneDrive EscapeHatchPrivateSync). Required for host pair/push. */
+      folderPath?: string;
+    }
   | {
       schema: typeof CARRIER_CONFIG_SCHEMA;
       kind: 'google-drive-file';
@@ -55,6 +61,11 @@ export async function readCarrierConfig(file: string): Promise<CarrierConfig | n
     if (parsed?.schema !== CARRIER_CONFIG_SCHEMA) throw new Error('INVALID_CARRIER_CONFIG');
     if (parsed.kind === 'folder') {
       if (!parsed.principal || typeof parsed.principal !== 'string') throw new Error('INVALID_CARRIER_CONFIG');
+      if (parsed.folderPath !== undefined) {
+        if (typeof parsed.folderPath !== 'string' || !path.isAbsolute(parsed.folderPath)) {
+          throw new Error('INVALID_CARRIER_CONFIG');
+        }
+      }
       return parsed;
     }
     if (parsed.kind === 'google-drive-file') {
@@ -69,8 +80,22 @@ export async function readCarrierConfig(file: string): Promise<CarrierConfig | n
   }
 }
 
+/** Resolve absolute folder carrier for host pair/push. Never invents a path silently. */
+export async function resolveFolderCarrierPath(dataHome: string, env: NodeJS.ProcessEnv = process.env): Promise<string | null> {
+  const fromEnv = env.ESCAPEHATCH_PRIVATE_SYNC_CARRIER;
+  if (fromEnv && path.isAbsolute(fromEnv)) return path.resolve(fromEnv);
+  const config = await readCarrierConfig(defaultCarrierConfigPath(dataHome));
+  if (config?.kind === 'folder' && config.folderPath && path.isAbsolute(config.folderPath)) {
+    return path.resolve(config.folderPath);
+  }
+  return null;
+}
+
 export async function writeCarrierConfig(file: string, config: CarrierConfig) {
   if (config.schema !== CARRIER_CONFIG_SCHEMA) throw new Error('INVALID_CARRIER_CONFIG');
+  if (config.kind === 'folder' && config.folderPath !== undefined && !path.isAbsolute(config.folderPath)) {
+    throw new Error('ABSOLUTE_FOLDER_CARRIER_REQUIRED');
+  }
   if (config.kind === 'google-drive-file') assertEscapeHatchOwnedTokenPath(config.tokenFile);
   const temp = file + '.' + Date.now() + '.tmp';
   await fs.mkdir(path.dirname(file), { recursive: true, mode: 0o700 });

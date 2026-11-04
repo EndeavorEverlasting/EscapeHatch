@@ -4,6 +4,7 @@ import { savedAnswerReviewRows, unrecognizedSavedAnswerCount, hasTalentCommunity
 
 const API = '/__escapehatch/managed-assist/preferences';
 const SYNC_STATUS_API = '/__escapehatch/managed-assist/private-sync/status';
+const SYNC_PAIR_API = '/__escapehatch/managed-assist/private-sync/pair';
 type PreferenceStoreMeta = { dataHome: string; preferenceStore: string; source: string; exists: boolean };
 type PrivateSyncUiStatus = {
   enabled?: boolean;
@@ -14,7 +15,15 @@ type PrivateSyncUiStatus = {
   projectionDigest?: string | null;
   cognizantTalentCommunityFieldsPresent?: string[];
   offlineQueued?: number;
+  carrierPathConfigured?: boolean;
   notes?: string[];
+};
+type PrivateSyncPairResult = {
+  ok?: boolean;
+  pairingCode?: string;
+  expiresAt?: string;
+  offerPath?: string;
+  error?: string;
 };
 function preferenceFieldLabel(id: string, fallback: string) {
   if (id === 'identity.title') return 'Salutation (Mr., Ms., Dr.)';
@@ -39,6 +48,8 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
   const [clearRequested, setClearRequested] = useState(false);
   const [removedQuestions, setRemovedQuestions] = useState<string[]>([]);
   const [syncStatus, setSyncStatus] = useState<PrivateSyncUiStatus | null>(null);
+  const [pairResult, setPairResult] = useState<PrivateSyncPairResult | null>(null);
+  const [pairBusy, setPairBusy] = useState(false);
   const editVersion = useRef(0);
   const loadVersion = useRef(0);
   function markEdited() {
@@ -168,6 +179,52 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
           Cognizant talent-community field ids present: {syncStatus.cognizantTalentCommunityFieldsPresent.length}
         </p>
       )}
+      {syncStatus?.enabled && (
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            className="rounded border border-accent px-3 py-2 text-sm font-medium disabled:opacity-50"
+            disabled={pairBusy || syncStatus.carrierPathConfigured === false}
+            data-testid="private-sync-pair-button"
+            onClick={() => {
+              void (async () => {
+                setPairBusy(true);
+                try {
+                  const response = await fetch(SYNC_PAIR_API, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                      'content-type': 'application/json',
+                      'x-escapehatch-operator-action': 'confirmed',
+                    },
+                    body: '{}',
+                  });
+                  const json = await response.json();
+                  setPairResult(response.ok ? json : { ok: false, error: json.error || 'pair_failed' });
+                } catch {
+                  setPairResult({ ok: false, error: 'pair_unavailable' });
+                } finally {
+                  setPairBusy(false);
+                }
+              })();
+            }}
+          >
+            {pairBusy ? 'Preparing code…' : 'Pair this phone'}
+          </button>
+          {syncStatus.carrierPathConfigured === false && (
+            <span className="text-xs text-muted-foreground">Bind a folder carrier with an absolute path first.</span>
+          )}
+        </div>
+      )}
+      {pairResult?.pairingCode && (
+        <p className="mt-3 font-mono text-lg tracking-widest text-foreground" data-testid="private-sync-pairing-code">
+          {pairResult.pairingCode}
+        </p>
+      )}
+      {pairResult?.expiresAt && (
+        <p className="mt-1 text-xs text-muted-foreground">Expires {new Date(pairResult.expiresAt).toLocaleString()} · offer staged for the phone</p>
+      )}
+      {pairResult?.error && <p className="mt-2 text-sm text-muted-foreground">Pairing unavailable: {pairResult.error}</p>}
     </aside>
 
     {ready && <section className="mt-4 rounded-xl border border-border bg-secondary/20 p-4" aria-label="Exact saved answers" data-testid="saved-answer-review">

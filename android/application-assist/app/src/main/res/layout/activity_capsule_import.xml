@@ -26,6 +26,24 @@
         android:minHeight="48dp"
         android:text="@string/capsule_choose" />
 
+    <EditText
+        android:id="@+id/lanBaseUrl"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:hint="@string/lan_base_hint"
+        android:importantForAutofill="no"
+        android:inputType="textUri"
+        android:minHeight="48dp" />
+
+    <Button
+        android:id="@+id/fetchCapsuleLan"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:minHeight="48dp"
+        android:text="@string/capsule_fetch_lan" />
+
     <Button
         android:id="@+id/saveProof"
         android:layout_width="match_parent"

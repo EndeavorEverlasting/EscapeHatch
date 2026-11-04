@@ -11,8 +11,12 @@
     <string name="privacy_preference_disabled">Off on this device. No consent will be automated.</string>
     <string name="materials_review_boundary">Résumé and cover letter review seals are confirmed in the desktop EscapeHatch Materials desk. This companion does not mark employer documents reviewed.</string>
     <string name="pairing_title">Pair this phone</string>
-    <string name="pairing_instructions">1) Choose the sealed pairing offer from OneDrive EscapeHatchPrivateSync.\n2) On your computer, open the pairing code EscapeHatch showed (Notepad).\n3) Type that 16-character code here and confirm.\nEscapeHatch never pairs silently and never uploads your answers in plaintext.</string>
+    <string name="pairing_instructions">1) Same Wi-Fi: fetch the sealed offer from the PC (:18765), or choose pairing-offer.json from OneDrive.\n2) On your computer, open the pairing code EscapeHatch showed (Notepad).\n3) Type that 16-character code here and confirm.\nEscapeHatch never pairs silently and never uploads your answers in plaintext.</string>
     <string name="pairing_choose_offer">Choose sealed offer</string>
+    <string name="lan_base_hint">PC Wi-Fi address (e.g. 192.168.1.80:18765)</string>
+    <string name="pairing_fetch_offer_lan">Fetch sealed offer from PC</string>
+    <string name="lan_fetch_failed">Could not fetch from PC (%1$s). Check Wi-Fi and :18765.</string>
+    <string name="lan_fetching">Fetching from PC…</string>
     <string name="pairing_code_hint">16-character code from desktop</string>
     <string name="pairing_confirm">Confirm pairing</string>
     <string name="pairing_open">Pair this phone</string>
@@ -28,8 +32,9 @@
     <string name="pairing_expired">Pairing offer expired. Export a new one on desktop.</string>
     <string name="pairing_auth_failed">Pairing authentication failed.</string>
     <string name="capsule_title">Import encrypted answers</string>
-    <string name="capsule_instructions">1) Choose the encrypted .ehsync file from OneDrive EscapeHatchPrivateSync.\n2) Confirm the digest matches your desktop.\n3) Tap Save proof to OneDrive and store escapehatch-phone-sync-proof.json in that same folder.\nAnswers stay sealed—only counts and digests are shown.</string>
+    <string name="capsule_instructions">1) Same Wi-Fi: fetch the .ehsync capsule from the PC (:18765), or choose it from OneDrive EscapeHatchPrivateSync.\n2) Confirm the digest matches your desktop.\n3) Tap Save proof to OneDrive and store escapehatch-phone-sync-proof.json in that same folder.\nAnswers stay sealed—only counts and digests are shown.</string>
     <string name="capsule_choose">Choose encrypted capsule</string>
+    <string name="capsule_fetch_lan">Fetch capsule from PC</string>
     <string name="capsule_open">Import encrypted answers</string>
     <string name="capsule_cancelled">Capsule selection cancelled.</string>
     <string name="capsule_unreadable">Could not read the capsule file.</string>

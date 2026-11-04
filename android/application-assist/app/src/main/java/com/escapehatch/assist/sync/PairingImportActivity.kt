@@ -17,6 +17,7 @@ import java.io.InputStreamReader
 class PairingImportActivity : AppCompatActivity() {
     private lateinit var status: TextView
     private lateinit var codeInput: EditText
+    private lateinit var lanBaseUrl: EditText
     private var offerJson: String? = null
     private val importer by lazy {
         PrivateSyncPairingImport(AndroidKeystoreSyncVaultKeyRepository(applicationContext))
@@ -44,10 +45,29 @@ class PairingImportActivity : AppCompatActivity() {
         setContentView(R.layout.activity_pairing_import)
         status = findViewById(R.id.pairingStatus)
         codeInput = findViewById(R.id.pairingCode)
+        lanBaseUrl = findViewById(R.id.lanBaseUrl)
         findViewById<Button>(R.id.chooseOffer).setOnClickListener {
             openOffer.launch(arrayOf("application/json", "text/*", "*/*"))
         }
+        findViewById<Button>(R.id.fetchOfferLan).setOnClickListener { fetchOfferFromLan() }
         findViewById<Button>(R.id.confirmPairing).setOnClickListener { confirmImport() }
+    }
+
+    private fun fetchOfferFromLan() {
+        status.text = getString(R.string.lan_fetching)
+        LanSealedFetch.fetchText(lanBaseUrl.text?.toString().orEmpty(), "/offer") { outcome ->
+            runOnUiThread {
+                when (outcome) {
+                    is LanSealedFetch.Outcome.Ok -> {
+                        offerJson = outcome.body
+                        status.text = getString(R.string.pairing_offer_loaded)
+                    }
+                    is LanSealedFetch.Outcome.Err -> {
+                        status.text = getString(R.string.lan_fetch_failed, outcome.reason)
+                    }
+                }
+            }
+        }
     }
 
     private fun confirmImport() {

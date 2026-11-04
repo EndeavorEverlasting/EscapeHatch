@@ -6,6 +6,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Button
+import android.widget.EditText
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -23,6 +24,7 @@ class CapsuleImportActivity : AppCompatActivity() {
     private lateinit var status: TextView
     private lateinit var saveProof: Button
     private lateinit var copyProof: Button
+    private lateinit var lanBaseUrl: EditText
     private var proofJson: String? = null
     private val importer by lazy {
         PrivateSyncCapsuleImport(
@@ -67,9 +69,11 @@ class CapsuleImportActivity : AppCompatActivity() {
         status = findViewById(R.id.capsuleStatus)
         saveProof = findViewById(R.id.saveProof)
         copyProof = findViewById(R.id.copyProof)
+        lanBaseUrl = findViewById(R.id.lanBaseUrl)
         findViewById<Button>(R.id.chooseCapsule).setOnClickListener {
             openCapsule.launch(arrayOf("application/json", "text/*", "*/*"))
         }
+        findViewById<Button>(R.id.fetchCapsuleLan).setOnClickListener { fetchCapsuleFromLan() }
         saveProof.setOnClickListener {
             createProof.launch(PhoneSyncProofReceipt.SUGGESTED_FILE_NAME)
         }
@@ -82,6 +86,20 @@ class CapsuleImportActivity : AppCompatActivity() {
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             clipboard.setPrimaryClip(ClipData.newPlainText("escapehatch-phone-sync-proof", payload))
             status.text = getString(R.string.capsule_proof_copied)
+        }
+    }
+
+    private fun fetchCapsuleFromLan() {
+        status.text = getString(R.string.lan_fetching)
+        LanSealedFetch.fetchText(lanBaseUrl.text?.toString().orEmpty(), "/capsule") { outcome ->
+            runOnUiThread {
+                when (outcome) {
+                    is LanSealedFetch.Outcome.Ok -> applyImport(importer.importCapsuleJson(outcome.body))
+                    is LanSealedFetch.Outcome.Err -> {
+                        status.text = getString(R.string.lan_fetch_failed, outcome.reason)
+                    }
+                }
+            }
         }
     }
 

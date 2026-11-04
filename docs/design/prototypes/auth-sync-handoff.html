@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EscapeHatch — Connect vault</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #101612;
+      --panel: #1c2a22;
+      --paper: #f3efe6;
+      --glow: #c6f54c;
+      --calm: #8fd3c8;
+      --warn: #e2a16a;
+      --muted: #9bb0a2;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: "Source Serif 4", Georgia, serif;
+      color: #e7efe8;
+      background: var(--ink);
+      overflow-x: hidden;
+    }
+    .stage {
+      min-height: 100%;
+      display: grid;
+      place-items: center;
+      padding: 2rem 1.25rem 3rem;
+      position: relative;
+      background:
+        radial-gradient(900px 480px at 70% 15%, rgba(198, 245, 76, 0.16), transparent 60%),
+        radial-gradient(700px 500px at 15% 85%, rgba(143, 211, 200, 0.12), transparent 55%),
+        linear-gradient(160deg, #0c110e 0%, #152018 45%, #101612 100%);
+    }
+    .stage::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 100% 48px;
+      mask-image: linear-gradient(180deg, transparent, #000 20%, #000 80%, transparent);
+      pointer-events: none;
+    }
+    .frame {
+      width: min(34rem, 100%);
+      position: relative;
+      z-index: 1;
+    }
+    .brand {
+      font-family: Syne, sans-serif;
+      font-weight: 800;
+      font-size: clamp(2.4rem, 8vw, 3.4rem);
+      letter-spacing: -0.04em;
+      line-height: 0.95;
+      margin: 0 0 0.85rem;
+    }
+    .promise {
+      font-size: 1.12rem;
+      line-height: 1.4;
+      color: var(--muted);
+      margin: 0 0 1.5rem;
+      max-width: 28ch;
+    }
+    .rail {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.85rem 1rem;
+      border: 1px solid rgba(198, 245, 76, 0.25);
+      background: rgba(28, 42, 34, 0.85);
+      backdrop-filter: blur(8px);
+      margin-bottom: 1.25rem;
+      transition: border-color 0.4s ease, background 0.4s ease;
+    }
+    .rail[data-state="ready"] {
+      border-color: rgba(143, 211, 200, 0.55);
+      background: rgba(20, 48, 42, 0.9);
+    }
+    .dot {
+      width: 0.7rem;
+      height: 0.7rem;
+      border-radius: 50%;
+      background: var(--glow);
+      box-shadow: 0 0 0 0 rgba(198, 245, 76, 0.55);
+      animation: pulse 1.8s ease-out infinite;
+    }
+    .rail[data-state="ready"] .dot {
+      background: var(--calm);
+      animation: none;
+      box-shadow: 0 0 12px rgba(143, 211, 200, 0.55);
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(198, 245, 76, 0.45); }
+      70% { box-shadow: 0 0 0 12px rgba(198, 245, 76, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(198, 245, 76, 0); }
+    }
+    .rail p { margin: 0; font-size: 0.98rem; }
+    .rail small { display: block; color: var(--muted); font-size: 0.82rem; margin-top: 0.15rem; }
+    .cta {
+      font-family: Syne, sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      border: 0;
+      cursor: pointer;
+      width: 100%;
+      padding: 1rem 1.1rem;
+      background: var(--glow);
+      color: var(--ink);
+      transition: transform 0.2s ease, filter 0.2s ease;
+    }
+    .cta:hover { filter: brightness(1.05); transform: translateY(-1px); }
+    .cta:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+    .cta[hidden] { display: none; }
+    .fine {
+      margin: 1rem 0 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .sheet {
+      margin-top: 1.25rem;
+      padding: 1rem 1.05rem;
+      background: rgba(243, 239, 230, 0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      display: none;
+    }
+    .sheet.open { display: block; animation: rise 0.45s ease; }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .sheet h2 {
+      font-family: Syne, sans-serif;
+      font-size: 1rem;
+      margin: 0 0 0.55rem;
+      color: var(--paper);
+    }
+    .sheet ol { margin: 0; padding-left: 1.15rem; color: var(--muted); }
+    .sheet li { margin: 0.35rem 0; }
+    @media (prefers-reduced-motion: reduce) {
+      .dot { animation: none; }
+      .sheet.open { animation: none; }
+      .cta { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <div class="frame">
+      <h1 class="brand">EscapeHatch</h1>
+      <p class="promise">Connect Google once. Only sealed sync packets leave this machine—never your answers in the clear.</p>
+
+      <div class="rail" id="rail" data-state="idle">
+        <span class="dot" aria-hidden="true"></span>
+        <div>
+          <p id="railTitle">Vault waiting</p>
+          <small id="railSub">No Google connection yet · ciphertext carrier idle</small>
+        </div>
+      </div>
+
+      <button class="cta" id="connect" type="button">Continue with Google</button>
+      <button class="cta" id="pair" type="button" hidden>Pair this phone</button>
+
+      <p class="fine" id="fine">Google opens in your browser. EscapeHatch resumes here when access is granted—same corridor, next light.</p>
+
+      <div class="sheet" id="pairSheet" aria-live="polite">
+        <h2>Phone pairing (product voice)</h2>
+        <ol>
+          <li>EscapeHatch shows a short code on this screen.</li>
+          <li>On the phone, open EscapeHatch Assist → Pair.</li>
+          <li>Approve the sealed offer EscapeHatch already prepared—no hunting through temp folders.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+  <script>
+    const rail = document.getElementById('rail');
+    const railTitle = document.getElementById('railTitle');
+    const railSub = document.getElementById('railSub');
+    const connect = document.getElementById('connect');
+    const pair = document.getElementById('pair');
+    const fine = document.getElementById('fine');
+    const pairSheet = document.getElementById('pairSheet');
+
+    function morph(title, sub, state) {
+      const run = () => {
+        rail.dataset.state = state;
+        railTitle.textContent = title;
+        railSub.textContent = sub;
+      };
+      if (document.startViewTransition) document.startViewTransition(run);
+      else run();
+    }
+
+    connect.addEventListener('click', () => {
+      morph('Opening Google…', 'Browser handoff in progress', 'idle');
+      fine.textContent = 'Complete sign-in in the browser window. This panel will unlock when EscapeHatch receives the token.';
+      connect.disabled = true;
+      // Prototype only: simulate NordVPN-like return after a short beat.
+      setTimeout(() => {
+        morph('Vault sealed', 'Google connected · drive.file · ciphertext only', 'ready');
+        connect.hidden = true;
+        pair.hidden = false;
+        fine.textContent = 'Connected. Pair a phone when you are ready—or continue on this device.';
+      }, 1400);
+    });
+
+    pair.addEventListener('click', () => {
+      pairSheet.classList.add('open');
+      morph('Pairing ready', 'Show code on desktop · confirm on phone', 'ready');
+    });
+  </script>
+</body>
+</html>

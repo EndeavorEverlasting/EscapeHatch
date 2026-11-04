@@ -50,7 +50,8 @@ export function projectProfilePuzzle({ profile, recovery }: ProfilePuzzleInput):
     const contact = recovery?.items.filter(item =>
       item.scope === 'question' && item.questionKey === contactQuestions[piece.key]) ?? [];
     const present = Boolean(profile[piece.key].trim());
-    const needsReview = contact.some(item => item.status === 'needs-review') ||
+    const conflicting = contact.some(item => item.status === 'needs-review');
+    const needsReview = conflicting ||
       piece.key === 'phone' && present && profile.phone_authority !== 'user_confirmed_primary';
     const updatedAt = latestSourceTime(contact);
     return {
@@ -58,7 +59,9 @@ export function projectProfilePuzzle({ profile, recovery }: ProfilePuzzleInput):
       status: needsReview ? 'needs_review' : present ? 'saved' : 'missing',
       sourceOwner: 'profile',
       ...(updatedAt ? { updatedAt } : {}),
-      nextAction: { label: 'Review profile detail', href: '/profile' },
+      nextAction: conflicting
+        ? { label: 'Review saved contact answers', href: '/assist' }
+        : { label: 'Review profile detail', href: '/profile' },
     };
   });
   const measured = Boolean(recovery && !recovery.loading && recovery.unavailable.length === 0);

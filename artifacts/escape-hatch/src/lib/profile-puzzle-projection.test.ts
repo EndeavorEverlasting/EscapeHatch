@@ -41,6 +41,9 @@ test('contact conflict overrides a nonempty saved value', () => {
   const snapshot = projectProfilePuzzle({ profile: { ...emptyProfile, email: 'sentinel@example.invalid' }, recovery: recovery([group]) });
   assert.equal(status(snapshot, 'email'), 'needs_review');
   assert.equal(snapshot.savedCount, 0);
+  assert.deepEqual(snapshot.pieces.find(piece => piece.key === 'email')?.nextAction,
+    { label: 'Review saved contact answers', href: '/assist' });
+  assert.equal(projectProfilePuzzle({ profile: { ...emptyProfile, phone: '555-0100' } }).pieces.find(piece => piece.key === 'phone')?.nextAction.href, '/profile');
 });
 
 test('proposed summary is not saved; exact accepted summary is saved', () => {

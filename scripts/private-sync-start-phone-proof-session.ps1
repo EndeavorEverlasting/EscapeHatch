@@ -38,16 +38,9 @@ if (-not $lanUp) {
     '--experimental-strip-types', 'private-sync-phone-lan-server.ts', $od, '18765'
   ) -WorkingDirectory (Join-Path $repo 'artifacts\escape-hatch')
   Start-Sleep -Seconds 2
-  # Best-effort private firewall allow for same-WiFi phone (no elevation → skip)
-  try {
-    $ruleName = 'EscapeHatch phone proof LAN 18765'
-    $existing = Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
-    if (-not $existing) {
-      New-NetFirewallRule -DisplayName $ruleName -Direction Inbound -Protocol TCP -LocalPort 18765 -Action Allow -Profile Private -ErrorAction SilentlyContinue | Out-Null
-    }
-  } catch {
-    Write-Output 'firewall_rule=skipped'
-  }
+  # Private-profile inbound 18765 (UAC if needed) so the phone can reach LAN install.
+  & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'private-sync-ensure-lan-firewall.ps1') |
+    ForEach-Object { Write-Output $_ }
 }
 
 Start-Process 'http://127.0.0.1:18766/corridor'

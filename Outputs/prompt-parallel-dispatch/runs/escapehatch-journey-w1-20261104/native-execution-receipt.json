@@ -1,0 +1,46 @@
+{
+  "run_id": "escapehatch-journey-w1-20261104",
+  "observed_parallelism": true,
+  "canonical_receipt_verified": false,
+  "verification_blocker": "harness/contracts/prompt-parallel-dispatch.v1.json and scripts/prompt_parallel_dispatch.py absent",
+  "returned_lanes": [
+    {
+      "lane_id": "W1-model",
+      "worker": "model_evidence",
+      "branch": "codex/journey-wayfinding-model-20261104",
+      "owned_surfaces": [
+        "artifacts/escape-hatch/src/lib/journey-wayfinding.ts",
+        "artifacts/escape-hatch/src/lib/journey-wayfinding.test.ts"
+      ],
+      "returned_commits": [
+        "bd4de2e1b3d9670e3112a2a3cc141ad398bb0615"
+      ]
+    },
+    {
+      "lane_id": "W1-UI",
+      "worker": "ui_evidence",
+      "branch": "codex/journey-wayfinding-ui-20261104",
+      "owned_surfaces": [
+        "artifacts/escape-hatch/src/components/journey-atlas.tsx",
+        "artifacts/escape-hatch/src/index.css (journey-scoped additions only)",
+        "artifacts/escape-hatch/tests/journey-wayfinding.spec.ts"
+      ],
+      "returned_commits": [
+        "d9890ef",
+        "432350c"
+      ]
+    }
+  ],
+  "local_validation": {
+    "unit": "210/210 passed",
+    "focused_browser": "15/15 passed",
+    "typecheck": "PASS",
+    "build": "PASS (existing bundle warning)",
+    "parent": "PASS; all nine parent gates remain unproven",
+    "journey": "PASS",
+    "governance": "PASS",
+    "diff": "PASS"
+  },
+  "visual": "Synthetic desktop screenshot reviewed. No applicant screenshots or values tracked. Downloaded typography and installed W1 behavior not certified.",
+  "integration": "Provider exact-head validation and merge pending"
+}

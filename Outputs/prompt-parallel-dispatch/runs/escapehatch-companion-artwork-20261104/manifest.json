@@ -1,0 +1,50 @@
+{
+  "schema_version": "prompt-parallel-dispatch/v1",
+  "run_id": "escapehatch-companion-artwork-20261104",
+  "repository": "EndeavorEverlasting/EscapeHatch",
+  "source_owner": "PR152 at 6b2793f; existing optional guide and offline mascot icon lanes",
+  "base_sha": "5cdb7d3f0ab8f3016431a497ade91f3f435586e9",
+  "parent_issue": "https://github.com/EndeavorEverlasting/EscapeHatch/issues/69",
+  "graph_width": 2,
+  "adapter": "collaboration.followup_task",
+  "lanes": [
+    {
+      "lane_id": "W2-companion",
+      "worker": "ui_evidence",
+      "branch": "codex/companion-guide-repair-20261104",
+      "owned_surfaces": [
+        "browser/application-assist/journey-guide.js",
+        "browser/application-assist/popup.html",
+        "tests/test_extension_journey_guide.mjs",
+        "artifacts/escape-hatch/tests/extension-journey-guide.spec.ts"
+      ],
+      "returned_commits": [
+        "7b82bff",
+        "5182f69",
+        "5083446"
+      ]
+    },
+    {
+      "lane_id": "W3-icon",
+      "worker": "model_evidence",
+      "branch": "codex/installer-icon-proof-20261104",
+      "owned_surfaces": [
+        "scripts/windows/EscapeHatch-Install.ps1",
+        "tests/test_escapehatch_installer_source_delivery.py"
+      ],
+      "returned_commits": [
+        "10e23fbf5071f618750b35507fd955a578ec195b"
+      ]
+    }
+  ],
+  "convergence_owner": "coordinator",
+  "forbidden_surfaces": [
+    "private applicant state",
+    "actual extension installation or enrollment",
+    "live installer/shortcuts",
+    "employer actions or submission",
+    "separately owned PR147 career schema"
+  ],
+  "canonical_validation": "UNVERIFIED_SCHEMA_AND_RUNNER_ABSENT",
+  "status": "REJOINED_LOCAL_SOURCE_CHECKS_PASSED_PROVIDER_PENDING"
+}

@@ -1,0 +1,54 @@
+{
+  "run_id": "escapehatch-profile-puzzle-20261103",
+  "adapter": "collaboration.spawn_agent",
+  "base_ref": "origin/main@ced3418b911d26b5f849d0a793ce5d09b64667e0",
+  "graph_width": 2,
+  "observed_parallelism": true,
+  "canonical_receipt_validation": "UNVERIFIED_MISSING_OWNER_SCHEMA_AND_RUNNER",
+  "convergence_owner": "EH-PA3",
+  "lanes": [
+    {
+      "lane_id": "EH-PA1",
+      "worker": "model_evidence",
+      "branch": "codex/profile-puzzle-model-20261104",
+      "owned_surfaces": [
+        "src/lib/profile-puzzle-projection.ts",
+        "src/lib/profile-puzzle-projection.test.ts"
+      ],
+      "returned_commits": [
+        "fc2c18c17c537c986f0eda3e7de7130f1d31a2c0",
+        "12c3a48fd4b77f0d58ab6fa5b33d165abf8c1433"
+      ],
+      "focused_tests": "13 passed"
+    },
+    {
+      "lane_id": "EH-PA2",
+      "worker": "ui_evidence",
+      "branch": "codex/profile-puzzle-ui-20261104",
+      "owned_surfaces": [
+        "src/components/profile-piece-board.tsx",
+        "src/index.css",
+        "tests/profile-puzzle-evidence.spec.ts"
+      ],
+      "returned_commits": [
+        "47f2b05"
+      ],
+      "focused_tests": "deferred to coordinator rejoin"
+    }
+  ],
+  "integration_status": "coordinator rejoined, unit/build/typecheck/parent/scene passed; provider and installed proof pending",
+  "privacy": "No applicant values, private paths or runtime payloads included",
+  "limitations": [
+    "Not a canonical verify-receipt result",
+    "Not a full suite completion or live ATS claim"
+  ],
+  "validation": {
+    "unit": "204 passed",
+    "browser": "131 passed, 1 pre-existing skip; subsequent focused final-source checks 10 passed",
+    "required_controls": "4 passed",
+    "harness": "PASS",
+    "journey": "PASS",
+    "parent": "PASS (nine parent gates remain UNPROVEN)",
+    "visual": "synthetic desktop and 320px mobile reviewed; local fallback fonts; sound overlap repaired"
+  }
+}

@@ -1,3 +1,7 @@
+import { saveWorkspace } from '../workspace-file.ts';
+import { readHostWorkspaceOwner } from '../workspace-owner-file.ts';
+import { emptyProfile, PROFILE_KEY } from '../src/lib/storage.ts';
+import { WORKSPACE_SCHEMA } from '../src/lib/workspace-bootstrap.ts';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -125,8 +129,10 @@ test('real resume controller survives synthetic login and SSO in one page, reads
     const action = (name: string, payload: object) => fetch(origin + '/__escapehatch/managed-assist/' + name, { method: 'POST',
       headers: { origin, 'content-type': 'application/json', 'x-escapehatch-operator-action': 'confirmed' }, body: JSON.stringify(payload) });
     const profile = { first_name: 'Synthetic', last_name: 'Recovery' };
+    await saveWorkspace({ schema: WORKSPACE_SCHEMA, values: { [PROFILE_KEY]: { ...emptyProfile, ...profile } } }, null, path.join(directory, 'workspace.v1.json'));
     expect((await status()).authCheckpoint.phase).toBe('AUTH_HANDOFF');
     expect((await action('resume', { profile })).status).toBe(409);
+    expect(await readHostWorkspaceOwner(directory)).toBeNull();
     await page.route('https://sso.example.com/**', route => route.fulfill({ contentType: 'text/html', body: '<input type="password">' }));
     await page.goto('https://sso.example.com/login');
     expect((await status()).authCheckpoint.phase).toBe('SESSION_ORIGIN_CHANGED');
@@ -138,6 +144,7 @@ test('real resume controller survives synthetic login and SSO in one page, reads
     expect((await status()).authCheckpoint.canResume).toBe(true);
     const resumed = await action('resume', { profile });
     expect(resumed.status).toBe(200);
+    expect(await readHostWorkspaceOwner(directory)).not.toBeNull();
     expect((await resumed.json()).filled).toContain('identity.last_name');
     await expect(page.locator('[name="first_name"]')).toHaveValue('Existing');
     await expect(page.locator('[name="last_name"]')).toHaveValue('Recovery');

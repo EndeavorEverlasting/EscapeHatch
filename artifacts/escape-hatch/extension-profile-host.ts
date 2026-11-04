@@ -8,6 +8,9 @@ import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { userDataRoot } from './user-data.ts';
+import { selectHostWorkspace } from './workspace-owner-file.ts';
+import { parsePairing, PAIRING_SCHEMA, SAFE_ANSWER_IDS, type Pairing } from './src/lib/extension-pairing.ts';
+export { PAIRING_SCHEMA, SAFE_ANSWER_IDS } from './src/lib/extension-pairing.ts';
 import { readWorkspace } from './workspace-file.ts';
 import { readPreferences, updatePreferences } from './preference-file.ts';
 import { PROFILE_KEY, parseProfileStorage, type Profile } from './src/lib/storage.ts';
@@ -16,12 +19,6 @@ import { OWNER_BINDING_SCHEMA, AGENT_CONTEXT_SCHEMA, parseWorkspaceOwnerBinding,
 import { EXTENSION_PROFILE_FIELDS, admitExtensionProfileProjection, type ApprovedExtensionProfile } from './src/lib/extension-profile-admission.ts';
 
 export const PROFILE_HOST_NAME = 'com.escapehatch.profile';
-export const PAIRING_SCHEMA = 'escapehatch/extension-native-pairing/v1';
-export const SAFE_ANSWER_IDS = [
-  'identity.professional_title', 'identity.website', 'education.highest_completed_level',
-  'education.institution', 'education.credential', 'education.field_of_study',
-  'education.dates', 'interview.live_coding_comfort',
-] as const;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const sha = /^[a-f0-9]{64}$/;
 const profileFields = [...EXTENSION_PROFILE_FIELDS, 'phone_authority'];
@@ -35,11 +32,6 @@ export type HostRequest = {
   expectedWorkspaceRevision?: string; expectedPreferenceRevision?: string;
   approvedFields?: string[]; approvedAnswerIds?: string[];
   existingProfile?: unknown; existingAnswers?: Record<string, string>;
-};
-type Pairing = {
-  schema: typeof PAIRING_SCHEMA; binding: WorkspaceOwnerBinding; browserProfileId: string;
-  profileDigest: string; preferenceDigest: string; approvedFields: string[];
-  approvedAnswerIds: string[]; approvedAt: string;
 };
 export type HostOptions = { dataRoot?: string };
 
@@ -69,13 +61,6 @@ async function noLinks(file: string) {
 function list(value: unknown, allowed: readonly string[], nonempty = false): value is string[] {
   return Array.isArray(value) && (!nonempty || value.length > 0) && value.length <= allowed.length &&
     value.every(v => typeof v === 'string' && allowed.includes(v)) && new Set(value).size === value.length;
-}
-function parsePairing(input: unknown): Pairing | null {
-  if (!object(input) || Object.keys(input).some(k => !['schema','binding','browserProfileId','profileDigest','preferenceDigest','approvedFields','approvedAnswerIds','approvedAt'].includes(k))) return null;
-  if (input.schema !== PAIRING_SCHEMA || !parseWorkspaceOwnerBinding(input.binding) || typeof input.browserProfileId !== 'string' || !uuid.test(input.browserProfileId) ||
-    typeof input.profileDigest !== 'string' || !sha.test(input.profileDigest) || typeof input.preferenceDigest !== 'string' || !sha.test(input.preferenceDigest) ||
-    !list(input.approvedFields, profileFields, true) || !list(input.approvedAnswerIds, SAFE_ANSWER_IDS) || typeof input.approvedAt !== 'string' || Number.isNaN(Date.parse(input.approvedAt))) return null;
-  return input as unknown as Pairing;
 }
 async function readPairing(file: string): Promise<Pairing | null> {
   await noLinks(file);
@@ -185,7 +170,7 @@ async function confirm(request: HostRequest, root: string, file: string) {
     if (source.workspaceRevision !== request.expectedWorkspaceRevision || source.preferenceRevision !== request.expectedPreferenceRevision) return fail('SOURCE_REVISION_CHANGED');
     if (request.approvedFields.some(id => !source.availableFields.some(field => field.id === id)) || request.approvedAnswerIds.some(id => !source.answers.some(answer => answer.id === id))) return fail('UNAVAILABLE_APPROVAL');
     if (!request.approvedFields.some(id => id !== 'phone_authority')) return fail('NO_APPROVED_PROFILE');
-    const binding: WorkspaceOwnerBinding = prior?.binding ?? { schema: OWNER_BINDING_SCHEMA, ownerId: randomUUID(), workspaceId: randomUUID(), installationId: randomUUID(), boundAt: new Date().toISOString(), selection: 'applicant-confirmed' };
+    const { binding } = await selectHostWorkspace(source.workspaceRevision, root, prior?.binding);
     // Re-read immediately before persisting approvals; source files remain owned
     // by their existing writers and cannot be replaced by a browser request.
     const current = await snapshot(root);

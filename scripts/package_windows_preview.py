@@ -8,6 +8,7 @@ upstream signed SHASUMS with a pinned keyring, using build-time gpgv only.
 """
 from __future__ import annotations
 import argparse
+import importlib.util
 import hashlib
 import io
 import json
@@ -223,6 +224,12 @@ def build(repo: Path, output: Path, node_runtime_archive: Path | None = None) ->
         if path.is_symlink() or getattr(path, 'is_junction', lambda: False)():
             raise ValueError('Release output must not contain links or junctions')
     commit, files = snapshot(repo)
+    # Ship the canonical extension receipt so installed recovery needs no Git/Python.
+    extension_spec = importlib.util.spec_from_file_location('escapehatch_extension_package', Path(__file__).with_name('package_application_assist.py'))
+    extension_package = importlib.util.module_from_spec(extension_spec)
+    extension_spec.loader.exec_module(extension_package)
+    extension_files = {name[len(extension_package.SOURCE_PREFIX):]: data for name, data in files.items() if name.startswith(extension_package.SOURCE_PREFIX)}
+    files[extension_package.SOURCE_PREFIX + 'release.json'] = extension_package.receipt_bytes(commit, extension_files)
     runtime = None
     if node_runtime_archive is not None:
         pin = load_node_pin(files[NODE_PIN])

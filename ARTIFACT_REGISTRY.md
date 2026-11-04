@@ -248,3 +248,49 @@ Live employer ATS behavior, recruiter preference, automatic submission/auto-appl
 - Validator: `scripts/validate_resume_selection_graph.py`; synthetic tests: `artifacts/escape-hatch/src/lib/resume-selection-graph.test.ts`.
 - Private actual résumé documents, domain masters, job derivatives, platform account slots and upload receipts belong in the user's private local/connected storage, **not** in this public repository or tracked fixtures.
 - Graph enforces typed, versioned lineage, user-owner isolation, stale source detection, ambiguous-domain review, and consent required for all platform-global replacements. Actual browser-side enforcement remains an independent P04 integration gate.
+
+
+## Profile puzzle convergence evidence (2026-11-04)
+
+| Artifact | Owner / path | Producer / trigger | Retention and privacy | Validation / proof ceiling |
+| --- | --- | --- | --- | --- |
+| Profile puzzle handoff | `docs/agent/P04_PROFILE_PUZZLE_ATELIER_CONVERGENCE_2026-11-03.md` | P04 coordinator; refreshed source/runtime evidence | Tracked public-neutral decisions only; retain with implementation | Parent and journey validators; never ATS readiness |
+| Profile puzzle dispatch specification | `Outputs/prompt-parallel-dispatch/runs/escapehatch-profile-puzzle-20261103/manifest.json` | P04 coordinator; lane ownership/adapter changes | Tracked fixed run identity, no applicant data | JSON parse; canonical schema/runner absent, contract verification UNPROVEN |
+| Native lane return receipt | `Outputs/prompt-parallel-dispatch/runs/escapehatch-profile-puzzle-20261103/native-execution-receipt.json` | Coordinator from actual native launch/return tools | Tracked sanitized worker/branch/commit evidence; retain with run | Readback against Git commits; not canonical verify-receipt or installed proof |
+| Synthetic board screenshots | `artifacts/escape-hatch/test-results/**/profile-puzzle-{desktop,mobile}.png` | Playwright profile-puzzle-evidence spec | Ignored local test output; may be replaced by rerun; synthetic only | Visual review plus browser assertions; no real profile screenshots in Git |
+
+
+## Website journey W1 extraction (2026-11-04)
+
+`Outputs/prompt-parallel-dispatch/runs/escapehatch-journey-w1-20261104/manifest.json`
+and its `native-execution-receipt.json` are coordinator-produced, fixed-run,
+tracked sanitized source/worker/commit receipts. Retain with the W1 integration;
+never include applicant payloads, locators or employer screenshots. JSON parsing
+and Git commit readback are available; canonical dispatch schema/runner remain
+absent, so contract-valid dispatch is UNPROVEN. Product validation uses
+`npm --prefix artifacts/escape-hatch run test:unit`, the journey browser spec,
+and the owning application-parent/journey validators. The existing scene registry
+remains the sole journey authority. Synthetic `journey-{desktop,mobile}.png`
+screenshots are ignored Playwright output, replaceable on rerun, and prove only
+the inspected local layouts.
+
+
+## Optional companion and mascot icon convergence (2026-11-04)
+
+`Outputs/prompt-parallel-dispatch/runs/escapehatch-companion-artwork-20261104/manifest.json`
+and `native-execution-receipt.json` retain sanitized native lane ownership,
+public source commits and actual returned proof. Producer: convergence coordinator;
+trigger: W2/W3 implementation/rejoin; retention: tracked with this fixed run.
+No private state, generated user icon, shortcut bytes or applicant screenshot is
+included. Canonical dispatch validation remains UNPROVEN while its owner schema
+and runner are absent. Behavioral validation uses the existing installer source-
+delivery/Windows regression tests and the isolated extension-journey Chromium spec.
+
+## Installed host owner and companion recovery (2026-11-04)
+
+| Artifact | Canonical owner / producer | Retention and privacy | Validation / proof ceiling |
+| --- | --- | --- | --- |
+| Shared host identity | `workspace-owner-file.ts`; authenticated explicit preparation or revision-checked workspace selection | Private `workspace-owner-binding.v1.json` under existing user data root; opaque IDs only; preserve across upgrades/uninstall, never tracked | Owner-file tests, native admission and managed middleware tests; no automatic fact/document approval |
+| Native envelope parser | `src/lib/extension-pairing.ts`; existing native review owner | Code only; actual `extension-native-pairing.v1.json` stays private | Existing parser/admission tests; conflicting IDs fail closed |
+| Companion diagnosis / staging | `extension-host-control.ts`, `companion-package.ts` | Metadata-only HTTP responses; immutable private package cache; no Chrome preference writes | Host-control tests and managed browser recovery spec; staging is not Chrome activation |
+| Shipped companion receipt | `scripts/package_application_assist.py` formatter called by `scripts/package_windows_preview.py` | Generated `browser/application-assist/release.json` in Windows preview, covered by Windows hash manifest; no tracked generated copy | Both package suites plus no-Git/no-Python runtime staging test; unsigned consistency proof only |

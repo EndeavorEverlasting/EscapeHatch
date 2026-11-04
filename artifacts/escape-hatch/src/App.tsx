@@ -85,6 +85,7 @@ import { initialSession, parseAssistSessionStatus, type AssistSession } from '@/
 import { ManagedBrowserAssist } from '@/components/managed-browser-assist';
 import { RecoveredAnswers, useRecoveredAnswers } from '@/components/recovered-answers';
 import { GuidedStart } from '@/components/guided-start';
+import { JourneyAtlas } from '@/components/journey-atlas';
 import { BirdsongControl } from '@/components/birdsong-control';
 import { refreshBoundTrackerOnStartup, type TrackerStatusEnvelope } from '@/lib/tracker-refresh-client';
 import { stageManagedLaunchIntent } from '@/lib/managed-launch-intent';
@@ -100,6 +101,7 @@ import {
   isSubmittedLocked,
   mergeTrackerIntoApplications,
   selectNextActionableOpportunity,
+  selectNextHomeApplication,
   trackerRowToApplication,
   type TrackerConnectionState,
   type TrackerSnapshot,
@@ -512,6 +514,7 @@ function AppShell({ children, profile }: { children: ReactNode; profile: Profile
   const [menuOpen, setMenuOpen] = useState(false);
   const nav = [
     { href: '/', label: 'Today', icon: Home },
+    { href: '/journey', label: 'Your journey', icon: LayoutList },
     { href: '/applications', label: 'Applications', icon: BriefcaseBusiness },
     { href: '/answers', label: 'Answer library', icon: Clipboard },
     { href: '/profile', label: 'Profile', icon: UserRound },
@@ -565,7 +568,8 @@ function PageIntro({ eyebrow, title, description, action }: { eyebrow: string; t
   </div>;
 }
 
-function HomePage({ profile, answers, applications, setApplications }: { profile: Profile; answers: AnswerSnippet[]; applications: Application[]; setApplications: React.Dispatch<React.SetStateAction<Application[]>> }) {
+function HomePage({ profile, answers, assistProfile, applications, setApplications }: { assistProfile: AssistProfile; profile: Profile; answers: AnswerSnippet[]; applications: Application[]; setApplications: React.Dispatch<React.SetStateAction<Application[]>> }) {
+  const recovery = useRecoveredAnswers(profile, answers, assistProfile);
   const completion = profileCompletion(profile);
   const [tracker, setTracker] = useState<TrackerConnectionState>({ status: 'NOT_CONNECTED', reason: 'Checking tracker…' });
   const [trackerBusy, setTrackerBusy] = useState(false);
@@ -611,12 +615,14 @@ function HomePage({ profile, answers, applications, setApplications }: { profile
   const staleMeta = tracker.status === 'STALE' ? tracker : null;
   const nextTracker = liveSnapshot ? selectNextActionableOpportunity(liveSnapshot) : null;
   const nextTrackerApp = nextTracker ? trackerRowToApplication(nextTracker) : null;
-  const nextLocked = nextTracker ? isSubmittedLocked(nextTracker) : false;
   const active = applications.filter((application) => application.status !== 'closed');
-  const next = nextTrackerApp ||
-    active.find((application) => application.status !== 'applied' && application.nextAction.trim()) ||
-    active.find((application) => application.status !== 'applied') ||
-    active[0];
+  // Actionable next never resurrects applied/follow-up/closed work as a new puzzle.
+  // Display may still show a local Applied confirmation when nothing else is on deck.
+  const nextActionable = selectNextHomeApplication(nextTrackerApp, applications);
+  const next = nextActionable
+    || active.find((application) => application.status === 'applied')
+    || null;
+  const nextLocked = Boolean(next && nextTracker && nextTrackerApp && next.id === nextTrackerApp.id && isSubmittedLocked(nextTracker));
   const [appliedUndo, setAppliedUndo] = useState<{ applicationId: string; company: string; previousStatus: ApplicationStatus } | null>(null);
   useEffect(() => {
     if (!appliedUndo) return;
@@ -659,7 +665,7 @@ function HomePage({ profile, answers, applications, setApplications }: { profile
         { label: 'Reusable answers', value: String(answers.length), caption: 'answers ready to borrow', href: '/answers', testId: 'link-stat-2' },
       ];
   return <div>
-    <GuidedStart profile={profile} applications={applications} focusOpportunity={next?.status === 'applied' ? undefined : next} />
+    <GuidedStart profile={profile} recovery={recovery} applications={applications} focusOpportunity={nextActionable || undefined} />
     <PageIntro eyebrow="Your cockpit" title={profile.first_name ? `Keep going, ${displayName(profile)}.` : 'Make room for momentum.'} description="A small, private place to move one good opportunity forward at a time." />
     <section className="mb-6 rounded-2xl border border-border bg-card p-5 shadow-sm" data-testid="tracker-connection-panel" data-tracker-status={tracker.status}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -693,9 +699,9 @@ function HomePage({ profile, answers, applications, setApplications }: { profile
         {appliedUndo && <div role="status" aria-live="polite" data-testid="home-applied-undo-notice" className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary-foreground/20 bg-primary-foreground/10 px-4 py-3 text-sm"><span>Marked {appliedUndo.company} applied.</span><Button type="button" variant="quiet" onClick={undoMarkApplied} data-testid="button-undo-mark-applied">Undo</Button></div>}
       </section>
       <section className="animate-rise-delay-1 rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
-        <div className="flex items-start justify-between"><div><p className="font-mono-app text-[10px] uppercase tracking-[.18em] text-muted-foreground">profile readiness</p><p className="mt-5 font-display text-5xl">{completion}<span className="text-2xl text-muted-foreground">%</span></p></div><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/20 text-accent-foreground"><UserRound size={19} /></div></div>
+        <div className="flex items-start justify-between"><div><p className="font-mono-app text-[10px] uppercase tracking-[.18em] text-muted-foreground">reusable profile coverage</p><p className="mt-5 font-display text-5xl">{completion}<span className="text-2xl text-muted-foreground">%</span></p></div><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/20 text-accent-foreground"><UserRound size={19} /></div></div>
         <div className="mt-6 h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-accent transition-all duration-500" style={{ width: `${Math.max(completion, 2)}%` }} /></div>
-        <p className="mt-4 text-sm leading-6 text-muted-foreground">{completion === 100 ? 'Ready when you are.' : 'Complete the reusable details once. Reuse them everywhere.'}</p>
+        <p className="mt-4 text-sm leading-6 text-muted-foreground">{completion === 100 ? 'Your reusable details are filled. Employer forms are verified separately.' : 'Complete reusable details once. Employer requirements are separate.'}</p>
         <Link href="/profile" data-testid="link-home-profile" className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-primary hover:underline">{completion === 100 ? 'Review profile' : 'Finish profile'} <ArrowRight size={15} /></Link>
       </section>
     </div>
@@ -756,7 +762,11 @@ function ProfilePage({
   const restoreWorkspaceButtonRef = useRef<HTMLButtonElement>(null);
   const completion = profileCompletion(draft);
   useEffect(() => setDraft(profile), [profile]);
-  const update = (key: keyof Profile) => (event: ChangeEvent<HTMLInputElement>) => setDraft((value) => ({ ...value, [key]: event.target.value }));
+  const update = (key: keyof Profile) => (event: ChangeEvent<HTMLInputElement>) => {
+    const next = event.target.value;
+    setDraft(value => ({ ...value, [key]: next,
+      ...(key === 'phone' && next !== value.phone ? { phone_authority: '' } : {}) }));
+  };
   const save = (event: FormEvent) => { event.preventDefault(); setProfile(draft); setSaved(true); window.setTimeout(() => setSaved(false), 1800); };
   const exportData = () => { const blob = new Blob([serializeProfileExport(draft)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'escape-hatch-profile.json'; anchor.click(); URL.revokeObjectURL(url); };
   const importData = (event: ChangeEvent<HTMLInputElement>) => {
@@ -824,7 +834,17 @@ function ProfilePage({
      {workspaceImportFeedback && <p role="alert" aria-live="polite" data-testid="workspace-import-feedback" className={`mb-5 rounded-lg border px-4 py-3 text-sm font-bold ${workspaceImportFeedback.type === 'error' ? 'border-destructive/30 bg-destructive/5 text-destructive' : 'border-primary/25 bg-primary/5 text-primary'}`}>{workspaceImportFeedback.text}</p>}
     <form onSubmit={save} className="grid gap-5 lg:grid-cols-[1fr_285px]">
       <div className="space-y-5">
-        <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-7"><div className="mb-6 flex items-start justify-between"><div><h2 className="font-display text-2xl">Name & contact</h2><p className="mt-1 text-sm text-muted-foreground">How you want to show up on an application.</p></div><UserRound size={20} className="text-primary" /></div><div className="grid gap-4 sm:grid-cols-[105px_1fr_1fr]"><Field label="Prefix" name="name_prefix" value={draft.name_prefix} onChange={update('name_prefix')} placeholder="Ms." data-testid="input-name-prefix" /><Field label="First name" name="first_name" value={draft.first_name} onChange={update('first_name')} placeholder="First" required data-testid="input-first-name" /><Field label="Last name" name="last_name" value={draft.last_name} onChange={update('last_name')} placeholder="Last" required data-testid="input-last-name" /></div><div className="mt-4 grid gap-4 sm:grid-cols-2"><Field label="Preferred name" name="preferred_name" value={draft.preferred_name} onChange={update('preferred_name')} placeholder="What should we call you?" data-testid="input-preferred-name" /><Field label="Email" name="email" type="email" value={draft.email} onChange={update('email')} placeholder="you@example.com" required data-testid="input-profile-email" /><Field label="Phone" name="phone" value={draft.phone} onChange={update('phone')} placeholder="+1 555 000 0000" data-testid="input-profile-phone" /><Field label="Phone authority" name="phone_authority" value={draft.phone_authority} onChange={update('phone_authority')} placeholder="Mobile, home, work..." data-testid="input-phone-authority" /></div></section>
+        <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-7"><div className="mb-6 flex items-start justify-between"><div><h2 className="font-display text-2xl">Name & contact</h2><p className="mt-1 text-sm text-muted-foreground">How you want to show up on an application.</p></div><UserRound size={20} className="text-primary" /></div><div className="grid gap-4 sm:grid-cols-[105px_1fr_1fr]"><Field label="Prefix" name="name_prefix" value={draft.name_prefix} onChange={update('name_prefix')} placeholder="Ms." data-testid="input-name-prefix" /><Field label="First name" name="first_name" value={draft.first_name} onChange={update('first_name')} placeholder="First" required data-testid="input-first-name" /><Field label="Last name" name="last_name" value={draft.last_name} onChange={update('last_name')} placeholder="Last" required data-testid="input-last-name" /></div><div className="mt-4 grid gap-4 sm:grid-cols-2"><Field label="Preferred name" name="preferred_name" value={draft.preferred_name} onChange={update('preferred_name')} placeholder="What should we call you?" data-testid="input-preferred-name" /><Field label="Email" name="email" type="email" value={draft.email} onChange={update('email')} placeholder="you@example.com" required data-testid="input-profile-email" /><Field label="Phone" name="phone" value={draft.phone} onChange={update('phone')} placeholder="+1 555 000 0000" data-testid="input-profile-phone" /><label className="flex min-h-11 items-start gap-3 text-sm leading-6">
+          <input type="checkbox" className="mt-1.5 h-4 w-4"
+            checked={draft.phone_authority === 'user_confirmed_primary'} disabled={!draft.phone.trim()}
+            onChange={event => {
+              const confirmed = event.target.checked;
+              setDraft(value => ({ ...value, phone_authority: confirmed ? 'user_confirmed_primary' : '' }));
+            }} data-testid="input-phone_authority" />
+          <span>I confirm this is my primary application phone number.
+            <span className="block text-xs text-muted-foreground">Save your profile to keep this confirmation. Changing the number requires a new review.</span>
+          </span>
+        </label></div></section>
         <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-7"><div className="mb-6 flex items-start justify-between"><div><h2 className="font-display text-2xl">Online & location</h2><p className="mt-1 text-sm text-muted-foreground">Useful context for forms and recruiter follow-up.</p></div><Link2 size={20} className="text-primary" /></div><div className="grid gap-4"><Field label="LinkedIn URL" name="linkedin_url" type="url" value={draft.linkedin_url} onChange={update('linkedin_url')} placeholder="linkedin.com/in/your-name" data-testid="input-linkedin-url" /><Field label="Street address" name="street_address" value={draft.street_address} onChange={update('street_address')} placeholder="Optional" data-testid="input-street-address" /></div><div className="mt-4 grid gap-4 sm:grid-cols-2"><Field label="City" name="city" value={draft.city} onChange={update('city')} placeholder="City" data-testid="input-city" /><Field label="Region / state" name="region" value={draft.region} onChange={update('region')} placeholder="Region" data-testid="input-region" /><Field label="Postal code" name="postal_code" value={draft.postal_code} onChange={update('postal_code')} placeholder="Postal code" data-testid="input-postal-code" /><Field label="Country" name="country" value={draft.country} onChange={update('country')} placeholder="Country" data-testid="input-country" /></div></section>
         <div className="flex items-center justify-end gap-3"><span className={`text-sm font-bold text-primary transition-opacity ${saved ? 'opacity-100' : 'opacity-0'}`}><Check size={15} className="mr-1 inline" />Saved locally</span><Button type="submit" data-testid="button-save-profile">Save profile <ArrowRight size={15} /></Button></div>
       </div>
@@ -1496,7 +1516,7 @@ function Router() {
     setApplications(workspace.applications);
     return persisted;
   };
-  return <AppShell profile={profile}><Switch><Route path="/"><HomePage profile={profile} answers={answers} applications={applications} setApplications={setApplications} /></Route><Route path="/profile"><ProfilePage profile={profile} answers={answers} applications={applications} setProfile={setProfile} setAnswers={setAnswers} setApplications={setApplications} onRestoreWorkspace={restoreWorkspace} draftRecoverySeconds={draftRecoverySeconds} setDraftRecoverySeconds={setDraftRecoverySeconds} /></Route><Route path="/answers"><AnswersPage assistProfile={assistProfile} profile={profile} answers={answers} setAnswers={setAnswers} dismissedDraft={dismissedAnswerDraft} setDismissedDraft={setDismissedAnswerDraft} draftExpiryAnnouncement={answerDraftExpiryAnnouncement} onDraftStarted={() => setAnswerDraftExpiryAnnouncement('')} draftRecoverySeconds={answerDraftRecoverySeconds} draftRecoveryWindowSeconds={draftRecoverySeconds} /></Route><Route path="/applications"><ApplicationsPage applications={applications} setApplications={setApplications} dismissedDraft={dismissedApplicationDraft} setDismissedDraft={setDismissedApplicationDraft} draftExpiryAnnouncement={applicationDraftExpiryAnnouncement} onDraftStarted={() => setApplicationDraftExpiryAnnouncement('')} draftRecoverySeconds={applicationDraftRecoverySeconds} draftRecoveryWindowSeconds={draftRecoverySeconds} /></Route><Route path="/sources"><SourcesPage profile={profile} assistProfile={assistProfile} applications={applications} sourceBindings={sourceBindings} onApprove={(value) => { persistSourceApproval(getLocalStorage(), value); setProfile(value.profile); setAssistProfile(value.assist); setSourceBindings(value.bindings); }} onForget={() => setSourceBindings([])} /></Route><Route path="/materials"><MaterialsReviewScene applications={applications} /></Route><Route path="/assist"><AssistPage assistProfile={assistProfile} setAssistProfile={setAssistProfile} sourceBindings={sourceBindings} profile={profile} answers={answers} applications={applications} setProfile={setProfile} setAnswers={setAnswers} setApplications={setApplications} /></Route><Route component={NotFoundPage} /></Switch></AppShell>;
+  return <AppShell profile={profile}><Switch><Route path="/"><HomePage profile={profile} answers={answers} assistProfile={assistProfile} applications={applications} setApplications={setApplications} /></Route><Route path="/journey"><JourneyAtlas applications={applications} /></Route><Route path="/profile"><ProfilePage profile={profile} answers={answers} applications={applications} setProfile={setProfile} setAnswers={setAnswers} setApplications={setApplications} onRestoreWorkspace={restoreWorkspace} draftRecoverySeconds={draftRecoverySeconds} setDraftRecoverySeconds={setDraftRecoverySeconds} /></Route><Route path="/answers"><AnswersPage assistProfile={assistProfile} profile={profile} answers={answers} setAnswers={setAnswers} dismissedDraft={dismissedAnswerDraft} setDismissedDraft={setDismissedAnswerDraft} draftExpiryAnnouncement={answerDraftExpiryAnnouncement} onDraftStarted={() => setAnswerDraftExpiryAnnouncement('')} draftRecoverySeconds={answerDraftRecoverySeconds} draftRecoveryWindowSeconds={draftRecoverySeconds} /></Route><Route path="/applications"><ApplicationsPage applications={applications} setApplications={setApplications} dismissedDraft={dismissedApplicationDraft} setDismissedDraft={setDismissedApplicationDraft} draftExpiryAnnouncement={applicationDraftExpiryAnnouncement} onDraftStarted={() => setApplicationDraftExpiryAnnouncement('')} draftRecoverySeconds={applicationDraftRecoverySeconds} draftRecoveryWindowSeconds={draftRecoverySeconds} /></Route><Route path="/sources"><SourcesPage profile={profile} assistProfile={assistProfile} applications={applications} sourceBindings={sourceBindings} onApprove={(value) => { persistSourceApproval(getLocalStorage(), value); setProfile(value.profile); setAssistProfile(value.assist); setSourceBindings(value.bindings); }} onForget={() => setSourceBindings([])} /></Route><Route path="/materials"><MaterialsReviewScene applications={applications} /></Route><Route path="/assist"><AssistPage assistProfile={assistProfile} setAssistProfile={setAssistProfile} sourceBindings={sourceBindings} profile={profile} answers={answers} applications={applications} setProfile={setProfile} setAnswers={setAnswers} setApplications={setApplications} /></Route><Route component={NotFoundPage} /></Switch></AppShell>;
 }
 
 function RoutedErrorBoundary({ children }: { children: ReactNode }) {

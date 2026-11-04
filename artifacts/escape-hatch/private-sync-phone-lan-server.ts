@@ -6,6 +6,7 @@
  * Usage:
  *   node --experimental-strip-types private-sync-phone-lan-server.ts [carrierAbsPath] [port]
  */
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import http from 'node:http';
 import os from 'node:os';
@@ -125,6 +126,19 @@ async function fileResponse(res: http.ServerResponse, filePath: string, contentT
   res.end(body);
 }
 
+function qrSvgFor(lanBase: string): string | null {
+  // Local SVG only — no third-party QR API; never embeds pairing codes.
+  const url = lanBase.endsWith('/') ? lanBase : `${lanBase}/`;
+  const py = [
+    'import qrcode, qrcode.image.svg as s, sys',
+    'img=qrcode.make(sys.argv[1], image_factory=s.SvgPathImage)',
+    'sys.stdout.buffer.write(img.to_string())',
+  ].join('; ');
+  const result = spawnSync('python', ['-c', py, url], { encoding: 'buffer', maxBuffer: 256_000 });
+  if (result.status !== 0 || !result.stdout?.byteLength) return null;
+  return result.stdout.toString('utf8');
+}
+
 function installPageHtml(lanBase: string, apkBytes: number | null): string {
   const apkHint =
     apkBytes && apkBytes > 0
@@ -138,6 +152,7 @@ function installPageHtml(lanBase: string, apkBytes: number | null): string {
 <h1 style="font:700 1.5rem system-ui,sans-serif">Install companion</h1>
 <p>Ciphertext-only LAN handoff. Pairing codes stay on the desktop—never on this page.</p>
 <p style="font:600 0.95rem system-ui,sans-serif;color:#c8f542">LAN host for Assist: <code style="color:#e8efe9">${hostForApp}</code></p>
+<p><img src="/qr.svg" alt="QR code for this LAN install URL" width="180" height="180" style="background:#fff;padding:8px;border-radius:4px"></p>
 <ol>
 <li><a href="/apk" style="color:#c8f542">Download EscapeHatchAssist-debug.apk</a> (${apkHint}) and allow install from this browser.</li>
 <li>Open Assist → Pair → paste <code>${hostForApp}</code> → <strong>Fetch sealed offer from PC</strong> → type the desktop TEMP pairing code.</li>
@@ -206,6 +221,24 @@ const server = http.createServer(async (req, res) => {
   }
   const headOnly = req.method === 'HEAD';
   try {
+    if (url.pathname === '/qr.svg') {
+      const hostHeader = String(req.headers.host || `127.0.0.1:${port}`);
+      const lanBase = `http://${hostHeader}`;
+      const svg = qrSvgFor(lanBase);
+      if (!svg) {
+        deny(res, 503, 'QR_UNAVAILABLE');
+        return;
+      }
+      res.writeHead(200, {
+        'content-type': 'image/svg+xml; charset=utf-8',
+        'content-length': String(Buffer.byteLength(svg)),
+        'cache-control': 'no-store',
+        ...cors,
+      });
+      if (!headOnly) res.end(svg);
+      else res.end();
+      return;
+    }
     if (url.pathname === '/' || url.pathname === '/index.html') {
       const apkPath = path.join(carrier, 'EscapeHatchAssist-debug.apk');
       let apkBytes: number | null = null;
@@ -294,10 +327,11 @@ const server = http.createServer(async (req, res) => {
       const body = JSON.stringify({
         ok: true,
         carrier,
-        serves: ['apk', 'offer', 'capsule', 'proof'],
+        serves: ['apk', 'offer', 'capsule', 'proof', 'qr'],
         apkBytes,
         pairingCode: 'never',
         proofPost: '/proof',
+        qrSvg: '/qr.svg',
       });
       res.writeHead(200, {
         'content-type': 'application/json; charset=utf-8',

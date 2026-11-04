@@ -74,13 +74,24 @@ test('phone LAN server serves apk/offer/capsule and never pairing codes', async 
     await waitHealth(port);
     const health = await (await fetch(`http://127.0.0.1:${port}/health`)).json();
     assert.equal(health.pairingCode, 'never');
-    assert.deepEqual(health.serves, ['apk', 'offer', 'capsule', 'proof']);
+    assert.deepEqual(health.serves, ['apk', 'offer', 'capsule', 'proof', 'qr']);
     assert.equal(health.proofPost, '/proof');
+    assert.equal(health.qrSvg, '/qr.svg');
 
     const index = await (await fetch(`http://127.0.0.1:${port}/`)).text();
     assert.match(index, /Download EscapeHatchAssist-debug\.apk/);
     assert.match(index, /Send proof to PC/);
+    assert.match(index, /\/qr\.svg/);
     assert.doesNotMatch(index, /pairingCode|pairing-code\.local/i);
+
+    const qr = await fetch(`http://127.0.0.1:${port}/qr.svg`);
+    // QR may be 503 if python/qrcode missing in CI — accept either SVG or structured miss.
+    assert.ok(qr.status === 200 || qr.status === 503);
+    if (qr.status === 200) {
+      const svg = await qr.text();
+      assert.match(svg, /<svg/i);
+      assert.doesNotMatch(svg, /pairingCode|pairing-code/i);
+    }
 
     const apkHead = await fetch(`http://127.0.0.1:${port}/apk`, { method: 'HEAD' });
     assert.equal(apkHead.status, 200);

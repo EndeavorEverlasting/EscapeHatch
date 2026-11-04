@@ -99,6 +99,10 @@ class CapsuleImportActivity : AppCompatActivity() {
             status.text = getString(R.string.capsule_proof_send_failed, "PROOF_EMPTY")
             return
         }
+        if (PhoneSyncProofReceipt.isEmulatorLab()) {
+            status.text = getString(R.string.capsule_proof_emulator_blocked)
+            return
+        }
         status.text = getString(R.string.lan_fetching)
         val raw = lanBaseUrl.text?.toString().orEmpty()
         LanSealedFetch.postProofJson(raw, payload) { outcome ->

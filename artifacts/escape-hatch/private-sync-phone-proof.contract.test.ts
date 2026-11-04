@@ -121,6 +121,14 @@ test('emulator lab proof shape is rejected for threeOfThree eligibility', () => 
   assert.equal(
     phoneProofEligibleForThreeOfThree({
       device: 'android-phone',
+      deviceKind: 'android-emulator',
+      notPhoneThreeOfThree: true,
+    }),
+    false,
+  );
+  assert.equal(
+    phoneProofEligibleForThreeOfThree({
+      device: 'android-phone',
     }),
     true,
   );

@@ -52,6 +52,7 @@
     <string name="capsule_proof_saved">Proof saved. Desktop will match digests when that file syncs.</string>
     <string name="capsule_proof_sent_lan">Proof sent to PC. Desktop watcher will match digests.</string>
     <string name="capsule_proof_send_failed">Could not send proof to PC (%1$s).</string>
+    <string name="capsule_proof_emulator_blocked">Emulator lab proof cannot close phone 3/3. Use a physical Android phone.</string>
     <string name="capsule_proof_copied">Value-free proof copied. Paste into EscapeHatchPrivateSync as escapehatch-phone-sync-proof.json.</string>
     <string name="capsule_proof_copy_failed">Could not copy proof.</string>
     <string name="capsule_proof_save_cancelled">Proof save cancelled.</string>

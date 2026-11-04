@@ -13,7 +13,9 @@ $repo = Split-Path -Parent $PSScriptRoot
 $od = Join-Path $env:USERPROFILE 'OneDrive\EscapeHatchPrivateSync'
 $proofName = 'escapehatch-phone-sync-proof.json'
 $expectedDigest = 'd9c4a8b80682fd06ffe0f1d0de14aa0622ac7338660f8dc33b147a426d8c448e'
-$deadline = (Get-Date).AddMinutes([Math]::Max(1, $WaitMinutes))
+# WaitMinutes 0 = single poll (CI/smoke); >0 = poll until window elapses.
+$singlePass = $WaitMinutes -le 0
+$deadline = (Get-Date).AddMinutes([Math]::Max(0, $WaitMinutes))
 
 Push-Location (Join-Path $repo 'artifacts\escape-hatch')
 try {
@@ -27,7 +29,7 @@ try {
 Write-Output "watching=$od\$proofName (+Downloads/Desktop + clipboard JSON)"
 Write-Output "expectedDigest=$expectedDigest"
 
-while ((Get-Date) -lt $deadline) {
+do {
   # Clipboard / Nearby Share path: phone copies value-free proof JSON; never logs values.
   try {
     $clip = Get-Clipboard -Raw -ErrorAction Stop
@@ -117,8 +119,9 @@ while ((Get-Date) -lt $deadline) {
 
     if ($result.phoneState -eq 'PROVEN') { exit 0 } else { exit 3 }
   }
+  if ($singlePass) { break }
   Start-Sleep -Seconds 5
-}
+} while ((Get-Date) -lt $deadline)
 
 Write-Output "phone_proof=TIMEOUT"
 exit 2

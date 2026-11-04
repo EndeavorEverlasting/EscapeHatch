@@ -8,6 +8,7 @@
  */
 import { spawnSync } from 'node:child_process';
 import dgram from 'node:dgram';
+import { createReadStream, createWriteStream } from 'node:fs';
 import fs from 'node:fs/promises';
 import http from 'node:http';
 import os from 'node:os';
@@ -115,19 +116,54 @@ async function newestCapsule(): Promise<string | null> {
   return ranked[0]?.full ?? null;
 }
 
-async function fileResponse(res: http.ServerResponse, filePath: string, contentType: string, downloadName?: string) {
-  const body = await fs.readFile(filePath);
-  const headers: Record<string, string> = {
+async function fileResponse(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  filePath: string,
+  contentType: string,
+  downloadName?: string,
+) {
+  // Stream + optional Range — DuckDuckGo/Chrome on Android often fail on a single
+  // buffered 6+ MB write without Accept-Ranges / partial content.
+  const st = await fs.stat(filePath);
+  const size = st.size;
+  const disposition = downloadName ? `attachment; filename="${downloadName}"` : undefined;
+  const baseHeaders: Record<string, string> = {
     'content-type': contentType,
-    'content-length': String(body.byteLength),
+    'accept-ranges': 'bytes',
     'cache-control': 'no-store',
     ...cors,
   };
-  if (downloadName) {
-    headers['content-disposition'] = `attachment; filename="${downloadName}"`;
+  if (disposition) baseHeaders['content-disposition'] = disposition;
+
+  const range = String(req.headers.range || '');
+  const m = /^bytes=(\d*)-(\d*)$/i.exec(range);
+  if (m) {
+    const start = m[1] ? Number(m[1]) : 0;
+    const end = m[2] ? Number(m[2]) : size - 1;
+    if (
+      Number.isFinite(start) &&
+      Number.isFinite(end) &&
+      start >= 0 &&
+      end >= start &&
+      end < size
+    ) {
+      const chunk = end - start + 1;
+      res.writeHead(206, {
+        ...baseHeaders,
+        'content-length': String(chunk),
+        'content-range': `bytes ${start}-${end}/${size}`,
+      });
+      createReadStream(filePath, { start, end }).pipe(res);
+      return;
+    }
   }
-  res.writeHead(200, headers);
-  res.end(body);
+
+  res.writeHead(200, {
+    ...baseHeaders,
+    'content-length': String(size),
+  });
+  createReadStream(filePath).pipe(res);
 }
 
 function qrSvgFor(lanBase: string): string | null {
@@ -156,9 +192,14 @@ function installPageHtml(lanBase: string, apkBytes: number | null): string {
 <h1 style="font:700 1.5rem system-ui,sans-serif">Install companion</h1>
 <p>Ciphertext-only LAN handoff. Pairing codes stay on the desktop—never on this page.</p>
 <p style="font:600 0.95rem system-ui,sans-serif;color:#c8f542">LAN host for Assist: <code style="color:#e8efe9">${hostForApp}</code></p>
+<p style="padding:0.75rem 1rem;border:1px solid #c8f542;border-radius:6px;background:#142018">
+<strong>If you see “Failed to download”</strong> (common in DuckDuckGo): open this same URL in <strong>Chrome</strong>,
+or install from the <strong>OneDrive</strong> app → <code>EscapeHatchPrivateSync</code> → <code>EscapeHatchAssist-debug.apk</code>
+(~${apkHint.includes('MB') ? apkHint.split('—')[0].trim() : '6.5 MB'}). USB debugging also works.
+</p>
 <p><img src="/qr.svg" alt="QR code for this LAN install URL" width="180" height="180" style="background:#fff;padding:8px;border-radius:4px"></p>
 <ol>
-<li><a href="/apk" style="color:#c8f542">Download EscapeHatchAssist-debug.apk</a> (${apkHint}) and allow install from this browser.</li>
+<li><a href="/apk" style="color:#c8f542" download="EscapeHatchAssist-debug.apk">Download EscapeHatchAssist-debug.apk</a> (${apkHint}) — prefer Chrome if DuckDuckGo fails.</li>
 <li>Open Assist → Pair → paste <code>${hostForApp}</code> → <strong>Fetch sealed offer from PC</strong> → type the desktop TEMP pairing code.</li>
 <li>Import → same host → <strong>Fetch capsule from PC</strong> (or download <a href="/offer" style="color:#c8f542">offer</a> / <a href="/capsule" style="color:#c8f542">capsule</a> here).</li>
 <li>After import, tap <strong>Send proof to PC</strong> (POST /proof) or save <code>escapehatch-phone-sync-proof.json</code> into OneDrive EscapeHatchPrivateSync.</li>
@@ -167,18 +208,25 @@ function installPageHtml(lanBase: string, apkBytes: number | null): string {
 </body></html>`;
 }
 
+const accessLogPath = path.join(os.tmpdir(), 'eh-phone-lan-access.log');
+
 function accessLog(req: http.IncomingMessage, pathname: string) {
   // Path + remote only — never pairing codes or preference values.
   const remote = req.socket.remoteAddress || 'unknown';
-  process.stdout.write(
+  const line =
     JSON.stringify({
       t: new Date().toISOString(),
       event: 'lan_access',
       method: req.method,
       path: pathname,
       remote,
-    }) + '\n',
-  );
+    }) + '\n';
+  process.stdout.write(line);
+  try {
+    createWriteStream(accessLogPath, { flags: 'a' }).end(line);
+  } catch {
+    /* best-effort file mirror for desktop watchers */
+  }
 }
 
 const server = http.createServer(async (req, res) => {
@@ -273,13 +321,20 @@ const server = http.createServer(async (req, res) => {
           'content-type': 'application/vnd.android.package-archive',
           'content-length': String(st.size),
           'content-disposition': 'attachment; filename="EscapeHatchAssist-debug.apk"',
+          'accept-ranges': 'bytes',
           'cache-control': 'no-store',
           ...cors,
         });
         res.end();
         return;
       }
-      await fileResponse(res, apk, 'application/vnd.android.package-archive', 'EscapeHatchAssist-debug.apk');
+      await fileResponse(
+        req,
+        res,
+        apk,
+        'application/vnd.android.package-archive',
+        'EscapeHatchAssist-debug.apk',
+      );
       return;
     }
     if (url.pathname === '/offer') {
@@ -296,7 +351,7 @@ const server = http.createServer(async (req, res) => {
         res.end();
         return;
       }
-      await fileResponse(res, offer, 'application/json; charset=utf-8', 'pairing-offer.json');
+      await fileResponse(req, res, offer, 'application/json; charset=utf-8', 'pairing-offer.json');
       return;
     }
     if (url.pathname === '/capsule') {
@@ -317,7 +372,7 @@ const server = http.createServer(async (req, res) => {
         res.end();
         return;
       }
-      await fileResponse(res, capsule, 'application/octet-stream', path.basename(capsule));
+      await fileResponse(req, res, capsule, 'application/octet-stream', path.basename(capsule));
       return;
     }
     if (url.pathname === '/health') {

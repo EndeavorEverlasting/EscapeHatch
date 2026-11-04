@@ -64,6 +64,20 @@ class AndroidKeystoreSyncVaultKeyRepository(
             return existing
         }
         val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
+        // Prefer StrongBox when the device exposes it; fall back to TEE/software Keystore.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            try {
+                generator.init(masterKeySpec(strongBox = true))
+                return generator.generateKey()
+            } catch (_: Exception) {
+                // StrongBox unavailable or rejected — continue without it.
+            }
+        }
+        generator.init(masterKeySpec(strongBox = false))
+        return generator.generateKey()
+    }
+
+    private fun masterKeySpec(strongBox: Boolean): KeyGenParameterSpec {
         val builder =
             KeyGenParameterSpec.Builder(
                 masterKeyAlias,
@@ -75,9 +89,11 @@ class AndroidKeystoreSyncVaultKeyRepository(
                 .setRandomizedEncryptionRequired(true)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             builder.setUnlockedDeviceRequired(true)
+            if (strongBox) {
+                builder.setIsStrongBoxBacked(true)
+            }
         }
-        generator.init(builder.build())
-        return generator.generateKey()
+        return builder.build()
     }
 
     companion object {

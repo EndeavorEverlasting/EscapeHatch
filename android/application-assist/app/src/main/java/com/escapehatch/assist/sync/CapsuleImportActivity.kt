@@ -70,6 +70,7 @@ class CapsuleImportActivity : AppCompatActivity() {
         saveProof = findViewById(R.id.saveProof)
         copyProof = findViewById(R.id.copyProof)
         lanBaseUrl = findViewById(R.id.lanBaseUrl)
+        LanHostMemory.bind(lanBaseUrl, this)
         findViewById<Button>(R.id.chooseCapsule).setOnClickListener {
             openCapsule.launch(arrayOf("application/json", "text/*", "*/*"))
         }
@@ -91,10 +92,14 @@ class CapsuleImportActivity : AppCompatActivity() {
 
     private fun fetchCapsuleFromLan() {
         status.text = getString(R.string.lan_fetching)
-        LanSealedFetch.fetchText(lanBaseUrl.text?.toString().orEmpty(), "/capsule") { outcome ->
+        val raw = lanBaseUrl.text?.toString().orEmpty()
+        LanSealedFetch.fetchText(raw, "/capsule") { outcome ->
             runOnUiThread {
                 when (outcome) {
-                    is LanSealedFetch.Outcome.Ok -> applyImport(importer.importCapsuleJson(outcome.body))
+                    is LanSealedFetch.Outcome.Ok -> {
+                        LanHostMemory.write(this, raw)
+                        applyImport(importer.importCapsuleJson(outcome.body))
+                    }
                     is LanSealedFetch.Outcome.Err -> {
                         status.text = getString(R.string.lan_fetch_failed, outcome.reason)
                     }

@@ -46,6 +46,7 @@ class PairingImportActivity : AppCompatActivity() {
         status = findViewById(R.id.pairingStatus)
         codeInput = findViewById(R.id.pairingCode)
         lanBaseUrl = findViewById(R.id.lanBaseUrl)
+        LanHostMemory.bind(lanBaseUrl, this)
         findViewById<Button>(R.id.chooseOffer).setOnClickListener {
             openOffer.launch(arrayOf("application/json", "text/*", "*/*"))
         }
@@ -55,10 +56,12 @@ class PairingImportActivity : AppCompatActivity() {
 
     private fun fetchOfferFromLan() {
         status.text = getString(R.string.lan_fetching)
-        LanSealedFetch.fetchText(lanBaseUrl.text?.toString().orEmpty(), "/offer") { outcome ->
+        val raw = lanBaseUrl.text?.toString().orEmpty()
+        LanSealedFetch.fetchText(raw, "/offer") { outcome ->
             runOnUiThread {
                 when (outcome) {
                     is LanSealedFetch.Outcome.Ok -> {
+                        LanHostMemory.write(this, raw)
                         offerJson = outcome.body
                         status.text = getString(R.string.pairing_offer_loaded)
                     }

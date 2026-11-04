@@ -39,4 +39,8 @@
     <string name="capsule_wrong_vault">Capsule belongs to a different vault.</string>
     <string name="capsule_auth_failed">Capsule authentication failed.</string>
     <string name="capsule_projection_invalid">Capsule projection invalid or empty.</string>
+    <string name="capsule_save_proof">Save proof to OneDrive</string>
+    <string name="capsule_proof_hint">Next: Save proof to OneDrive EscapeHatchPrivateSync so desktop can confirm the digest match.</string>
+    <string name="capsule_proof_saved">Proof saved. Desktop will match digests when that file syncs.</string>
+    <string name="capsule_proof_save_cancelled">Proof save cancelled.</string>
 </resources>

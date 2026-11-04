@@ -9,13 +9,17 @@ import androidx.appcompat.app.AppCompatActivity
 import com.escapehatch.assist.R
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.time.Instant
 
 /**
  * Explicit operator import of a ciphertext preference capsule (.ehsync).
  * Never logs answer values; status shows field ids and digest only.
+ * After import, operator can save a value-free proof JSON into OneDrive.
  */
 class CapsuleImportActivity : AppCompatActivity() {
     private lateinit var status: TextView
+    private lateinit var saveProof: Button
+    private var proofJson: String? = null
     private val importer by lazy {
         PrivateSyncCapsuleImport(
             AndroidKeystoreSyncVaultKeyRepository(applicationContext),
@@ -40,30 +44,61 @@ class CapsuleImportActivity : AppCompatActivity() {
             applyImport(importer.importCapsuleJson(raw))
         }
 
+    private val createProof =
+        registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri: Uri? ->
+            val payload = proofJson
+            if (uri == null || payload == null) {
+                status.text = getString(R.string.capsule_proof_save_cancelled)
+                return@registerForActivityResult
+            }
+            contentResolver.openOutputStream(uri)?.use { stream ->
+                stream.write(payload.toByteArray(Charsets.UTF_8))
+            }
+            status.text = getString(R.string.capsule_proof_saved)
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_capsule_import)
         status = findViewById(R.id.capsuleStatus)
+        saveProof = findViewById(R.id.saveProof)
         findViewById<Button>(R.id.chooseCapsule).setOnClickListener {
             openCapsule.launch(arrayOf("application/json", "text/*", "*/*"))
+        }
+        saveProof.setOnClickListener {
+            createProof.launch(PhoneSyncProofReceipt.SUGGESTED_FILE_NAME)
         }
     }
 
     private fun applyImport(result: CapsuleImportResult) {
         status.text =
             when (result.state) {
-                CapsuleImportState.IMPORTED ->
+                CapsuleImportState.IMPORTED -> {
+                    proofJson =
+                        PhoneSyncProofReceipt.toJson(
+                            vaultId = result.vaultId,
+                            entryCount = result.entryCount,
+                            cognizantFieldIds = result.cognizantFieldIds,
+                            projectionDigest = result.projectionDigest,
+                            createdAtIso = Instant.now().toString(),
+                        )
+                    saveProof.isEnabled = true
                     getString(
                         R.string.capsule_imported,
                         result.entryCount,
                         result.cognizantFieldIds.joinToString(", "),
                         result.projectionDigest ?: "",
-                    )
+                    ) + "\n" + getString(R.string.capsule_proof_hint)
+                }
                 CapsuleImportState.PAIRING_REQUIRED -> getString(R.string.capsule_pairing_required)
                 CapsuleImportState.INVALID_CAPSULE -> getString(R.string.capsule_invalid)
                 CapsuleImportState.WRONG_VAULT_KEY -> getString(R.string.capsule_wrong_vault)
                 CapsuleImportState.AUTHENTICATION_FAILED -> getString(R.string.capsule_auth_failed)
                 CapsuleImportState.INVALID_SYNC_PROJECTION -> getString(R.string.capsule_projection_invalid)
             }
+        if (result.state != CapsuleImportState.IMPORTED) {
+            proofJson = null
+            saveProof.isEnabled = false
+        }
     }
 }

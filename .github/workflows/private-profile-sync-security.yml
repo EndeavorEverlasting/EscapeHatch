@@ -1,0 +1,52 @@
+name: Private Profile Sync Security
+on:
+  pull_request:
+    paths:
+      - "artifacts/escape-hatch/private-sync-*.ts"
+      - "artifacts/escape-hatch/package.json"
+      - "docs/agent/P04_SECURE_MULTIDEVICE_PROFILE_SYNC_2026-11-03.md"
+      - "Outputs/prompt-parallel-dispatch/runs/escapehatch-secure-device-sync-20261103/**"
+      - ".github/workflows/private-profile-sync-security.yml"
+  push:
+    paths:
+      - "artifacts/escape-hatch/private-sync-*.ts"
+      - "artifacts/escape-hatch/package.json"
+      - ".github/workflows/private-profile-sync-security.yml"
+permissions:
+  contents: read
+concurrency:
+  group: private-profile-sync-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  capsule-confidentiality:
+    runs-on: ubuntu-latest
+    name: Cryptographic capsule and exclusion tests
+    defaults:
+      run:
+        working-directory: artifacts/escape-hatch
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: npm ci --no-audit --no-fund
+      - name: Execute synthetic AEAD and forbidden-field regression
+        run: node --experimental-strip-types --test private-sync-crypto.test.ts
+      - name: Typecheck and baseline application safeguards
+        run: npm run typecheck
+  two-device-conflict:
+    runs-on: ubuntu-latest
+    name: Synthetic paired devices and conflict tests
+    defaults:
+      run:
+        working-directory: artifacts/escape-hatch
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: npm ci --no-audit --no-fund
+      - name: Execute synthetic two-device encrypted sync regression
+        run: node --experimental-strip-types --test private-sync-device.test.ts
+      - name: Validate no accidental app settings or submitted job edits
+        run: node --experimental-strip-types --test private-sync-crypto.test.ts

@@ -197,8 +197,9 @@ while ((Get-Date) -lt $deadline) {
     if ($capsule) { & $adb -s $serial push $capsule.FullName "$remoteDir/" }
     & $adb -s $serial push (Join-Path $od 'pairing-offer.json') "$remoteDir/"
     Write-Output "pushed_files=$remoteDir"
-    # Launch pair UI first; pairing code stays on desktop TEMP only (never pushed).
-    & $adb -s $serial shell am start -n com.escapehatch.assist/.sync.PairingImportActivity | Out-Null
+    # Launch pair UI via exported deep link (activities stay non-exported for release).
+    # Pairing code stays on desktop TEMP only (never pushed).
+    & $adb -s $serial shell am start -a android.intent.action.VIEW -d 'escapehatch://assist/pair' | Out-Null
     Write-Output "pairing_ui_launched=1"
     Set-Content -Path (Join-Path $env:TEMP 'eh-physical-phone-attached.flag') -Value ((Get-Date).ToUniversalTime().ToString('o')) -NoNewline
     try {

@@ -2,6 +2,8 @@
 
 **Parent:** #69. **Mission:** desktop, laptop, and Android phone reuse one applicant's approved answers (including Cognizant talent-community values) without reentry. **Canonical owner:** existing OS-private EscapeHatch preference writer, never a competing cloud profile.
 
+**Autonomous P04 dispatch:** The operator is **not** responsible for downloading a handoff, copying a prompt, moving a JSON file, selecting a branch or scheduling agents. The repository-owned manifest is `Outputs/prompt-parallel-dispatch/runs/escapehatch-secure-device-sync-20261103/manifest.json`; `.github/workflows/private-profile-sync-security.yml` automatically runs independent synthetic security jobs on PR changes and validates that manifest. The installed local agent must discover this exact repository path, take the remaining local-only lanes through its available harness, and publish sanitized proof. When a local runner or approved provider account is unavailable, report that runtime gate; do not hand it back as a manual file-transfer chore.
+
 **Status:** PR #184 is an unverified cryptographic foundation, NOT active sync. Preserve the existing Cognizant submitted job and accepted talent-community enrollment. No real applicant values, passwords, MFA, tokens, browser cookies, legal/EEO data or device consent flags in GitHub or the transport.
 
 ## Launch order — execute in repository

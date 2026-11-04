@@ -37,6 +37,10 @@ if (!allowed.has(action) || (!['status', 'authorize-drive'].includes(action) && 
     if (process.env.ESCAPEHATCH_EXPERIMENTAL_SYNC !== '1' || !process.env.ESCAPEHATCH_DATA_HOME) {
       throw new Error('EXPERIMENTAL_SYNC_DISABLED');
     }
+    // Live Windows CLI must not silently accept plaintext file-prototype keys.
+    if (process.platform === 'win32' && process.env.ESCAPEHATCH_SYNC_KEY_BACKEND === 'file') {
+      throw new Error('WINDOWS_DPAPI_REQUIRED_CLEAR_ESCAPEHATCH_SYNC_KEY_BACKEND');
+    }
     const dataHome = process.env.ESCAPEHATCH_DATA_HOME;
     if (action === 'status') {
       process.stdout.write(JSON.stringify(await observePrivateSyncStatus({

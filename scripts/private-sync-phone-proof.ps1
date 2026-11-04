@@ -3,9 +3,78 @@
 param(
   [int]$WaitMinutes = 20,
   # Skip offer re-export (use existing OneDrive/TEMP artifacts). For background ADB waiters.
-  [switch]$AttachOnly
+  [switch]$AttachOnly,
+  # Regression: long TEMP path + PNG write (8.3 short names break Pillow on Windows).
+  [switch]$SelfTestQr
 )
 $ErrorActionPreference = 'Stop'
+
+function Get-PhoneQrTempRoot {
+  $tempRoot = [System.IO.Path]::GetFullPath($env:TEMP)
+  if ($tempRoot -match '~') {
+    $tempRoot = [System.IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA 'Temp'))
+  }
+  if ($tempRoot -match '~') {
+    throw "TEMP resolves to short path: $tempRoot"
+  }
+  return $tempRoot
+}
+
+function Write-PhoneInstallQrPng {
+  param(
+    [Parameter(Mandatory = $true)][string]$LanUrl,
+    [Parameter(Mandatory = $true)][string]$DestinationPng
+  )
+  $tempRoot = Get-PhoneQrTempRoot
+  # Unique names: a stale/locked escapehatch-phone-install-qr.png can make Pillow raise EINVAL.
+  $stamp = [guid]::NewGuid().ToString('N').Substring(0, 8)
+  $candidates = @(
+    (Join-Path $tempRoot "eh-phone-qr-$stamp.png"),
+    (Join-Path $env:LOCALAPPDATA "EscapeHatch\eh-phone-qr-$stamp.png")
+  )
+  New-Item -ItemType Directory -Force -Path (Join-Path $env:LOCALAPPDATA 'EscapeHatch') | Out-Null
+  $pySave = @'
+import qrcode, pathlib, sys
+url, dest = sys.argv[1], pathlib.Path(sys.argv[2])
+dest.parent.mkdir(parents=True, exist_ok=True)
+qrcode.make(url).save(dest)
+'@
+  $pyFile = Join-Path $tempRoot "eh-write-phone-qr-$stamp.py"
+  Set-Content -LiteralPath $pyFile -Value $pySave -Encoding utf8
+  $qrTemp = $null
+  foreach ($cand in $candidates) {
+    & python $pyFile $LanUrl $cand
+    if ($LASTEXITCODE -eq 0 -and (Test-Path -LiteralPath $cand)) {
+      $qrTemp = $cand
+      break
+    }
+  }
+  if (-not $qrTemp) {
+    throw 'qr png missing after python write'
+  }
+  $hdr = Get-Content -LiteralPath $qrTemp -Encoding Byte -TotalCount 8
+  $pngMagic = [byte[]](137, 80, 78, 71, 13, 10, 26, 10)
+  for ($i = 0; $i -lt 8; $i++) {
+    if ($hdr[$i] -ne $pngMagic[$i]) { throw "qr png magic mismatch at $qrTemp" }
+  }
+  try {
+    Copy-Item -LiteralPath $qrTemp -Destination $DestinationPng -Force -ErrorAction Stop
+    return $DestinationPng
+  } catch {
+    # Host stream only — Write-Output would pollute the return path string.
+    Write-Host 'qr_onedrive_locked=using_temp'
+    return $qrTemp
+  }
+}
+
+if ($SelfTestQr) {
+  $dest = Join-Path (Get-PhoneQrTempRoot) 'eh-selftest-phone-qr.png'
+  $written = Write-PhoneInstallQrPng -LanUrl 'http://192.0.2.1:18765/' -DestinationPng $dest
+  if (-not (Test-Path -LiteralPath $written)) { throw "SelfTestQr missing $written" }
+  Write-Output "selfTestQr=PASS path=$written bytes=$((Get-Item -LiteralPath $written).Length)"
+  exit 0
+}
+
 $env:ESCAPEHATCH_EXPERIMENTAL_SYNC = '1'
 if (-not $env:ESCAPEHATCH_DATA_HOME) {
   $env:ESCAPEHATCH_DATA_HOME = Join-Path $env:LOCALAPPDATA 'EscapeHatch'
@@ -105,15 +174,8 @@ if (-not $AttachOnly) {
   $qrPath = Join-Path $od 'phone-install-qr.png'
   if ($lanUrl) {
     try {
-      $qrTemp = Join-Path $env:TEMP 'escapehatch-phone-install-qr.png'
-      $qrTempPosix = ($qrTemp -replace '\\', '/')
-      python -c "import qrcode; qrcode.make(r'''$lanUrl''').save(r'''$qrTempPosix''')"
-      try {
-        Copy-Item -LiteralPath $qrTemp -Destination $qrPath -Force -ErrorAction Stop
-      } catch {
-        $qrPath = $qrTemp
-        Write-Output "qr_onedrive_locked=using_temp"
-      }
+      $qrPath = Write-PhoneInstallQrPng -LanUrl $lanUrl -DestinationPng $qrPath
+      Write-Output "qrPath=$qrPath"
     } catch {
       Write-Output "qr_skip=$($_.Exception.Message)"
     }

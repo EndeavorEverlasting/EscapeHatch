@@ -72,7 +72,7 @@ if (-not $adbWaiters) {
     '-NoProfile', '-ExecutionPolicy', 'Bypass',
     '-File', (Join-Path $PSScriptRoot 'private-sync-phone-proof.ps1'),
     '-AttachOnly',
-    '-WaitMinutes', '45'
+    '-WaitMinutes', '360'
   )
   Write-Output 'adb_waiter=started'
 } else {

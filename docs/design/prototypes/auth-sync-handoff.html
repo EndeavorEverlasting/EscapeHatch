@@ -177,7 +177,7 @@
     </div>
   </div>
   <script>
-    const STATUS_URL = 'http://127.0.0.1:18766/';
+    const STATUS_URL = location.port === '18766' ? '/' : 'http://127.0.0.1:18766/';
     const rail = document.getElementById('rail');
     const railTitle = document.getElementById('railTitle');
     const railSub = document.getElementById('railSub');

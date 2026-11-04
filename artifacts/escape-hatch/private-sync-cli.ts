@@ -27,7 +27,9 @@ const allowed = new Set([
 ]);
 if (!allowed.has(action) || (!['status', 'authorize-drive'].includes(action) && (!carrier || !path.isAbsolute(carrier)))) {
   process.stderr.write(
-    'Usage: node --experimental-strip-types private-sync-cli.ts status|authorize-drive|init-key|push|pull|export-pairing|import-pairing|bind-folder|bind-drive [ABSOLUTE_CARRIER_PATH] ...\n'
+    'Usage: node --experimental-strip-types private-sync-cli.ts status|authorize-drive|init-key|push|pull|export-pairing|import-pairing|bind-folder|bind-drive [ABSOLUTE_CARRIER_PATH] ...\n' +
+      '  import-pairing CARRIER ABSOLUTE_OFFER_FILE PAIRING_CODE\n' +
+      '  export-pairing CARRIER ABSOLUTE_OFFER_OUT\n'
   );
   process.exitCode = 2;
 } else {

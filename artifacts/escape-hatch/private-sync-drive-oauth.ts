@@ -12,6 +12,8 @@ import { assertEscapeHatchOwnedTokenPath, defaultDriveTokenPath } from './privat
 
 const SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const CLIENT_SCHEMA = 'escapehatch/private-sync-google-oauth-client/v1';
+/** Loopback redirect; avoid 8765 (PiShark / other local listeners). */
+export const DEFAULT_OAUTH_REDIRECT_PORT = 18767;
 
 export type OAuthClientConfig = {
   schema: typeof CLIENT_SCHEMA;
@@ -61,7 +63,7 @@ export async function authorizeDriveFileAccess(options: {
   const client = await readOAuthClientConfig(options.clientFile || defaultOAuthClientPath());
   const tokenFile = options.tokenFile || defaultDriveTokenPath();
   assertEscapeHatchOwnedTokenPath(tokenFile);
-  const port = client.redirectPort || 8765;
+  const port = client.redirectPort || DEFAULT_OAUTH_REDIRECT_PORT;
   const redirectUri = `http://127.0.0.1:${port}/oauth2/callback`;
   const verifier = b64url(randomBytes(32));
   const challenge = b64url(createHash('sha256').update(verifier).digest());

@@ -539,6 +539,11 @@ test('private-sync status endpoint stays value-free and reports DISABLED without
     assert.equal(enabled.body.values, 'redacted');
     assert.ok(typeof enabled.body.status === 'string');
     assert.equal(Object.prototype.hasOwnProperty.call(enabled.body, 'preferences'), false);
+    assert.equal(Object.prototype.hasOwnProperty.call(enabled.body, 'pairingCode'), false);
+    assert.ok('phoneLanUrl' in enabled.body);
+    if (enabled.body.phoneLanUrl != null) {
+      assert.match(String(enabled.body.phoneLanUrl), /^http:\/\/192\.168\.\d+\.\d+:18765\/$/);
+    }
     assert.equal((await get('https://foreign.example.com')).code, 403);
   } finally {
     await listeners.dispose();

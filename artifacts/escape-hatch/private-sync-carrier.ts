@@ -5,6 +5,7 @@ import { envelopeDigest, parseEnvelope, openProjection } from './private-sync-cr
 export async function readCarrier(folder: string, key: Uint8Array) {
   if (!path.isAbsolute(folder)) throw new Error('ABSOLUTE_PATH_REQUIRED');
   const files = await fs.readdir(folder).catch(e => { if (e.code === 'ENOENT') return []; throw e; });
+  if (files.length > 500) throw new Error('CARRIER_TOO_MANY_FILES');
   const found = [];
   for (const file of files.filter(f => f.endsWith('.ehsync'))) {
     const envelope = parseEnvelope(JSON.parse(await fs.readFile(path.join(folder, file), 'utf8')));

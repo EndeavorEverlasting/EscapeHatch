@@ -8,6 +8,9 @@ if(!['init-key','push','pull'].includes(action)||!carrier||!path.isAbsolute(carr
   process.exitCode=2;
 } else {
   try {
+    if (process.env.ESCAPEHATCH_EXPERIMENTAL_SYNC !== '1' || !process.env.ESCAPEHATCH_DATA_HOME) {
+      throw new Error('EXPERIMENTAL_SYNC_DISABLED');
+    }
     if(action==='push')await fs.mkdir(carrier,{recursive:true});
     const result=action==='init-key'?await createLocalSyncKey({carrier}):
       await runPrivateSync({carrier},action as 'push'|'pull');

@@ -120,6 +120,10 @@ export async function storeSyncKey(
     if (options.replace) await fs.rm(p.raw, { force: true });
     return { key, backend, vaultId: vaultIdForKey(key) };
   }
+  // Live Windows hosts must use DPAPI. Tests may set ESCAPEHATCH_SYNC_KEY_BACKEND=file.
+  if (process.platform === 'win32' && process.env.ESCAPEHATCH_SYNC_KEY_BACKEND !== 'file') {
+    throw new Error('WINDOWS_DPAPI_REQUIRED');
+  }
   if (options.replace) await fs.rm(p.raw, { force: true }).catch(() => undefined);
   await writeExclusive(p.raw, key);
   return { key, backend: 'file-prototype', vaultId: vaultIdForKey(key) };

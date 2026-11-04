@@ -1,0 +1,38 @@
+{
+  "schema": "escapehatch/private-sync-multidevice-proof/v1",
+  "title": "Private sync multi-device proof ledger",
+  "description": "Value-free proof ceiling for desktop, laptop, and Android phone ciphertext sync. threeOfThree stays false until each device reports digestMatch with Cognizant talent-community field ids present. Never records preference values.",
+  "required": [
+    "schema",
+    "updatedAt",
+    "carrierKind",
+    "projectionDigest",
+    "reusableAnswerCount",
+    "devices",
+    "threeOfThree"
+  ],
+  "properties": {
+    "schema": { "const": "escapehatch/private-sync-multidevice-proof/v1" },
+    "projectionDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "reusableAnswerCount": { "type": "integer", "minimum": 0 },
+    "threeOfThree": { "type": "boolean" },
+    "devices": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["id", "status", "digestMatch", "proof"],
+        "properties": {
+          "id": {
+            "enum": ["desktop", "laptop-sim", "laptop", "android-phone"]
+          },
+          "status": { "type": "string" },
+          "digestMatch": { "type": "boolean" },
+          "proof": { "type": "string" },
+          "keyBackend": { "type": "string" }
+        }
+      }
+    }
+  },
+  "completionRule": "threeOfThree may be true only when desktop, one Windows peer (laptop or laptop-sim explicitly labeled), and android-phone each have digestMatch true and android-phone proof is not AWAITING_DEVICE."
+}

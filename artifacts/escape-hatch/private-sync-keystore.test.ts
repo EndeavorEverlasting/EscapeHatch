@@ -44,6 +44,23 @@ test('file-prototype backend stores and reloads a 32-byte vault secret', async (
   }
 });
 
+test('Windows refuses file-prototype key store unless ESCAPEHATCH_SYNC_KEY_BACKEND=file', async (t) => {
+  if (process.platform !== 'win32') {
+    t.skip('Windows-only refusal');
+    return;
+  }
+  const prev = process.env.ESCAPEHATCH_SYNC_KEY_BACKEND;
+  delete process.env.ESCAPEHATCH_SYNC_KEY_BACKEND;
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-keystore-refuse-file-'));
+  try {
+    await assert.rejects(storeSyncKey(root, generateSyncKey(), 'file-prototype'), /WINDOWS_DPAPI_REQUIRED/);
+  } finally {
+    if (prev === undefined) delete process.env.ESCAPEHATCH_SYNC_KEY_BACKEND;
+    else process.env.ESCAPEHATCH_SYNC_KEY_BACKEND = prev;
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
 test('Windows DPAPI round-trips the vault secret on this host when available', async (t) => {
   if (!preferWindowsDpapi()) {
     t.skip('Windows DPAPI backend not selected on this host');

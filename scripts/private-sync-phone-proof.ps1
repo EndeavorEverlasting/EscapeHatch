@@ -79,7 +79,8 @@ $lanUrl = if ($lanIp) { "http://${lanIp}:${lanPort}/" } else { $null }
 $qrPath = Join-Path $od 'phone-install-qr.png'
 if ($lanUrl) {
   try {
-    python -c "import qrcode; qrcode.make(r'$lanUrl').save(r'$($qrPath.Replace('\','\\'))')"
+    $qrPosix = ($qrPath -replace '\\', '/')
+    python -c "import qrcode; qrcode.make(r'''$lanUrl''').save(r'''$qrPosix''')"
   } catch {
     Write-Output "qr_skip=$($_.Exception.Message)"
   }

@@ -1,6 +1,6 @@
 {
   "schema": "escapehatch/private-sync-phone-pack/v1",
-  "purpose": "Fixed-name phone pack eliminates hash-filename and chat-title friction for sealed sync.",
+  "purpose": "Fixed-name phone pack + LAN-first pairing path. Seams inventory: private-sync-phone-seams.v1.json.",
   "folderName": "EscapeHatchPhoneDrop",
   "requiredFiles": {
     "pairingOffer": "pairing-offer.json",
@@ -8,26 +8,37 @@
     "answersCapsule": "escapehatch-answers.ehsync",
     "apk": "EscapeHatchAssist-debug.apk"
   },
+  "desktopCodeAlias": "ESCAPE_HATCH_PAIRING_CODE.txt",
   "phoneWrittenFiles": {
     "proof": "escapehatch-phone-sync-proof.json"
   },
-  "operatorPath": [
-    "Install EscapeHatchAssist-debug.apk from the folder",
-    "Assist → Pair this phone → Choose EscapeHatchPhoneDrop folder once",
-    "Confirm pairing (offer + code auto-loaded)",
+  "operatorPathLan": [
+    "Open LAN install (DuckDuckGo/Firefox preferred) → install APK",
+    "Assist → Pair → Fetch sealed offer from PC",
+    "Type desktop corridor / ESCAPE_HATCH_PAIRING_CODE.txt code → Confirm",
+    "Import → Fetch capsule from PC → Send proof to PC"
+  ],
+  "operatorPathOffline": [
+    "Install EscapeHatchAssist-debug.apk from EscapeHatchPhoneDrop",
+    "Assist → Pair → Offline: choose EscapeHatchPhoneDrop folder once",
+    "Confirm pairing (offer + PAIRING_CODE.txt auto-loaded)",
     "Import loads escapehatch-answers.ehsync; proof auto-writes back"
   ],
   "forbiddenOperatorWork": [
     "Hunting hash-named .ehsync files",
     "Searching Drive by 32/64-character chat titles",
     "Manually copying pairing codes from agent chat",
-    "Choosing offer and capsule as separate unknown files when the pack folder is available"
+    "Choosing offer and capsule as separate unknown files when the pack folder is available",
+    "Opening http://LAN:18765 in the desktop default browser (HTTPS-First interstitial)",
+    "Using Drive folder picker when LAN fetch is already filled in"
   ],
   "hostOwner": "scripts/private-sync-stage-phone-pack.ps1",
   "androidOwner": "android/application-assist/.../PhonePackStore.kt",
+  "seamsContract": "harness/contracts/private-sync-phone-seams.v1.json",
   "securityNotes": [
     "PAIRING_CODE.txt is a short-lived SAS (pairing TTL), not a durable vault key",
     "Capsule remains ciphertext-only; proof is value-free digests/counts",
-    "Never commit private carrier contents to git"
+    "Never commit private carrier contents to git",
+    "Pairing code is never served on LAN :18765"
   ]
 }

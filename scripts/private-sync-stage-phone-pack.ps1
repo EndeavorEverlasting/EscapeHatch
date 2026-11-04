@@ -78,6 +78,10 @@ $startHere = @(
   'No hash filenames. No chat titles. Nord stays on for Drive path.'
 ) -join "`r`n"
 
+# Visible desktop code surface (SEAM-EMPTY-CODE-SURFACE / SEAM-CODE-NOT-VISIBLE).
+$desktopCode = Join-Path ([Environment]::GetFolderPath('Desktop')) 'ESCAPE_HATCH_PAIRING_CODE.txt'
+Set-Content -Path $desktopCode -Value $code -NoNewline -Encoding ascii
+
 foreach ($target in @($od, $desk)) {
   Copy-Item $offerOut (Join-Path $target 'pairing-offer.json') -Force
   Set-Content -Path (Join-Path $target 'PAIRING_CODE.txt') -Value $code -NoNewline -Encoding ascii
@@ -111,14 +115,13 @@ Write-Output "staged_desktop=$desk"
 Write-Output "staged_onedrive=$od"
 Write-Output "answers=escapehatch-answers.ehsync"
 Write-Output "offer=pairing-offer.json"
-Write-Output "code=PAIRING_CODE.txt (also TEMP\pairing-code.local.txt)"
+Write-Output "code=PAIRING_CODE.txt + Desktop\ESCAPE_HATCH_PAIRING_CODE.txt (also TEMP\pairing-code.local.txt)"
+if ($OpenCodeNotepad) {
+  Start-Process notepad.exe $desktopCode
+}
 Write-Output "digest=$($status.projectionDigest)"
 Write-Output "apk=$(if ($apkItem) { $apkItem.FullName } else { 'missing' })"
 Write-Output "vaultId=$($export.vaultId)"
-
-if ($OpenCodeNotepad) {
-  Start-Process notepad.exe $codeLocal
-}
 
 # Best-effort: mirror fixed names into recorded Google Drive folder via existing MCP/agent path is out of band.
 # Operator/agent upload uses Desktop EscapeHatchPhoneDrop as the source of truth.

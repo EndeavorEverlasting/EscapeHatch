@@ -1,82 +1,96 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="24dp">
+    android:fillViewport="true">
 
-    <TextView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/pairing_title"
-        android:textSize="22sp"
-        android:textStyle="bold" />
+        android:orientation="vertical"
+        android:padding="24dp">
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/pairing_instructions" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/pairing_title"
+            android:textSize="22sp"
+            android:textStyle="bold" />
 
-    <Button
-        android:id="@+id/choosePackFolder"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:minHeight="48dp"
-        android:text="@string/phone_pack_choose_folder" />
+        <TextView
+            android:id="@+id/pairingStepRail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/pairing_step_rail_initial"
+            android:textIsSelectable="true" />
 
-    <EditText
-        android:id="@+id/pairingCode"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:hint="@string/pairing_code_hint"
-        android:importantForAutofill="no"
-        android:inputType="textVisiblePassword"
-        android:maxLength="16"
-        android:minHeight="48dp" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/pairing_instructions" />
 
-    <Button
-        android:id="@+id/confirmPairing"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:alpha="0.45"
-        android:enabled="false"
-        android:minHeight="48dp"
-        android:text="@string/pairing_confirm" />
+        <EditText
+            android:id="@+id/lanBaseUrl"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:hint="@string/lan_base_hint"
+            android:importantForAutofill="no"
+            android:inputType="textUri"
+            android:minHeight="48dp" />
 
-    <EditText
-        android:id="@+id/lanBaseUrl"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:hint="@string/lan_base_hint"
-        android:importantForAutofill="no"
-        android:inputType="textUri"
-        android:minHeight="48dp" />
+        <Button
+            android:id="@+id/fetchOfferLan"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minHeight="48dp"
+            android:text="@string/pairing_fetch_lan" />
 
-    <Button
-        android:id="@+id/fetchOfferLan"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:minHeight="48dp"
-        android:text="@string/pairing_fetch_lan" />
+        <EditText
+            android:id="@+id/pairingCode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="@string/pairing_code_hint"
+            android:importantForAutofill="no"
+            android:inputType="textVisiblePassword"
+            android:maxLength="16"
+            android:minHeight="48dp" />
 
-    <Button
-        android:id="@+id/chooseOffer"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:minHeight="48dp"
-        android:text="@string/pairing_choose_offer_fallback" />
+        <Button
+            android:id="@+id/confirmPairing"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:alpha="0.45"
+            android:enabled="false"
+            android:minHeight="48dp"
+            android:text="@string/pairing_confirm" />
 
-    <TextView
-        android:id="@+id/pairingStatus"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:textIsSelectable="true" />
-</LinearLayout>
+        <Button
+            android:id="@+id/choosePackFolder"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:minHeight="48dp"
+            android:text="@string/phone_pack_choose_folder_offline" />
+
+        <Button
+            android:id="@+id/chooseOffer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minHeight="48dp"
+            android:text="@string/pairing_choose_offer_fallback" />
+
+        <TextView
+            android:id="@+id/pairingStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:textIsSelectable="true" />
+    </LinearLayout>
+</ScrollView>

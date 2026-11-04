@@ -193,9 +193,9 @@
         <img class="pair-qr" id="pairQr" width="168" height="168" alt="QR code: phone opens LAN install URL">
         <p class="pair-meta" id="lanInstall">LAN install: checking…</p>
         <ol>
-          <li>Same Wi-Fi: scan the QR (or open the LAN URL) on the phone and install the APK.</li>
-          <li>Assist → Pair → Fetch sealed offer from PC (enter the LAN host) → type this code.</li>
-          <li>Import → Fetch capsule from PC → tap <strong>Send proof to PC</strong>.</li>
+          <li>Same Wi-Fi: scan the QR (or open the LAN URL in DuckDuckGo/Firefox) and install the APK.</li>
+          <li>Assist → Pair → <strong>Fetch sealed offer from PC</strong> → type <em>this</em> code (never served on LAN).</li>
+          <li>Import → Fetch capsule from PC → <strong>Send proof to PC</strong>.</li>
         </ol>
       </div>
     </div>
@@ -218,6 +218,8 @@
     const pairQr = document.getElementById('pairQr');
     let live = null;
     let lanUrl = null;
+    let autoPairWhenSynced = false;
+    let pairInFlight = false;
 
     function setPairQr(url) {
       if (!pairQr) return;
@@ -274,8 +276,13 @@
         connect.hidden = true;
         pair.hidden = false;
         fine.textContent =
-          'Live desktop vault is sealed (ciphertext carrier). Pair a phone when you are ready—LAN :18765 serves APK + sealed files only.';
+          'Live desktop vault is sealed. Pairing code appears below automatically—type it on the phone after Fetch sealed offer from PC.';
         refreshPhoneInstall();
+        // SEAM-CODE-NOT-VISIBLE: do not leave the operator on Vault sealed without a visible code.
+        if (!autoPairWhenSynced) {
+          autoPairWhenSynced = true;
+          openPairSheet();
+        }
         return;
       }
       if (report.vaultPresent) {
@@ -309,11 +316,13 @@
       }, 1400);
     });
 
-    pair.addEventListener('click', async () => {
+    async function openPairSheet() {
+      if (pairInFlight) return;
+      pairInFlight = true;
       pairSheet.classList.add('open');
       pairCode.textContent = 'Preparing…';
       pairMeta.textContent = 'Requesting a fresh pairing offer from this machine…';
-      morph('Pairing ready', 'Show code on desktop · confirm on phone', 'ready');
+      morph('Pairing ready', 'Code on this PC · Confirm on phone', 'ready');
       try {
         const res = await fetch(PAIR_URL, { method: 'POST', cache: 'no-store' });
         const body = await res.json();
@@ -322,14 +331,19 @@
         pairMeta.textContent = `Expires ${body.expiresAt || 'soon'} · offer staged · digest ${(live?.projectionDigest || '').slice(0, 12) || '—'}…`;
         await refreshPhoneInstall();
         fine.textContent = lanUrl
-          ? ('Code stays on this PC. Phone: open ' + lanUrl + ' → install → Pair → Fetch offer → enter code → Fetch capsule → Save proof.')
-          : 'Enter the code on the phone. Offer is in EscapeHatchPrivateSync; code also under TEMP.';
+          ? ('NEXT on phone: Fetch sealed offer from PC → type this code → Confirm → Fetch capsule → Send proof. LAN ' + lanUrl)
+          : 'NEXT on phone: Fetch sealed offer from PC → type this code → Confirm. Stage EscapeHatchPhoneDrop if offline.';
       } catch (err) {
         pairCode.textContent = 'Unavailable';
         pairMeta.textContent = 'Start private-sync-status-server with the OneDrive carrier path, then try again.';
         fine.textContent = String(err && err.message ? err.message : err);
+        autoPairWhenSynced = false;
+      } finally {
+        pairInFlight = false;
       }
-    });
+    }
+
+    pair.addEventListener('click', () => { openPairSheet(); });
 
     // First paint can race the status server; retry once so Pair CTA appears when vault is sealed.
     refreshLive().then(() => {

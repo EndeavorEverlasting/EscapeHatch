@@ -1,0 +1,126 @@
+{
+  "schema": "escapehatch/private-sync-phone-seams/v1",
+  "purpose": "Fail-closed inventory of phone-sync friction seams observed in live operator pairing. Agents must not leave these as chat lore.",
+  "parent": "https://github.com/EndeavorEverlasting/EscapeHatch/issues/69",
+  "relatedContracts": [
+    "harness/contracts/private-sync-phone-pack.v1.json",
+    "harness/contracts/private-sync-multidevice-proof.v1.json"
+  ],
+  "designSources": [
+    {
+      "id": "UP-1B0AFA8BE",
+      "mechanism": "State-machine / step views for completed vs next action"
+    }
+  ],
+  "operatorPrimaryPath": "LAN",
+  "operatorBackupPath": "EscapeHatchPhoneDrop folder grant",
+  "seams": [
+    {
+      "id": "SEAM-HASH-FILENAME",
+      "symptom": "Operator must hunt hash-named .ehsync or 32/64-char chat titles",
+      "requiredBehavior": "Host stages only fixed names: pairing-offer.json, PAIRING_CODE.txt, escapehatch-answers.ehsync, EscapeHatchAssist-debug.apk",
+      "owners": ["scripts/private-sync-stage-phone-pack.ps1", "harness/contracts/private-sync-phone-pack.v1.json"],
+      "forbiddenAgentResponse": "Tell the operator to search Drive or chat for a hash/title"
+    },
+    {
+      "id": "SEAM-DRIVE-FOLDER-WITHOUT-LAN",
+      "symptom": "Pair screen leads with Choose EscapeHatchPhoneDrop folder; Drive opens; operator does not know which folder",
+      "requiredBehavior": "When LAN base URL is present, primary CTA is Fetch sealed offer from PC. Folder grant is Offline backup only and must name EscapeHatchPhoneDrop exactly in copy",
+      "owners": [
+        "android/.../PairingImportActivity.kt",
+        "android/.../res/values/strings.xml",
+        "android/.../res/layout/activity_pairing_import.xml"
+      ],
+      "forbiddenAgentResponse": "Send the operator into Google Drive without a fixed folder name and LAN-first alternative"
+    },
+    {
+      "id": "SEAM-CHROME-HTTPS-FIRST",
+      "symptom": "Desktop or phone Chrome shows Continue to site for http://LAN:18765",
+      "requiredBehavior": "Host never Start-Process a LAN IP URL. Operator desktop preview uses http://127.0.0.1 only via private-sync-focus-operator-browser.ps1. Phone install copy prefers DuckDuckGo/Firefox or Continue-once; Assist LAN fetch uses cleartext OkHttp",
+      "owners": [
+        "scripts/private-sync-focus-operator-browser.ps1",
+        "scripts/private-sync-start-phone-proof-session.ps1"
+      ],
+      "forbiddenAgentResponse": "Open http://192.168.x.x:18765 in the default desktop browser"
+    },
+    {
+      "id": "SEAM-BROWSER-SPRAY",
+      "symptom": "Agent opens QR/helper/corridor across every browser on the host",
+      "requiredBehavior": "Attach existing EscapeHatch-titled browser via title/PID focus helper; never spray Start-Process browser launches for phone session",
+      "owners": [
+        "scripts/private-sync-focus-operator-browser.ps1",
+        "scripts/windows/EscapeHatch-CareerBrowser.ps1"
+      ],
+      "forbiddenAgentResponse": "Start-Process chrome/brave/edge/qr/png without attaching the EscapeHatch tab first"
+    },
+    {
+      "id": "SEAM-CODE-NOT-VISIBLE",
+      "symptom": "Agent says corridor shows the 16-character code while UI only shows Vault sealed + Pair this phone",
+      "requiredBehavior": "When vault is SYNCED, corridor must auto-open the pairing sheet and display a live pairing code (POST /pair) without requiring the operator to invent a second click. Desktop also writes ESCAPE_HATCH_PAIRING_CODE.txt on stage",
+      "owners": [
+        "docs/design/prototypes/auth-sync-handoff.html",
+        "scripts/private-sync-stage-phone-pack.ps1",
+        "artifacts/escape-hatch/private-sync-status-server.ts"
+      ],
+      "forbiddenAgentResponse": "Claim the code is visible on corridor without the pair sheet open and a 16-character code rendered"
+    },
+    {
+      "id": "SEAM-EMPTY-CODE-SURFACE",
+      "symptom": "pairing-code.local.txt opens empty in an editor; operator cannot find the code",
+      "requiredBehavior": "Stage script writes non-empty PAIRING_CODE.txt into EscapeHatchPhoneDrop and Desktop ESCAPE_HATCH_PAIRING_CODE.txt; open with notepad.exe that path after stage when -OpenCodeNotepad",
+      "owners": ["scripts/private-sync-stage-phone-pack.ps1"],
+      "forbiddenAgentResponse": "Point at TEMP pairing-code.local.txt without verifying non-empty content"
+    },
+    {
+      "id": "SEAM-BUTTONS-IGNORE-STATE",
+      "symptom": "Buttons do not change when offer is loaded or code is entered; operator cannot see what is complete",
+      "requiredBehavior": "Pairing UI is a step machine: Offer pending|loaded, Code pending|ready, Confirm enabled only when both ready; completed steps show done labeling",
+      "owners": [
+        "android/.../PairingImportActivity.kt",
+        "android/.../CapsuleImportActivity.kt"
+      ],
+      "forbiddenAgentResponse": "Leave Confirm enabled/disabled without reflecting offer+code readiness"
+    },
+    {
+      "id": "SEAM-AGENT-AS-STEP-RELAY",
+      "symptom": "Operator must ask the agent for every next tap",
+      "requiredBehavior": "Status line always names the single next operator action. Host corridor fine-print matches Android status. Agents execute host actions; they do not substitute chat for missing UI state",
+      "owners": [
+        "android/.../res/values/strings.xml",
+        "docs/design/prototypes/auth-sync-handoff.html"
+      ],
+      "forbiddenAgentResponse": "Replace missing product next-action labeling with repeated chat scavenger hunts"
+    },
+    {
+      "id": "SEAM-PLAYWRIGHT-AS-HOST",
+      "symptom": "Agent uses Playwright/Computer Use as the product path instead of EscapeHatch host logic",
+      "requiredBehavior": "LAN server, stage pack, focus helper, Nord window, and Assist LAN fetch are the product path. Browser automation is recovery only, never the designed operator flow",
+      "owners": ["scripts/private-sync-*.ps1", "artifacts/escape-hatch/private-sync-phone-lan-server.ts"],
+      "forbiddenAgentResponse": "Treat Playwright clicking Continue to site as the durable fix for HTTPS-First"
+    },
+    {
+      "id": "SEAM-NORD-LAN-GATE",
+      "symptom": "Phone cannot reach :18765 while Nord is up; Nord left down after transfer",
+      "requiredBehavior": "Short Nord disconnect window with hard RestoreOnly/finally; prefer Drive/OneDrive when Nord must stay up; never leave Nord down after proof or timeout",
+      "owners": ["scripts/private-sync-nord-lan-window.ps1"],
+      "forbiddenAgentResponse": "Disconnect Nord without arming restore"
+    },
+    {
+      "id": "SEAM-LAN-VS-FOLDER-COPY-CONFLICT",
+      "symptom": "Copy says folder auto-fills code while LAN path leaves code empty (code never served on LAN)",
+      "requiredBehavior": "LAN path copy must say: Fetch offer from PC, then type the desktop corridor/Desktop code. Only folder path claims auto-fill from PAIRING_CODE.txt",
+      "owners": ["android/.../res/values/strings.xml", "docs/design/prototypes/auth-sync-handoff.html"],
+      "forbiddenAgentResponse": "Promise LAN auto-fills the pairing code"
+    }
+  ],
+  "requiredAnchors": [
+    "harness/contracts/private-sync-phone-seams.v1.json",
+    "scripts/validate_private_sync_phone_seams.py",
+    "scripts/private-sync-stage-phone-pack.ps1",
+    "scripts/private-sync-focus-operator-browser.ps1",
+    "docs/design/prototypes/auth-sync-handoff.html",
+    "android/application-assist/app/src/main/java/com/escapehatch/assist/sync/PairingImportActivity.kt",
+    "android/application-assist/app/src/main/res/values/strings.xml"
+  ],
+  "validator": "python scripts/validate_private_sync_phone_seams.py"
+}

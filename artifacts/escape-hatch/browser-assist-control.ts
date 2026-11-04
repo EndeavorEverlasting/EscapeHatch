@@ -1,4 +1,5 @@
 import { selectInstalledHostWorkspace } from './workspace-owner-file.ts';
+import { readWorkspace } from './workspace-file.ts';
 import { prepareWithoutTrustedNavigation } from './managed-prepare-fallback.ts';
 import { INITIAL_CHECKPOINT, advanceAuthCheckpoint, inspectAuthObservation, resumeAllowed, type AuthCheckpoint } from './managed-auth-checkpoint.ts';
 import { fieldProgressState, attachmentProgressState, evidenceDescription } from './managed-progress-evidence.ts';

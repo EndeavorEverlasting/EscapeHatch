@@ -356,3 +356,10 @@ retains its existing large-chunk advisory. A validator invocation from the cockp
 subdirectory initially failed to resolve root scripts; rerun from repository root
 passed. These are local source/controlled-runtime results, not installed private
 workspace or employer proof.
+
+CI additionally exercised the existing managed controller suite and exposed a
+pre-existing missing `readWorkspace` import in existing-tab and community-resume
+routes. Restoring the canonical import resolves those paths: all 19 controller
+tests PASS locally, including preserved browser entries. The full 50-case
+bootstrap unit suite also PASS. This correction does not broaden preparation or
+submission authority.

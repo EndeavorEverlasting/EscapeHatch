@@ -32,4 +32,3 @@ test('sealed preference capsule authenticates saved Cognizant answers without le
   );
   assert.throws(()=>validateProjection({...projected,entries:{...projected.entries,'credential.password': projected.entries['talent_community.primary_areas']}}),/FORBIDDEN_SYNC_FIELD/);
 });
-

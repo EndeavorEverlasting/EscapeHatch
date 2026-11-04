@@ -21,14 +21,22 @@ New-Item -ItemType Directory -Force -Path $od | Out-Null
 $offerOut = Join-Path $env:TEMP 'eh-pairing-offer-phone.json'
 $codeLocal = Join-Path $env:TEMP 'pairing-code.local.txt'
 $receipt = Join-Path $env:TEMP 'eh-sync-proof-receipt.json'
+# Prefer the newest companion APK (build output often newer than a stale TEMP copy).
 $apkCandidates = @(
   (Join-Path $env:TEMP 'EscapeHatchAssist-debug.apk'),
   (Join-Path $repo 'android\application-assist\app\build\outputs\apk\debug\app-debug.apk')
-)
-$apk = $apkCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+) | Where-Object { Test-Path $_ }
+$apk = $apkCandidates |
+  ForEach-Object { Get-Item $_ } |
+  Sort-Object LastWriteTime -Descending |
+  Select-Object -First 1 -ExpandProperty FullName
 if ($apk) {
-  Copy-Item $apk (Join-Path $od 'EscapeHatchAssist-debug.apk') -Force
-  $apk = Join-Path $od 'EscapeHatchAssist-debug.apk'
+  $staged = Join-Path $od 'EscapeHatchAssist-debug.apk'
+  Copy-Item $apk $staged -Force
+  # Keep TEMP in sync so later AttachOnly runs do not re-stage an older APK.
+  Copy-Item $apk (Join-Path $env:TEMP 'EscapeHatchAssist-debug.apk') -Force
+  $apk = $staged
+  Write-Output "apk_staged=$apk bytes=$((Get-Item $apk).Length) mtime=$((Get-Item $apk).LastWriteTime.ToString('o'))"
 }
 $adb = Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe'
 if (-not (Test-Path $adb)) { throw "adb missing at $adb" }

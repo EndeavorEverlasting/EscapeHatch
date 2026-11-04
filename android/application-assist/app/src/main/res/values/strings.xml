@@ -11,7 +11,7 @@
     <string name="privacy_preference_disabled">Off on this device. No consent will be automated.</string>
     <string name="materials_review_boundary">Résumé and cover letter review seals are confirmed in the desktop EscapeHatch Materials desk. This companion does not mark employer documents reviewed.</string>
     <string name="pairing_title">Pair this phone</string>
-    <string name="pairing_instructions">1) Same Wi-Fi: fetch the sealed offer from the PC (:18765), or choose pairing-offer.json from OneDrive.\n2) On your computer, open the pairing code EscapeHatch showed (Notepad).\n3) Type that 16-character code here and confirm.\nEscapeHatch never pairs silently and never uploads your answers in plaintext.</string>
+    <string name="pairing_instructions">1) Prefer OneDrive (keeps PC NordVPN on): tap Choose sealed offer → EscapeHatchPrivateSync → pairing-offer.json.\n2) On your computer, open the pairing code EscapeHatch showed (TEMP / corridor Notepad).\n3) Type that 16-character code here and confirm.\nOptional: Fetch sealed offer from PC on LAN :18765 only during a short Nord pause.\nEscapeHatch never pairs silently and never uploads your answers in plaintext.</string>
     <string name="pairing_choose_offer">Choose sealed offer</string>
     <string name="lan_base_hint">PC Wi-Fi address (e.g. 192.168.1.80:18765)</string>
     <string name="pairing_fetch_offer_lan">Fetch sealed offer from PC</string>
@@ -33,7 +33,7 @@
     <string name="pairing_auth_failed">Pairing authentication failed.</string>
     <string name="pairing_keystore_failed">Could not protect the vault key in Android Keystore on this device. Unlock the screen (set a PIN/pattern if needed) and try again.</string>
     <string name="capsule_title">Import encrypted answers</string>
-    <string name="capsule_instructions">1) Same Wi-Fi: fetch the .ehsync capsule from the PC (:18765), or choose it from OneDrive EscapeHatchPrivateSync.\n2) Confirm the digest matches your desktop.\n3) Tap Send proof to PC (same Wi‑Fi). OneDrive save remains a fallback.\nAnswers stay sealed—only counts and digests are shown.</string>
+    <string name="capsule_instructions">1) Prefer OneDrive: Choose encrypted capsule → EscapeHatchPrivateSync → newest .ehsync (keeps PC NordVPN on).\n2) Confirm the digest matches your desktop.\n3) Tap Save proof to OneDrive (escapehatch-phone-sync-proof.json). Send proof to PC is optional LAN-only.\nAnswers stay sealed—only counts and digests are shown.</string>
     <string name="capsule_choose">Choose encrypted capsule</string>
     <string name="capsule_fetch_lan">Fetch capsule from PC</string>
     <string name="capsule_open">Import encrypted answers</string>
@@ -48,7 +48,7 @@
     <string name="capsule_send_proof_lan">Send proof to PC</string>
     <string name="capsule_save_proof">Save proof to OneDrive</string>
     <string name="capsule_copy_proof">Copy proof JSON</string>
-    <string name="capsule_proof_hint">Next: Send proof to PC on the same Wi‑Fi, or save escapehatch-phone-sync-proof.json into OneDrive EscapeHatchPrivateSync. Desktop confirms the digest—no answer values leave this screen.</string>
+    <string name="capsule_proof_hint">Next: Save proof to OneDrive as escapehatch-phone-sync-proof.json (VPN-safe). Send proof to PC only if LAN :18765 is briefly open. Desktop confirms the digest—no answer values leave this screen.</string>
     <string name="capsule_proof_saved">Proof saved. Desktop will match digests when that file syncs.</string>
     <string name="capsule_proof_sent_lan">Proof sent to PC. Desktop watcher will match digests.</string>
     <string name="capsule_proof_send_failed">Could not send proof to PC (%1$s).</string>

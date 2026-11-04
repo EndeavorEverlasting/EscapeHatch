@@ -29,7 +29,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
-      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-audit --no-fund
       - name: Execute synthetic AEAD and forbidden-field regression
         run: node --experimental-strip-types --test private-sync-crypto.test.ts
       - name: Typecheck and baseline application safeguards
@@ -45,7 +45,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
-      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-audit --no-fund
       - name: Execute synthetic two-device encrypted sync regression
         run: node --experimental-strip-types --test private-sync-device.test.ts
       - name: Validate no accidental app settings or submitted job edits

@@ -493,3 +493,63 @@ test('managed enrollment reuses existing reviewed Cognizant resume, never job st
     await fs.rm(root, { recursive: true, force: true });
   }
 });
+
+test('private-sync status endpoint stays value-free and reports DISABLED without experimental flag', async () => {
+  const root = await fs.mkdtemp(path.join(tmpdir(), 'eh-private-sync-status-'));
+  const before = { ...process.env };
+  const instanceId = 'private-sync-status-' + Date.now();
+  const symbol = Symbol.for('escapehatch.managed-browser.' + instanceId);
+  const listeners = new ManagedListeners(path.join(root, 'receipts.json'), path.join(root, 'preferences.json'));
+  try {
+    Object.assign(process.env, {
+      ESCAPEHATCH_DATA_HOME: root,
+      ESCAPEHATCH_REPO_FINGERPRINT: 'a'.repeat(64),
+      ESCAPEHATCH_SHUTDOWN_TOKEN: 'synthetic-only',
+      ESCAPEHATCH_STARTED_AT_UTC: new Date().toISOString(),
+      PORT: '21055',
+      ESCAPEHATCH_INSTANCE_ID: instanceId,
+    });
+    delete process.env.ESCAPEHATCH_EXPERIMENTAL_SYNC;
+    (globalThis as Record<symbol, unknown>)[symbol] = {
+      context: null, page: null, state: 'idle', applicationOrigin: null, applicationUrl: null,
+      opportunityId: null, preparation: null, networkDiagnosis: null, authCheckpoint: null,
+      trustedReturnPath: null, listeners, busy: false,
+    };
+    let middleware: Function = () => {};
+    const plugin = createManagedBrowserAssistPlugin();
+    (plugin.configureServer as Function)({ config: { server: { port: 21055 } }, middlewares: { use: (handler: Function) => { middleware = handler; } } });
+    const get = async (origin = 'http://127.0.0.1:21055') => {
+      let code = 0, body = '';
+      await middleware(
+        { url: '/__escapehatch/managed-assist/private-sync/status', method: 'GET', headers: { host: '127.0.0.1:21055', origin }, socket: { remoteAddress: '127.0.0.1' } },
+        { set statusCode(value: number) { code = value; }, setHeader() {}, end(value: string) { body = value; } },
+        () => assert.fail('private-sync status route missed'),
+      );
+      return { code, body: JSON.parse(body) };
+    };
+    const disabled = await get();
+    assert.equal(disabled.code, 200);
+    assert.equal(disabled.body.enabled, false);
+    assert.equal(disabled.body.status, 'DISABLED');
+    assert.equal(disabled.body.values, undefined);
+    process.env.ESCAPEHATCH_EXPERIMENTAL_SYNC = '1';
+    const enabled = await get();
+    assert.equal(enabled.code, 200);
+    assert.equal(enabled.body.enabled, true);
+    assert.equal(enabled.body.values, 'redacted');
+    assert.ok(typeof enabled.body.status === 'string');
+    assert.equal(Object.prototype.hasOwnProperty.call(enabled.body, 'preferences'), false);
+    assert.equal(Object.prototype.hasOwnProperty.call(enabled.body, 'pairingCode'), false);
+    assert.ok('phoneLanUrl' in enabled.body);
+    if (enabled.body.phoneLanUrl != null) {
+      assert.match(String(enabled.body.phoneLanUrl), /^http:\/\/192\.168\.\d+\.\d+:18765\/$/);
+    }
+    assert.equal((await get('https://foreign.example.com')).code, 403);
+  } finally {
+    await listeners.dispose();
+    delete (globalThis as Record<symbol, unknown>)[symbol];
+    for (const key of Object.keys(process.env)) if (!(key in before)) delete process.env[key];
+    Object.assign(process.env, before);
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});

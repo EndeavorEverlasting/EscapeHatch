@@ -3,7 +3,31 @@ import { emptyPreferences, parsePreferences, questions, preferenceChoices, expan
 import { savedAnswerReviewRows, unrecognizedSavedAnswerCount, hasTalentCommunityAnswers, talentCommunityAnswerHandoff, canReplaceEditorFromDisk } from '@/lib/answer-transparency';
 
 const API = '/__escapehatch/managed-assist/preferences';
+const SYNC_STATUS_API = '/__escapehatch/managed-assist/private-sync/status';
+const SYNC_PAIR_API = '/__escapehatch/managed-assist/private-sync/pair';
 type PreferenceStoreMeta = { dataHome: string; preferenceStore: string; source: string; exists: boolean };
+type PrivateSyncUiStatus = {
+  enabled?: boolean;
+  status?: string;
+  keyBackend?: string;
+  carrierKind?: string;
+  reusableAnswerCount?: number;
+  projectionDigest?: string | null;
+  cognizantTalentCommunityFieldsPresent?: string[];
+  offlineQueued?: number;
+  carrierPathConfigured?: boolean;
+  phoneLanUrl?: string | null;
+  phoneLanHost?: string | null;
+  notes?: string[];
+};
+type PrivateSyncPairResult = {
+  ok?: boolean;
+  pairingCode?: string;
+  expiresAt?: string;
+  offerPath?: string;
+  phoneLanUrl?: string | null;
+  error?: string;
+};
 function preferenceFieldLabel(id: string, fallback: string) {
   if (id === 'identity.title') return 'Salutation (Mr., Ms., Dr.)';
   if (id === 'identity.job_title') return 'Target opportunity title';
@@ -26,6 +50,9 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
   const [busy, setBusy] = useState(false);
   const [clearRequested, setClearRequested] = useState(false);
   const [removedQuestions, setRemovedQuestions] = useState<string[]>([]);
+  const [syncStatus, setSyncStatus] = useState<PrivateSyncUiStatus | null>(null);
+  const [pairResult, setPairResult] = useState<PrivateSyncPairResult | null>(null);
+  const [pairBusy, setPairBusy] = useState(false);
   const editVersion = useRef(0);
   const loadVersion = useRef(0);
   function markEdited() {
@@ -64,6 +91,19 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
     }
   }
   useEffect(() => { if (!dirty) void load(); else setMessage('New recorded answers are saved on disk. Save or reload your edits before reloading them here.'); }, [refresh]);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch(SYNC_STATUS_API, { credentials: 'same-origin', cache: 'no-store' });
+        const json = await response.json();
+        if (!cancelled && response.ok) setSyncStatus(json);
+      } catch {
+        if (!cancelled) setSyncStatus(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [refresh, ready]);
   async function save(clear = false) {
     setBusy(true);
     try {
@@ -115,6 +155,98 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
         <summary className="cursor-pointer select-none font-medium text-foreground/90">Exact store path</summary>
         <p className="mt-2 break-all font-mono text-[0.7rem] leading-5 text-muted-foreground" data-testid="preference-store-path">{store.preferenceStore}</p>
       </details>}
+    </aside>
+
+    <aside className="preference-sync-rail mt-4 border-l-4 border-accent/70 bg-accent/[0.05] py-3 pl-4 pr-3" aria-label="Private multi-device sync" data-testid="private-sync-status-rail">
+      <p className="text-sm font-semibold text-foreground">Private multi-device sync</p>
+      <p className="mt-1 text-sm leading-6 text-muted-foreground">
+        Ciphertext-only carrier. Status never includes answer values—only counts and a digest fingerprint.
+      </p>
+      <p className="mt-2 text-xs tracking-wide text-muted-foreground">
+        Status:{' '}
+        <span className="font-medium text-foreground" data-testid="private-sync-status-label">
+          {!syncStatus ? 'Checking…' : syncStatus.enabled === false ? 'Off on this host' : (syncStatus.status || 'Unknown')}
+        </span>
+        {syncStatus?.enabled && syncStatus.keyBackend ? <> · {syncStatus.keyBackend}</> : null}
+        {syncStatus?.enabled && syncStatus.carrierKind ? <> · {syncStatus.carrierKind}</> : null}
+        {typeof syncStatus?.reusableAnswerCount === 'number' ? <> · {syncStatus.reusableAnswerCount} reusable</> : null}
+        {typeof syncStatus?.offlineQueued === 'number' && syncStatus.offlineQueued > 0 ? <> · {syncStatus.offlineQueued} queued offline</> : null}
+      </p>
+      {syncStatus?.status === 'CONFLICT' && (
+        <p className="mt-2 text-sm text-muted-foreground" data-testid="private-sync-conflict-note">
+          Concurrent offline edits diverged. This computer kept its last-known-good answers; resolve on one device, then pair/pull again—nothing was discarded silently.
+        </p>
+      )}
+      {syncStatus?.status === 'OFFLINE' && (
+        <p className="mt-2 text-sm text-muted-foreground" data-testid="private-sync-offline-note">
+          Capsules are queued until the ciphertext carrier accepts them again.
+        </p>
+      )}
+      {syncStatus?.projectionDigest && (
+        <p className="mt-1 break-all font-mono text-[0.7rem] text-muted-foreground" data-testid="private-sync-digest">
+          digest {syncStatus.projectionDigest.slice(0, 16)}…
+        </p>
+      )}
+      {Array.isArray(syncStatus?.cognizantTalentCommunityFieldsPresent) && syncStatus.cognizantTalentCommunityFieldsPresent.length > 0 && (
+        <p className="mt-1 text-xs text-muted-foreground">
+          Cognizant talent-community field ids present: {syncStatus.cognizantTalentCommunityFieldsPresent.length}
+        </p>
+      )}
+      {syncStatus?.enabled && (
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            className="rounded border border-accent px-3 py-2 text-sm font-medium disabled:opacity-50"
+            disabled={pairBusy || syncStatus.carrierPathConfigured === false}
+            data-testid="private-sync-pair-button"
+            onClick={() => {
+              void (async () => {
+                setPairBusy(true);
+                try {
+                  const response = await fetch(SYNC_PAIR_API, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                      'content-type': 'application/json',
+                      'x-escapehatch-operator-action': 'confirmed',
+                    },
+                    body: '{}',
+                  });
+                  const json = await response.json();
+                  setPairResult(response.ok ? json : { ok: false, error: json.error || 'pair_failed' });
+                } catch {
+                  setPairResult({ ok: false, error: 'pair_unavailable' });
+                } finally {
+                  setPairBusy(false);
+                }
+              })();
+            }}
+          >
+            {pairBusy ? 'Preparing code…' : 'Pair this phone'}
+          </button>
+          {syncStatus.carrierPathConfigured === false && (
+            <span className="text-xs text-muted-foreground">Bind a folder carrier with an absolute path first.</span>
+          )}
+        </div>
+      )}
+      {pairResult?.pairingCode && (
+        <p className="mt-3 font-mono text-lg tracking-widest text-foreground" data-testid="private-sync-pairing-code">
+          {pairResult.pairingCode}
+        </p>
+      )}
+      {pairResult?.expiresAt && (
+        <p className="mt-1 text-xs text-muted-foreground">Expires {new Date(pairResult.expiresAt).toLocaleString()} · offer staged for the phone</p>
+      )}
+      {(pairResult?.phoneLanUrl || syncStatus?.phoneLanUrl) && (
+        <p className="mt-2 text-xs text-muted-foreground" data-testid="private-sync-phone-lan">
+          Phone Wi-Fi install:{' '}
+          <a className="font-medium text-foreground underline" href={pairResult?.phoneLanUrl || syncStatus?.phoneLanUrl || undefined}>
+            {pairResult?.phoneLanUrl || syncStatus?.phoneLanUrl}
+          </a>
+          {' '}· APK + sealed files only; enter this code on the phone after Fetch sealed offer.
+        </p>
+      )}
+      {pairResult?.error && <p className="mt-2 text-sm text-muted-foreground">Pairing unavailable: {pairResult.error}</p>}
     </aside>
 
     {ready && <section className="mt-4 rounded-xl border border-border bg-secondary/20 p-4" aria-label="Exact saved answers" data-testid="saved-answer-review">

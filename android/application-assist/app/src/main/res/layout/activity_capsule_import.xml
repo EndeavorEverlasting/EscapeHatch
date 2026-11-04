@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/capsule_title"
+        android:textSize="22sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/capsule_instructions" />
+
+    <Button
+        android:id="@+id/loadFromPack"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:minHeight="48dp"
+        android:text="@string/phone_pack_load_answers" />
+
+    <Button
+        android:id="@+id/choosePackFolder"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:minHeight="48dp"
+        android:text="@string/phone_pack_choose_folder" />
+
+    <Button
+        android:id="@+id/chooseCapsule"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:minHeight="48dp"
+        android:text="@string/capsule_choose_fallback" />
+
+    <EditText
+        android:id="@+id/lanBaseUrl"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:hint="@string/lan_base_hint"
+        android:importantForAutofill="no"
+        android:inputType="textUri"
+        android:minHeight="48dp" />
+
+    <Button
+        android:id="@+id/fetchCapsuleLan"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:minHeight="48dp"
+        android:text="@string/capsule_fetch_lan" />
+
+    <Button
+        android:id="@+id/saveProof"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:enabled="false"
+        android:minHeight="48dp"
+        android:text="@string/capsule_save_proof" />
+
+    <Button
+        android:id="@+id/sendProofLan"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:enabled="false"
+        android:minHeight="48dp"
+        android:text="@string/capsule_send_proof_lan" />
+
+    <Button
+        android:id="@+id/copyProof"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:enabled="false"
+        android:minHeight="48dp"
+        android:text="@string/capsule_copy_proof" />
+
+    <TextView
+        android:id="@+id/capsuleStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:textIsSelectable="true" />
+</LinearLayout>

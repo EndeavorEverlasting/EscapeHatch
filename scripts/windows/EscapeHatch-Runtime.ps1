@@ -444,6 +444,26 @@ function Start-ColdRuntime {
     $stdout = Join-Path $Paths.LogDir "runtime-$stamp-$instanceId.stdout.log"
     $stderr = Join-Path $Paths.LogDir "runtime-$stamp-$instanceId.stderr.log"
 
+    $dataHomeForSync = if ($env:ESCAPEHATCH_DATA_HOME) { $env:ESCAPEHATCH_DATA_HOME } else { Join-Path $env:LOCALAPPDATA 'EscapeHatch' }
+    $carrierConfigPath = Join-Path $dataHomeForSync 'private-sync-carrier.json'
+    $enablePrivateSync = $false
+    $carrierFolderPath = $null
+    if (Test-Path -LiteralPath $carrierConfigPath -PathType Leaf) {
+        try {
+            $carrierCfg = Get-Content -LiteralPath $carrierConfigPath -Raw | ConvertFrom-Json
+            if ($carrierCfg.schema -eq 'escapehatch/private-sync-carrier-config/v1' -and $carrierCfg.kind -eq 'folder') {
+                $enablePrivateSync = $true
+                if ($carrierCfg.folderPath -and [IO.Path]::IsPathRooted([string]$carrierCfg.folderPath)) {
+                    $carrierFolderPath = [string]$carrierCfg.folderPath
+                }
+            } elseif ($carrierCfg.schema -eq 'escapehatch/private-sync-carrier-config/v1' -and $carrierCfg.kind -eq 'google-drive-file') {
+                $enablePrivateSync = $true
+            }
+        } catch {
+            $enablePrivateSync = $false
+        }
+    }
+
     $managedEnvironment = @{
         PORT = [string]$Port
         HOST = $RuntimeHost
@@ -453,6 +473,13 @@ function Start-ColdRuntime {
         ESCAPEHATCH_SHUTDOWN_TOKEN = $shutdownToken
         ESCAPEHATCH_STARTED_AT_UTC = $startedAtUtc
         ESCAPEHATCH_RUNTIME_PROTOCOL = [string]$RuntimeProtocol
+        ESCAPEHATCH_DATA_HOME = [string]$dataHomeForSync
+    }
+    if ($enablePrivateSync) {
+        $managedEnvironment['ESCAPEHATCH_EXPERIMENTAL_SYNC'] = '1'
+        if ($carrierFolderPath) {
+            $managedEnvironment['ESCAPEHATCH_PRIVATE_SYNC_CARRIER'] = $carrierFolderPath
+        }
     }
 
     $previous = @{}
@@ -729,6 +756,9 @@ function Invoke-StatusAction {
     Write-Host "PREFERENCE_STORE=$preferenceStore"
     Write-Host "PREFERENCE_STORE_EXISTS=$([bool](Test-Path -LiteralPath $preferenceStore -PathType Leaf))"
     Write-Host "PREFERENCE_VALUES=redacted"
+    $carrierConfigPath = Join-Path $dataHome 'private-sync-carrier.json'
+    Write-Host "PRIVATE_SYNC_CARRIER_CONFIG_EXISTS=$([bool](Test-Path -LiteralPath $carrierConfigPath -PathType Leaf))"
+    Write-Host "PRIVATE_SYNC_EXPERIMENTAL=$($env:ESCAPEHATCH_EXPERIMENTAL_SYNC)"
     if ($observation.State -eq 'FOREIGN_CONFLICT') {
         $script:StatusExitCode = 2
     }

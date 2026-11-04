@@ -1,6 +1,7 @@
 package com.escapehatch.assist
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -10,6 +11,8 @@ import androidx.appcompat.widget.SwitchCompat
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import com.escapehatch.assist.sync.CapsuleImportActivity
+import com.escapehatch.assist.sync.PairingImportActivity
 import java.util.UUID
 
 class CompanionActivity : AppCompatActivity() {
@@ -49,6 +52,12 @@ class CompanionActivity : AppCompatActivity() {
             }
             renderPrivacyPreference()
         }
+        findViewById<Button>(R.id.openPairing).setOnClickListener {
+            startActivity(Intent(this, PairingImportActivity::class.java))
+        }
+        findViewById<Button>(R.id.openCapsuleImport).setOnClickListener {
+            startActivity(Intent(this, CapsuleImportActivity::class.java))
+        }
         findViewById<Button>(R.id.postNotification).setOnClickListener { postQuietNotification() }
         findViewById<Button>(R.id.dismissNotification).setOnClickListener {
             QuietAssistNotification.dismiss(this)
@@ -72,6 +81,22 @@ class CompanionActivity : AppCompatActivity() {
             QuietAssistNotification.dismiss(this)
             render()
             return
+        }
+        // Deep links for phone proof: escapehatch://assist/pair|import (no secrets in URI).
+        val data = intent.data
+        if (Intent.ACTION_VIEW == intent.action && data != null &&
+            data.scheme == "escapehatch" && data.host == "assist"
+        ) {
+            when (data.path?.trim('/')?.lowercase()) {
+                "pair" -> {
+                    startActivity(Intent(this, PairingImportActivity::class.java))
+                    return
+                }
+                "import", "capsule" -> {
+                    startActivity(Intent(this, CapsuleImportActivity::class.java))
+                    return
+                }
+            }
         }
         val handoff = HandoffIntents.fromIntent(intent)
         if (handoff != null) {

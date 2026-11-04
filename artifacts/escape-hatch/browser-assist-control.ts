@@ -23,7 +23,16 @@ import { readPreferences, updatePreferences, clearPreferences, mergePreferenceEd
 import { accessSync, constants as fsConstants } from 'node:fs';
 import { fillSavedPreferences, openApplicationForm } from './managed-form.ts';
 import { emptyPreferences } from './src/lib/application-preferences.ts';
+import { observePrivateSyncStatus } from './private-sync-status.ts';
+import { exportPairingOffer } from './private-sync-device.ts';
+import { resolveFolderCarrierPath } from './private-sync-config.ts';
+import { resolvePhoneLanInstall } from './private-sync-phone-install.ts';
+import {
+  maybePushPrivateSyncAfterPreferenceWrite,
+  maybePullPrivateSyncOnStartup,
+} from './private-sync-after-write.ts';
 import { prepareToFinalReview, type PreparationResult } from './application-autopilot-executor.ts';
+import os from 'node:os';
 import {
   ADAPTER_EVIDENCE_SCHEMA,
   type GrantableEffectClass,
@@ -382,7 +391,12 @@ export function createManagedBrowserAssistPlugin(): Plugin {
   return {
     name: 'escapehatch-managed-browser-assist',
     configureServer(server) {
-      if (managed) startSubmissionSync();
+      if (managed) {
+        startSubmissionSync();
+        void maybePullPrivateSyncOnStartup().catch(() => {
+          /* startup pull is best-effort; never block the host */
+        });
+      }
       server.middlewares.use(async (req, res, next) => {
         const url = new URL(req.url || '/', 'http://127.0.0.1');
         if (!url.pathname.startsWith(PREFIX + '/')) return next();
@@ -449,6 +463,42 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             });
           }
           catch { return respond(res, 422, { ok: false, error: 'Saved preferences could not be read; existing data preserved.' }); }
+        }
+        if (url.pathname === PREFIX + '/private-sync/status' && req.method === 'GET') {
+          if (req.headers.origin && req.headers.origin !== expectedOrigin || req.headers['sec-fetch-site'] === 'cross-site') {
+            return respond(res, 403, { ok: false, error: 'operator_origin_required' });
+          }
+          if (process.env.ESCAPEHATCH_EXPERIMENTAL_SYNC !== '1') {
+            return respond(res, 200, {
+              ok: true,
+              enabled: false,
+              status: 'DISABLED',
+              notes: ['Set ESCAPEHATCH_EXPERIMENTAL_SYNC=1 to observe private ciphertext sync.'],
+            });
+          }
+          try {
+            const dataHome = process.env.ESCAPEHATCH_DATA_HOME || userDataRoot();
+            const carrier = await resolveFolderCarrierPath(dataHome);
+            const report = await observePrivateSyncStatus({ dataHome, carrier: carrier || undefined });
+            const phoneInstall = resolvePhoneLanInstall();
+            return respond(res, 200, {
+              ok: true,
+              enabled: true,
+              ...report,
+              carrierPathConfigured: Boolean(carrier),
+              phoneLanUrl: phoneInstall.lanUrl,
+              phoneLanHost: phoneInstall.lanHost,
+              values: 'redacted',
+            });
+          } catch {
+            return respond(res, 422, { ok: false, error: 'Private sync status unavailable; existing profile preserved.' });
+          }
+        }
+        if (url.pathname === PREFIX + '/private-sync/phone-install' && req.method === 'GET') {
+          if (req.headers.origin && req.headers.origin !== expectedOrigin || req.headers['sec-fetch-site'] === 'cross-site') {
+            return respond(res, 403, { ok: false, error: 'operator_origin_required' });
+          }
+          return respond(res, 200, { ok: true, ...resolvePhoneLanInstall(), values: 'redacted' });
         }
         if (url.pathname.startsWith(PREFIX + '/documents/') && req.method === 'GET') {
           if (req.headers.origin && req.headers.origin !== expectedOrigin || req.headers['sec-fetch-site'] === 'cross-site') return respond(res, 403, { ok: false, error: 'operator_origin_required' });
@@ -532,9 +582,41 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             await selected.bringToFront();
             return respond(res, 200, { ok: true, state, currentPage: { opportunityId, applicationUrl, pageUrl: selected.url() }, requiresOperatorSubmission: true, listeners: status });
           }
-          if (url.pathname === PREFIX + '/preferences') return respond(res, 200, { ok: true,
-            preferences: await updatePreferences(current => mergePreferenceEdits(current, payload.preferences, payload.removedQuestions)) });
+          if (url.pathname === PREFIX + '/preferences') {
+            const preferences = await updatePreferences(current => mergePreferenceEdits(current, payload.preferences, payload.removedQuestions));
+            const privateSync = await maybePushPrivateSyncAfterPreferenceWrite();
+            return respond(res, 200, { ok: true, preferences, privateSync });
+          }
           if (url.pathname === PREFIX + '/preferences/clear') { await listeners.setRecording(false); await clearPreferences(); return respond(res, 200, { ok: true }); }
+          if (url.pathname === PREFIX + '/private-sync/pair') {
+            if (process.env.ESCAPEHATCH_EXPERIMENTAL_SYNC !== '1') {
+              return respond(res, 422, { ok: false, error: 'experimental_sync_disabled' });
+            }
+            const dataHome = process.env.ESCAPEHATCH_DATA_HOME || userDataRoot();
+            const carrier = await resolveFolderCarrierPath(dataHome);
+            if (!carrier) {
+              return respond(res, 422, { ok: false, error: 'folder_carrier_path_unconfigured' });
+            }
+            const offer = await exportPairingOffer({ carrier, dataHome });
+            const { pairingCode, ...sealed } = offer;
+            const offerPath = path.join(carrier, 'pairing-offer.json');
+            await fs.writeFile(offerPath, JSON.stringify(sealed), { mode: 0o600 });
+            const codePath = path.join(os.tmpdir(), 'pairing-code.local.txt');
+            await fs.writeFile(codePath, pairingCode, { mode: 0o600 });
+            const phoneInstall = resolvePhoneLanInstall();
+            return respond(res, 200, {
+              ok: true,
+              state: 'PAIRING_READY',
+              vaultId: sealed.vaultId,
+              expiresAt: sealed.expiresAt,
+              pairingCode,
+              codePath,
+              offerPath,
+              phoneLanUrl: phoneInstall.lanUrl,
+              phoneLanHost: phoneInstall.lanHost,
+              values: 'redacted',
+            });
+          }
           if (url.pathname.startsWith(PREFIX + '/documents/')) {
             const scope = documentScope(payload.opportunityId, payload.url); validateApplicationUrl(scope.url);
             const kind = payload.kind;

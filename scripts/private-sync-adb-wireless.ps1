@@ -9,14 +9,40 @@ param(
 $ErrorActionPreference = 'Continue'
 if (-not (Test-Path $Adb)) { Write-Output 'adb=missing'; exit 1 }
 
+# ARP OUI prefixes that are displays/cast gear, not EscapeHatch phone proof targets.
+$NonPhoneOuiPrefixes = @(
+  'A8-4A-63'  # TPV Display Technology (smart TV / monitor)
+)
+
 function Get-PhysicalAdbRows {
   & $Adb devices | Select-Object -Skip 1 | Where-Object {
     $_ -and $_ -notmatch '^emulator-' -and $_ -notmatch '^\s*$'
   }
 }
 
+function Test-NonPhoneLanHost([string]$HostIp) {
+  if (-not $HostIp) { return $false }
+  try {
+    $n = Get-NetNeighbor -IPAddress $HostIp -ErrorAction SilentlyContinue | Select-Object -First 1
+    $mac = [string]$n.LinkLayerAddress
+    if (-not $mac) { return $false }
+    foreach ($oui in $NonPhoneOuiPrefixes) {
+      if ($mac.StartsWith($oui, [System.StringComparison]::OrdinalIgnoreCase)) {
+        Write-Output "adb_skip_non_phone host=$HostIp mac=$mac oui=$oui"
+        return $true
+      }
+    }
+  } catch {}
+  return $false
+}
+
 function Try-Connect([string]$Endpoint) {
   if (-not $Endpoint) { return $false }
+  $hostIp = ($Endpoint -split ':')[0]
+  if (Test-NonPhoneLanHost $hostIp) {
+    & $Adb disconnect $Endpoint 2>&1 | Out-Null
+    return $false
+  }
   Write-Output "adb_connect_try=$Endpoint"
   & $Adb connect $Endpoint 2>&1 | ForEach-Object { Write-Output $_ }
   $rows = Get-PhysicalAdbRows

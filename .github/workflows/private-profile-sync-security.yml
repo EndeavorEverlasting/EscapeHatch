@@ -5,6 +5,8 @@ on:
       - "artifacts/escape-hatch/private-sync-*.ts"
       - "artifacts/escape-hatch/package.json"
       - "scripts/windows/EscapeHatch-PrivateSyncKey.ps1"
+      - "scripts/private-sync-stage-peer-bundle.ps1"
+      - "scripts/private-sync-pair-windows-peer.ps1"
       - "docs/agent/P04_SECURE_MULTIDEVICE_PROFILE_SYNC_2026-11-03.md"
       - "Outputs/prompt-parallel-dispatch/runs/escapehatch-secure-device-sync-20261103/**"
       - ".github/workflows/private-profile-sync-security.yml"
@@ -14,6 +16,8 @@ on:
       - "artifacts/escape-hatch/private-sync-*.ts"
       - "artifacts/escape-hatch/package.json"
       - "scripts/windows/EscapeHatch-PrivateSyncKey.ps1"
+      - "scripts/private-sync-stage-peer-bundle.ps1"
+      - "scripts/private-sync-pair-windows-peer.ps1"
       - ".github/workflows/private-profile-sync-security.yml"
 permissions:
   contents: read
@@ -61,3 +65,12 @@ jobs:
         run: node --experimental-strip-types --test private-sync-device.test.ts private-sync-device-cross.test.ts private-sync-keystore.test.ts private-sync-transport.test.ts private-sync-status.test.ts private-sync-after-write.test.ts private-sync-config.test.ts
       - name: Validate no accidental app settings or submitted job edits
         run: node --experimental-strip-types --test private-sync-crypto.test.ts
+  windows-peer-bundle:
+    runs-on: windows-latest
+    name: Worktree-free Windows peer bundle (DPAPI helper)
+    steps:
+      - uses: actions/checkout@v4
+      - name: Stage peer-bundle SelfTest (layout + DPAPI roundtrip)
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/private-sync-stage-peer-bundle.ps1 -SelfTest -RepoRoot $PWD

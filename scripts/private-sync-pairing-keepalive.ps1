@@ -23,7 +23,17 @@ function Get-OfferExpiryUtc {
   if (-not (Test-Path $offerPath)) { return [datetime]::MinValue }
   $raw = Get-Content $offerPath -Raw
   if ($raw -match '"expiresAt"\s*:\s*"([^"]+)"') {
-    return [datetime]::Parse($Matches[1], $null, [System.Globalization.DateTimeStyles]::RoundtripKind).ToUniversalTime()
+    $iso = $Matches[1]
+    # Prefer explicit Z/offset parse — ConvertFrom-Json Unspecified local skews TTL by hours.
+    try {
+      return [datetime]::Parse(
+        $iso,
+        [System.Globalization.CultureInfo]::InvariantCulture,
+        [System.Globalization.DateTimeStyles]::RoundtripKind
+      ).ToUniversalTime()
+    } catch {
+      return [datetime]::MinValue
+    }
   }
   return [datetime]::MinValue
 }

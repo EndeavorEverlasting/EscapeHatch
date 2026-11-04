@@ -5,6 +5,7 @@ param(
   [string]$DataHome = $(if ($env:ESCAPEHATCH_DATA_HOME) { $env:ESCAPEHATCH_DATA_HOME } else { Join-Path $env:LOCALAPPDATA 'EscapeHatch-Peer' }),
   [string]$Carrier = $(Join-Path $env:USERPROFILE 'OneDrive\EscapeHatchPrivateSync'),
   [string]$PairingCodePath = $(Join-Path $env:TEMP 'pairing-code.local.txt'),
+  [string]$CliDir = '',
   [switch]$UpdateLedger
 )
 $ErrorActionPreference = 'Stop'
@@ -16,7 +17,21 @@ if ($env:ESCAPEHATCH_SYNC_KEY_BACKEND -eq 'file') {
   Write-Output 'key_backend_override=cleared_file_prototype'
 }
 $repo = Split-Path -Parent $PSScriptRoot
-$cliDir = Join-Path $repo 'artifacts\escape-hatch'
+$carrierBundleCli = Join-Path $Carrier 'peer-bundle\artifacts\escape-hatch'
+if (-not $CliDir) {
+  $repoCli = Join-Path $repo 'artifacts\escape-hatch'
+  if (Test-Path (Join-Path $repoCli 'private-sync-cli.ts')) {
+    $CliDir = $repoCli
+  } elseif (Test-Path (Join-Path $carrierBundleCli 'private-sync-cli.ts')) {
+    $CliDir = $carrierBundleCli
+  } else {
+    throw "MISSING_CLI - stage with scripts/private-sync-stage-peer-bundle.ps1 or run from EscapeHatch worktree"
+  }
+}
+if (-not (Test-Path (Join-Path $CliDir 'private-sync-cli.ts'))) {
+  throw "MISSING_CLI $CliDir\private-sync-cli.ts"
+}
+Write-Output "cliDir=$CliDir"
 $offer = Join-Path $Carrier 'pairing-offer.json'
 if (-not (Test-Path $offer)) { throw "MISSING_OFFER $offer" }
 if (-not (Test-Path $PairingCodePath)) { throw "MISSING_PAIRING_CODE_FILE $PairingCodePath (desktop TEMP only; never commit)" }
@@ -40,7 +55,7 @@ function Invoke-SyncCli([string[]]$CliArgs) {
   return ($line | ConvertFrom-Json)
 }
 
-Push-Location $cliDir
+Push-Location $CliDir
 try {
   $import = $null
   try {

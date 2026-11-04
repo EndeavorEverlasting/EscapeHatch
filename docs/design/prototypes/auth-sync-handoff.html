@@ -142,11 +142,23 @@
     .sheet li { margin: 0.35rem 0; }
     .pair-code {
       margin: 0.85rem 0 0.35rem;
+      padding: 0.75rem 0.85rem;
       font: 700 1.85rem/1.2 "Segoe UI", system-ui, sans-serif;
       letter-spacing: 0.18em;
       color: var(--ink);
+      background: var(--paper);
       word-break: break-all;
     }
+    .pair-qr {
+      display: none;
+      margin: 0.85rem 0 0.35rem;
+      width: 168px;
+      height: 168px;
+      padding: 8px;
+      background: #fff;
+      border-radius: 4px;
+    }
+    .pair-qr[src] { display: block; }
     .pair-meta { margin: 0; font-size: 0.85rem; color: var(--muted); }
     @media (prefers-reduced-motion: reduce) {
       .dot { animation: none; }
@@ -178,11 +190,12 @@
         <h2>Phone pairing</h2>
         <p class="pair-code" id="pairCode">Preparing…</p>
         <p class="pair-meta" id="pairMeta">Live code appears here on this device only.</p>
+        <img class="pair-qr" id="pairQr" width="168" height="168" alt="QR code: phone opens LAN install URL">
         <p class="pair-meta" id="lanInstall">LAN install: checking…</p>
         <ol>
-          <li>Same Wi-Fi: open the LAN install URL on the phone (or scan the QR) and install the APK.</li>
+          <li>Same Wi-Fi: scan the QR (or open the LAN URL) on the phone and install the APK.</li>
           <li>Assist → Pair → Fetch sealed offer from PC (enter the LAN host) → type this code.</li>
-          <li>Import → Fetch capsule from PC → Save proof JSON back to EscapeHatchPrivateSync.</li>
+          <li>Import → Fetch capsule from PC → tap <strong>Send proof to PC</strong>.</li>
         </ol>
       </div>
     </div>
@@ -202,8 +215,22 @@
     const pairCode = document.getElementById('pairCode');
     const pairMeta = document.getElementById('pairMeta');
     const lanInstall = document.getElementById('lanInstall');
+    const pairQr = document.getElementById('pairQr');
     let live = null;
     let lanUrl = null;
+
+    function setPairQr(url) {
+      if (!pairQr) return;
+      if (url) {
+        // Same LAN server that serves the phone install page.
+        const qrSrc = url.replace(/\/?$/, '/') + 'qr.svg';
+        pairQr.src = qrSrc;
+        pairQr.hidden = false;
+      } else {
+        pairQr.removeAttribute('src');
+        pairQr.hidden = true;
+      }
+    }
 
     async function refreshPhoneInstall() {
       try {
@@ -211,12 +238,14 @@
         if (!res.ok) throw new Error('phone-install ' + res.status);
         const body = await res.json();
         lanUrl = body.lanUrl || null;
+        setPairQr(lanUrl);
         if (lanInstall) {
           lanInstall.innerHTML = lanUrl
             ? ('LAN install (phone Wi-Fi): <a href="' + lanUrl + '" style="color:#c6f54c">' + lanUrl + '</a> — APK + sealed files only; code stays here.')
             : 'LAN install URL unavailable (no Wi-Fi IPv4). Use OneDrive EscapeHatchPrivateSync or USB.';
         }
       } catch {
+        setPairQr(null);
         if (lanInstall) lanInstall.textContent = 'Start the phone LAN server on :18765 for same-Wi-Fi install.';
       }
     }
@@ -302,7 +331,10 @@
       }
     });
 
-    refreshLive();
+    // First paint can race the status server; retry once so Pair CTA appears when vault is sealed.
+    refreshLive().then(() => {
+      if (pair.hidden) setTimeout(() => { refreshLive(); }, 400);
+    });
     refreshPhoneInstall();
     setInterval(refreshLive, 8000);
 

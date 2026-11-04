@@ -89,6 +89,44 @@ foreach ($line in $mdns) {
   }
 }
 
+# Fast ARP-neighbor probe for classic wireless ADB (:5555). Short TCP timeouts —
+# never run a full-subnet Test-NetConnection sweep (that hung phone waiters).
+function Test-TcpOpenFast([string]$HostIp, [int]$Port, [int]$TimeoutMs = 250) {
+  $client = New-Object System.Net.Sockets.TcpClient
+  try {
+    $iar = $client.BeginConnect($HostIp, $Port, $null, $null)
+    if (-not $iar.AsyncWaitHandle.WaitOne($TimeoutMs, $false)) {
+      try { $client.Close() } catch {}
+      return $false
+    }
+    $client.EndConnect($iar)
+    return $true
+  } catch {
+    return $false
+  } finally {
+    try { $client.Close() } catch {}
+  }
+}
+
+$selfIps = @{}
+Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | ForEach-Object {
+  if ($_.IPAddress) { $selfIps[$_.IPAddress] = $true }
+}
+$neighbors = Get-NetNeighbor -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+  Where-Object {
+    $_.State -in @('Reachable', 'Stale', 'Delay', 'Probe') -and
+    $_.IPAddress -match '^192\.168\.\d+\.\d+$' -and
+    -not $selfIps.ContainsKey($_.IPAddress)
+  } |
+  Select-Object -ExpandProperty IPAddress -Unique
+
+foreach ($hostIp in $neighbors) {
+  if (Test-NonPhoneLanHost $hostIp) { continue }
+  if (-not (Test-TcpOpenFast $hostIp 5555 250)) { continue }
+  Write-Output "arp_adb_open=${hostIp}:5555"
+  if (Try-Connect "${hostIp}:5555") { exit 0 }
+}
+
 $rows = Get-PhysicalAdbRows
 if ($rows | Where-Object { $_ -match '\tdevice$' }) {
   Write-Output 'adb_device=present'

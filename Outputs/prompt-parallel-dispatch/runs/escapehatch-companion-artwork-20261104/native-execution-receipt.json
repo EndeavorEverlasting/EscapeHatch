@@ -1,0 +1,49 @@
+{
+  "run_id": "escapehatch-companion-artwork-20261104",
+  "observed_parallelism": true,
+  "canonical_receipt_verified": false,
+  "canonical_verification_blocker": "Owning dispatch schema/runner absent; this is native launch/return evidence only",
+  "returned_lanes": [
+    {
+      "lane_id": "W2-companion",
+      "worker": "ui_evidence",
+      "branch": "codex/companion-guide-repair-20261104",
+      "owned_surfaces": [
+        "browser/application-assist/journey-guide.js",
+        "browser/application-assist/popup.html",
+        "tests/test_extension_journey_guide.mjs",
+        "artifacts/escape-hatch/tests/extension-journey-guide.spec.ts"
+      ],
+      "returned_commits": [
+        "7b82bff",
+        "5182f69",
+        "5083446"
+      ]
+    },
+    {
+      "lane_id": "W3-icon",
+      "worker": "model_evidence",
+      "branch": "codex/installer-icon-proof-20261104",
+      "owned_surfaces": [
+        "scripts/windows/EscapeHatch-Install.ps1",
+        "tests/test_escapehatch_installer_source_delivery.py"
+      ],
+      "returned_commits": [
+        "10e23fbf5071f618750b35507fd955a578ec195b"
+      ]
+    }
+  ],
+  "local_validation": {
+    "node_guide": "3/3 PASS",
+    "coordinator_browser": "17/17 PASS (12 guide + 5 website journey)",
+    "coordinator_source_delivery": "6/6 PASS including Windows COM readback in temporary roots",
+    "worker_installer_regression": "18/18 PASS on reconciled floor; live runtime untouched",
+    "modality_contract": "6/6 PASS",
+    "parent": "PASS, not parent completion",
+    "journey": "PASS",
+    "harness": "PASS",
+    "diff": "PASS"
+  },
+  "proof_ceiling": "Controlled Chromium actual popup DOM/guide with synthetic storage and handlers; temporary-root Windows installer/icon behavior. No live extension enrollment, actual shortcut rendering or ATS claim.",
+  "integration": "Provider exact-head checks and merge pending"
+}

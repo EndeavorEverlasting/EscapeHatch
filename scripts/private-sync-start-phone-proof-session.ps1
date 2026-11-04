@@ -100,6 +100,24 @@ if (-not $keepers) {
   Write-Output "pairing_keepalive=already_running pid=$($keepers[0].ProcessId)"
 }
 
+$lanWatchers = Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+  Where-Object { $_.CommandLine -match 'private-sync-watch-lan-phone\.ps1' }
+if (-not $lanWatchers) {
+  Start-Process -WindowStyle Hidden powershell -ArgumentList @(
+    '-NoProfile', '-ExecutionPolicy', 'Bypass',
+    '-File', (Join-Path $PSScriptRoot 'private-sync-watch-lan-phone.ps1'),
+    '-WaitMinutes', '360'
+  )
+  Write-Output 'lan_phone_watch=started'
+} else {
+  Write-Output "lan_phone_watch=already_running pid=$($lanWatchers[0].ProcessId)"
+}
+
+$ceiling = Join-Path $PSScriptRoot 'private-sync-proof-ceiling-report.ps1'
+if (Test-Path $ceiling) {
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $ceiling | ForEach-Object { Write-Output $_ }
+}
+
 $lanHealth = $null
 try { $lanHealth = (Invoke-RestMethod 'http://127.0.0.1:18765/health' -TimeoutSec 2) } catch { }
 Write-Output "onedrive=$od"
@@ -107,5 +125,5 @@ Write-Output 'pairingCode=TEMP\pairing-code.local.txt (not printed)'
 Write-Output 'corridor=http://127.0.0.1:18766/corridor'
 Write-Output 'lanInstall=http://<this-pc-wifi-ip>:18765/ (QR opened when available)'
 Write-Output "lanHealth=$(if ($lanHealth) { 'ok' } else { 'down' })"
-Write-Output 'NEXT=Phone on same Wi-Fi: scan QR / open :18765 → install APK → Pair → Import → Save proof; or USB-debug for auto install'
+Write-Output 'NEXT=Phone on same Wi-Fi: scan QR / open :18765 → install APK → Pair → Import → Send proof to PC; or USB-debug for auto install'
 exit 0

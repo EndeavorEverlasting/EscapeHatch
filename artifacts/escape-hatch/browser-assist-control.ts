@@ -1,3 +1,4 @@
+import { selectInstalledHostWorkspace } from './workspace-owner-file.ts';
 import { prepareWithoutTrustedNavigation } from './managed-prepare-fallback.ts';
 import { INITIAL_CHECKPOINT, advanceAuthCheckpoint, inspectAuthObservation, resumeAllowed, type AuthCheckpoint } from './managed-auth-checkpoint.ts';
 import { fieldProgressState, attachmentProgressState, evidenceDescription } from './managed-progress-evidence.ts';
@@ -5,7 +6,6 @@ import { assertInspectionScope, inspectApplicationRequirements, inspectRequiredF
 import { OpportunityDocumentStore, documentScope, type DocumentKind } from './opportunity-documents.ts';
 import { ManagedListeners } from './managed-listeners.ts';
 import { enqueueSubmissionSync, retrySubmissionSync, readSubmissionSyncStatus, startSubmissionSync } from './tracker-writeback.ts';
-import { readWorkspace } from './workspace-file.ts';
 import { APPLICATIONS_KEY } from './src/lib/storage.ts';
 import { withCareerPreferences } from './career-preferences.ts';
 import { captureMilitaryAnswers } from './managed-form.ts';
@@ -674,6 +674,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             if (opportunityId && authorization.opportunityId !== opportunityId) {
               return respond(res, 409, { ok: false, error: 'opportunity_binding_mismatch' });
             }
+            await selectInstalledHostWorkspace();
             const preferences = await readPreferences();
             const uploadPolicy = preferences.require_document_review !== false;
             // Only the CURRENT employer page determines which documents are requested.
@@ -804,6 +805,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
                 return respond(res, 409, { ok: false, error: 'application_form_or_opportunity_not_verified_check_again' });
               }
             }
+            await selectInstalledHostWorkspace();
             const preferences = await readPreferences();
             const contact = reviewedContactFields(payload.profile);
             const now = new Date().toISOString();
@@ -821,6 +823,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             return respond(res, 200, { ok: true, state, ...outcome, authCheckpoint, evidenceSummary: evidenceDescription(state), requiresOperatorSubmission: true });
           }
           if (url.pathname === PREFIX + '/attach') {
+            await selectInstalledHostWorkspace();
             if (payload.resume || payload.cover) throw new Error('Save the selected documents to this opportunity before attaching.');
             const packageFiles = await documentStore.forUpload(opportunityId, applicationUrl, (await readPreferences()).require_document_review !== false);
             const outcome = await attachPdfs(page, packageFiles.resume, packageFiles.cover);

@@ -6,6 +6,7 @@ import { userDataRoot } from './user-data.ts';
 import { isLoopbackAddress, readManagedRuntime } from './runtime-control.ts';
 import { readWorkspace, saveWorkspace, MAX_WORKSPACE_BYTES } from './workspace-file.ts';
 import { readPreferences } from './preference-file.ts';
+import { readHostWorkspaceOwner, selectHostWorkspace } from './workspace-owner-file.ts';
 import { PROFILE_KEY } from './src/lib/storage.ts';
 import { hasContext, profileFromPreferences, WORKSPACE_SCHEMA, workspaceParsers, type BootstrapResponse, type SavedWorkspace } from './src/lib/workspace-bootstrap.ts';
 
@@ -42,10 +43,27 @@ export function createWorkspaceControlPlugin(): Plugin {
     configureServer(server) {
     server.middlewares.use(async (req, res, next) => {
       const route = (req.url || '').split('?')[0];
-      if (!['/__escapehatch/workspace', '/__escapehatch/workspace/status', '/__escapehatch/workspace/resume'].includes(route)) return next();
+      if (!['/__escapehatch/workspace', '/__escapehatch/workspace/status', '/__escapehatch/workspace/resume', '/__escapehatch/workspace/owner'].includes(route)) return next();
       const port = Number(process.env.PORT || server.config.server.port || 5173);
       if (!managed) return respond(res, 200, { managed: false });
       if (!authorizedWorkspaceRequest(req, port)) return respond(res, 403, { error: 'same_origin_loopback_required' });
+      if (route === '/__escapehatch/workspace/owner') {
+        if (req.method === 'GET') {
+          try {
+            const source = await readWorkspace();
+            const binding = await readHostWorkspaceOwner();
+            return respond(res, 200, { managed: true, state: binding ? 'OWNER_BOUND' : 'OWNER_SELECTION_REQUIRED',
+              binding, workspaceRevision: source?.revision ?? null, extensionRequired: false });
+          } catch { return respond(res, 409, { error: 'OWNER_CONTEXT_RECOVERY_REQUIRED' }); }
+        }
+        if (req.method !== 'POST' || req.headers['x-escapehatch-workspace'] !== '1' || req.headers['content-type'] !== 'application/json') return respond(res, 403, { error: 'workspace_selection_required' });
+        try {
+          let bytes = ''; for await (const chunk of req) { bytes += chunk.toString(); if (bytes.length > 1024) return respond(res, 413, { error: 'selection_too_large' }); }
+          const input = JSON.parse(bytes);
+          if (input.selection !== 'current-installed-workspace' || Object.keys(input).some(key => !['selection', 'expectedRevision'].includes(key))) return respond(res, 400, { error: 'current_workspace_selection_required' });
+          return respond(res, 200, { state: 'OWNER_BOUND', ...await selectHostWorkspace(input.expectedRevision), extensionRequired: false });
+        } catch { return respond(res, 409, { error: 'WORKSPACE_SELECTION_NOT_VERIFIED' }); }
+      }
       if (route === '/__escapehatch/workspace/status' && req.method === 'GET') {
         const result = await bootstrapWorkspace();
         return respond(res, 200, { managed: true, state: result.state, message: result.message,

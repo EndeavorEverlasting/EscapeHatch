@@ -104,7 +104,14 @@ object LanSealedFetch {
                     conn.disconnect()
                 }
             } catch (e: Exception) {
-                onResult(Outcome.Err(e.javaClass.simpleName))
+                val detail = (e.message ?: "").replace('\n', ' ').take(80)
+                val reason =
+                    if (detail.isBlank()) {
+                        e.javaClass.simpleName
+                    } else {
+                        "${e.javaClass.simpleName}:$detail"
+                    }
+                onResult(Outcome.Err(reason))
             }
         }
     }

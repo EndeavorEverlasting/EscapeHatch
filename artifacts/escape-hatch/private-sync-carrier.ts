@@ -8,6 +8,7 @@ export async function readCarrier(folder: string, key: Uint8Array) {
   if (files.length > 500) throw new Error('CARRIER_TOO_MANY_FILES');
   const found = [];
   for (const file of files.filter(f => f.endsWith('.ehsync'))) {
+    if (!/^[a-f0-9]{64}\.ehsync$/.test(file)) throw new Error('BAD_CAPSULE_FILENAME');
     const envelope = parseEnvelope(JSON.parse(await fs.readFile(path.join(folder, file), 'utf8')));
     if (file !== envelopeDigest(envelope) + '.ehsync') throw new Error('CARRIER_TAMPERED');
     found.push({ file, envelope, answers: openProjection(envelope, key) });

@@ -155,8 +155,10 @@ jobs:
       - name: Set up Gradle (uses committed wrapper)
         uses: gradle/actions/setup-gradle@v4
       - name: Compile Android companion from canonical VERSION
-        run: ./gradlew --no-daemon :app:assembleDebug :app:testDebugUnitTest
         working-directory: android/application-assist
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon :app:assembleDebug :app:testDebugUnitTest
       - name: Keep a synthetic debug-build receipt
         uses: actions/upload-artifact@v4
         with:

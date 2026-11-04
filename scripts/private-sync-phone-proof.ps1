@@ -82,7 +82,12 @@ if ($lanUrl) {
     $qrTemp = Join-Path $env:TEMP 'escapehatch-phone-install-qr.png'
     $qrTempPosix = ($qrTemp -replace '\\', '/')
     python -c "import qrcode; qrcode.make(r'''$lanUrl''').save(r'''$qrTempPosix''')"
-    Copy-Item -LiteralPath $qrTemp -Destination $qrPath -Force
+    try {
+      Copy-Item -LiteralPath $qrTemp -Destination $qrPath -Force -ErrorAction Stop
+    } catch {
+      $qrPath = $qrTemp
+      Write-Output "qr_onedrive_locked=using_temp"
+    }
   } catch {
     Write-Output "qr_skip=$($_.Exception.Message)"
   }

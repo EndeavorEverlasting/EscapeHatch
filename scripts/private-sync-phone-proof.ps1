@@ -140,24 +140,24 @@ if (-not $AttachOnly) {
     '3. Enter the pairing code from desktop TEMP\pairing-code.local.txt (never in OneDrive / never on :18765).',
     '4. Choose sealed offer: pairing-offer.json (OneDrive or LAN /offer).',
     '5. Import encrypted answers: newest .ehsync (OneDrive or LAN /capsule).',
-    '6. Save proof → escapehatch-phone-sync-proof.json in EscapeHatchPrivateSync (or Downloads).',
+    '6. Send proof to PC (LAN :18765/proof) or save escapehatch-phone-sync-proof.json in EscapeHatchPrivateSync.',
     "Desktop digest to match: $($status.projectionDigest)",
-    'Values are never written to this helper or the proof receipt.'
+    'Values are never written to this helper or the proof receipt. Emulator cannot close phone 3/3.'
   ) | Set-Content -Path $steps -Encoding utf8
   $digestShort = $status.projectionDigest.Substring(0, 16)
-  $lanLine = if ($lanUrl) { "<p>LAN install: <a href=`"$lanUrl`" style=`"color:#c8f542`">$lanUrl</a> (APK + sealed offer/capsule only).</p>" } else { '' }
+  $lanLine = if ($lanUrl) { "<p>LAN install: <a href=`"$lanUrl`" style=`"color:#c8f542`">$lanUrl</a> (APK + sealed offer/capsule + proof POST).</p>" } else { '' }
   @"
 <!doctype html><html lang="en"><meta charset="utf-8"><title>EscapeHatch phone proof</title>
 <body style="font:16px/1.45 Georgia,serif;max-width:40rem;margin:2rem;background:#0b1210;color:#e8efe9">
 <h1 style="font:700 1.6rem system-ui,sans-serif">Phone proof — LAN / OneDrive</h1>
-<p>Install the APK, pair with the desktop TEMP code, import sealed offer + <code>.ehsync</code>, save value-free proof JSON back to EscapeHatchPrivateSync.</p>
+<p>Install the APK, pair with the desktop TEMP code, import sealed offer + <code>.ehsync</code>, then <strong>Send proof to PC</strong> (or save proof JSON into EscapeHatchPrivateSync).</p>
 $lanLine
 <ol>
 <li>Install <strong>EscapeHatchAssist-debug.apk</strong> (LAN :18765, OneDrive, or USB auto-install)</li>
 <li>Assist → <strong>Pair this phone</strong> → enter desktop TEMP pairing code</li>
-<li>Choose sealed offer <code>pairing-offer.json</code></li>
-<li>Import newest <code>.ehsync</code></li>
-<li>Save proof → desktop watcher matches digest <code>${digestShort}…</code></li>
+<li>Choose sealed offer <code>pairing-offer.json</code> (or Fetch from PC)</li>
+<li>Import newest <code>.ehsync</code> (or Fetch capsule from PC)</li>
+<li><strong>Send proof to PC</strong> — desktop watcher matches digest <code>${digestShort}…</code></li>
 </ol>
 <p style="color:#9aab9e">No answer values or pairing codes are shown here.</p>
 </body></html>

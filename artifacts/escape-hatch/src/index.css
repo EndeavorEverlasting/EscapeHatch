@@ -274,3 +274,30 @@
 @media (prefers-reduced-motion: reduce) {
   .profile-puzzle-tile, .guide-step { animation: none; transition: none; transform: none; }
 }
+
+/* Journey material relief shares the local evidence board's quiet visual language.
+   Original CSS only; UP-60FBA76B5 and UP-F8DA7EE77 bound interaction movement. */
+.journey-atlas { min-width: 0; overflow-wrap: anywhere; }
+.journey-atlas-header {
+  background: repeating-linear-gradient(8deg, transparent 0 3px, hsl(var(--foreground) / .018) 3px 4px), hsl(var(--secondary) / .4);
+  box-shadow: inset 0 1px 0 hsl(var(--card)), inset 0 -8px 20px hsl(var(--foreground) / .025);
+}
+.journey-atlas-piece {
+  min-width: 0;
+  box-shadow: inset 0 1px 0 hsl(var(--card)), 0 2px 0 hsl(var(--border) / .7);
+}
+.journey-atlas-piece[aria-pressed="true"] {
+  box-shadow: inset 0 1px 0 hsl(var(--card)), 0 4px 0 hsl(var(--primary) / .28), 0 7px 12px hsl(var(--foreground) / .055);
+}
+.journey-atlas-inspection {
+  box-shadow: inset 0 2px 5px hsl(var(--foreground) / .055);
+  background: hsl(var(--secondary) / .35);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .journey-atlas-piece { transition: transform 160ms ease-out, box-shadow 160ms ease-out; }
+  .journey-atlas-piece[aria-pressed="true"] { transform: translateY(-2px); }
+  .journey-atlas-piece:active { transform: translateY(1px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .journey-atlas-piece { transition: none; animation: none; transform: none; }
+}

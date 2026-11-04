@@ -27,7 +27,8 @@ while ((Get-Date) -lt $deadline) {
       if ($line -notmatch '"remote"\s*:\s*"([^"]+)"') { return }
       $remote = $Matches[1] -replace '^::ffff:', ''
       if ($remote -in @('127.0.0.1', '::1', 'localhost', $SelfIpv4)) { return }
-      if ($line -notmatch '"path"\s*:\s*"(/apk|/offer|/capsule|/|/index\.html|/proof)"') { return }
+      # /health from a foreign host means companion LAN probe / beacon follow-up.
+      if ($line -notmatch '"path"\s*:\s*"(/apk|/offer|/capsule|/|/index\.html|/proof|/health|/qr\.svg)"') { return }
       $key = "$remote|$($Matches[1])"
       if ($seen.ContainsKey($key)) { return }
       $seen[$key] = $true

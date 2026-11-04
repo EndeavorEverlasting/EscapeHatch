@@ -26,6 +26,12 @@ $proof = $raw | ConvertFrom-Json
 if ($proof.schema -ne 'escapehatch/private-sync-phone-proof-receipt/v1') {
   throw 'INVALID_PROOF_SCHEMA'
 }
+if ($proof.notPhoneThreeOfThree -eq $true -or $proof.deviceKind -eq 'android-emulator') {
+  throw 'REJECTED_EMULATOR_LAB_PROOF'
+}
+if ([string]$proof.device -ne 'android-phone') {
+  throw 'REJECTED_NON_PHONE_DEVICE'
+}
 if (-not $proof.projectionDigest -or $proof.projectionDigest.Length -ne 64) {
   throw 'INVALID_PROOF_DIGEST'
 }

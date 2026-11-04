@@ -39,7 +39,8 @@ while ((Get-Date) -lt $deadline) {
       Start-Sleep -Seconds 15
       continue
     }
-    if ($proof.device -and $proof.device -ne 'android-phone') {
+    # Require the phone receipt's device claim (missing device is not android-phone).
+    if ([string]$proof.device -ne 'android-phone') {
       Write-Output "phone_proof=REJECTED_DEVICE device=$($proof.device)"
       Start-Sleep -Seconds 15
       continue

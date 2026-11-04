@@ -91,3 +91,37 @@ test('phone proof digest matches Node projectionDigest of opened capsule plainte
   assert.equal(phoneCog, deskCog);
   assert.equal(proof.projectionDigest, nodeDigest);
 });
+
+/** Mirror of await/ingest gate: emulator lab receipts must never close 3/3. */
+function phoneProofEligibleForThreeOfThree(proof: {
+  device?: string;
+  deviceKind?: string;
+  notPhoneThreeOfThree?: boolean;
+}): boolean {
+  if (proof.notPhoneThreeOfThree === true) return false;
+  if (proof.deviceKind === 'android-emulator') return false;
+  return proof.device === 'android-phone';
+}
+
+test('emulator lab proof shape is rejected for threeOfThree eligibility', () => {
+  assert.equal(
+    phoneProofEligibleForThreeOfThree({
+      deviceKind: 'android-emulator',
+      notPhoneThreeOfThree: true,
+    }),
+    false,
+  );
+  assert.equal(
+    phoneProofEligibleForThreeOfThree({
+      device: 'android-emulator',
+    }),
+    false,
+  );
+  assert.equal(phoneProofEligibleForThreeOfThree({}), false);
+  assert.equal(
+    phoneProofEligibleForThreeOfThree({
+      device: 'android-phone',
+    }),
+    true,
+  );
+});

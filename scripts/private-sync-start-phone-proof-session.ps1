@@ -57,13 +57,14 @@ $qr = Join-Path $od 'phone-install-qr.png'
 if (-not (Test-Path $qr)) { $qr = Join-Path $env:TEMP 'escapehatch-phone-install-qr.png' }
 if (Test-Path $qr) { Start-Process $qr }
 
-# Proof watcher (OneDrive + Downloads)
+# Proof watcher (OneDrive + Downloads) — long window; ledger updates on PROVEN
 $watchers = Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
   Where-Object { $_.CommandLine -match 'private-sync-await-phone-proof\.ps1' }
 if (-not $watchers) {
   Start-Process -WindowStyle Hidden powershell -ArgumentList @(
     '-NoProfile', '-ExecutionPolicy', 'Bypass',
-    '-File', (Join-Path $PSScriptRoot 'private-sync-await-phone-proof.ps1')
+    '-File', (Join-Path $PSScriptRoot 'private-sync-await-phone-proof.ps1'),
+    '-WaitMinutes', '360'
   )
   Write-Output 'watcher=started'
 } else {

@@ -1,5 +1,8 @@
 # Watches OneDrive for escapehatch-phone-sync-proof.json and compares digests.
-# Never prints preference values.
+# Never prints preference values. On PROVEN, updates the private multidevice ledger.
+param(
+  [int]$WaitMinutes = 360
+)
 $ErrorActionPreference = 'Stop'
 $env:ESCAPEHATCH_EXPERIMENTAL_SYNC = '1'
 if (-not $env:ESCAPEHATCH_DATA_HOME) {
@@ -10,7 +13,7 @@ $repo = Split-Path -Parent $PSScriptRoot
 $od = Join-Path $env:USERPROFILE 'OneDrive\EscapeHatchPrivateSync'
 $proofName = 'escapehatch-phone-sync-proof.json'
 $expectedDigest = 'd9c4a8b80682fd06ffe0f1d0de14aa0622ac7338660f8dc33b147a426d8c448e'
-$deadline = (Get-Date).AddMinutes(45)
+$deadline = (Get-Date).AddMinutes([Math]::Max(1, $WaitMinutes))
 
 Push-Location (Join-Path $repo 'artifacts\escape-hatch')
 try {
@@ -49,6 +52,38 @@ while ((Get-Date) -lt $deadline) {
     $out = Join-Path $env:TEMP 'eh-sync-proof-receipt.json'
     $result | ConvertTo-Json -Depth 5 | Set-Content $out -Encoding utf8
     Write-Output ($result | ConvertTo-Json -Compress)
+
+    # Persist value-free multidevice ledger (OneDrive only; never Git).
+    $ledgerPath = Join-Path $od 'multidevice-proof-ledger.json'
+    if (Test-Path $ledgerPath) {
+      $ledger = Get-Content $ledgerPath -Raw | ConvertFrom-Json
+      $devices = @($ledger.devices)
+      $phone = $devices | Where-Object { $_.id -eq 'android-phone' } | Select-Object -First 1
+      if (-not $phone) {
+        $phone = [pscustomobject]@{ id = 'android-phone'; status = 'UNPROVEN'; digestMatch = $false; proof = 'AWAITING_DEVICE' }
+        $devices += $phone
+      }
+      if ($result.phoneState -eq 'PROVEN') {
+        $phone.status = 'PROVEN'
+        $phone.digestMatch = $true
+        $phone.proof = 'PHONE_PROOF_JSON'
+        $phone | Add-Member -NotePropertyName keyBackend -NotePropertyValue 'android-keystore' -Force
+        $ledger.threeOfThree = $true
+        $ledger.notes = 'Values never recorded. Desktop + laptop-sim + android-phone digests matched (Cognizant field ids present).'
+      } else {
+        $phone.status = 'MISMATCH'
+        $phone.digestMatch = $false
+        $phone.proof = 'PHONE_PROOF_MISMATCH'
+        $ledger.threeOfThree = $false
+      }
+      $ledger.devices = $devices
+      $ledger.updatedAt = (Get-Date).ToUniversalTime().ToString('o')
+      $ledger.projectionDigest = $expectedDigest
+      $ledger.reusableAnswerCount = $status.reusableAnswerCount
+      $ledger | ConvertTo-Json -Depth 8 | Set-Content $ledgerPath -Encoding utf8
+      Write-Output "ledger_updated=$ledgerPath threeOfThree=$($ledger.threeOfThree)"
+    }
+
     if ($result.phoneState -eq 'PROVEN') { exit 0 } else { exit 3 }
   }
   Start-Sleep -Seconds 5

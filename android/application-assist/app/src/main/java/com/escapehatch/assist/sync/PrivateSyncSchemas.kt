@@ -12,6 +12,7 @@ object PrivateSyncSchemas {
     const val VAULT_KEY_BYTES = 32
     const val GCM_NONCE_BYTES = 12
     const val GCM_TAG_BYTES = 16
-    const val PAIRING_TTL_MS = 15 * 60 * 1000L
+    /** Must match Node private-sync-keystore PAIRING_TTL_MS (60 minutes). */
+    const val PAIRING_TTL_MS = 60 * 60 * 1000L
     const val PAIRING_TTL_SLACK_MS = 1000L
 }

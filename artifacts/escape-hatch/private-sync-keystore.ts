@@ -14,7 +14,8 @@ export const KEYSTORE_SCHEMA = 'escapehatch/private-sync-keystore/v1';
 export const PAIRING_SCHEMA = 'escapehatch/private-sync-pairing/v1';
 const RAW_KEY = 'private-sync.key';
 const DPAPI_KEY = 'private-sync.key.dpapi';
-const PAIRING_TTL_MS = 15 * 60 * 1000;
+/** Long enough for phone sideload + offer pick; still short-lived SAS. */
+const PAIRING_TTL_MS = 60 * 60 * 1000;
 
 export type KeyBackend = 'windows-dpapi' | 'file-prototype';
 export type StoredKey = { key: Buffer; backend: KeyBackend; vaultId: string };

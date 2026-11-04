@@ -7,7 +7,7 @@ import { userDataRoot } from './user-data.ts';
 import { keyPaths, loadSyncKey, preferWindowsDpapi } from './private-sync-keystore.ts';
 import { defaultCarrierConfigPath, readCarrierConfig } from './private-sync-config.ts';
 import { readOfflineQueue } from './private-sync-transport.ts';
-import { projectReusablePreferences } from './private-sync-crypto.ts';
+import { projectReusablePreferences, projectionDigest } from './private-sync-crypto.ts';
 import { readPreferences } from './preference-file.ts';
 
 export type SyncUiStatus =
@@ -27,6 +27,8 @@ export type SyncStatusReport = {
   carrierKind: 'folder' | 'google-drive-file' | 'unconfigured';
   offlineQueued: number;
   reusableAnswerCount: number;
+  /** SHA-256 of reusable projection JSON; never includes preference values in this report object beyond digest. */
+  projectionDigest: string | null;
   cognizantTalentCommunityFieldsPresent: string[];
   notes: string[];
 };
@@ -36,11 +38,13 @@ export async function observePrivateSyncStatus(options: { dataHome?: string; car
   const notes: string[] = [];
   const prefsPath = path.join(root, 'application-question-preferences.json');
   let reusableAnswerCount = 0;
+  let digest: string | null = null;
   let cognizant: string[] = [];
   try {
     const prefs = await readPreferences(prefsPath);
     const projection = projectReusablePreferences(prefs);
     reusableAnswerCount = Object.keys(projection.entries).length;
+    digest = reusableAnswerCount ? projectionDigest(projection) : null;
     cognizant = Object.keys(projection.entries)
       .filter(id => id.startsWith('talent_community.'))
       .sort();
@@ -78,6 +82,7 @@ export async function observePrivateSyncStatus(options: { dataHome?: string; car
       carrierKind,
       offlineQueued,
       reusableAnswerCount,
+      projectionDigest: digest,
       cognizantTalentCommunityFieldsPresent: cognizant,
       notes,
     };
@@ -90,6 +95,7 @@ export async function observePrivateSyncStatus(options: { dataHome?: string; car
       carrierKind,
       offlineQueued,
       reusableAnswerCount,
+      projectionDigest: digest,
       cognizantTalentCommunityFieldsPresent: cognizant,
       notes: [...notes, 'CARRIER_UNCONFIGURED'],
     };
@@ -102,6 +108,7 @@ export async function observePrivateSyncStatus(options: { dataHome?: string; car
       carrierKind,
       offlineQueued,
       reusableAnswerCount,
+      projectionDigest: digest,
       cognizantTalentCommunityFieldsPresent: cognizant,
       notes: [...notes, 'OFFLINE_QUEUE_PENDING'],
     };
@@ -125,6 +132,7 @@ export async function observePrivateSyncStatus(options: { dataHome?: string; car
     carrierKind,
     offlineQueued,
     reusableAnswerCount,
+    projectionDigest: digest,
     cognizantTalentCommunityFieldsPresent: cognizant,
     notes: hasDeviceState ? notes : [...notes, 'AWAITING_FIRST_PUSH_OR_PULL'],
   };

@@ -25,11 +25,14 @@ test('status reports Cognizant field ids without values and pairing-required whe
     assert.equal(before.status, 'PAIRING_REQUIRED');
     assert.deepEqual(before.cognizantTalentCommunityFieldsPresent, ['talent_community.primary_areas']);
     assert.equal(JSON.stringify(before).includes('SECRET_SHOULD_NOT_APPEAR'), false);
+    assert.equal(typeof before.projectionDigest, 'string');
+    assert.equal(before.projectionDigest?.length, 64);
     const carrier = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-sync-status-carrier-'));
     await createLocalSyncKey({ dataHome: root, carrier });
     const after = await observePrivateSyncStatus({ dataHome: root });
     assert.equal(after.status, 'LOCAL_ONLY');
     assert.equal(after.vaultPresent, true);
+    assert.equal(after.projectionDigest, before.projectionDigest);
   } finally {
     if (prev === undefined) delete process.env.ESCAPEHATCH_SYNC_KEY_BACKEND;
     else process.env.ESCAPEHATCH_SYNC_KEY_BACKEND = prev;

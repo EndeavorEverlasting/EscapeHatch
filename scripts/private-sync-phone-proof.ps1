@@ -191,12 +191,19 @@ if (-not $AttachOnly) {
   Write-Output "lanUrl=$lanUrl"
   Write-Output "qrPath=$qrPath"
 
+  # URL-only pointer for OneDrive mobile (no pairing code, no answers).
+  $lanUrlFile = Join-Path $od 'lan-install-url.txt'
+  if ($lanUrl) {
+    Set-Content -LiteralPath $lanUrlFile -Value $lanUrl.TrimEnd('/') -Encoding ascii -NoNewline
+    Write-Output "lanUrlFile=$lanUrlFile"
+  }
+
   $helper = Join-Path $od 'PHONE_PROOF_HELPER.html'
   $steps = Join-Path $od 'PHONE_PROOF_STEPS.txt'
   @(
     'EscapeHatch phone proof (LAN / OneDrive / USB)',
-    'A. Same Wi-Fi: scan phone-install-qr.png or open http://<pc-ip>:18765/ → download APK.',
-    'B. Or OneDrive → EscapeHatchPrivateSync → EscapeHatchAssist-debug.apk.',
+    'A. Same Wi-Fi: scan phone-install-qr.png, open lan-install-url.txt, or http://<pc-ip>:18765/ → download APK.',
+    'B. Or OneDrive → EscapeHatchPrivateSync → EscapeHatchAssist-debug.apk (sideload) / lan-install-url.txt (browser).',
     'C. Or USB debugging: desktop auto-installs when adb sees the device.',
     '2. Open EscapeHatch Assist → Pair this phone.',
     '3. Enter the pairing code from desktop TEMP\pairing-code.local.txt (never in OneDrive / never on :18765).',
@@ -207,7 +214,7 @@ if (-not $AttachOnly) {
     'Values are never written to this helper or the proof receipt. Emulator cannot close phone 3/3.'
   ) | Set-Content -Path $steps -Encoding utf8
   $digestShort = $status.projectionDigest.Substring(0, 16)
-  $lanLine = if ($lanUrl) { "<p>LAN install: <a href=`"$lanUrl`" style=`"color:#c8f542`">$lanUrl</a> (APK + sealed offer/capsule + proof POST).</p>" } else { '' }
+  $lanLine = if ($lanUrl) { "<p>LAN install: <a href=`"$lanUrl`" style=`"color:#c8f542`">$lanUrl</a> (APK + sealed offer/capsule + proof POST).</p><p>On phone OneDrive: open <code>lan-install-url.txt</code> (URL only — never a pairing code).</p>" } else { '' }
   @"
 <!doctype html><html lang="en"><meta charset="utf-8"><title>EscapeHatch phone proof</title>
 <body style="font:16px/1.45 Georgia,serif;max-width:40rem;margin:2rem;background:#0b1210;color:#e8efe9">

@@ -37,13 +37,17 @@ object LanHostProbe {
             val b = parts[1].toIntOrNull() ?: continue
             val c = parts[2].toIntOrNull() ?: continue
             val d = parts[3].toIntOrNull() ?: continue
-            // Prefer .1 (router often not PC) skip; try .80 common lab host, then neighbors.
+            // Prefer known lab desktop (.80), then nearby DHCP neighbors, then sparse /24 sweep.
             val guesses = linkedSetOf<Int>()
             guesses.add(80)
             guesses.add(1)
-            for (delta in -5..5) {
+            for (delta in -8..8) {
                 val n = d + delta
                 if (n in 1..254 && n != d) guesses.add(n)
+            }
+            // Sparse sweep catches desktops outside ±8 without probing all 254 first.
+            for (n in 2..254 step 5) {
+                if (n != d) guesses.add(n)
             }
             for (hostOctet in guesses) {
                 candidates.add("$a.$b.$c.$hostOctet:${LanSealedFetch.PHONE_PROOF_PORT}")

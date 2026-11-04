@@ -178,10 +178,11 @@
         <h2>Phone pairing</h2>
         <p class="pair-code" id="pairCode">Preparing…</p>
         <p class="pair-meta" id="pairMeta">Live code appears here on this device only.</p>
+        <p class="pair-meta" id="lanInstall">LAN install: checking…</p>
         <ol>
-          <li>Enter this code in EscapeHatch Assist → Pair this phone.</li>
-          <li>Choose the sealed offer EscapeHatch staged in OneDrive EscapeHatchPrivateSync.</li>
-          <li>Import the newest .ehsync, then Save proof back to that folder.</li>
+          <li>Same Wi-Fi: open the LAN install URL on the phone (or scan the QR) and install the APK.</li>
+          <li>Assist → Pair → Fetch sealed offer from PC (enter the LAN host) → type this code.</li>
+          <li>Import → Fetch capsule from PC → Save proof JSON back to EscapeHatchPrivateSync.</li>
         </ol>
       </div>
     </div>
@@ -190,6 +191,7 @@
     const ORIGIN = location.port === '18766' ? '' : 'http://127.0.0.1:18766';
     const STATUS_URL = ORIGIN + '/';
     const PAIR_URL = ORIGIN + '/pair';
+    const PHONE_INSTALL_URL = ORIGIN + '/phone-install';
     const rail = document.getElementById('rail');
     const railTitle = document.getElementById('railTitle');
     const railSub = document.getElementById('railSub');
@@ -199,7 +201,25 @@
     const pairSheet = document.getElementById('pairSheet');
     const pairCode = document.getElementById('pairCode');
     const pairMeta = document.getElementById('pairMeta');
+    const lanInstall = document.getElementById('lanInstall');
     let live = null;
+    let lanUrl = null;
+
+    async function refreshPhoneInstall() {
+      try {
+        const res = await fetch(PHONE_INSTALL_URL, { cache: 'no-store' });
+        if (!res.ok) throw new Error('phone-install ' + res.status);
+        const body = await res.json();
+        lanUrl = body.lanUrl || null;
+        if (lanInstall) {
+          lanInstall.innerHTML = lanUrl
+            ? ('LAN install (phone Wi-Fi): <a href="' + lanUrl + '" style="color:#c6f54c">' + lanUrl + '</a> — APK + sealed files only; code stays here.')
+            : 'LAN install URL unavailable (no Wi-Fi IPv4). Use OneDrive EscapeHatchPrivateSync or USB.';
+        }
+      } catch {
+        if (lanInstall) lanInstall.textContent = 'Start the phone LAN server on :18765 for same-Wi-Fi install.';
+      }
+    }
 
     function morph(title, sub, state) {
       const run = () => {
@@ -225,7 +245,8 @@
         connect.hidden = true;
         pair.hidden = false;
         fine.textContent =
-          'Live desktop vault is sealed (ciphertext carrier). Pair a phone when you are ready—Google Drive OAuth remains a separate product beat when you choose it.';
+          'Live desktop vault is sealed (ciphertext carrier). Pair a phone when you are ready—LAN :18765 serves APK + sealed files only.';
+        refreshPhoneInstall();
         return;
       }
       if (report.vaultPresent) {
@@ -270,7 +291,10 @@
         if (!res.ok) throw new Error(body.detail || body.error || 'pair failed');
         pairCode.textContent = body.pairingCode || '—';
         pairMeta.textContent = `Expires ${body.expiresAt || 'soon'} · offer staged · digest ${(live?.projectionDigest || '').slice(0, 12) || '—'}…`;
-        fine.textContent = 'Enter the code on the phone. Offer is in EscapeHatchPrivateSync; code also mirrored under TEMP for operators who prefer a file.';
+        await refreshPhoneInstall();
+        fine.textContent = lanUrl
+          ? ('Code stays on this PC. Phone: open ' + lanUrl + ' → install → Pair → Fetch offer → enter code → Fetch capsule → Save proof.')
+          : 'Enter the code on the phone. Offer is in EscapeHatchPrivateSync; code also under TEMP.';
       } catch (err) {
         pairCode.textContent = 'Unavailable';
         pairMeta.textContent = 'Start private-sync-status-server with the OneDrive carrier path, then try again.';
@@ -279,7 +303,9 @@
     });
 
     refreshLive();
+    refreshPhoneInstall();
     setInterval(refreshLive, 8000);
+
   </script>
 </body>
 </html>

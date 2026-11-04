@@ -61,6 +61,31 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (url.pathname === '/phone-install' || url.pathname === '/phone-install/') {
+      const ifaces = Object.entries(os.networkInterfaces());
+      const candidates: Array<{ name: string; address: string }> = [];
+      for (const [name, list] of ifaces) {
+        for (const info of list || []) {
+          if ((info.family === 'IPv4' || (info.family as unknown) === 4) && !info.internal) {
+            candidates.push({ name, address: info.address });
+          }
+        }
+      }
+      const wifi =
+        candidates.find((i) => /^192\.168\./.test(i.address) && /wi-?fi|wlan|wireless/i.test(i.name)) ||
+        candidates.find((i) => /^192\.168\./.test(i.address));
+      const lanHost = wifi?.address || null;
+      json(res, 200, {
+        lanPort: 18765,
+        lanUrl: lanHost ? `http://${lanHost}:18765/` : null,
+        lanHost,
+        serves: ['apk', 'offer', 'capsule'],
+        pairingCode: 'never_on_lan',
+        phoneHint: 'On the phone: install APK from lanUrl, Pair → Fetch sealed offer from PC, enter desktop code, Import → Fetch capsule, Save proof.',
+      });
+      return;
+    }
+
     if (url.pathname === '/pair' && req.method === 'POST') {
       const dataHome = process.env.ESCAPEHATCH_DATA_HOME;
       if (!carrier) {

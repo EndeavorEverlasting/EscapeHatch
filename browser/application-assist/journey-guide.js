@@ -121,7 +121,7 @@
     const destination = id ? doc.getElementById(id) : null;
     const visible = element => !!element && !element.closest("[hidden], [inert], [aria-hidden='true']") && element.getClientRects().length > 0;
     if (!visible(destination) || destination.matches(":disabled")) {
-      guideStatus.textContent = "The related control is not visible. Return to session commands or open the linked cockpit page to continue.";
+      guideStatus.textContent = "The related control is hidden or unavailable. Return to session commands or open the linked cockpit page to continue.";
       return;
     }
     destination.scrollIntoView?.({ block: "center", behavior: root.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });

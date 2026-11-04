@@ -139,11 +139,11 @@ test('hidden and disabled controls are never reported as focused or activated', 
   await page.locator('#guideScenes button').nth(3).click();
   await page.locator('#startAssist').evaluate(button => { (button as HTMLButtonElement).disabled = true; });
   await page.locator('#guideFind').click();
-  await expect(page.locator('#guideStatus')).toContainText('not visible');
+  await expect(page.locator('#guideStatus')).toContainText('hidden or unavailable');
   await expect(page.locator('#guideFind')).toBeFocused();
   await page.locator('#guideScenes button').nth(1).click();
   await page.locator('#workspaceStatus').evaluate(region => { region.hidden = true; });
   await page.locator('#guideFind').click();
-  await expect(page.locator('#guideStatus')).toContainText('not visible');
+  await expect(page.locator('#guideStatus')).toContainText('hidden or unavailable');
   expect(await page.evaluate(() => (window as any).__guideTest.actions)).toEqual([]);
 });

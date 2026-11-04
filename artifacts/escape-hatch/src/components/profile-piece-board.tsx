@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'wouter';
-import { Check, Sparkles } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { REUSABLE_PROFILE_PIECES } from '@/lib/mascot-guidance';
 import type { Profile } from '@/lib/storage';
 
@@ -16,8 +16,8 @@ export function ProfilePieceBoard({ profile }: { profile: Profile }) {
   return <section className="profile-puzzle-board mt-5" aria-labelledby="profile-puzzle-heading" data-testid="profile-puzzle-board">
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div>
-        <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[.14em] text-primary"><Sparkles size={15} aria-hidden="true" /> Your reusable pieces</p>
-        <h3 id="profile-puzzle-heading" className="mt-1 font-display text-2xl">A profile you can build on.</h3>
+        <p className="font-mono-app text-[10px] font-bold uppercase tracking-[.15em] text-primary">Reusable pieces</p>
+        <h3 id="profile-puzzle-heading" className="mt-1 font-display text-2xl">Build the board you reuse.</h3>
       </div>
       <span className="rounded-full border border-primary/25 bg-card px-3 py-1.5 text-xs font-bold text-primary" data-testid="profile-puzzle-count">{filled} / {REUSABLE_PROFILE_PIECES.length} saved locally</span>
     </div>

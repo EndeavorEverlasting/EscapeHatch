@@ -229,9 +229,11 @@ test('Today never resurrects a locally submitted opportunity from an older Ready
   const submittedLocal = { ...formerlyReady, status: 'applied' as const };
   const followUpLocal = { ...formerlyReady, status: 'follow_up' as const };
   assert.equal(selectNextHomeApplication(formerlyReady, [submittedLocal, trulyReady])?.id, trulyReady.id);
-  assert.equal(selectNextHomeApplication(formerlyReady, [followUpLocal])?.id, null);
-  assert.equal(selectNextHomeApplication(formerlyReady, [{ ...formerlyReady, status: 'closed' }])?.id, null);
+  assert.equal(selectNextHomeApplication(formerlyReady, [followUpLocal]), null);
+  assert.equal(selectNextHomeApplication(formerlyReady, [{ ...formerlyReady, status: 'closed' }]), null);
   assert.equal(selectNextHomeApplication(formerlyReady, [formerlyReady])?.id, formerlyReady.id);
-  assert.equal(selectNextHomeApplication(null, [submittedLocal])?.id, null);
-  assert.equal(selectNextHomeApplication(formerlyReady, [{ ...formerlyReady, reconciliationConflict: 'opportunity_url_changed' }])?.id, null);
+  // Applied confirmation may still paint on Home when nothing is actionable; that
+  // display fallback is App-owned and must not re-enter GuidedStart focusOpportunity.
+  assert.equal(selectNextHomeApplication(null, [submittedLocal]), null);
+  assert.equal(selectNextHomeApplication(formerlyReady, [{ ...formerlyReady, reconciliationConflict: 'opportunity_url_changed' }]), null);
 });

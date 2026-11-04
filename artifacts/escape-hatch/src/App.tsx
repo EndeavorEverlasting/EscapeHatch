@@ -613,7 +613,12 @@ function HomePage({ profile, answers, applications, setApplications }: { profile
   const nextTracker = liveSnapshot ? selectNextActionableOpportunity(liveSnapshot) : null;
   const nextTrackerApp = nextTracker ? trackerRowToApplication(nextTracker) : null;
   const active = applications.filter((application) => application.status !== 'closed');
-  const next = selectNextHomeApplication(nextTrackerApp, applications);
+  // Actionable next never resurrects applied/follow-up/closed work as a new puzzle.
+  // Display may still show a local Applied confirmation when nothing else is on deck.
+  const nextActionable = selectNextHomeApplication(nextTrackerApp, applications);
+  const next = nextActionable
+    || active.find((application) => application.status === 'applied')
+    || null;
   const nextLocked = Boolean(next && nextTracker && nextTrackerApp && next.id === nextTrackerApp.id && isSubmittedLocked(nextTracker));
   const [appliedUndo, setAppliedUndo] = useState<{ applicationId: string; company: string; previousStatus: ApplicationStatus } | null>(null);
   useEffect(() => {
@@ -657,7 +662,7 @@ function HomePage({ profile, answers, applications, setApplications }: { profile
         { label: 'Reusable answers', value: String(answers.length), caption: 'answers ready to borrow', href: '/answers', testId: 'link-stat-2' },
       ];
   return <div>
-    <GuidedStart profile={profile} applications={applications} focusOpportunity={next || undefined} />
+    <GuidedStart profile={profile} applications={applications} focusOpportunity={nextActionable || undefined} />
     <PageIntro eyebrow="Your cockpit" title={profile.first_name ? `Keep going, ${displayName(profile)}.` : 'Make room for momentum.'} description="A small, private place to move one good opportunity forward at a time." />
     <section className="mb-6 rounded-2xl border border-border bg-card p-5 shadow-sm" data-testid="tracker-connection-panel" data-tracker-status={tracker.status}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

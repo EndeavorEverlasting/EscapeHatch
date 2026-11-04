@@ -58,7 +58,7 @@ export function GuidedStart({ profile, applications, focusOpportunity }: { profi
       </div>
     </div>
     <ProfilePieceBoard profile={profile} />
-    <details className="guided-journey mt-5" open={!focusOpportunity || guidance.essentialMissing.length > 0}>
+    <details className="guided-journey mt-5" open={!focusOpportunity}>
       <summary className="min-h-11 cursor-pointer rounded-lg border border-border bg-card/70 px-4 py-3 text-sm font-bold text-primary">Explore your application path · sources, opportunities, and application assembly</summary>
     <ol className="mt-4 grid gap-4 md:grid-cols-3" aria-label="Application journey">{steps.map((step, index) => <li key={step.href} className={index === guidance.nextStep ? 'guide-step guide-step-current' : 'guide-step'}>
       <step.icon size={24} aria-hidden="true" className="text-primary" />

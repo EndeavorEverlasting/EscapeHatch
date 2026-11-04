@@ -202,6 +202,10 @@
   border-color: hsl(var(--primary));
   box-shadow: 0 0 0 2px hsl(var(--primary) / .22), 0 4px 0 hsl(var(--primary) / .35);
 }
+.profile-puzzle-tile:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 3px;
+}
 .profile-puzzle-tile-mark {
   display: grid;
   place-items: center;
@@ -223,19 +227,21 @@
   .profile-puzzle-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (prefers-reduced-motion: no-preference) {
+  /* Single orchestrated arrival; hover lift answers user intent (UP-F8DA7EE77). */
   @keyframes puzzle-tile-arrival {
-    from { opacity: 0; transform: translateY(11px) scale(.97); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
   }
   .profile-puzzle-tile {
-    animation: puzzle-tile-arrival 430ms cubic-bezier(.2,.75,.2,1) both;
-    transition: transform 180ms cubic-bezier(.2,.75,.2,1), box-shadow 180ms ease;
+    animation: puzzle-tile-arrival 360ms cubic-bezier(.2,.75,.2,1) both;
+    transition: transform 160ms cubic-bezier(.2,.75,.2,1), box-shadow 160ms ease;
   }
-  .profile-puzzle-tile:is(:hover,:focus-visible) { transform: translateY(-4px) rotate(-.5deg); }
-  .profile-puzzle-tile:active { transform: translateY(1px) scale(.98); }
-  .guide-step { transition: transform 180ms ease, box-shadow 180ms ease; }
+  .profile-puzzle-tile:hover { transform: translateY(-3px); }
+  .profile-puzzle-tile:active { transform: translateY(1px) scale(.985); }
+  .guide-step { transition: transform 160ms ease, box-shadow 160ms ease; }
   .guide-step:hover { transform: translateY(-2px); box-shadow: 0 7px 16px hsl(var(--foreground) / .05); }
 }
 @media (prefers-reduced-motion: reduce) {
+  /* Focus ring remains; no entrance/hover motion (UP-60FBA76B5). */
   .profile-puzzle-tile, .guide-step { animation: none; transition: none; transform: none; }
 }

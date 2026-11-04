@@ -58,6 +58,13 @@ if (!allowed.has(action) || (!['status', 'authorize-drive'].includes(action) && 
       const outPath = process.argv[4];
       if (!outPath || !path.isAbsolute(outPath)) throw new Error('ABSOLUTE_PAIRING_FILE_REQUIRED');
       const { pairingCode, ...sealed } = offer;
+      // Replace any prior sealed offer at this path (keepalive/refresh). Never append codes into the file.
+      try {
+        await fs.unlink(outPath);
+      } catch (e) {
+        const err = e as NodeJS.ErrnoException;
+        if (err?.code !== 'ENOENT') throw e;
+      }
       await fs.writeFile(outPath, JSON.stringify(sealed), { flag: 'wx', mode: 0o600 });
       process.stdout.write(JSON.stringify({ state: 'PAIRING_EXPORTED', vaultId: sealed.vaultId, pairingFile: outPath, pairingCode }) + '\n');
     } else if (action === 'import-pairing') {

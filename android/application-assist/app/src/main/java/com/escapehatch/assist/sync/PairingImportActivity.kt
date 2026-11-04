@@ -85,11 +85,17 @@ class PairingImportActivity : AppCompatActivity() {
             return
         }
         val result =
-            importer.importPairingOfferJson(
-                offerJson = offer,
-                pairingCode = code,
-                operatorConfirmed = true,
-            )
+            try {
+                importer.importPairingOfferJson(
+                    offerJson = offer,
+                    pairingCode = code,
+                    operatorConfirmed = true,
+                )
+            } catch (_: Exception) {
+                status.text = getString(R.string.pairing_keystore_failed)
+                codeInput.text?.clear()
+                return
+            }
         status.text =
             when (result.state) {
                 PairingImportState.IMPORTED -> getString(R.string.pairing_imported, result.vaultId ?: "")

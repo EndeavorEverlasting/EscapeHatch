@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import android.util.Log
 import java.security.KeyStore
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -63,21 +64,63 @@ class AndroidKeystoreSyncVaultKeyRepository(
         if (existing != null) {
             return existing
         }
-        val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
-        // Prefer StrongBox when the device exposes it; fall back to TEE/software Keystore.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        // Prefer StrongBox + unlocked-device binding; fall back for emulators / devices
+        // without a lock-screen ECDH super key ("User ECDH key missing").
+        // Use a fresh KeyGenerator per attempt — re-init after failure is unreliable.
+        val attempts =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                listOf(
+                    MasterKeyAttempt(strongBox = true, unlockedDeviceRequired = true),
+                    MasterKeyAttempt(strongBox = false, unlockedDeviceRequired = true),
+                    MasterKeyAttempt(strongBox = false, unlockedDeviceRequired = false),
+                )
+            } else {
+                listOf(MasterKeyAttempt(strongBox = false, unlockedDeviceRequired = false))
+            }
+        var lastError: Exception? = null
+        for (attempt in attempts) {
             try {
-                generator.init(masterKeySpec(strongBox = true))
+                deleteMasterKeyIfPresent(keyStore)
+                val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
+                generator.init(
+                    masterKeySpec(
+                        strongBox = attempt.strongBox,
+                        unlockedDeviceRequired = attempt.unlockedDeviceRequired,
+                    ),
+                )
                 return generator.generateKey()
-            } catch (_: Exception) {
-                // StrongBox unavailable or rejected — continue without it.
+            } catch (e: Exception) {
+                lastError = e
+                Log.w(
+                    TAG,
+                    "master key attempt failed strongBox=${attempt.strongBox} unlockedDeviceRequired=${attempt.unlockedDeviceRequired}: ${e.javaClass.simpleName}",
+                    e,
+                )
+                deleteMasterKeyIfPresent(keyStore)
             }
         }
-        generator.init(masterKeySpec(strongBox = false))
-        return generator.generateKey()
+        throw lastError ?: IllegalStateException("Android Keystore master key generation failed")
     }
 
-    private fun masterKeySpec(strongBox: Boolean): KeyGenParameterSpec {
+    private fun deleteMasterKeyIfPresent(keyStore: KeyStore) {
+        try {
+            if (keyStore.containsAlias(masterKeyAlias)) {
+                keyStore.deleteEntry(masterKeyAlias)
+            }
+        } catch (_: Exception) {
+            // Best-effort cleanup between fallback attempts.
+        }
+    }
+
+    private data class MasterKeyAttempt(
+        val strongBox: Boolean,
+        val unlockedDeviceRequired: Boolean,
+    )
+
+    private fun masterKeySpec(
+        strongBox: Boolean,
+        unlockedDeviceRequired: Boolean,
+    ): KeyGenParameterSpec {
         val builder =
             KeyGenParameterSpec.Builder(
                 masterKeyAlias,
@@ -88,7 +131,9 @@ class AndroidKeystoreSyncVaultKeyRepository(
                 .setKeySize(256)
                 .setRandomizedEncryptionRequired(true)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            builder.setUnlockedDeviceRequired(true)
+            if (unlockedDeviceRequired) {
+                builder.setUnlockedDeviceRequired(true)
+            }
             if (strongBox) {
                 builder.setIsStrongBoxBacked(true)
             }
@@ -97,6 +142,7 @@ class AndroidKeystoreSyncVaultKeyRepository(
     }
 
     companion object {
+        private const val TAG = "EhPrivateSyncKeystore"
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
         private const val PREFS_NAME = "escapehatch_private_sync_vault"
         private const val PREF_WRAPPED_VAULT = "wrapped_vault_v1"

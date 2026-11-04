@@ -43,12 +43,15 @@ if (-not $lanUp) {
     ForEach-Object { Write-Output $_ }
 }
 
-Start-Process 'http://127.0.0.1:18766/corridor'
-$helper = Join-Path $od 'PHONE_PROOF_HELPER.html'
-if (Test-Path $helper) { Start-Process $helper }
-$qr = Join-Path $od 'phone-install-qr.png'
-if (-not (Test-Path $qr)) { $qr = Join-Path $env:TEMP 'escapehatch-phone-install-qr.png' }
-if (Test-Path $qr) { Start-Process $qr }
+# Attach the already-open EscapeHatch operator browser only. Never Start-Process
+# a fresh browser, never open a LAN IP URL (Chrome HTTPS-First "Continue to site").
+$focus = Join-Path $PSScriptRoot 'private-sync-focus-operator-browser.ps1'
+if (Test-Path $focus) {
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $focus -TitleHint 'EscapeHatch' -Navigate Corridor |
+    ForEach-Object { Write-Output $_ }
+} else {
+  Write-Output 'operator_browser=skipped (focus helper missing); open http://127.0.0.1:18766/corridor in the existing EscapeHatch tab'
+}
 
 # Proof watcher (OneDrive + Downloads) — long window; ledger updates on PROVEN
 $watchers = Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |

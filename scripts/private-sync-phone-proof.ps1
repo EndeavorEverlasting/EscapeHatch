@@ -21,6 +21,10 @@ $apkCandidates = @(
   (Join-Path $repo 'android\application-assist\app\build\outputs\apk\debug\app-debug.apk')
 )
 $apk = $apkCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+if ($apk) {
+  Copy-Item $apk (Join-Path $od 'EscapeHatchAssist-debug.apk') -Force
+  $apk = Join-Path $od 'EscapeHatchAssist-debug.apk'
+}
 $adb = Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe'
 if (-not (Test-Path $adb)) { throw "adb missing at $adb" }
 

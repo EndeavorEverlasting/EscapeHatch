@@ -11,7 +11,7 @@
     <string name="privacy_preference_disabled">Off on this device. No consent will be automated.</string>
     <string name="materials_review_boundary">Résumé and cover letter review seals are confirmed in the desktop EscapeHatch Materials desk. This companion does not mark employer documents reviewed.</string>
     <string name="pairing_title">Pair sync vault</string>
-    <string name="pairing_instructions">Choose the sealed pairing offer file, then type the 16-character code from your desktop. EscapeHatch never pairs silently and never uploads your answers in plaintext.</string>
+    <string name="pairing_instructions">From OneDrive EscapeHatchPrivateSync, choose pairing-offer.json, then type the 16-character code shown only on your desktop (pairing-code.local.txt). EscapeHatch never pairs silently and never uploads your answers in plaintext.</string>
     <string name="pairing_choose_offer">Choose pairing offer</string>
     <string name="pairing_code_hint">16-character pairing code</string>
     <string name="pairing_confirm">Confirm pairing</string>

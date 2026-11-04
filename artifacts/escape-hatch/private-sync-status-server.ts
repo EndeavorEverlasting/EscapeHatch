@@ -1,7 +1,7 @@
 /**
  * Localhost-only status surface for private sync.
  * Serves observePrivateSyncStatus JSON — never preference values —
- * and the auth corridor prototype at /corridor.
+ * the auth corridor prototype at /corridor, and live pairing at POST /pair.
  *
  * Usage:
  *   ESCAPEHATCH_EXPERIMENTAL_SYNC=1 ESCAPEHATCH_DATA_HOME=... \
@@ -9,9 +9,11 @@
  */
 import fs from 'node:fs/promises';
 import http from 'node:http';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { observePrivateSyncStatus } from './private-sync-status.ts';
+import { exportPairingOffer } from './private-sync-device.ts';
 
 const carrierArg = process.argv[2];
 const port = Number(process.argv[3] || 18766);
@@ -26,9 +28,18 @@ if (process.env.ESCAPEHATCH_EXPERIMENTAL_SYNC !== '1') {
 
 const cors = {
   'access-control-allow-origin': '*',
-  'access-control-allow-methods': 'GET, OPTIONS',
+  'access-control-allow-methods': 'GET, POST, OPTIONS',
   'access-control-allow-headers': 'content-type',
 };
+
+function json(res: http.ServerResponse, code: number, body: unknown) {
+  res.writeHead(code, {
+    'content-type': 'application/json; charset=utf-8',
+    'cache-control': 'no-store',
+    ...cors,
+  });
+  res.end(JSON.stringify(body, null, 2));
+}
 
 const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
@@ -48,20 +59,41 @@ const server = http.createServer(async (req, res) => {
       res.end(html);
       return;
     }
+
+    if (url.pathname === '/pair' && req.method === 'POST') {
+      if (!carrier) {
+        json(res, 422, { error: 'CARRIER_REQUIRED', detail: 'Start status server with an absolute carrier path.' });
+        return;
+      }
+      const offer = await exportPairingOffer({
+        carrier,
+        dataHome: process.env.ESCAPEHATCH_DATA_HOME,
+      });
+      const { pairingCode, ...sealed } = offer;
+      const offerPath = path.join(carrier, 'pairing-offer.json');
+      await fs.writeFile(offerPath, JSON.stringify(sealed), { mode: 0o600 });
+      const codePath = path.join(os.tmpdir(), 'pairing-code.local.txt');
+      await fs.writeFile(codePath, pairingCode, { mode: 0o600 });
+      // Localhost-only process: code is shown on the operator desktop for SAS entry.
+      json(res, 200, {
+        state: 'PAIRING_READY',
+        vaultId: sealed.vaultId,
+        expiresAt: sealed.expiresAt,
+        pairingCode,
+        codePath,
+        offerPath,
+        values: 'redacted',
+      });
+      return;
+    }
+
     const report = await observePrivateSyncStatus({
       dataHome: process.env.ESCAPEHATCH_DATA_HOME,
       carrier,
     });
-    const body = JSON.stringify(report, null, 2);
-    res.writeHead(200, {
-      'content-type': 'application/json; charset=utf-8',
-      'cache-control': 'no-store',
-      ...cors,
-    });
-    res.end(body);
+    json(res, 200, report);
   } catch (error) {
-    res.writeHead(500, { 'content-type': 'application/json; charset=utf-8', ...cors });
-    res.end(JSON.stringify({ error: 'STATUS_FAILED', detail: error instanceof Error ? error.message : 'unknown' }));
+    json(res, 500, { error: 'STATUS_FAILED', detail: error instanceof Error ? error.message : 'unknown' });
   }
 });
 
@@ -73,6 +105,7 @@ server.listen(port, '127.0.0.1', () => {
       bind: '127.0.0.1',
       carrier: carrier || null,
       corridor: `http://127.0.0.1:${port}/corridor`,
+      pair: `POST http://127.0.0.1:${port}/pair`,
     }) + '\n',
   );
 });

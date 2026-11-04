@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { userDataRoot, legacyPrivateRoots } from './user-data.ts';
@@ -44,9 +45,17 @@ export function migrateLegacyPreferences(destination = preferenceFile(), legacy?
   return transaction(destination, () => migrateLegacyPreferencesUnlocked(destination, legacy));
 }
 
+function isDefaultPlatformPreferenceFile(file: string, env: NodeJS.ProcessEnv = process.env): boolean {
+  // Legacy migration is only for the primary installed EscapeHatch profile.
+  // Alternate ESCAPEHATCH_DATA_HOME device homes must start blank (then sync/pair).
+  if (env.ESCAPEHATCH_DATA_HOME || env.ESCAPEHATCH_PREFERENCES_FILE) return false;
+  const platformRoot = path.join(env.LOCALAPPDATA || path.join(homedir(), 'AppData', 'Local'), 'EscapeHatch');
+  return path.resolve(file) === path.resolve(path.join(platformRoot, 'application-question-preferences.json'));
+}
+
 async function readPreferencesUnlocked(file: string): Promise<Preferences> {
   try {
-    if (file === preferenceFile() && !process.env.ESCAPEHATCH_PREFERENCES_FILE) await migrateLegacyPreferencesUnlocked(file);
+    if (isDefaultPlatformPreferenceFile(file)) await migrateLegacyPreferencesUnlocked(file);
     const bytes = await fs.readFile(file);
     if (bytes.length > 65536) throw new Error('Invalid saved preferences; restore a valid preference export.');
     const data = parsePreferences(JSON.parse(bytes.toString('utf8').replace(/^\uFEFF/, '')));

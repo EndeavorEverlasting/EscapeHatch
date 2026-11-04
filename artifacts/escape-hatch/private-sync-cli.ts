@@ -10,6 +10,7 @@ import {
   runPrivateSync,
 } from './private-sync-device.ts';
 import { observePrivateSyncStatus } from './private-sync-status.ts';
+import { authorizeDriveFileAccess, defaultOAuthClientPath } from './private-sync-drive-oauth.ts';
 
 const action = process.argv[2];
 const carrier = process.argv[3];
@@ -22,10 +23,11 @@ const allowed = new Set([
   'status',
   'bind-folder',
   'bind-drive',
+  'authorize-drive',
 ]);
-if (!allowed.has(action) || (action !== 'status' && (!carrier || !path.isAbsolute(carrier)))) {
+if (!allowed.has(action) || (!['status', 'authorize-drive'].includes(action) && (!carrier || !path.isAbsolute(carrier)))) {
   process.stderr.write(
-    'Usage: node --experimental-strip-types private-sync-cli.ts status|init-key|push|pull|export-pairing|import-pairing|bind-folder|bind-drive [ABSOLUTE_CARRIER_PATH] ...\n'
+    'Usage: node --experimental-strip-types private-sync-cli.ts status|authorize-drive|init-key|push|pull|export-pairing|import-pairing|bind-folder|bind-drive [ABSOLUTE_CARRIER_PATH] ...\n'
   );
   process.exitCode = 2;
 } else {
@@ -39,6 +41,11 @@ if (!allowed.has(action) || (action !== 'status' && (!carrier || !path.isAbsolut
         dataHome,
         carrier: carrier && path.isAbsolute(carrier) ? carrier : undefined,
       })) + '\n');
+    } else if (action === 'authorize-drive') {
+      process.stdout.write(JSON.stringify({
+        ...(await authorizeDriveFileAccess()),
+        clientConfigPath: defaultOAuthClientPath(),
+      }) + '\n');
     } else if (action === 'push') {
       await fs.mkdir(carrier, { recursive: true });
       process.stdout.write(JSON.stringify(await runPrivateSync({ carrier, dataHome }, 'push')) + '\n');

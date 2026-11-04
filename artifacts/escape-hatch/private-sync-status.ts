@@ -9,6 +9,7 @@ import { defaultCarrierConfigPath, readCarrierConfig } from './private-sync-conf
 import { readOfflineQueue } from './private-sync-transport.ts';
 import { projectReusablePreferences, projectionDigest } from './private-sync-crypto.ts';
 import { readPreferences } from './preference-file.ts';
+import { readPrivateSyncLastResult } from './private-sync-after-write.ts';
 
 export type SyncUiStatus =
   | 'LOCAL_ONLY'
@@ -98,6 +99,20 @@ export async function observePrivateSyncStatus(options: { dataHome?: string; car
       projectionDigest: digest,
       cognizantTalentCommunityFieldsPresent: cognizant,
       notes: [...notes, 'CARRIER_UNCONFIGURED'],
+    };
+  }
+  const last = await readPrivateSyncLastResult(root);
+  if (last?.state === 'CONFLICT' || (last?.detail && last.detail.startsWith('SYNC_CONFLICT'))) {
+    return {
+      status: 'CONFLICT',
+      vaultPresent,
+      keyBackend,
+      carrierKind,
+      offlineQueued,
+      reusableAnswerCount,
+      projectionDigest: digest,
+      cognizantTalentCommunityFieldsPresent: cognizant,
+      notes: [...notes, last.detail || 'SYNC_CONFLICT', 'LOCAL_LAST_KNOWN_GOOD_PRESERVED'],
     };
   }
   if (offlineQueued > 0) {

@@ -6,7 +6,10 @@ import path from 'node:path';
 import { emptyPreferences } from './src/lib/application-preferences.ts';
 import { savePreferences } from './preference-file.ts';
 import { createLocalSyncKey, bindFolderCarrier, runPrivateSync } from './private-sync-device.ts';
-import { maybePushPrivateSyncAfterPreferenceWrite } from './private-sync-after-write.ts';
+import {
+  maybePushPrivateSyncAfterPreferenceWrite,
+  maybePullPrivateSyncOnStartup,
+} from './private-sync-after-write.ts';
 
 test('preference save triggers ciphertext push when experimental sync and folder carrier are bound', async () => {
   const dataHome = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-after-write-'));
@@ -53,6 +56,20 @@ test('after-write push is skipped when experimental sync is off', async () => {
     delete process.env.ESCAPEHATCH_EXPERIMENTAL_SYNC;
     const result = await maybePushPrivateSyncAfterPreferenceWrite();
     assert.deepEqual(result, { attempted: false, reason: 'experimental_sync_disabled' });
+  } finally {
+    if (prev === undefined) delete process.env.ESCAPEHATCH_EXPERIMENTAL_SYNC;
+    else process.env.ESCAPEHATCH_EXPERIMENTAL_SYNC = prev;
+  }
+});
+
+test('startup pull is skipped when experimental sync is off', async () => {
+  const prev = process.env.ESCAPEHATCH_EXPERIMENTAL_SYNC;
+  try {
+    delete process.env.ESCAPEHATCH_EXPERIMENTAL_SYNC;
+    assert.deepEqual(await maybePullPrivateSyncOnStartup(), {
+      attempted: false,
+      reason: 'experimental_sync_disabled',
+    });
   } finally {
     if (prev === undefined) delete process.env.ESCAPEHATCH_EXPERIMENTAL_SYNC;
     else process.env.ESCAPEHATCH_EXPERIMENTAL_SYNC = prev;

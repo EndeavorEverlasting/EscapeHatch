@@ -169,6 +169,16 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
         {typeof syncStatus?.reusableAnswerCount === 'number' ? <> · {syncStatus.reusableAnswerCount} reusable</> : null}
         {typeof syncStatus?.offlineQueued === 'number' && syncStatus.offlineQueued > 0 ? <> · {syncStatus.offlineQueued} queued offline</> : null}
       </p>
+      {syncStatus?.status === 'CONFLICT' && (
+        <p className="mt-2 text-sm text-muted-foreground" data-testid="private-sync-conflict-note">
+          Concurrent offline edits diverged. This computer kept its last-known-good answers; resolve on one device, then pair/pull again—nothing was discarded silently.
+        </p>
+      )}
+      {syncStatus?.status === 'OFFLINE' && (
+        <p className="mt-2 text-sm text-muted-foreground" data-testid="private-sync-offline-note">
+          Capsules are queued until the ciphertext carrier accepts them again.
+        </p>
+      )}
       {syncStatus?.projectionDigest && (
         <p className="mt-1 break-all font-mono text-[0.7rem] text-muted-foreground" data-testid="private-sync-digest">
           digest {syncStatus.projectionDigest.slice(0, 16)}…

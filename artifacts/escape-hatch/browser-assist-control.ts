@@ -25,7 +25,10 @@ import { emptyPreferences } from './src/lib/application-preferences.ts';
 import { observePrivateSyncStatus } from './private-sync-status.ts';
 import { exportPairingOffer } from './private-sync-device.ts';
 import { resolveFolderCarrierPath } from './private-sync-config.ts';
-import { maybePushPrivateSyncAfterPreferenceWrite } from './private-sync-after-write.ts';
+import {
+  maybePushPrivateSyncAfterPreferenceWrite,
+  maybePullPrivateSyncOnStartup,
+} from './private-sync-after-write.ts';
 import { prepareToFinalReview, type PreparationResult } from './application-autopilot-executor.ts';
 import os from 'node:os';
 import {
@@ -386,7 +389,12 @@ export function createManagedBrowserAssistPlugin(): Plugin {
   return {
     name: 'escapehatch-managed-browser-assist',
     configureServer(server) {
-      if (managed) startSubmissionSync();
+      if (managed) {
+        startSubmissionSync();
+        void maybePullPrivateSyncOnStartup().catch(() => {
+          /* startup pull is best-effort; never block the host */
+        });
+      }
       server.middlewares.use(async (req, res, next) => {
         const url = new URL(req.url || '/', 'http://127.0.0.1');
         if (!url.pathname.startsWith(PREFIX + '/')) return next();

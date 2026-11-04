@@ -83,6 +83,8 @@ test('phone LAN server serves apk/offer/capsule and never pairing codes', async 
     assert.match(index, /Download EscapeHatchAssist-debug\.apk/);
     assert.match(index, /Send proof to PC/);
     assert.match(index, /\/qr\.svg/);
+    assert.match(index, /ERR_TOO_MANY_RETRIES/);
+    assert.match(index, /reconnects VPN automatically/i);
     assert.doesNotMatch(index, /pairingCode|pairing-code\.local/i);
 
     const qr = await fetch(`http://127.0.0.1:${port}/qr.svg`);

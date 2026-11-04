@@ -197,6 +197,11 @@ function installPageHtml(lanBase: string, apkBytes: number | null): string {
 or install from the <strong>OneDrive</strong> app → <code>EscapeHatchPrivateSync</code> → <code>EscapeHatchAssist-debug.apk</code>
 (~${apkHint.includes('MB') ? apkHint.split('—')[0].trim() : '6.5 MB'}). USB debugging also works.
 </p>
+<p style="padding:0.75rem 1rem;border:1px solid #f0a060;border-radius:6px;background:#1a1410;color:#f5e6d8">
+<strong>ERR_TOO_MANY_RETRIES / site won’t load:</strong> PC or phone VPN (NordLynx) often blocks LAN.
+Desktop opens a <em>short</em> Nord pause for this handoff, then <strong>reconnects VPN automatically</strong>.
+Prefer OneDrive APK when possible so the VPN-off window stays tiny. Pause any VPN on the phone too.
+</p>
 <p><img src="/qr.svg" alt="QR code for this LAN install URL" width="180" height="180" style="background:#fff;padding:8px;border-radius:4px"></p>
 <ol>
 <li><a href="/apk" style="color:#c8f542" download="EscapeHatchAssist-debug.apk">Download EscapeHatchAssist-debug.apk</a> (${apkHint}) — prefer Chrome if DuckDuckGo fails.</li>

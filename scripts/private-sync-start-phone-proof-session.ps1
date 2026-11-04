@@ -113,6 +113,20 @@ Write-Output 'nord_lan_window=operator_gated use=Desktop\Open-PhoneLanNordWindow
 & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'private-sync-nord-lan-window.ps1') -Mode RestoreOnly |
   ForEach-Object { Write-Output $_ }
 
+# Self-healing watchdog: restarts await/keepalive/lan/attach; never opens Nord pause.
+$dogs = Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+  Where-Object { $_.CommandLine -match 'private-sync-watchdog-phone-session\.ps1' }
+if (-not $dogs) {
+  Start-Process -WindowStyle Hidden powershell -ArgumentList @(
+    '-NoProfile', '-ExecutionPolicy', 'Bypass',
+    '-File', (Join-Path $PSScriptRoot 'private-sync-watchdog-phone-session.ps1'),
+    '-MaxHours', '6'
+  )
+  Write-Output 'watchdog=started'
+} else {
+  Write-Output "watchdog=already_running pid=$($dogs[0].ProcessId)"
+}
+
 $ceiling = Join-Path $PSScriptRoot 'private-sync-proof-ceiling-report.ps1'
 if (Test-Path $ceiling) {
   & powershell -NoProfile -ExecutionPolicy Bypass -File $ceiling | ForEach-Object { Write-Output $_ }

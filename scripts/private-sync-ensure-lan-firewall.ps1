@@ -6,16 +6,23 @@ param(
 $ErrorActionPreference = 'Stop'
 
 function Ensure-Rule([string]$Name, [string]$Protocol, [int]$Port) {
+  # Profile Any: Windows often marks home Wi-Fi as Public; Private-only blocks phones.
   $existing = Get-NetFirewallRule -DisplayName $Name -ErrorAction SilentlyContinue
   if ($existing) {
     if (-not $existing.Enabled) {
       Enable-NetFirewallRule -DisplayName $Name
     }
-    Write-Output "firewall=exists name=$Name enabled=$([bool](Get-NetFirewallRule -DisplayName $Name).Enabled)"
+    try {
+      Set-NetFirewallRule -DisplayName $Name -Profile Any
+    } catch {
+      Write-Output "firewall_profile_warn=$($_.Exception.Message)"
+    }
+    $rule = Get-NetFirewallRule -DisplayName $Name
+    Write-Output "firewall=exists name=$Name enabled=$($rule.Enabled) profile=$($rule.Profile)"
     return
   }
-  New-NetFirewallRule -DisplayName $Name -Direction Inbound -Protocol $Protocol -LocalPort $Port -Action Allow -Profile Private | Out-Null
-  Write-Output "firewall=created name=$Name proto=$Protocol port=$Port"
+  New-NetFirewallRule -DisplayName $Name -Direction Inbound -Protocol $Protocol -LocalPort $Port -Action Allow -Profile Any | Out-Null
+  Write-Output "firewall=created name=$Name proto=$Protocol port=$Port profile=Any"
 }
 
 try {

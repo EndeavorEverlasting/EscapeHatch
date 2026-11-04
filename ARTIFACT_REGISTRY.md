@@ -222,6 +222,7 @@ The following are intentionally **not** tracked repository artifacts:
 | Private sync phone proof session | `scripts/private-sync-start-phone-proof-session.ps1` | Tracked operator launcher; stages OneDrive APK/offer/helper, LAN :18765 install server, corridor, ADB attach-only waiter, proof watcher; no codes/values printed | Phone 3/3 proof path changes | Operator run on Windows host with OneDrive carrier |
 | Private sync phone LAN install server | `artifacts/escape-hatch/private-sync-phone-lan-server.ts` | Serves APK + sealed offer + `.ehsync` on `0.0.0.0:18765`; never serves pairing codes or preference values | Phone USB-free install path | Started by phone proof session; same Wi-Fi as phone |
 | Private sync pairing keepalive | `scripts/private-sync-pairing-keepalive.ps1` | Re-exports sealed offer + TEMP code before SAS TTL; stops on phone proof; never prints code/values | Long phone-wait sessions | Started by phone proof session |
+| Private sync ADB wireless helper | `scripts/private-sync-adb-wireless.ps1` | mDNS/`adb connect`/`adb pair` from TEMP instructions or env; never prints vault codes/values | Phone attach without USB | Invoked by phone-proof waiter loop |
 
 
 ## Validation output

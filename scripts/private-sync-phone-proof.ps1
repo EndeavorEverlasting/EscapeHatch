@@ -161,7 +161,14 @@ $lanLine
 }
 
 $deadline = (Get-Date).AddMinutes([Math]::Max(0, $WaitMinutes))
+$wirelessHelper = Join-Path $PSScriptRoot 'private-sync-adb-wireless.ps1'
+$nextWirelessProbe = Get-Date
 while ((Get-Date) -lt $deadline) {
+  # USB or wireless (mDNS / TEMP\eh-adb-wireless.local.txt / ESCAPEHATCH_ADB_CONNECT)
+  if ((Get-Date) -ge $nextWirelessProbe -and (Test-Path $wirelessHelper)) {
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $wirelessHelper -Adb $adb | ForEach-Object { Write-Output $_ }
+    $nextWirelessProbe = (Get-Date).AddSeconds(30)
+  }
   $devices = & $adb devices | Select-Object -Skip 1 | Where-Object { $_ -match '\tdevice$' }
   if ($devices) {
     Write-Output "adb_device=attached"
@@ -184,5 +191,5 @@ while ((Get-Date) -lt $deadline) {
 }
 
 Write-Output "adb_device=none_within_${WaitMinutes}m"
-Write-Output "NEXT=Install via LAN QR/http :18765, OneDrive helper $helper, or USB-debug with -WaitMinutes 20"
+Write-Output "NEXT=Install via LAN :18765 / OneDrive helper, USB-debug, or wireless: write pair/connect lines to TEMP\eh-adb-wireless.local.txt"
 exit 2

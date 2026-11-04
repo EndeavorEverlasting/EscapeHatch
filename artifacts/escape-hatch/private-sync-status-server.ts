@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { observePrivateSyncStatus } from './private-sync-status.ts';
 import { exportPairingOffer } from './private-sync-device.ts';
 import { resolveFolderCarrierPath } from './private-sync-config.ts';
+import { resolvePhoneLanInstall } from './private-sync-phone-install.ts';
 
 const carrierArg = process.argv[2];
 const port = Number(process.argv[3] || 18766);
@@ -62,27 +63,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (url.pathname === '/phone-install' || url.pathname === '/phone-install/') {
-      const ifaces = Object.entries(os.networkInterfaces());
-      const candidates: Array<{ name: string; address: string }> = [];
-      for (const [name, list] of ifaces) {
-        for (const info of list || []) {
-          if ((info.family === 'IPv4' || (info.family as unknown) === 4) && !info.internal) {
-            candidates.push({ name, address: info.address });
-          }
-        }
-      }
-      const wifi =
-        candidates.find((i) => /^192\.168\./.test(i.address) && /wi-?fi|wlan|wireless/i.test(i.name)) ||
-        candidates.find((i) => /^192\.168\./.test(i.address));
-      const lanHost = wifi?.address || null;
-      json(res, 200, {
-        lanPort: 18765,
-        lanUrl: lanHost ? `http://${lanHost}:18765/` : null,
-        lanHost,
-        serves: ['apk', 'offer', 'capsule'],
-        pairingCode: 'never_on_lan',
-        phoneHint: 'On the phone: install APK from lanUrl, Pair → Fetch sealed offer from PC, enter desktop code, Import → Fetch capsule, Save proof.',
-      });
+      json(res, 200, resolvePhoneLanInstall());
       return;
     }
 

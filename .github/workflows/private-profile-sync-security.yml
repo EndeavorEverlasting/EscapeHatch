@@ -39,7 +39,7 @@ jobs:
       - name: Execute synthetic AEAD and forbidden-field regression
         run: node --experimental-strip-types --test private-sync-crypto.test.ts private-sync-phone-proof.contract.test.ts
       - name: Phone LAN install server never serves pairing codes
-        run: node --experimental-strip-types --test private-sync-phone-lan-server.test.ts
+        run: node --experimental-strip-types --test private-sync-phone-install.test.ts private-sync-phone-lan-server.test.ts
       - name: Typecheck and baseline application safeguards
         run: npm run typecheck
   two-device-conflict:

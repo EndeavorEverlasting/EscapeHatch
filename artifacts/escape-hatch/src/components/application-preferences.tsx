@@ -16,6 +16,8 @@ type PrivateSyncUiStatus = {
   cognizantTalentCommunityFieldsPresent?: string[];
   offlineQueued?: number;
   carrierPathConfigured?: boolean;
+  phoneLanUrl?: string | null;
+  phoneLanHost?: string | null;
   notes?: string[];
 };
 type PrivateSyncPairResult = {
@@ -23,6 +25,7 @@ type PrivateSyncPairResult = {
   pairingCode?: string;
   expiresAt?: string;
   offerPath?: string;
+  phoneLanUrl?: string | null;
   error?: string;
 };
 function preferenceFieldLabel(id: string, fallback: string) {
@@ -233,6 +236,15 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
       )}
       {pairResult?.expiresAt && (
         <p className="mt-1 text-xs text-muted-foreground">Expires {new Date(pairResult.expiresAt).toLocaleString()} · offer staged for the phone</p>
+      )}
+      {(pairResult?.phoneLanUrl || syncStatus?.phoneLanUrl) && (
+        <p className="mt-2 text-xs text-muted-foreground" data-testid="private-sync-phone-lan">
+          Phone Wi-Fi install:{' '}
+          <a className="font-medium text-foreground underline" href={pairResult?.phoneLanUrl || syncStatus?.phoneLanUrl || undefined}>
+            {pairResult?.phoneLanUrl || syncStatus?.phoneLanUrl}
+          </a>
+          {' '}· APK + sealed files only; enter this code on the phone after Fetch sealed offer.
+        </p>
       )}
       {pairResult?.error && <p className="mt-2 text-sm text-muted-foreground">Pairing unavailable: {pairResult.error}</p>}
     </aside>

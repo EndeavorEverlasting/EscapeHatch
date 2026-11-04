@@ -25,6 +25,7 @@ import { emptyPreferences } from './src/lib/application-preferences.ts';
 import { observePrivateSyncStatus } from './private-sync-status.ts';
 import { exportPairingOffer } from './private-sync-device.ts';
 import { resolveFolderCarrierPath } from './private-sync-config.ts';
+import { resolvePhoneLanInstall } from './private-sync-phone-install.ts';
 import {
   maybePushPrivateSyncAfterPreferenceWrite,
   maybePullPrivateSyncOnStartup,
@@ -478,16 +479,25 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             const dataHome = process.env.ESCAPEHATCH_DATA_HOME || userDataRoot();
             const carrier = await resolveFolderCarrierPath(dataHome);
             const report = await observePrivateSyncStatus({ dataHome, carrier: carrier || undefined });
+            const phoneInstall = resolvePhoneLanInstall();
             return respond(res, 200, {
               ok: true,
               enabled: true,
               ...report,
               carrierPathConfigured: Boolean(carrier),
+              phoneLanUrl: phoneInstall.lanUrl,
+              phoneLanHost: phoneInstall.lanHost,
               values: 'redacted',
             });
           } catch {
             return respond(res, 422, { ok: false, error: 'Private sync status unavailable; existing profile preserved.' });
           }
+        }
+        if (url.pathname === PREFIX + '/private-sync/phone-install' && req.method === 'GET') {
+          if (req.headers.origin && req.headers.origin !== expectedOrigin || req.headers['sec-fetch-site'] === 'cross-site') {
+            return respond(res, 403, { ok: false, error: 'operator_origin_required' });
+          }
+          return respond(res, 200, { ok: true, ...resolvePhoneLanInstall(), values: 'redacted' });
         }
         if (url.pathname.startsWith(PREFIX + '/documents/') && req.method === 'GET') {
           if (req.headers.origin && req.headers.origin !== expectedOrigin || req.headers['sec-fetch-site'] === 'cross-site') return respond(res, 403, { ok: false, error: 'operator_origin_required' });
@@ -592,6 +602,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             await fs.writeFile(offerPath, JSON.stringify(sealed), { mode: 0o600 });
             const codePath = path.join(os.tmpdir(), 'pairing-code.local.txt');
             await fs.writeFile(codePath, pairingCode, { mode: 0o600 });
+            const phoneInstall = resolvePhoneLanInstall();
             return respond(res, 200, {
               ok: true,
               state: 'PAIRING_READY',
@@ -600,6 +611,8 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               pairingCode,
               codePath,
               offerPath,
+              phoneLanUrl: phoneInstall.lanUrl,
+              phoneLanHost: phoneInstall.lanHost,
               values: 'redacted',
             });
           }

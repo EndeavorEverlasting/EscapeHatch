@@ -1,0 +1,230 @@
+{
+  "schema_version": "prompt-parallel-dispatch/v1",
+  "run_id": "escapehatch-secure-device-sync-20261103",
+  "repository": "EndeavorEverlasting/EscapeHatch",
+  "plan_owner": "docs/agent/P04_SECURE_MULTIDEVICE_PROFILE_SYNC_2026-11-03.md",
+  "parent_issue": "https://github.com/EndeavorEverlasting/EscapeHatch/issues/69",
+  "source_pr": "https://github.com/EndeavorEverlasting/EscapeHatch/pull/184",
+  "disposition": "AUTONOMOUS_CI_DISPATCH_WITH_LOCAL_RUNTIME_GATE",
+  "default_branch_baseline": "3725dd9e5099a8176f7fbe8441ee845334b20466",
+  "graph": {
+    "expression": "EH-SECURITY -> {EH-CRYPTO-CI || EH-DEVICE-CI} -> {EH-KEYSTORE-LOCAL || EH-ANDROID-LOCAL || EH-CARRIER-LOCAL} -> EH-CONVERGE",
+    "initial_width": 2,
+    "max_width": 3,
+    "parallel_disposition": "REQUIRED_WITH_OBSERVED_RUN_EVIDENCE"
+  },
+  "launch_order": [
+    "EH-CRYPTO-CI",
+    "EH-DEVICE-CI",
+    "EH-KEYSTORE-LOCAL",
+    "EH-ANDROID-LOCAL",
+    "EH-CARRIER-LOCAL",
+    "EH-CONVERGE"
+  ],
+  "lanes": [
+    {
+      "lane_id": "EH-CRYPTO-CI",
+      "execution_environment": "CI_OR_REMOTE_RUNNER",
+      "provider_access": [
+        "github_actions"
+      ],
+      "mission": "Verify synthetic AEAD encryption, tamper rejection, and strict reusable-answer allowlist",
+      "owned_mutation_surfaces": [],
+      "forbidden_surfaces": [
+        "real applicant values",
+        "local secret keys",
+        "production device settings"
+      ],
+      "adapter": {
+        "kind": "github_actions",
+        "workflow": ".github/workflows/private-profile-sync-security.yml",
+        "job": "capsule-confidentiality"
+      },
+      "launch": {
+        "mode": "automatic_pull_request_check",
+        "trigger": "pull_request",
+        "branch": "feat/private-sync-encrypted-v1"
+      },
+      "validation": [
+        "node --experimental-strip-types --test private-sync-crypto.test.ts",
+        "npm run typecheck"
+      ],
+      "expected_artifacts": [
+        "GitHub Actions exact-head result"
+      ],
+      "status": "CI_DISPATCHED_EVIDENCE_PENDING"
+    },
+    {
+      "lane_id": "EH-DEVICE-CI",
+      "execution_environment": "CI_OR_REMOTE_RUNNER",
+      "provider_access": [
+        "github_actions"
+      ],
+      "mission": "Run synthetic paired-device readback and offline-conflict tests without accessing a real profile",
+      "owned_mutation_surfaces": [],
+      "forbidden_surfaces": [
+        "real applicant values",
+        "unreviewed profile edits",
+        "live cloud credentials"
+      ],
+      "adapter": {
+        "kind": "github_actions",
+        "workflow": ".github/workflows/private-profile-sync-security.yml",
+        "job": "two-device-conflict"
+      },
+      "launch": {
+        "mode": "automatic_pull_request_check",
+        "trigger": "pull_request",
+        "branch": "feat/private-sync-encrypted-v1"
+      },
+      "validation": [
+        "node --experimental-strip-types --test private-sync-device.test.ts"
+      ],
+      "expected_artifacts": [
+        "GitHub Actions exact-head result"
+      ],
+      "status": "CI_DISPATCHED_EVIDENCE_PENDING"
+    },
+    {
+      "lane_id": "EH-KEYSTORE-LOCAL",
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "github_repo_access"
+      ],
+      "dependencies": [
+        "EH-CRYPTO-CI"
+      ],
+      "mission": "Replace prototype raw key file with Windows DPAPI-backed provisioning and explicit local owner checks",
+      "owned_mutation_surfaces": [
+        "artifacts/escape-hatch/private-sync-device.ts",
+        "artifacts/escape-hatch/private-sync-cli.ts",
+        "new Windows security tests"
+      ],
+      "forbidden_surfaces": [
+        "public profile data",
+        "live key export",
+        "unapproved settings"
+      ],
+      "adapter": {
+        "kind": "local_repo_agent",
+        "availability": "UNVERIFIED"
+      },
+      "launch": {
+        "mode": "agent_harness_auto_dispatch",
+        "entrypoint": "P04 handoff document"
+      },
+      "expected_artifacts": [
+        "isolated branch and tested security change"
+      ],
+      "status": "WAITING_DEVICE_HOST"
+    },
+    {
+      "lane_id": "EH-ANDROID-LOCAL",
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "github_repo_access"
+      ],
+      "dependencies": [
+        "EH-CRYPTO-CI"
+      ],
+      "mission": "Implement Android Keystore-wrapped pairing and authenticated capsule crypto parity",
+      "owned_mutation_surfaces": [
+        "android/application-assist/"
+      ],
+      "forbidden_surfaces": [
+        "account consent",
+        "MFA",
+        "silent pairing"
+      ],
+      "adapter": {
+        "kind": "local_repo_agent",
+        "availability": "UNVERIFIED"
+      },
+      "launch": {
+        "mode": "agent_harness_auto_dispatch",
+        "entrypoint": "P04 handoff document"
+      },
+      "expected_artifacts": [
+        "Android native vector tests and Gradle build"
+      ],
+      "status": "WAITING_DEVICE_HOST"
+    },
+    {
+      "lane_id": "EH-CARRIER-LOCAL",
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "github_repo_access"
+      ],
+      "dependencies": [
+        "EH-DEVICE-CI",
+        "EH-KEYSTORE-LOCAL"
+      ],
+      "mission": "Implement user-authorized account-bound ciphertext carrier with CAS and offline queue",
+      "owned_mutation_surfaces": [
+        "new carrier adapter",
+        "carrier tests"
+      ],
+      "forbidden_surfaces": [
+        "ChatGPT connector credentials",
+        "broad Drive access",
+        "raw source file in cloud"
+      ],
+      "adapter": {
+        "kind": "local_repo_agent",
+        "availability": "UNVERIFIED"
+      },
+      "launch": {
+        "mode": "agent_harness_auto_dispatch",
+        "entrypoint": "P04 handoff document"
+      },
+      "expected_artifacts": [
+        "provider revision readback and fault injection tests"
+      ],
+      "status": "WAITING_APPROVED_PROVIDER_AUTH"
+    },
+    {
+      "lane_id": "EH-CONVERGE",
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "github_repo_access"
+      ],
+      "dependencies": [
+        "EH-KEYSTORE-LOCAL",
+        "EH-ANDROID-LOCAL",
+        "EH-CARRIER-LOCAL"
+      ],
+      "mission": "P08 independently certify 3 devices; reconcile CI and merge exact head via protected repo rules",
+      "owned_mutation_surfaces": [
+        "integration PR",
+        "sanitized receipts"
+      ],
+      "forbidden_surfaces": [
+        "false live completion",
+        "unreviewed applicant values"
+      ],
+      "adapter": {
+        "kind": "local_repo_agent",
+        "availability": "UNVERIFIED"
+      },
+      "launch": {
+        "mode": "agent_harness_auto_dispatch",
+        "entrypoint": "P04 handoff document"
+      },
+      "expected_artifacts": [
+        "main SHA",
+        "three verified device readbacks",
+        "offline conflict and revocation evidence"
+      ],
+      "status": "WAITING_UPSTREAM"
+    }
+  ],
+  "statuses": {
+    "code": "PR_DRAFT",
+    "ci": "RUNNING_OR_PENDING",
+    "merged": false,
+    "installed": false,
+    "provider_synced": false,
+    "paired_device_count": 0
+  },
+  "autonomy_gap": "Real local agent and provider credentials are unavailable to this GitHub-only session; CI synthetic lanes are autonomously dispatched by the PR workflow. Do not request operator downloads."
+}

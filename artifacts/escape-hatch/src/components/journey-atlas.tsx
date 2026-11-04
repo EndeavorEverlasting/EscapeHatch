@@ -80,18 +80,17 @@ export function JourneyAtlas({ applications }: { applications: Application[] }) 
       </Link>)}
     </section>
 
-    <section className="rounded-2xl border border-border bg-card p-5 sm:p-7" aria-label="All canonical application scenes">
-      <div className="flex items-center gap-2"><Map size={20} aria-hidden="true" className="text-primary" /><h2 className="font-display text-2xl">From installation to final review</h2></div>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">These are EscapeHatch’s canonical scene states, including sign-in and recovery. Each has a user-facing destination, even when the actual action belongs inside employer Chrome or the installer.</p>
+    <section className="rounded-2xl border border-border bg-card p-5 sm:p-7" aria-label="Installation, sign-in and recovery">
+      <div className="flex items-center gap-2"><Map size={20} aria-hidden="true" className="text-primary" /><h2 className="font-display text-2xl">Installation, sign-in and recovery</h2></div>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">Find the next place to continue, including setup, employer sign-in and recovery. Some actions happen in the installer or employer browser; the links below help you reach their instructions.</p>
       <ol className="mt-5 grid gap-2 md:grid-cols-2">
-        {canonicalScenes.map((scene, index) => <li key={scene.id} className="rounded-xl border border-border p-3" data-testid={'journey-canonical-' + scene.id.toLowerCase()}>
-          <p className="font-mono-app text-[10px] text-muted-foreground">{String(index + 1).padStart(2, '0')} · {scene.id.replaceAll('_', ' ')} · {scene.location}</p>
+        {canonicalScenes.map(scene => <li key={scene.id} className="rounded-xl border border-border p-3" data-testid={'journey-canonical-' + scene.id.toLowerCase()}>
+          <p className="text-xs text-muted-foreground">{scene.location}</p>
           <p className="mt-2 text-sm font-semibold">{scene.title}</p>
           <div className="mt-2 flex items-center justify-between gap-3">
             {scene.location === 'Setup' ? <a href="#setup" className="inline-flex min-h-10 items-center gap-1 text-xs font-bold text-primary underline underline-offset-4">{scene.action} <ArrowRight size={13} /></a> : <Link href={scene.route} className="inline-flex min-h-10 items-center gap-1 text-xs font-bold text-primary underline underline-offset-4">{scene.action} <ArrowRight size={13} /></Link>}
             {scene.operatorOnly && <span className="text-[10px] font-bold text-muted-foreground">You decide</span>}
           </div>
-          <p className="mt-2 text-[11px] text-muted-foreground">Transitions: {scene.outgoing.length ? scene.outgoing.map(id => id.replaceAll('_', ' ').toLowerCase()).join(' · ') : 'No next scene in this registry'}</p>
         </li>)}
       </ol>
     </section>

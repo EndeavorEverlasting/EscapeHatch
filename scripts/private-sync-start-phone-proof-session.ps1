@@ -1,6 +1,7 @@
 ﻿# One operator command to prepare the USB-free Android 3/3 proof session.
-# Stages APK/offer/helper, ensures localhost status+corridor, opens helper UI,
-# and starts the OneDrive proof watcher. Never prints preference values or the pairing code.
+# Stages APK/offer/helper, starts LAN APK server (18765), localhost corridor (18766),
+# background ADB attach installer, and the OneDrive proof watcher.
+# Never prints preference values or the pairing code.
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
 $od = Join-Path $env:USERPROFILE 'OneDrive\EscapeHatchPrivateSync'
@@ -13,24 +14,50 @@ Write-Output '=== EscapeHatch phone proof session ==='
 & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'private-sync-phone-proof.ps1') -WaitMinutes 0
 if ($LASTEXITCODE -notin 0, 2) { throw "phone-proof prepare failed: $LASTEXITCODE" }
 
-# Ensure status server + corridor for live Pair CTA
-$statusUp = $false
-try {
-  $null = Invoke-WebRequest 'http://127.0.0.1:18766/' -UseBasicParsing -TimeoutSec 2
-  $statusUp = $true
-} catch { $statusUp = $false }
-if (-not $statusUp) {
+function Test-LocalEndpoint([string]$Url) {
+  try {
+    $null = Invoke-WebRequest $Url -UseBasicParsing -TimeoutSec 2
+    return $true
+  } catch {
+    return $false
+  }
+}
+
+# Localhost status server + corridor for live Pair CTA (pairing codes stay here)
+if (-not (Test-LocalEndpoint 'http://127.0.0.1:18766/')) {
   Start-Process -WindowStyle Hidden -FilePath node -ArgumentList @(
     '--experimental-strip-types', 'private-sync-status-server.ts', $od, '18766'
   ) -WorkingDirectory (Join-Path $repo 'artifacts\escape-hatch')
   Start-Sleep -Seconds 2
 }
 
+# LAN APK / sealed-artifact server for phone browser install (never serves pairing code)
+$lanUp = Test-LocalEndpoint 'http://127.0.0.1:18765/health'
+if (-not $lanUp) {
+  Start-Process -WindowStyle Hidden -FilePath node -ArgumentList @(
+    '--experimental-strip-types', 'private-sync-phone-lan-server.ts', $od, '18765'
+  ) -WorkingDirectory (Join-Path $repo 'artifacts\escape-hatch')
+  Start-Sleep -Seconds 2
+  # Best-effort private firewall allow for same-WiFi phone (no elevation → skip)
+  try {
+    $ruleName = 'EscapeHatch phone proof LAN 18765'
+    $existing = Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
+    if (-not $existing) {
+      New-NetFirewallRule -DisplayName $ruleName -Direction Inbound -Protocol TCP -LocalPort 18765 -Action Allow -Profile Private -ErrorAction SilentlyContinue | Out-Null
+    }
+  } catch {
+    Write-Output 'firewall_rule=skipped'
+  }
+}
+
 Start-Process 'http://127.0.0.1:18766/corridor'
 $helper = Join-Path $od 'PHONE_PROOF_HELPER.html'
 if (Test-Path $helper) { Start-Process $helper }
+$qr = Join-Path $od 'phone-install-qr.png'
+if (-not (Test-Path $qr)) { $qr = Join-Path $env:TEMP 'escapehatch-phone-install-qr.png' }
+if (Test-Path $qr) { Start-Process $qr }
 
-# Start watcher if none is already waiting on the proof file
+# Proof watcher (OneDrive + Downloads)
 $watchers = Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
   Where-Object { $_.CommandLine -match 'private-sync-await-phone-proof\.ps1' }
 if (-not $watchers) {
@@ -43,8 +70,27 @@ if (-not $watchers) {
   Write-Output "watcher=already_running pid=$($watchers[0].ProcessId)"
 }
 
+# Background ADB attach: reuse existing offer; install + push + launch when a device appears
+$adbWaiters = Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+  Where-Object { $_.CommandLine -match 'private-sync-phone-proof\.ps1' -and $_.CommandLine -match 'AttachOnly' }
+if (-not $adbWaiters) {
+  Start-Process -WindowStyle Hidden powershell -ArgumentList @(
+    '-NoProfile', '-ExecutionPolicy', 'Bypass',
+    '-File', (Join-Path $PSScriptRoot 'private-sync-phone-proof.ps1'),
+    '-AttachOnly',
+    '-WaitMinutes', '45'
+  )
+  Write-Output 'adb_waiter=started'
+} else {
+  Write-Output "adb_waiter=already_running pid=$($adbWaiters[0].ProcessId)"
+}
+
+$lanHealth = $null
+try { $lanHealth = (Invoke-RestMethod 'http://127.0.0.1:18765/health' -TimeoutSec 2) } catch { }
 Write-Output "onedrive=$od"
 Write-Output 'pairingCode=TEMP\pairing-code.local.txt (not printed)'
 Write-Output 'corridor=http://127.0.0.1:18766/corridor'
-Write-Output 'NEXT=Install APK from OneDrive EscapeHatchPrivateSync → Pair → Import .ehsync → Save/Copy proof JSON back to that folder'
+Write-Output 'lanInstall=http://<this-pc-wifi-ip>:18765/ (QR opened when available)'
+Write-Output "lanHealth=$(if ($lanHealth) { 'ok' } else { 'down' })"
+Write-Output 'NEXT=Phone on same Wi-Fi: scan QR / open :18765 → install APK → Pair → Import → Save proof; or USB-debug for auto install'
 exit 0

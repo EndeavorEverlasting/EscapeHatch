@@ -219,7 +219,8 @@ The following are intentionally **not** tracked repository artifacts:
 | Agent context boundary validator | `scripts/validate_agent_context_boundaries.py` | Tracked stdlib validator with synthetic leak-negative self-test | Contract or handoff changes | `python scripts/validate_agent_context_boundaries.py --self-test` and `python scripts/validate_agent_context_boundaries.py` |
 | Private sync multidevice proof contract | `harness/contracts/private-sync-multidevice-proof.v1.json` | Tracked value-free proof ceiling; never stores preference values | Cross-device sync proof changes | `python scripts/validate_private_sync_multidevice_proof.py --self-test` |
 | Private sync multidevice proof validator | `scripts/validate_private_sync_multidevice_proof.py` | Tracked; refuses `threeOfThree=true` while Android remains unproven | Ledger/contract changes | `--self-test` or path to private OneDrive ledger (operator-local) |
-| Private sync phone proof session | `scripts/private-sync-start-phone-proof-session.ps1` | Tracked operator launcher; stages OneDrive APK/offer/helper, corridor, watcher; no codes/values printed | Phone 3/3 proof path changes | Operator run on Windows host with OneDrive carrier |
+| Private sync phone proof session | `scripts/private-sync-start-phone-proof-session.ps1` | Tracked operator launcher; stages OneDrive APK/offer/helper, LAN :18765 install server, corridor, ADB attach-only waiter, proof watcher; no codes/values printed | Phone 3/3 proof path changes | Operator run on Windows host with OneDrive carrier |
+| Private sync phone LAN install server | `artifacts/escape-hatch/private-sync-phone-lan-server.ts` | Serves APK + sealed offer + `.ehsync` on `0.0.0.0:18765`; never serves pairing codes or preference values | Phone USB-free install path | Started by phone proof session; same Wi-Fi as phone |
 
 
 ## Validation output

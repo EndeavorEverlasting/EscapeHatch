@@ -37,7 +37,9 @@ jobs:
         run: python scripts/validate_secure_profile_sync_dispatch.py
       - run: npm install --no-audit --no-fund
       - name: Execute synthetic AEAD and forbidden-field regression
-        run: node --experimental-strip-types --test private-sync-crypto.test.ts
+        run: node --experimental-strip-types --test private-sync-crypto.test.ts private-sync-phone-proof.contract.test.ts
+      - name: Phone LAN install server never serves pairing codes
+        run: node --experimental-strip-types --test private-sync-phone-lan-server.test.ts
       - name: Typecheck and baseline application safeguards
         run: npm run typecheck
   two-device-conflict:
@@ -56,6 +58,6 @@ jobs:
         run: python scripts/validate_secure_profile_sync_dispatch.py
       - run: npm install --no-audit --no-fund
       - name: Execute synthetic two-device encrypted sync regression
-        run: node --experimental-strip-types --test private-sync-device.test.ts private-sync-keystore.test.ts private-sync-transport.test.ts
+        run: node --experimental-strip-types --test private-sync-device.test.ts private-sync-device-cross.test.ts private-sync-keystore.test.ts private-sync-transport.test.ts private-sync-status.test.ts private-sync-after-write.test.ts private-sync-config.test.ts
       - name: Validate no accidental app settings or submitted job edits
         run: node --experimental-strip-types --test private-sync-crypto.test.ts

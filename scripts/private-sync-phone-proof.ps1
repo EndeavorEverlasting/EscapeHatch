@@ -187,19 +187,39 @@ while ((Get-Date) -lt $deadline) {
   $devices = @($physicalRows | Where-Object { $_ -match '\tdevice$' })
   if ($devices) {
     Write-Output "adb_device=attached"
+    $serial = (($devices[0] -split '\s+')[0])
     if ($apk) {
-      & $adb install -r $apk
+      & $adb -s $serial install -r $apk
       Write-Output "apk_install_exit=$LASTEXITCODE"
     }
     $remoteDir = '/sdcard/Download/EscapeHatchPrivateSync'
-    & $adb shell mkdir -p $remoteDir
-    if ($capsule) { & $adb push $capsule.FullName "$remoteDir/" }
-    & $adb push (Join-Path $od 'pairing-offer.json') "$remoteDir/"
+    & $adb -s $serial shell mkdir -p $remoteDir
+    if ($capsule) { & $adb -s $serial push $capsule.FullName "$remoteDir/" }
+    & $adb -s $serial push (Join-Path $od 'pairing-offer.json') "$remoteDir/"
     Write-Output "pushed_files=$remoteDir"
-    # Launch companion UI; pairing code stays on desktop TEMP only.
-    & $adb shell am start -n com.escapehatch.assist/.CompanionActivity | Out-Null
-    Write-Output "companion_launched=1"
-    Write-Output "NEXT=On phone: Pair this phone → enter TEMP pairing code → Import .ehsync from $remoteDir → Save proof"
+    # Launch pair UI first; pairing code stays on desktop TEMP only (never pushed).
+    & $adb -s $serial shell am start -n com.escapehatch.assist/.sync.PairingImportActivity | Out-Null
+    Write-Output "pairing_ui_launched=1"
+    Set-Content -Path (Join-Path $env:TEMP 'eh-physical-phone-attached.flag') -Value ((Get-Date).ToUniversalTime().ToString('o')) -NoNewline
+    try {
+      Add-Type -AssemblyName System.Windows.Forms -ErrorAction Stop
+      Add-Type -AssemblyName System.Drawing -ErrorAction Stop
+      $ni = New-Object System.Windows.Forms.NotifyIcon
+      $ni.Icon = [System.Drawing.SystemIcons]::Information
+      $ni.Visible = $true
+      $ni.ShowBalloonTip(
+        15000,
+        'EscapeHatch phone attached',
+        'Pair on phone with TEMP\pairing-code.local.txt, import capsule, then Send proof to PC.',
+        [System.Windows.Forms.ToolTipIcon]::Info
+      )
+      Start-Sleep -Seconds 2
+      $ni.Dispose()
+    } catch {
+      Write-Output 'balloon=skipped'
+    }
+    Start-Process 'http://127.0.0.1:18766/corridor' -ErrorAction SilentlyContinue
+    Write-Output "NEXT=On phone: enter TEMP pairing code → Fetch/import capsule → Send proof to PC (LAN :18765/proof)"
     exit 0
   }
   Start-Sleep -Seconds 5

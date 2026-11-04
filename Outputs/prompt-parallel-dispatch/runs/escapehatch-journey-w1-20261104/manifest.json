@@ -1,0 +1,51 @@
+{
+  "schema_version": "prompt-parallel-dispatch/v1",
+  "run_id": "escapehatch-journey-w1-20261104",
+  "repository": "EndeavorEverlasting/EscapeHatch",
+  "base_sha": "e71008a503cb75460eb8beee0873e9cfd972d05a",
+  "source_owner": "PR #152 at 6b2793f7aae9f8d121e08b735b3fdf2e8699b9dc",
+  "parent_issue": "https://github.com/EndeavorEverlasting/EscapeHatch/issues/69",
+  "graph": {
+    "expression": "refresh -> {model || UI} -> coordinator integration -> provider checks -> installed observation",
+    "max_width": 2
+  },
+  "adapter": "collaboration.spawn_agent / followup_task",
+  "canonical_validation": "UNVERIFIED_SCHEMA_AND_RUNNER_ABSENT",
+  "lanes": [
+    {
+      "lane_id": "W1-model",
+      "worker": "model_evidence",
+      "branch": "codex/journey-wayfinding-model-20261104",
+      "owned_surfaces": [
+        "artifacts/escape-hatch/src/lib/journey-wayfinding.ts",
+        "artifacts/escape-hatch/src/lib/journey-wayfinding.test.ts"
+      ],
+      "returned_commits": [
+        "bd4de2e1b3d9670e3112a2a3cc141ad398bb0615"
+      ]
+    },
+    {
+      "lane_id": "W1-UI",
+      "worker": "ui_evidence",
+      "branch": "codex/journey-wayfinding-ui-20261104",
+      "owned_surfaces": [
+        "artifacts/escape-hatch/src/components/journey-atlas.tsx",
+        "artifacts/escape-hatch/src/index.css (journey-scoped additions only)",
+        "artifacts/escape-hatch/tests/journey-wayfinding.spec.ts"
+      ],
+      "returned_commits": [
+        "d9890ef",
+        "432350c"
+      ]
+    }
+  ],
+  "forbidden_surfaces": [
+    "private state",
+    "employer actions",
+    "PR152 extension and installer lanes",
+    "PR147 persistence",
+    "canonical scene registry changes"
+  ],
+  "convergence_owner": "coordinator",
+  "status": "NATIVE_LANES_REJOINED_LOCAL_CHECKS_PASSED_PROVIDER_PENDING"
+}

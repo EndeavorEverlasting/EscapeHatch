@@ -70,7 +70,9 @@ if (-not $lanIp) {
       $_.IPAddress -notmatch '^(127\.|169\.254\.|10\.5\.)'
     } | Select-Object -First 1 -ExpandProperty IPAddress)
 }
-$lanUrl = if ($lanIp) { "http://${lanIp}:8765/" } else { $null }
+# Dedicated EscapeHatch phone-proof port (avoid PiShark / other apps on 8765).
+$lanPort = 18765
+$lanUrl = if ($lanIp) { "http://${lanIp}:${lanPort}/" } else { $null }
 $qrPath = Join-Path $od 'phone-install-qr.png'
 if ($lanUrl) {
   try {

@@ -33,7 +33,7 @@
     <string name="pairing_auth_failed">Pairing authentication failed.</string>
     <string name="pairing_keystore_failed">Could not protect the vault key in Android Keystore on this device. Unlock the screen (set a PIN/pattern if needed) and try again.</string>
     <string name="capsule_title">Import encrypted answers</string>
-    <string name="capsule_instructions">1) Same Wi-Fi: fetch the .ehsync capsule from the PC (:18765), or choose it from OneDrive EscapeHatchPrivateSync.\n2) Confirm the digest matches your desktop.\n3) Tap Save proof to OneDrive and store escapehatch-phone-sync-proof.json in that same folder.\nAnswers stay sealed—only counts and digests are shown.</string>
+    <string name="capsule_instructions">1) Same Wi-Fi: fetch the .ehsync capsule from the PC (:18765), or choose it from OneDrive EscapeHatchPrivateSync.\n2) Confirm the digest matches your desktop.\n3) Tap Send proof to PC (same Wi‑Fi). OneDrive save remains a fallback.\nAnswers stay sealed—only counts and digests are shown.</string>
     <string name="capsule_choose">Choose encrypted capsule</string>
     <string name="capsule_fetch_lan">Fetch capsule from PC</string>
     <string name="capsule_open">Import encrypted answers</string>

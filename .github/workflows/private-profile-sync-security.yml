@@ -74,3 +74,5 @@ jobs:
         shell: pwsh
         run: |
           powershell -NoProfile -ExecutionPolicy Bypass -File scripts/private-sync-stage-peer-bundle.ps1 -SelfTest -RepoRoot $PWD
+
+# ci-requeue 2026-11-04T16:13:30.2974227Z

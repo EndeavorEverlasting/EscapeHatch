@@ -242,3 +242,13 @@ Live employer ATS behavior, recruiter preference, automatic submission/auto-appl
 - Validator: `scripts/validate_resume_selection_graph.py`; synthetic tests: `artifacts/escape-hatch/src/lib/resume-selection-graph.test.ts`.
 - Private actual résumé documents, domain masters, job derivatives, platform account slots and upload receipts belong in the user's private local/connected storage, **not** in this public repository or tracked fixtures.
 - Graph enforces typed, versioned lineage, user-owner isolation, stale source detection, ambiguous-domain review, and consent required for all platform-global replacements. Actual browser-side enforcement remains an independent P04 integration gate.
+
+
+## Profile puzzle convergence evidence (2026-11-04)
+
+| Artifact | Owner / path | Producer / trigger | Retention and privacy | Validation / proof ceiling |
+| --- | --- | --- | --- | --- |
+| Profile puzzle handoff | `docs/agent/P04_PROFILE_PUZZLE_ATELIER_CONVERGENCE_2026-11-03.md` | P04 coordinator; refreshed source/runtime evidence | Tracked public-neutral decisions only; retain with implementation | Parent and journey validators; never ATS readiness |
+| Profile puzzle dispatch specification | `Outputs/prompt-parallel-dispatch/runs/escapehatch-profile-puzzle-20261103/manifest.json` | P04 coordinator; lane ownership/adapter changes | Tracked fixed run identity, no applicant data | JSON parse; canonical schema/runner absent, contract verification UNPROVEN |
+| Native lane return receipt | `Outputs/prompt-parallel-dispatch/runs/escapehatch-profile-puzzle-20261103/native-execution-receipt.json` | Coordinator from actual native launch/return tools | Tracked sanitized worker/branch/commit evidence; retain with run | Readback against Git commits; not canonical verify-receipt or installed proof |
+| Synthetic board screenshots | `artifacts/escape-hatch/test-results/**/profile-puzzle-{desktop,mobile}.png` | Playwright profile-puzzle-evidence spec | Ignored local test output; may be replaced by rerun; synthetic only | Visual review plus browser assertions; no real profile screenshots in Git |

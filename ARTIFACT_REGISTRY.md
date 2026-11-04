@@ -217,6 +217,9 @@ The following are intentionally **not** tracked repository artifacts:
 | Self-contained context-boundary handoff | `docs/agent/CONTEXT_BOUNDARY_AND_PRIVATE_PROFILE_HANDOFF_2026-10-31.md` | Tracked and sanitized; no private profile bytes/URLs, applicant values or personal developer rules | Private author-voice correction, user/developer/repo boundary or local-agent continuity changes | `python scripts/validate_agent_context_boundaries.py` |
 | Agent context boundary contract | `harness/contracts/agent-context-boundaries.v1.json` | Tracked schema/owner routing; local EscapeHatch harness must be independently discoverable | Cross-harness contexts, local profile ownership or policy-adapter changes | `python scripts/validate_agent_context_boundaries.py` |
 | Agent context boundary validator | `scripts/validate_agent_context_boundaries.py` | Tracked stdlib validator with synthetic leak-negative self-test | Contract or handoff changes | `python scripts/validate_agent_context_boundaries.py --self-test` and `python scripts/validate_agent_context_boundaries.py` |
+| Private sync multidevice proof contract | `harness/contracts/private-sync-multidevice-proof.v1.json` | Tracked value-free proof ceiling; never stores preference values | Cross-device sync proof changes | `python scripts/validate_private_sync_multidevice_proof.py --self-test` |
+| Private sync multidevice proof validator | `scripts/validate_private_sync_multidevice_proof.py` | Tracked; refuses `threeOfThree=true` while Android remains unproven | Ledger/contract changes | `--self-test` or path to private OneDrive ledger (operator-local) |
+| Private sync phone proof session | `scripts/private-sync-start-phone-proof-session.ps1` | Tracked operator launcher; stages OneDrive APK/offer/helper, corridor, watcher; no codes/values printed | Phone 3/3 proof path changes | Operator run on Windows host with OneDrive carrier |
 
 
 ## Validation output

@@ -79,8 +79,10 @@ $lanUrl = if ($lanIp) { "http://${lanIp}:${lanPort}/" } else { $null }
 $qrPath = Join-Path $od 'phone-install-qr.png'
 if ($lanUrl) {
   try {
-    $qrPosix = ($qrPath -replace '\\', '/')
-    python -c "import qrcode; qrcode.make(r'''$lanUrl''').save(r'''$qrPosix''')"
+    $qrTemp = Join-Path $env:TEMP 'escapehatch-phone-install-qr.png'
+    $qrTempPosix = ($qrTemp -replace '\\', '/')
+    python -c "import qrcode; qrcode.make(r'''$lanUrl''').save(r'''$qrTempPosix''')"
+    Copy-Item -LiteralPath $qrTemp -Destination $qrPath -Force
   } catch {
     Write-Output "qr_skip=$($_.Exception.Message)"
   }

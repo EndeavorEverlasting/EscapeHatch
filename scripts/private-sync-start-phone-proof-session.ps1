@@ -106,22 +106,12 @@ if (-not $lanWatchers) {
   Write-Output "lan_phone_watch=already_running pid=$($lanWatchers[0].ProcessId)"
 }
 
-# Short NordVPN-off window for LAN :18765; ALWAYS reconnects in finally (or RestoreOnly).
-# Prefer OneDrive APK when possible — this only covers the LAN path.
-$nordWindows = Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
-  Where-Object { $_.CommandLine -match 'private-sync-nord-lan-window\.ps1' -and $_.CommandLine -match '-Mode\s+Open' }
-if (-not $nordWindows) {
-  Start-Process -WindowStyle Hidden powershell -ArgumentList @(
-    '-NoProfile', '-ExecutionPolicy', 'Bypass',
-    '-File', (Join-Path $PSScriptRoot 'private-sync-nord-lan-window.ps1'),
-    '-Mode', 'Open',
-    '-MaxMinutes', '12',
-    '-RestoreAfterForeignApk'
-  )
-  Write-Output 'nord_lan_window=started maxMinutes=12 restoreAfterForeignApk=1'
-} else {
-  Write-Output "nord_lan_window=already_running pid=$($nordWindows[0].ProcessId)"
-}
+# Do NOT auto-disconnect NordVPN here. Operator opens a short LAN window only when the
+# phone is in hand: Desktop\Open-PhoneLanNordWindow.cmd (always restores in finally).
+# Prefer OneDrive / EscapeHatchPhoneDrop so Nord can stay connected.
+Write-Output 'nord_lan_window=operator_gated use=Desktop\Open-PhoneLanNordWindow.cmd (auto-restore)'
+& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'private-sync-nord-lan-window.ps1') -Mode RestoreOnly |
+  ForEach-Object { Write-Output $_ }
 
 $ceiling = Join-Path $PSScriptRoot 'private-sync-proof-ceiling-report.ps1'
 if (Test-Path $ceiling) {
@@ -135,6 +125,6 @@ Write-Output 'pairingCode=TEMP\pairing-code.local.txt (not printed)'
 Write-Output 'corridor=http://127.0.0.1:18766/corridor'
 Write-Output 'lanInstall=http://<this-pc-wifi-ip>:18765/ (QR opened when available)'
 Write-Output "lanHealth=$(if ($lanHealth) { 'ok' } else { 'down' })"
-Write-Output 'nord_restore=scripts\private-sync-nord-lan-window.ps1 -Mode RestoreOnly (auto after proof/APK/12m)'
-Write-Output 'NEXT=Phone on same Wi-Fi (Nord briefly paused): Chrome http://<pc-ip>:18765/ OR OneDrive APK → Pair → Import → Send proof; VPN reconnects automatically'
+Write-Output 'nord_restore=scripts\private-sync-nord-lan-window.ps1 -Mode RestoreOnly'
+Write-Output 'NEXT=Prefer OneDrive/Desktop EscapeHatchPhoneDrop APK (Nord stays on). LAN only when phone is ready: Open-PhoneLanNordWindow.cmd → Chrome :18765 → pair → Save proof'
 exit 0

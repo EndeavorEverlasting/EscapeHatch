@@ -144,3 +144,85 @@ No private resume, contact, answer, tracker locator or employer screenshot was
 committed. No source installation selection, saved-copy conflict, real application
 or protected 21033 state was changed. The P04 parent and installed candidate remain
 open independently of this source slice.
+
+
+## Post-merge normal-launch observation — 2026-11-04
+
+PR #185 merged through provider promotion as `e71008a503cb75460eb8beee0873e9cfd972d05a`.
+The provider main contains the exact candidate source. The selected installation's
+checkout was fast-forwarded without removing its pre-existing untracked work;
+the already-owned runtime continued without restart. Normal canonical launch in
+Chrome recovered populated private context. The earlier saved-copy conflict was
+specific to the separate in-app-browser profile; it was not observed in the
+normal launched Chrome profile. Neither copy was manually selected or replaced.
+
+On the merged installed desktop UI, pointer selection of the new professional
+summary piece exposed its fixed state/owner and existing career-review link.
+The protected contact-piece control also exposed its local-profile inspection
+and review link; the employer-boundary disclaimer remained visible. No private
+values were put in the board, no field fill/upload was invoked, and no employer
+page was changed. Installed keyboard/mobile/reduced-motion and end-to-end ATS
+proof remain independent of these observed desktop pointer interactions.
+
+The normal installed UI still reports a stale tracker. Owner-scoped automated
+applicant admission is also not established by code access, contact matching or
+launcher health; the inspected native pairing record was absent. Those facts
+block promoting this UI observation into real-application readiness or Deloitte
+field-fill authority. Existing role documents remain pending operator approval.
+
+### Dependency-ready scene successor
+
+The website-only W1 implementation is recovered from existing PR #152 at
+`6b2793f7aae9f8d121e08b735b3fdf2e8699b9dc`, preserving its extension and installer
+lanes. It projects the same canonical scene registry, exposes the Materials page,
+keeps an extension-free normal preparation path and requires actual keyboard,
+responsive, motion and inert-selection proof. It does not add a new scene owner,
+persist progress, or mark an employer stage complete through navigation.
+
+
+### W1 extraction source result
+
+The website projection and existing atlas were extracted from PR #152 into an
+isolated lane; the original branch, extension and installer files were preserved.
+Two native workers independently returned the model and UI, then coordinator
+integration added the route and unit-suite entry. The scoped follow-up removed
+visible implementation IDs and transitions from user copy. No new canonical
+registry or store was introduced. Local result: 210 unit tests and 15 focused
+journey/profile browser checks passed, plus typecheck/build and parent/journey/
+governance validators. The initial 14-scene coverage derives from the registry,
+not a manually maintained UI count. Synthetic desktop layout was inspected.
+Provider convergence and installed W1 observation remain separately pending at
+this source commit. See the registered W1 native run receipt for lane commits.
+
+### Changed-file inventory for the executed source phases
+
+Profile phase (PR #185):
+- `ARTIFACT_REGISTRY.md`
+- `Outputs/prompt-parallel-dispatch/runs/escapehatch-profile-puzzle-20261103/manifest.json`
+- `Outputs/prompt-parallel-dispatch/runs/escapehatch-profile-puzzle-20261103/native-execution-receipt.json`
+- `artifacts/escape-hatch/package.json`
+- `artifacts/escape-hatch/playwright.config.ts`
+- `artifacts/escape-hatch/src/App.tsx`
+- `artifacts/escape-hatch/src/components/birdsong-control.tsx`
+- `artifacts/escape-hatch/src/components/guided-start.tsx`
+- `artifacts/escape-hatch/src/components/profile-piece-board.tsx`
+- `artifacts/escape-hatch/src/index.css`
+- `artifacts/escape-hatch/src/lib/profile-puzzle-projection.ts`
+- `artifacts/escape-hatch/src/lib/profile-puzzle-projection.test.ts`
+- `artifacts/escape-hatch/tests/mascot-guidance.spec.ts`
+- `artifacts/escape-hatch/tests/persistence.spec.ts`
+- `artifacts/escape-hatch/tests/profile-puzzle-evidence.spec.ts`
+- `docs/agent/P04_PROFILE_PUZZLE_ATELIER_CONVERGENCE_2026-11-03.md`
+
+Website W1 successor:
+- `ARTIFACT_REGISTRY.md`
+- `Outputs/prompt-parallel-dispatch/runs/escapehatch-journey-w1-20261104/manifest.json`
+- `Outputs/prompt-parallel-dispatch/runs/escapehatch-journey-w1-20261104/native-execution-receipt.json`
+- `artifacts/escape-hatch/package.json`
+- `artifacts/escape-hatch/src/App.tsx`
+- `artifacts/escape-hatch/src/components/journey-atlas.tsx`
+- `artifacts/escape-hatch/src/index.css`
+- `artifacts/escape-hatch/src/lib/journey-wayfinding.ts`
+- `artifacts/escape-hatch/src/lib/journey-wayfinding.test.ts`
+- `artifacts/escape-hatch/tests/journey-wayfinding.spec.ts`
+- `docs/agent/P04_PROFILE_PUZZLE_ATELIER_CONVERGENCE_2026-11-03.md`

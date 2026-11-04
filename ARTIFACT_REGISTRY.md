@@ -252,3 +252,18 @@ Live employer ATS behavior, recruiter preference, automatic submission/auto-appl
 | Profile puzzle dispatch specification | `Outputs/prompt-parallel-dispatch/runs/escapehatch-profile-puzzle-20261103/manifest.json` | P04 coordinator; lane ownership/adapter changes | Tracked fixed run identity, no applicant data | JSON parse; canonical schema/runner absent, contract verification UNPROVEN |
 | Native lane return receipt | `Outputs/prompt-parallel-dispatch/runs/escapehatch-profile-puzzle-20261103/native-execution-receipt.json` | Coordinator from actual native launch/return tools | Tracked sanitized worker/branch/commit evidence; retain with run | Readback against Git commits; not canonical verify-receipt or installed proof |
 | Synthetic board screenshots | `artifacts/escape-hatch/test-results/**/profile-puzzle-{desktop,mobile}.png` | Playwright profile-puzzle-evidence spec | Ignored local test output; may be replaced by rerun; synthetic only | Visual review plus browser assertions; no real profile screenshots in Git |
+
+
+## Website journey W1 extraction (2026-11-04)
+
+`Outputs/prompt-parallel-dispatch/runs/escapehatch-journey-w1-20261104/manifest.json`
+and its `native-execution-receipt.json` are coordinator-produced, fixed-run,
+tracked sanitized source/worker/commit receipts. Retain with the W1 integration;
+never include applicant payloads, locators or employer screenshots. JSON parsing
+and Git commit readback are available; canonical dispatch schema/runner remain
+absent, so contract-valid dispatch is UNPROVEN. Product validation uses
+`npm --prefix artifacts/escape-hatch run test:unit`, the journey browser spec,
+and the owning application-parent/journey validators. The existing scene registry
+remains the sole journey authority. Synthetic `journey-{desktop,mobile}.png`
+screenshots are ignored Playwright output, replaceable on rerun, and prove only
+the inspected local layouts.

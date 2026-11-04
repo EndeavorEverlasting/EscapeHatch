@@ -14,7 +14,7 @@ export function JourneyAtlas({ applications }: { applications: Application[] }) 
       <div className="relative z-10 max-w-2xl">
         <p className="text-xs font-semibold text-primary">Your application journey</p>
         <h1 className="mt-3 font-display text-4xl leading-tight sm:text-5xl">See every piece of the application.</h1>
-        <p className="mt-4 text-sm leading-7 text-muted-foreground">Prepare once, choose a job, and assemble its real employer form. Every destination is visible and usable without an agent opening a hidden page. The map helps you find your next action. Each application still needs its own verification.</p>
+        <p className="mt-4 text-sm leading-7 text-muted-foreground">Explore your sources, saved answers and role materials, then choose a job to prepare. Open any scene to find your next action. Each employer form still needs its own verification.</p>
         <p className="mt-3 text-xs text-muted-foreground">{applications.length} locally tracked {applications.length === 1 ? 'opportunity' : 'opportunities'}. Employer submission requires separate confirmation.</p>
       </div>
       <img src="/escapehatch-mascot.webp" alt="" aria-hidden="true" width={140} height={140} className="pointer-events-none absolute -bottom-6 right-0 w-28 opacity-30 sm:bottom-2 sm:right-7 sm:w-36" />
@@ -52,7 +52,7 @@ export function JourneyAtlas({ applications }: { applications: Application[] }) 
       <h2 className="mt-2 font-display text-3xl">Set up once. Return to your work.</h2>
       <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">The Windows developer-preview setup checks dependencies, offers supported recovery when tools are missing, preserves existing installations and starts the local cockpit. Build artifacts may include a bundled Node/npm runtime. Setup and build artifacts are unsigned previews; review their source and provenance before running. Employer sign-in stays with you.</p>
       <ol className="mt-5 grid gap-3 md:grid-cols-3">
-        <li className="rounded-xl border border-border p-4"><span className="font-mono-app text-xs text-primary">01 · Download</span><p className="mt-2 font-bold">Get the verified source path</p><p className="mt-2 text-xs leading-5 text-muted-foreground">Review the unsigned setup script, or inspect an available preview build artifact and its checksum in the workflow. A workflow link is not a signed release or a direct download.</p></li>
+        <li className="rounded-xl border border-border p-4"><span className="font-mono-app text-xs text-primary">01 · Download</span><p className="mt-2 font-bold">Get the verified source path</p><p className="mt-2 text-xs leading-5 text-muted-foreground">Review the unsigned setup script, or inspect available preview downloads and their checksums on the build page.</p></li>
         <li className="rounded-xl border border-border p-4"><span className="font-mono-app text-xs text-primary">02 · Install</span><p className="mt-2 font-bold">Confirm your Windows choices</p><p className="mt-2 text-xs leading-5 text-muted-foreground">Review security prompts, missing dependencies and the installation location. Use the installation-owned launcher to return to your workspace. Existing user data and customized shortcuts are preserved.</p></li>
         <li className="rounded-xl border border-border p-4"><span className="font-mono-app text-xs text-primary">03 · Connect</span><p className="mt-2 font-bold">Choose a job and open Browser assist</p><p className="mt-2 text-xs leading-5 text-muted-foreground">Recover your saved career workspace, choose an opportunity in Applications, then open Browser assist to prepare its employer form. This normal path does not require an extension. Extension enrollment is optional for supported companion workflows.</p></li>
       </ol>
@@ -60,7 +60,7 @@ export function JourneyAtlas({ applications }: { applications: Application[] }) 
         <a href="https://raw.githubusercontent.com/EndeavorEverlasting/EscapeHatch/main/Get-EscapeHatch.cmd" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 py-2 font-bold text-primary-foreground" data-testid="journey-download-setup">Review developer-preview setup <ArrowRight size={16} /></a>
         <a href="https://github.com/EndeavorEverlasting/EscapeHatch/actions/workflows/windows-preview-package.yml" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1 font-bold text-primary underline underline-offset-4" data-testid="journey-bundled-package">Inspect preview build artifacts <ArrowRight size={15} /></a>
       </div>
-      <p className="mt-3 text-xs text-muted-foreground">This guide is navigation, not installed-state telemetry. Confirm actual installation and owner-bound workspace readiness in the local application. Review optional extension enrollment only if you choose that workflow.</p>
+      <p className="mt-3 text-xs text-muted-foreground">Open each step to check your setup and sign-in status. Your saved workspace stays on this computer. Use the optional extension only when you need its companion workflow.</p>
     </section>
 
     <section aria-label="Website destinations" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

@@ -1,0 +1,48 @@
+{
+  "schema_version": "prompt-parallel-dispatch-receipt/v1",
+  "run_id": "escapehatch-secure-device-sync-20261103",
+  "repository": "EndeavorEverlasting/EscapeHatch",
+  "manifest": "Outputs/prompt-parallel-dispatch/runs/escapehatch-secure-device-sync-20261103/manifest.json",
+  "provider": "GitHub Actions",
+  "execution_environment": "CI_OR_REMOTE_RUNNER",
+  "workflow": "Private Profile Sync Security",
+  "workflow_run_url": "https://github.com/EndeavorEverlasting/EscapeHatch/actions/runs/41756312001",
+  "workflow_run_id": 41756312001,
+  "branch_head_at_run": "58fe24db10a3a5194617ad0f5c9e37908da778ea",
+  "proof_ceiling": "SYNTHETIC_CI_NOT_CURRENT_EXACT_HEAD_NOT_INSTALLED",
+  "lanes": [
+    {
+      "lane_id": "EH-DEVICE-CI",
+      "job_id": 126333126817,
+      "job_name": "Synthetic paired devices and conflict tests",
+      "start_utc": "2026-11-04T01:46:20Z",
+      "finish_utc": "2026-11-04T01:46:51Z",
+      "conclusion": "success"
+    },
+    {
+      "lane_id": "EH-CRYPTO-CI",
+      "job_id": 126333127285,
+      "job_name": "Cryptographic capsule and exclusion tests",
+      "start_utc": "2026-11-04T01:46:26Z",
+      "finish_utc": "2026-11-04T01:47:04Z",
+      "conclusion": "success"
+    }
+  ],
+  "observed_parallelism": true,
+  "overlapping_window_utc": {
+    "start": "2026-11-04T01:46:26Z",
+    "end": "2026-11-04T01:46:51Z",
+    "seconds": 25
+  },
+  "source": "GitHub Actions provider job timestamps and job conclusions",
+  "privacy": "No production applicant profile or credentials were read or written by synthetic CI",
+  "not_proven": [
+    "latest PR head security gate",
+    "Windows DPAPI key protection",
+    "Android Keystore pairing",
+    "authorized cloud carrier",
+    "real three-device readback",
+    "installed application integration"
+  ],
+  "status": "EARLIER_HEAD_CI_PARALLELISM_PROVED_EXACT_HEAD_PENDING"
+}

@@ -22,10 +22,13 @@ class PhoneSyncProofReceiptTest {
                 createdAtIso = "2026-11-04T03:00:00Z",
             )
         assertTrue(json.contains(PhoneSyncProofReceipt.SCHEMA))
+        assertTrue(json.contains("\"device\":\"android-phone\""))
+        assertFalse(json.contains("notPhoneThreeOfThree"))
         assertTrue(json.contains("talent_community.primary_areas"))
         assertTrue(json.contains("d9c4a8b80682fd06ffe0f1d0de14aa0622ac7338660f8dc33b147a426d8c448e"))
         assertEquals(true, json.contains("\"reusableAnswerCount\":26"))
         assertFalse(json.contains("Synthetic"))
         assertFalse(json.contains("password"))
+        assertFalse(PhoneSyncProofReceipt.isEmulatorLab())
     }
 }

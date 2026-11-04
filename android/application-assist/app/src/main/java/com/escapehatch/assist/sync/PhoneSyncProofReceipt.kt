@@ -12,13 +12,18 @@ object PhoneSyncProofReceipt {
     const val SUGGESTED_FILE_NAME = "escapehatch-phone-sync-proof.json"
 
     fun isEmulatorLab(): Boolean {
-        val fingerprint = Build.FINGERPRINT.lowercase()
-        val model = Build.MODEL.lowercase()
-        val product = Build.PRODUCT.lowercase()
-        val hardware = Build.HARDWARE.lowercase()
-        val brand = Build.BRAND.lowercase()
-        val device = Build.DEVICE.lowercase()
-        val manufacturer = Build.MANUFACTURER.lowercase()
+        // Build.* can be null in JVM unit tests — never NPE; empty ⇒ not an emulator claim.
+        val fingerprint = Build.FINGERPRINT?.lowercase().orEmpty()
+        val model = Build.MODEL?.lowercase().orEmpty()
+        val product = Build.PRODUCT?.lowercase().orEmpty()
+        val hardware = Build.HARDWARE?.lowercase().orEmpty()
+        val brand = Build.BRAND?.lowercase().orEmpty()
+        val device = Build.DEVICE?.lowercase().orEmpty()
+        val manufacturer = Build.MANUFACTURER?.lowercase().orEmpty()
+        val board = Build.BOARD?.lowercase().orEmpty()
+        if (fingerprint.isEmpty() && model.isEmpty() && product.isEmpty() && hardware.isEmpty()) {
+            return false
+        }
         if (fingerprint.startsWith("generic") || fingerprint.contains("unknown")) return true
         if (model.contains("google_sdk") || model.contains("emulator") || model.contains("android sdk built for")) {
             return true
@@ -27,7 +32,7 @@ object PhoneSyncProofReceipt {
         if (hardware.contains("goldfish") || hardware.contains("ranchu") || hardware.contains("vbox")) return true
         if (brand.startsWith("generic") && device.startsWith("generic")) return true
         if (manufacturer.contains("genymotion")) return true
-        if (Build.BOARD.equals("QC_Reference_Phone", ignoreCase = true)) return true
+        if (board == "qc_reference_phone") return true
         return false
     }
 

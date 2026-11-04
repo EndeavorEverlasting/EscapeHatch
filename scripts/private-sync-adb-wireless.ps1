@@ -9,12 +9,22 @@ param(
 $ErrorActionPreference = 'Continue'
 if (-not (Test-Path $Adb)) { Write-Output 'adb=missing'; exit 1 }
 
+function Get-PhysicalAdbRows {
+  & $Adb devices | Select-Object -Skip 1 | Where-Object {
+    $_ -and $_ -notmatch '^emulator-' -and $_ -notmatch '^\s*$'
+  }
+}
+
 function Try-Connect([string]$Endpoint) {
   if (-not $Endpoint) { return $false }
   Write-Output "adb_connect_try=$Endpoint"
   & $Adb connect $Endpoint 2>&1 | ForEach-Object { Write-Output $_ }
-  $devices = & $Adb devices | Select-Object -Skip 1 | Where-Object { $_ -match '\tdevice$' }
-  return [bool]$devices
+  $rows = Get-PhysicalAdbRows
+  if ($rows | Where-Object { $_ -match '\tdevice$' }) { return $true }
+  if ($rows | Where-Object { $_ -match '\tunauthorized' }) {
+    Write-Output 'adb_device=unauthorized_tap_allow_on_phone'
+  }
+  return $false
 }
 
 # Env one-shot pair: host:port:code
@@ -53,7 +63,14 @@ foreach ($line in $mdns) {
   }
 }
 
-$devices = & $Adb devices | Select-Object -Skip 1 | Where-Object { $_ -match '\tdevice$' }
-if ($devices) { Write-Output 'adb_device=present'; exit 0 }
+$rows = Get-PhysicalAdbRows
+if ($rows | Where-Object { $_ -match '\tdevice$' }) {
+  Write-Output 'adb_device=present'
+  exit 0
+}
+if ($rows | Where-Object { $_ -match '\tunauthorized' }) {
+  Write-Output 'adb_device=unauthorized_tap_allow_on_phone'
+  exit 3
+}
 Write-Output 'adb_wireless=none'
 exit 2

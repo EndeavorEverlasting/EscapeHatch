@@ -170,9 +170,13 @@ while ((Get-Date) -lt $deadline) {
     $nextWirelessProbe = (Get-Date).AddSeconds(30)
   }
   # Physical phone only — Android emulators are Keystore lab devices, not android-phone 3/3.
-  $devices = & $adb devices | Select-Object -Skip 1 | Where-Object {
-    $_ -match '\tdevice$' -and $_ -notmatch '^emulator-'
+  $physicalRows = & $adb devices | Select-Object -Skip 1 | Where-Object {
+    $_ -and $_ -notmatch '^emulator-' -and $_ -notmatch '^\s*$'
   }
+  if ($physicalRows | Where-Object { $_ -match '\tunauthorized' }) {
+    Write-Output 'adb_device=unauthorized_tap_allow_on_phone'
+  }
+  $devices = @($physicalRows | Where-Object { $_ -match '\tdevice$' })
   if ($devices) {
     Write-Output "adb_device=attached"
     if ($apk) {

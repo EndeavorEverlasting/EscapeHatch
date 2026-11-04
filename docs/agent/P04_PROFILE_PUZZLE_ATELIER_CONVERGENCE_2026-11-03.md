@@ -1,11 +1,11 @@
 # P04 — Profile Puzzle Atelier: remote-first convergence handoff
 
-**Repository:** `EndeavorEverlasting/EscapeHatch`  
-**Parent:** [#69](https://github.com/EndeavorEverlasting/EscapeHatch/issues/69), independently still OPEN (deterministic ATS preparation)  
-**Design owner:** [#182](https://github.com/EndeavorEverlasting/EscapeHatch/issues/182)  
-**Already merged:** [PR #183](https://github.com/EndeavorEverlasting/EscapeHatch/pull/183)  
-**Observed base:** `main@a09c0224f93a7a7253d397977a1d9d0fa6364036` (refresh before any mutation).  
-**Prompt:** TokenCorridor registry P04, *Repo-Aware Sprint + Harness Factoring Distributor*, current on 2026-11-03.  
+**Repository:** `EndeavorEverlasting/EscapeHatch`
+**Parent:** [#69](https://github.com/EndeavorEverlasting/EscapeHatch/issues/69), independently still OPEN (deterministic ATS preparation)
+**Design owner:** [#182](https://github.com/EndeavorEverlasting/EscapeHatch/issues/182)
+**Already merged:** [PR #183](https://github.com/EndeavorEverlasting/EscapeHatch/pull/183)
+**Observed base:** `main@a09c0224f93a7a7253d397977a1d9d0fa6364036` (refresh before any mutation).
+**Prompt:** TokenCorridor registry P04, *Repo-Aware Sprint + Harness Factoring Distributor*, current on 2026-11-03.
 **Transport:** Remote repository is the handoff. **Do not ask the operator to download, extract, paste prompts, or schedule workers.**
 
 ## Operator outcome — do not lose the parent
@@ -51,9 +51,9 @@ Provider access: GitHub is a **provider**, not the Windows host. Planning here r
 Manifest owner: `Outputs/prompt-parallel-dispatch/runs/escapehatch-profile-puzzle-20261103/manifest.json`. The present TokenCorridor and EscapeHatch trees did **not** expose the P04 canonical `harness/contracts/prompt-parallel-dispatch.v1.json` or `scripts/prompt_parallel_dispatch.py`; the manifest cannot be called canonically schema-validated/dispatched until the owning runner/contract is resolved. This is a precisely bounded **AUTONOMY_GAP**, not an invitation for manual operator shuttle.
 
 ## Proof, preservation and next parent gate
-**READ:** P04 catalog, repository governance, current issue/PR, current relevant UI and answer-recovery owners.  
-**APPLIED:** durable P04 factoring and machine-readable dispatch specification in a new scoped branch.  
-**OBSERVED:** PR #183 merged on `main`; CI and disposable runtime proof recorded in #182, not an installed update.  
+**READ:** P04 catalog, repository governance, current issue/PR, current relevant UI and answer-recovery owners.
+**APPLIED:** durable P04 factoring and machine-readable dispatch specification in a new scoped branch.
+**OBSERVED:** PR #183 merged on `main`; CI and disposable runtime proof recorded in #182, not an installed update.
 **UNPROVEN:** expanded career/artifact/answer puzzle integration; actual agent dispatch receipt; real Windows postmerge installation and P08 certification; all nine Issue #69 parent gates remain separately open until independent end-to-end proof.
 
 **First executable continuation:** authorized repository worker reads this doc and manifest, refreshes main, performs EH-PA0, selects a real runtime adapter, dispatches PA1/PA2 in isolated owners, integrates PA3 under validation, then performs installed-host PA4. Do not re-download the earlier package and do not invent autonomous workers.

@@ -74,10 +74,12 @@ test('phone LAN server serves apk/offer/capsule and never pairing codes', async 
     await waitHealth(port);
     const health = await (await fetch(`http://127.0.0.1:${port}/health`)).json();
     assert.equal(health.pairingCode, 'never');
-    assert.deepEqual(health.serves, ['apk', 'offer', 'capsule']);
+    assert.deepEqual(health.serves, ['apk', 'offer', 'capsule', 'proof']);
+    assert.equal(health.proofPost, '/proof');
 
     const index = await (await fetch(`http://127.0.0.1:${port}/`)).text();
     assert.match(index, /Download EscapeHatchAssist-debug\.apk/);
+    assert.match(index, /Send proof to PC/);
     assert.doesNotMatch(index, /pairingCode|pairing-code\.local/i);
 
     const apkHead = await fetch(`http://127.0.0.1:${port}/apk`, { method: 'HEAD' });
@@ -97,6 +99,43 @@ test('phone LAN server serves apk/offer/capsule and never pairing codes', async 
     assert.equal(capsule.status, 200);
     assert.match(capsule.headers.get('content-disposition') || '', /deadbeef\.ehsync/);
     assert.equal(Buffer.from(await capsule.arrayBuffer()).toString('utf8'), 'ciphertext-only');
+
+    const goodProof = {
+      schema: 'escapehatch/private-sync-phone-proof-receipt/v1',
+      createdAt: '2026-11-04T12:00:00.000Z',
+      device: 'android-phone',
+      phoneState: 'IMPORTED',
+      vaultId: 'v'.repeat(32),
+      reusableAnswerCount: 3,
+      projectionDigest: 'a'.repeat(64),
+      cognizantTalentCommunityFieldsPresent: ['talent_community.primary_areas'],
+    };
+    const posted = await fetch(`http://127.0.0.1:${port}/proof`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(goodProof),
+    });
+    assert.equal(posted.status, 200);
+    const postedJson = (await posted.json()) as { ok: boolean; stored: string };
+    assert.equal(postedJson.ok, true);
+    assert.equal(postedJson.stored, 'escapehatch-phone-sync-proof.json');
+    const stored = JSON.parse(
+      await fs.readFile(path.join(root, 'escapehatch-phone-sync-proof.json'), 'utf8'),
+    );
+    assert.equal(stored.device, 'android-phone');
+    assert.equal(stored.projectionDigest, 'a'.repeat(64));
+    assert.equal('Synthetic' in stored, false);
+
+    const emuReject = await fetch(`http://127.0.0.1:${port}/proof`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        ...goodProof,
+        deviceKind: 'android-emulator',
+        notPhoneThreeOfThree: true,
+      }),
+    });
+    assert.equal(emuReject.status, 400);
   } finally {
     child.kill('SIGTERM');
     await new Promise((r) => child.once('exit', r));

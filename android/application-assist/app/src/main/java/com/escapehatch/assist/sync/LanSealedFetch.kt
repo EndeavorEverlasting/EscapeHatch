@@ -78,41 +78,75 @@ object LanSealedFetch {
             return
         }
         executor.execute {
-            try {
-                val url = URL("$base$path")
-                val conn =
-                    (url.openConnection() as HttpURLConnection).apply {
-                        connectTimeout = 8_000
-                        readTimeout = 20_000
-                        requestMethod = "GET"
-                        instanceFollowRedirects = false
+            onResult(httpExchange(base, path, "GET", null))
+        }
+    }
+
+    /** POST value-free phone proof JSON to desktop :18765/proof (never pairing codes). */
+    fun postProofJson(
+        baseUrl: String,
+        proofJson: String,
+        onResult: (Outcome) -> Unit,
+    ) {
+        val base = normalizeBaseUrl(baseUrl)
+        if (base == null) {
+            onResult(Outcome.Err("LAN_URL_REFUSED"))
+            return
+        }
+        if (proofJson.isBlank()) {
+            onResult(Outcome.Err("PROOF_EMPTY"))
+            return
+        }
+        executor.execute {
+            onResult(httpExchange(base, "/proof", "POST", proofJson))
+        }
+    }
+
+    private fun httpExchange(
+        base: String,
+        path: String,
+        method: String,
+        body: String?,
+    ): Outcome {
+        return try {
+            val url = URL("$base$path")
+            val conn =
+                (url.openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 8_000
+                    readTimeout = 20_000
+                    requestMethod = method
+                    instanceFollowRedirects = false
+                    if (body != null) {
+                        doOutput = true
+                        setRequestProperty("Content-Type", "application/json; charset=utf-8")
                     }
-                try {
-                    val code = conn.responseCode
-                    if (code != 200) {
-                        onResult(Outcome.Err("HTTP_$code"))
-                        return@execute
-                    }
-                    val body =
-                        BufferedReader(InputStreamReader(conn.inputStream, Charsets.UTF_8)).use { it.readText() }
-                    if (body.contains("\"pairingCode\"") || body.contains("pairing-code.local")) {
-                        onResult(Outcome.Err("PAIRING_CODE_REFUSED"))
-                        return@execute
-                    }
-                    onResult(Outcome.Ok(body))
-                } finally {
-                    conn.disconnect()
                 }
-            } catch (e: Exception) {
-                val detail = (e.message ?: "").replace('\n', ' ').take(80)
-                val reason =
-                    if (detail.isBlank()) {
-                        e.javaClass.simpleName
-                    } else {
-                        "${e.javaClass.simpleName}:$detail"
-                    }
-                onResult(Outcome.Err(reason))
+            try {
+                if (body != null) {
+                    conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                }
+                val code = conn.responseCode
+                if (code !in 200..299) {
+                    return Outcome.Err("HTTP_$code")
+                }
+                val response =
+                    BufferedReader(InputStreamReader(conn.inputStream, Charsets.UTF_8)).use { it.readText() }
+                if (response.contains("\"pairingCode\"") || response.contains("pairing-code.local")) {
+                    return Outcome.Err("PAIRING_CODE_REFUSED")
+                }
+                Outcome.Ok(response)
+            } finally {
+                conn.disconnect()
             }
+        } catch (e: Exception) {
+            val detail = (e.message ?: "").replace('\n', ' ').take(80)
+            val reason =
+                if (detail.isBlank()) {
+                    e.javaClass.simpleName
+                } else {
+                    "${e.javaClass.simpleName}:$detail"
+                }
+            Outcome.Err(reason)
         }
     }
 }

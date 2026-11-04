@@ -45,6 +45,15 @@
         android:text="@string/capsule_fetch_lan" />
 
     <Button
+        android:id="@+id/sendProofLan"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:enabled="false"
+        android:minHeight="48dp"
+        android:text="@string/capsule_send_proof_lan" />
+
+    <Button
         android:id="@+id/saveProof"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

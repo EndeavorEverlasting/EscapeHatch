@@ -45,10 +45,13 @@
     <string name="capsule_wrong_vault">Capsule belongs to a different vault.</string>
     <string name="capsule_auth_failed">Capsule authentication failed.</string>
     <string name="capsule_projection_invalid">Capsule projection invalid or empty.</string>
+    <string name="capsule_send_proof_lan">Send proof to PC</string>
     <string name="capsule_save_proof">Save proof to OneDrive</string>
     <string name="capsule_copy_proof">Copy proof JSON</string>
-    <string name="capsule_proof_hint">Next: Save proof into OneDrive EscapeHatchPrivateSync (or Copy proof JSON and paste a new file there). Desktop confirms the digest—no answer values leave this screen.</string>
+    <string name="capsule_proof_hint">Next: Send proof to PC on the same Wi‑Fi, or save escapehatch-phone-sync-proof.json into OneDrive EscapeHatchPrivateSync. Desktop confirms the digest—no answer values leave this screen.</string>
     <string name="capsule_proof_saved">Proof saved. Desktop will match digests when that file syncs.</string>
+    <string name="capsule_proof_sent_lan">Proof sent to PC. Desktop watcher will match digests.</string>
+    <string name="capsule_proof_send_failed">Could not send proof to PC (%1$s).</string>
     <string name="capsule_proof_copied">Value-free proof copied. Paste into EscapeHatchPrivateSync as escapehatch-phone-sync-proof.json.</string>
     <string name="capsule_proof_copy_failed">Could not copy proof.</string>
     <string name="capsule_proof_save_cancelled">Proof save cancelled.</string>

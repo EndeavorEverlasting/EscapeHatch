@@ -20,9 +20,75 @@ const carrier =
 
 const cors = {
   'access-control-allow-origin': '*',
-  'access-control-allow-methods': 'GET, OPTIONS',
+  'access-control-allow-methods': 'GET, HEAD, POST, OPTIONS',
   'access-control-allow-headers': 'content-type',
 };
+
+const PHONE_PROOF_SCHEMA = 'escapehatch/private-sync-phone-proof-receipt/v1';
+const PHONE_PROOF_FILE = 'escapehatch-phone-sync-proof.json';
+
+function readBody(req: http.IncomingMessage, limit = 64_000): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let total = 0;
+    req.on('data', (chunk: Buffer) => {
+      total += chunk.byteLength;
+      if (total > limit) {
+        reject(new Error('BODY_TOO_LARGE'));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('error', reject);
+  });
+}
+
+/** Value-free phone proof only — never preference values or pairing codes. */
+function acceptPhoneProofJson(raw: string): { ok: true; pretty: string } | { ok: false; error: string } {
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    return { ok: false, error: 'INVALID_JSON' };
+  }
+  if (parsed.schema !== PHONE_PROOF_SCHEMA) {
+    return { ok: false, error: 'INVALID_PROOF_SCHEMA' };
+  }
+  if (parsed.notPhoneThreeOfThree === true || parsed.deviceKind === 'android-emulator') {
+    return { ok: false, error: 'REJECTED_EMULATOR_LAB_PROOF' };
+  }
+  if (parsed.device !== 'android-phone') {
+    return { ok: false, error: 'REJECTED_NON_PHONE_DEVICE' };
+  }
+  const digest = parsed.projectionDigest;
+  if (typeof digest !== 'string' || !/^[a-f0-9]{64}$/i.test(digest)) {
+    return { ok: false, error: 'INVALID_PROOF_DIGEST' };
+  }
+  if (typeof parsed.reusableAnswerCount !== 'number') {
+    return { ok: false, error: 'INVALID_PROOF_COUNT' };
+  }
+  const compressed = JSON.stringify(parsed);
+  if (/password|ssn|secret|Bearer |@gmail\.com/i.test(compressed)) {
+    return { ok: false, error: 'PROOF_LOOKS_LIKE_IT_CONTAINS_SENSITIVE_TEXT' };
+  }
+  // Persist only known value-free fields (drop unknown keys).
+  const cognizant = Array.isArray(parsed.cognizantTalentCommunityFieldsPresent)
+    ? parsed.cognizantTalentCommunityFieldsPresent.filter((id): id is string => typeof id === 'string')
+    : [];
+  const slim = {
+    schema: PHONE_PROOF_SCHEMA,
+    createdAt: typeof parsed.createdAt === 'string' ? parsed.createdAt : new Date().toISOString(),
+    device: 'android-phone',
+    phoneState: typeof parsed.phoneState === 'string' ? parsed.phoneState : 'IMPORTED',
+    vaultId: typeof parsed.vaultId === 'string' ? parsed.vaultId : null,
+    reusableAnswerCount: parsed.reusableAnswerCount,
+    projectionDigest: digest.toLowerCase(),
+    cognizantTalentCommunityFieldsPresent: cognizant,
+  };
+  return { ok: true, pretty: `${JSON.stringify(slim, null, 2)}\n` };
+}
 
 function deny(res: http.ServerResponse, code: number, detail: string) {
   res.writeHead(code, { 'content-type': 'application/json; charset=utf-8', ...cors });
@@ -76,7 +142,7 @@ function installPageHtml(lanBase: string, apkBytes: number | null): string {
 <li><a href="/apk" style="color:#c8f542">Download EscapeHatchAssist-debug.apk</a> (${apkHint}) and allow install from this browser.</li>
 <li>Open Assist → Pair → paste <code>${hostForApp}</code> → <strong>Fetch sealed offer from PC</strong> → type the desktop TEMP pairing code.</li>
 <li>Import → same host → <strong>Fetch capsule from PC</strong> (or download <a href="/offer" style="color:#c8f542">offer</a> / <a href="/capsule" style="color:#c8f542">capsule</a> here).</li>
-<li>Save proof JSON back to OneDrive EscapeHatchPrivateSync as <code>escapehatch-phone-sync-proof.json</code>.</li>
+<li>After import, tap <strong>Send proof to PC</strong> (POST /proof) or save <code>escapehatch-phone-sync-proof.json</code> into OneDrive EscapeHatchPrivateSync.</li>
 </ol>
 <p style="color:#9aab9e">No answer values are served here. This is for a phone—not a smart TV/display.</p>
 </body></html>`;
@@ -102,13 +168,43 @@ const server = http.createServer(async (req, res) => {
     res.end();
     return;
   }
+  const url = new URL(req.url || '/', `http://127.0.0.1:${port}`);
+  accessLog(req, url.pathname);
+
+  if (req.method === 'POST' && url.pathname === '/proof') {
+    try {
+      const raw = await readBody(req);
+      const accepted = acceptPhoneProofJson(raw);
+      if (!accepted.ok) {
+        deny(res, 400, accepted.error);
+        return;
+      }
+      const dest = path.join(carrier, PHONE_PROOF_FILE);
+      await fs.writeFile(dest, accepted.pretty, 'utf8');
+      const body = JSON.stringify({
+        ok: true,
+        stored: PHONE_PROOF_FILE,
+        digest: JSON.parse(accepted.pretty).projectionDigest,
+        values: 'never',
+      });
+      res.writeHead(200, {
+        'content-type': 'application/json; charset=utf-8',
+        'content-length': String(Buffer.byteLength(body)),
+        'cache-control': 'no-store',
+        ...cors,
+      });
+      res.end(body);
+    } catch (error) {
+      deny(res, 500, error instanceof Error ? error.message : 'PROOF_STORE_FAILED');
+    }
+    return;
+  }
+
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     deny(res, 405, 'METHOD_NOT_ALLOWED');
     return;
   }
   const headOnly = req.method === 'HEAD';
-  const url = new URL(req.url || '/', `http://127.0.0.1:${port}`);
-  accessLog(req, url.pathname);
   try {
     if (url.pathname === '/' || url.pathname === '/index.html') {
       const apkPath = path.join(carrier, 'EscapeHatchAssist-debug.apk');
@@ -198,9 +294,10 @@ const server = http.createServer(async (req, res) => {
       const body = JSON.stringify({
         ok: true,
         carrier,
-        serves: ['apk', 'offer', 'capsule'],
+        serves: ['apk', 'offer', 'capsule', 'proof'],
         apkBytes,
         pairingCode: 'never',
+        proofPost: '/proof',
       });
       res.writeHead(200, {
         'content-type': 'application/json; charset=utf-8',

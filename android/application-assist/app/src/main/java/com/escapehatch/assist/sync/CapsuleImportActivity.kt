@@ -22,6 +22,7 @@ import java.time.Instant
  */
 class CapsuleImportActivity : AppCompatActivity() {
     private lateinit var status: TextView
+    private lateinit var sendProofLan: Button
     private lateinit var saveProof: Button
     private lateinit var copyProof: Button
     private lateinit var lanBaseUrl: EditText
@@ -67,6 +68,7 @@ class CapsuleImportActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_capsule_import)
         status = findViewById(R.id.capsuleStatus)
+        sendProofLan = findViewById(R.id.sendProofLan)
         saveProof = findViewById(R.id.saveProof)
         copyProof = findViewById(R.id.copyProof)
         lanBaseUrl = findViewById(R.id.lanBaseUrl)
@@ -75,6 +77,7 @@ class CapsuleImportActivity : AppCompatActivity() {
             openCapsule.launch(arrayOf("application/json", "text/*", "*/*"))
         }
         findViewById<Button>(R.id.fetchCapsuleLan).setOnClickListener { fetchCapsuleFromLan() }
+        sendProofLan.setOnClickListener { sendProofToLan() }
         saveProof.setOnClickListener {
             createProof.launch(PhoneSyncProofReceipt.SUGGESTED_FILE_NAME)
         }
@@ -87,6 +90,29 @@ class CapsuleImportActivity : AppCompatActivity() {
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             clipboard.setPrimaryClip(ClipData.newPlainText("escapehatch-phone-sync-proof", payload))
             status.text = getString(R.string.capsule_proof_copied)
+        }
+    }
+
+    private fun sendProofToLan() {
+        val payload = proofJson
+        if (payload.isNullOrBlank()) {
+            status.text = getString(R.string.capsule_proof_send_failed, "PROOF_EMPTY")
+            return
+        }
+        status.text = getString(R.string.lan_fetching)
+        val raw = lanBaseUrl.text?.toString().orEmpty()
+        LanSealedFetch.postProofJson(raw, payload) { outcome ->
+            runOnUiThread {
+                when (outcome) {
+                    is LanSealedFetch.Outcome.Ok -> {
+                        LanHostMemory.write(this, raw)
+                        status.text = getString(R.string.capsule_proof_sent_lan)
+                    }
+                    is LanSealedFetch.Outcome.Err -> {
+                        status.text = getString(R.string.capsule_proof_send_failed, outcome.reason)
+                    }
+                }
+            }
         }
     }
 
@@ -120,6 +146,7 @@ class CapsuleImportActivity : AppCompatActivity() {
                             projectionDigest = result.projectionDigest,
                             createdAtIso = Instant.now().toString(),
                         )
+                    sendProofLan.isEnabled = true
                     saveProof.isEnabled = true
                     copyProof.isEnabled = true
                     getString(
@@ -137,6 +164,7 @@ class CapsuleImportActivity : AppCompatActivity() {
             }
         if (result.state != CapsuleImportState.IMPORTED) {
             proofJson = null
+            sendProofLan.isEnabled = false
             saveProof.isEnabled = false
             copyProof.isEnabled = false
         }

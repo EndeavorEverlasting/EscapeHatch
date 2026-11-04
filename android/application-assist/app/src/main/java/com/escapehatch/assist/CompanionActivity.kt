@@ -1,6 +1,7 @@
 package com.escapehatch.assist
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -10,6 +11,8 @@ import androidx.appcompat.widget.SwitchCompat
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import com.escapehatch.assist.sync.CapsuleImportActivity
+import com.escapehatch.assist.sync.PairingImportActivity
 import java.util.UUID
 
 class CompanionActivity : AppCompatActivity() {
@@ -48,6 +51,12 @@ class CompanionActivity : AppCompatActivity() {
                 restoringPrivacyToggle = false
             }
             renderPrivacyPreference()
+        }
+        findViewById<Button>(R.id.openPairing).setOnClickListener {
+            startActivity(Intent(this, PairingImportActivity::class.java))
+        }
+        findViewById<Button>(R.id.openCapsuleImport).setOnClickListener {
+            startActivity(Intent(this, CapsuleImportActivity::class.java))
         }
         findViewById<Button>(R.id.postNotification).setOnClickListener { postQuietNotification() }
         findViewById<Button>(R.id.dismissNotification).setOnClickListener {

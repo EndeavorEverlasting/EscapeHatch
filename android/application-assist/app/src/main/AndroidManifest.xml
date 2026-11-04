@@ -10,6 +10,14 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.EscapeHatchAssist">
         <activity
+            android:name=".sync.PairingImportActivity"
+            android:exported="false"
+            android:resizeableActivity="true" />
+        <activity
+            android:name=".sync.CapsuleImportActivity"
+            android:exported="false"
+            android:resizeableActivity="true" />
+        <activity
             android:name=".CompanionActivity"
             android:exported="true"
             android:resizeableActivity="true">

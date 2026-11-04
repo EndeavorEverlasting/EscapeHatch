@@ -43,6 +43,22 @@
         android:textIsSelectable="true" />
 
     <Button
+        android:id="@+id/openPairing"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:minHeight="48dp"
+        android:text="@string/pairing_open" />
+
+    <Button
+        android:id="@+id/openCapsuleImport"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:minHeight="48dp"
+        android:text="@string/capsule_open" />
+
+    <Button
         android:id="@+id/postNotification"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

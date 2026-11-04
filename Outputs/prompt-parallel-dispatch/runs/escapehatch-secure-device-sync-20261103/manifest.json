@@ -225,7 +225,7 @@
     "installed": false,
     "provider_synced": false,
     "paired_device_count": 2,
-    "paired_device_note": "desktop OneDrive SYNCED + alternate Windows DATA_HOME digest match over live OneDrive; Android pairing+capsule import UI built/tested; phone live readback unproven; Drive OAuth client not required (OneDrive carrier)"
+    "paired_device_note": "desktop+laptop-sim share projectionDigest d9c4a8b8… over OneDrive (26 answers, 3 Cognizant ids); Android pairing+capsule UI + 60m SAS + phone-proof.ps1; phone live readback unproven (no adb device)"
   },
   "autonomy_gap": "Real local agent and provider credentials are unavailable to this GitHub-only session; CI synthetic lanes are autonomously dispatched by the PR workflow. Do not request operator downloads."
 }

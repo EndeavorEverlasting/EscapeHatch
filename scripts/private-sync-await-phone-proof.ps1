@@ -31,7 +31,9 @@ while ((Get-Date) -lt $deadline) {
   if ($candidate) {
     $proof = Get-Content $candidate.FullName -Raw | ConvertFrom-Json
     $match = ($proof.projectionDigest -eq $expectedDigest) -and ($proof.reusableAnswerCount -eq $status.reusableAnswerCount)
-    $cognizantOk = (@($proof.cognizantTalentCommunityFieldsPresent) -join ',') -eq (@($status.cognizantTalentCommunityFieldsPresent) -join ',')
+    $phoneCog = @($proof.cognizantTalentCommunityFieldsPresent) | Sort-Object
+    $deskCog = @($status.cognizantTalentCommunityFieldsPresent) | Sort-Object
+    $cognizantOk = ($phoneCog -join ',') -eq ($deskCog -join ',')
     $result = [ordered]@{
       schema = 'escapehatch/private-sync-phone-proof-receipt/v1'
       phoneState = if ($match -and $cognizantOk) { 'PROVEN' } else { 'MISMATCH' }

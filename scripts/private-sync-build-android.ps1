@@ -17,7 +17,10 @@ $app = Join-Path $repo 'android\application-assist'
 if (-not $JavaHome -or -not (Test-Path (Join-Path $JavaHome 'bin\java.exe'))) {
   throw 'JDK_17_OR_21_REQUIRED (Android Studio JBR 25 is not usable with this Gradle)'
 }
+$prevEa = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
 $ver = & (Join-Path $JavaHome 'bin\java.exe') -version 2>&1 | Out-String
+$ErrorActionPreference = $prevEa
 if ($ver -match 'version "2[5-9]\.') {
   throw "JDK_TOO_NEW $JavaHome — use Temurin 17/21"
 }

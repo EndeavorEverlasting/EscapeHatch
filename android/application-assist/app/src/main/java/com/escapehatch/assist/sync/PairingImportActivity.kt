@@ -1,5 +1,6 @@
 package com.escapehatch.assist.sync
 
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Button
@@ -107,5 +108,9 @@ class PairingImportActivity : AppCompatActivity() {
                 PairingImportState.AUTHENTICATION_FAILED -> getString(R.string.pairing_auth_failed)
             }
         codeInput.text?.clear()
+        if (result.state == PairingImportState.IMPORTED) {
+            // Continue straight into sealed capsule import / Send proof to PC.
+            startActivity(Intent(this, CapsuleImportActivity::class.java))
+        }
     }
 }

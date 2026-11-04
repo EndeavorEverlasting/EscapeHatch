@@ -201,36 +201,50 @@ if (-not $AttachOnly) {
   $helper = Join-Path $od 'PHONE_PROOF_HELPER.html'
   $steps = Join-Path $od 'PHONE_PROOF_STEPS.txt'
   @(
-    'EscapeHatch phone proof (LAN / OneDrive / USB)',
-    'A. Same Wi-Fi: scan phone-install-qr.png, open lan-install-url.txt, or http://<pc-ip>:18765/ → download APK.',
-    'B. Or OneDrive → EscapeHatchPrivateSync → EscapeHatchAssist-debug.apk (sideload) / lan-install-url.txt (browser).',
-    'C. Or USB debugging: desktop auto-installs when adb sees the device.',
-    '2. Open EscapeHatch Assist → Pair this phone.',
-    '3. Enter the pairing code from desktop TEMP\pairing-code.local.txt (never in OneDrive / never on :18765).',
-    '4. Choose sealed offer: pairing-offer.json (OneDrive or LAN /offer).',
-    '5. Import encrypted answers: newest .ehsync (OneDrive or LAN /capsule).',
-    '6. Send proof to PC (LAN :18765/proof) or save escapehatch-phone-sync-proof.json in EscapeHatchPrivateSync.',
+    'EscapeHatch phone proof — prefer OneDrive (keeps NordVPN on)',
+    '1. Phone OneDrive app → EscapeHatchPrivateSync → install EscapeHatchAssist-debug.apk (~6.5 MB).',
+    '2. Same folder: open pairing-offer.json in Assist Pair, then import newest .ehsync.',
+    '3. Desktop TEMP\pairing-code.local.txt is the ONLY place for the pairing code (never in OneDrive / never on :18765).',
+    '4. After import: Save proof JSON into EscapeHatchPrivateSync as escapehatch-phone-sync-proof.json (VPN-safe) OR Send proof to PC on LAN.',
+    'Optional LAN (needs short Nord pause on PC): lan-install-url.txt or http://<pc-ip>:18765/ — desktop auto-restores VPN.',
+    'Optional USB debugging: plug in; desktop AttachOnly installs + pushes offer/capsule.',
     "Desktop digest to match: $($status.projectionDigest)",
-    'Values are never written to this helper or the proof receipt. Emulator cannot close phone 3/3.'
+    'Values never written here. Emulator cannot close phone 3/3.'
   ) | Set-Content -Path $steps -Encoding utf8
   $digestShort = $status.projectionDigest.Substring(0, 16)
-  $lanLine = if ($lanUrl) { "<p>LAN install: <a href=`"$lanUrl`" style=`"color:#c8f542`">$lanUrl</a> (APK + sealed offer/capsule + proof POST).</p><p>On phone OneDrive: open <code>lan-install-url.txt</code> (URL only — never a pairing code).</p>" } else { '' }
+  $lanLine = if ($lanUrl) { "<p style=`"color:#9aab9e`">Optional LAN (PC Nord briefly paused, then auto-restored): <a href=`"$lanUrl`" style=`"color:#c8f542`">$lanUrl</a> — or open <code>lan-install-url.txt</code>.</p>" } else { '' }
   @"
 <!doctype html><html lang="en"><meta charset="utf-8"><title>EscapeHatch phone proof</title>
 <body style="font:16px/1.45 Georgia,serif;max-width:40rem;margin:2rem;background:#0b1210;color:#e8efe9">
-<h1 style="font:700 1.6rem system-ui,sans-serif">Phone proof — LAN / OneDrive</h1>
-<p>Install the APK, pair with the desktop TEMP code, import sealed offer + <code>.ehsync</code>, then <strong>Send proof to PC</strong> (or save proof JSON into EscapeHatchPrivateSync).</p>
-$lanLine
+<h1 style="font:700 1.6rem system-ui,sans-serif">Phone proof — OneDrive first</h1>
+<p style="padding:0.75rem 1rem;border:1px solid #c8f542;border-radius:6px;background:#142018">
+<strong>Keep NordVPN on:</strong> install from this OneDrive folder — no PC LAN required.
+</p>
 <ol>
-<li>Install <strong>EscapeHatchAssist-debug.apk</strong> (LAN :18765, OneDrive, or USB auto-install)</li>
-<li>Assist → <strong>Pair this phone</strong> → enter desktop TEMP pairing code</li>
-<li>Choose sealed offer <code>pairing-offer.json</code> (or Fetch from PC)</li>
-<li>Import newest <code>.ehsync</code> (or Fetch capsule from PC)</li>
-<li><strong>Send proof to PC</strong> — desktop watcher matches digest <code>${digestShort}…</code></li>
+<li>Install <strong>EscapeHatchAssist-debug.apk</strong> from this folder (~6.5&nbsp;MB)</li>
+<li>Assist → <strong>Pair this phone</strong> → desktop TEMP pairing code (not stored here)</li>
+<li>Open sealed offer <code>pairing-offer.json</code> from this folder</li>
+<li>Import newest <code>.ehsync</code> from this folder</li>
+<li>Save <code>escapehatch-phone-sync-proof.json</code> back here (or Send proof to PC on LAN)</li>
 </ol>
+$lanLine
+<p>Desktop digest to match: <code>${digestShort}…</code></p>
 <p style="color:#9aab9e">No answer values or pairing codes are shown here.</p>
 </body></html>
 "@ | Set-Content -Path $helper -Encoding utf8
+  $onedriveFirst = Join-Path $od 'PHONE_ONEDRIVE_FIRST.txt'
+  @(
+    'VPN-SAFE phone install (Nord stays connected on the PC)',
+    '',
+    'On the phone OneDrive app open EscapeHatchPrivateSync and:',
+    '  1) Install EscapeHatchAssist-debug.apk',
+    '  2) Pair using the code shown only on the PC (TEMP\pairing-code.local.txt / corridor)',
+    '  3) Use pairing-offer.json + the newest .ehsync from this same folder',
+    '  4) Save escapehatch-phone-sync-proof.json back into this folder',
+    '',
+    'LAN http://192.168.x.x:18765/ is optional and needs a short Nord pause on the PC (auto-restored).'
+  ) | Set-Content -Path $onedriveFirst -Encoding utf8
+  Write-Output "onedriveFirst=$onedriveFirst"
   Write-Output "helper=$helper"
   Write-Output "steps=$steps"
 } else {

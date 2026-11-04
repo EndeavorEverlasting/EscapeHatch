@@ -82,6 +82,22 @@ class CompanionActivity : AppCompatActivity() {
             render()
             return
         }
+        // Deep links for phone proof: escapehatch://assist/pair|import (no secrets in URI).
+        val data = intent.data
+        if (Intent.ACTION_VIEW == intent.action && data != null &&
+            data.scheme == "escapehatch" && data.host == "assist"
+        ) {
+            when (data.path?.trim('/')?.lowercase()) {
+                "pair" -> {
+                    startActivity(Intent(this, PairingImportActivity::class.java))
+                    return
+                }
+                "import", "capsule" -> {
+                    startActivity(Intent(this, CapsuleImportActivity::class.java))
+                    return
+                }
+            }
+        }
         val handoff = HandoffIntents.fromIntent(intent)
         if (handoff != null) {
             val existing = store.load()

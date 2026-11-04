@@ -85,6 +85,20 @@ if (-not $adbWaiters) {
   Write-Output "adb_waiter=already_running pid=$($adbWaiters[0].ProcessId)"
 }
 
+# Keep sealed offer + TEMP pairing code fresh across SAS TTL without printing the code
+$keepers = Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+  Where-Object { $_.CommandLine -match 'private-sync-pairing-keepalive\.ps1' }
+if (-not $keepers) {
+  Start-Process -WindowStyle Hidden powershell -ArgumentList @(
+    '-NoProfile', '-ExecutionPolicy', 'Bypass',
+    '-File', (Join-Path $PSScriptRoot 'private-sync-pairing-keepalive.ps1'),
+    '-MaxHours', '6'
+  )
+  Write-Output 'pairing_keepalive=started'
+} else {
+  Write-Output "pairing_keepalive=already_running pid=$($keepers[0].ProcessId)"
+}
+
 $lanHealth = $null
 try { $lanHealth = (Invoke-RestMethod 'http://127.0.0.1:18765/health' -TimeoutSec 2) } catch { }
 Write-Output "onedrive=$od"

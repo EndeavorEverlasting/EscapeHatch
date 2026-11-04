@@ -67,8 +67,8 @@ const installPage = `<!doctype html>
 <p>Ciphertext-only LAN handoff. Pairing codes stay on the desktop—never on this page.</p>
 <ol>
 <li><a href="/apk" style="color:#c8f542">Download EscapeHatchAssist-debug.apk</a> and allow install from this browser.</li>
-<li>Open Assist → Pair this phone → type the desktop TEMP pairing code.</li>
-<li>Import sealed <a href="/offer" style="color:#c8f542">pairing-offer.json</a> and the <a href="/capsule" style="color:#c8f542">.ehsync capsule</a>.</li>
+<li>Open Assist (or <code>escapehatch://assist/pair</code>) → type the desktop TEMP pairing code.</li>
+<li>Import sealed <a href="/offer" style="color:#c8f542">pairing-offer.json</a> and the <a href="/capsule" style="color:#c8f542">.ehsync capsule</a> (or <code>escapehatch://assist/import</code>).</li>
 <li>Save proof JSON back to OneDrive EscapeHatchPrivateSync.</li>
 </ol>
 <p style="color:#9aab9e">No answer values are served here.</p>

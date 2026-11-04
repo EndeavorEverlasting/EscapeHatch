@@ -54,7 +54,7 @@ const profileValues = {
   preferred_name: 'Ada',
   email: 'ada@example.com',
   phone: '+1 555 0100',
-  phone_authority: 'mobile',
+  phone_authority: 'user_confirmed_primary',
   linkedin_url: 'https://linkedin.com/in/ada',
   street_address: '1 Analytical Engine Way',
   city: 'London',
@@ -65,13 +65,15 @@ const profileValues = {
 
 async function fillProfile(page: import('@playwright/test').Page) {
   for (const [field, value] of Object.entries(profileValues)) {
-    await page.getByTestId(`input-${field}`).fill(value);
+    if (field === 'phone_authority') await page.getByTestId(`input-${field}`).check();
+    else await page.getByTestId(`input-${field}`).fill(value);
   }
 }
 
 async function expectProfile(page: import('@playwright/test').Page) {
   for (const [field, value] of Object.entries(profileValues)) {
-    await expect(page.getByTestId(`input-${field}`)).toHaveValue(value);
+    if (field === 'phone_authority') await expect(page.getByTestId(`input-${field}`)).toBeChecked();
+    else await expect(page.getByTestId(`input-${field}`)).toHaveValue(value);
   }
 }
 

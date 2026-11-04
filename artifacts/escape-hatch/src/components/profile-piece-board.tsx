@@ -63,7 +63,7 @@ export function ProfilePieceBoard({ profile, recovery }: {
       <div aria-live="polite" aria-atomic="true">
         {activePiece ? <>
           <p className="text-sm font-bold">{activePiece.label}: {stateLabels[activePiece.status].toLowerCase()}.</p>
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">Source: {activePiece.sourceOwner}{activePiece.updatedAt ? ` · Updated ${activePiece.updatedAt}` : ''}</p>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">Source: {activePiece.sourceOwner === 'profile' ? 'Private profile' : 'Saved answers and reviewed career story'}{activePiece.updatedAt ? ` · Updated ${activePiece.updatedAt}` : ''}</p>
         </> : <p className="text-xs leading-5">Choose a piece to inspect it. Nothing is sent to an employer.</p>}
       </div>
       <Link href={activePiece?.nextAction.href || '/profile'} className="inline-flex min-h-11 items-center text-xs font-bold text-primary underline underline-offset-4">{activePiece?.nextAction.label || 'Edit your profile'}</Link>

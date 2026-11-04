@@ -57,3 +57,90 @@ Manifest owner: `Outputs/prompt-parallel-dispatch/runs/escapehatch-profile-puzzl
 **UNPROVEN:** expanded career/artifact/answer puzzle integration; actual agent dispatch receipt; real Windows postmerge installation and P08 certification; all nine Issue #69 parent gates remain separately open until independent end-to-end proof.
 
 **First executable continuation:** authorized repository worker reads this doc and manifest, refreshes main, performs EH-PA0, selects a real runtime adapter, dispatches PA1/PA2 in isolated owners, integrates PA3 under validation, then performs installed-host PA4. Do not re-download the earlier package and do not invent autonomous workers.
+
+
+## Local execution update — 2026-11-04
+
+The original remote-only handoff above is historical. Current execution recovered
+`origin/main@ced3418`, preserved the dirty starting checkout and every existing
+worktree, and used isolated model/UI branches plus coordinator convergence.
+Native `collaboration.spawn_agent` launched both implementation lanes; returned
+commits and ownership are recorded in the adjacent `native-execution-receipt.json`.
+The schema and runner remain absent in this repository and the inspected upstream
+checkout. Native concurrency is observed; **contract-valid dispatch remains
+UNVERIFIED**, rather than claiming a canonical parallel PASS.
+
+### P141 → P82 admission and measured slice
+
+- Selected thesis: extend the existing truthful tactile spine, preserving its
+  contact board and selected application action. Issue #182 and the source board
+  corroborate this choice. Global cinematic transitions stay deferred; the
+  existing scene navigator in PR #152 remains its separately owned successor.
+- Hypothesis: adding two source-backed career signals to the existing eight
+  contact slots can expose conflicts/unavailable evidence without leaking values,
+  disrupting keyboard interaction, or changing the selected opportunity.
+- Comparator: merged eight-slot saved/missing board. Boundary: one read-only
+  ten-signal board, existing recovery owners, no new persisted store or artwork
+  dependency. No claim that this slice completes the suite or an employer form.
+- Measurement: pure negative tests; browser keyboard selection, storage equality,
+  conflict/unavailable state, selected-opportunity preservation, 320px layout,
+  200% CSS zoom and reduced-motion checks; synthetic desktop/mobile screenshots.
+- Decision rule: PROMOTE only when state/privacy/navigation checks pass; REFINE
+  bounded failures; REJECT if a truthful projection requires competing persistence
+  or weakens employer boundaries; INCONCLUSIVE for installed-host taste/acceptance
+  until observed through the selected source. No aesthetic preference is inferred
+  from automated tests.
+
+### Design and review findings
+
+Reuse existing Newsreader/Manrope typography and paper/slate/teal tokens. Original
+CSS grain, inset slots and selected relief express material depth without imported
+assets. Upstream mechanisms: `UP-60FBA76B5` reduced-motion parity;
+`UP-F8DA7EE77` movement budget; `UP-60B0939CC` screenshot comparisons. No external
+code/assets were adopted, so this slice introduces no third-party asset license.
+
+The model review found that contact conflict actions must reach saved-answer
+review, and unconfirmed phone values need an understandable confirmation control.
+The coordinator repaired those bounded recovery paths; changing a confirmed phone
+clears its authority. No real profile was changed to test this behavior.
+
+### Installed-host and parent boundary
+
+Status on the selected installation reported owned healthy 21031 and a recovered
+workspace; selected source was `a09c022`, not the candidate. Opening the installed
+page exposed an explicit browser/saved-workspace conflict in queue/context.
+Neither copy was selected, no protected employer tab was changed, and 21033 was
+preserved. Health/readiness endpoint output is not UI acceptance or owner admission.
+Deloitte remains subject to owner/workspace recovery, current opportunity checks,
+review of the existing role documents, required-control inventory, actual field
+readback and operator-only protected actions. No document approval, upload, fill
+or submission is claimed by this UI sprint.
+
+All nine parent #69 gates remain independently UNPROVEN in the canonical parent
+contract. The next suite owner is PR #152 website wayfinding reconciliation,
+followed by the actual UI/persistence gaps in #147. PR #148 is a separately gated
+learning-suite plan, not a prerequisite for applying to a saved opportunity.
+
+
+### Local validation and deliberate second pass
+
+The integrated candidate passed 204 unit tests, typecheck, production build,
+parent/scene/governance/context-boundary/harness validators and four required-field
+controls. Full browser run: 131 passed, one existing skipped extension-popup test.
+The subsequent final-source focused rerun passed all ten profile/mascot checks.
+The first full browser attempt was interrupted after repeated external-font page
+load timeouts; a direct font request also timed out. The test-only Chromium
+resolver now excludes the two Google Fonts domains, leaving product fonts intact.
+Screenshots therefore certify local fallback-font layout, not downloaded font
+rendering. Build retains the existing >500 kB chunk warning.
+
+Synthetic mobile image review exposed a floating sound control over the career
+pieces. The control now stays in page flow below desktop width; its desktop fixed
+position and opted-in audio behavior are preserved. The final focused test proves
+non-overlap, 320px containment, 200% CSS zoom, keyboard toggling/focus, reduced motion,
+phone confirmation/reset, conflict privacy and retained opportunity action.
+
+No private resume, contact, answer, tracker locator or employer screenshot was
+committed. No source installation selection, saved-copy conflict, real application
+or protected 21033 state was changed. The P04 parent and installed candidate remain
+open independently of this source slice.

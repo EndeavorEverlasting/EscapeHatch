@@ -8,7 +8,8 @@
   "base_ref": {
     "observed_default_branch": "main",
     "observed_default_sha_at_authorship": "a09c0224f93a7a7253d397977a1d9d0fa6364036",
-    "refresh_before_mutation": true
+    "refresh_before_mutation": true,
+    "refreshed_default_sha": "ced3418b911d26b5f849d0a793ce5d09b64667e0"
   },
   "graph": {
     "expression": "EH-PA0 -> {EH-PA1 || EH-PA2} -> EH-PA3 -> EH-PA4",
@@ -23,15 +24,17 @@
   },
   "convergence_owner": "EH-PA3",
   "manifest_path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-profile-puzzle-20261103/manifest.json",
-  "status": "DURABLE_P04_PLAN_COMMITTED_PENDING_VALIDATED_RUNTIME_DISPATCH",
+  "status": "SOURCE_INTEGRATED_LOCAL_VALIDATION_PASSED_PENDING_PROVIDER_AND_INSTALLED_PROOF",
   "execution": {
-    "observed_parallelism": false,
+    "observed_parallelism": true,
     "verified_dispatch_receipt": false,
     "canonical_receipt_validation": "BLOCKED_SCHEMA_AND_RUNNER_ABSENT",
-    "chat_provider_handoff": "GitHub branch and draft PR only"
+    "adapter": "collaboration.spawn_agent",
+    "receipt_path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-profile-puzzle-20261103/native-execution-receipt.json",
+    "proof_ceiling": "Native runtime lane launch/return evidence only; not a schema-validated dispatch PASS or installed-app certificate"
   },
   "adapter_ladder": {
-    "native_subagents": "not exposed in current chat",
+    "native_subagents": "Observed: model_evidence and ui_evidence independently implemented isolated branches; coordinator rejoined commits",
     "repository_local_runner": "local-agent runtime known from prior work but not currently attached to this chat",
     "connected_remote_provider": "GitHub source/write supported; no proved independent code-execution adapter",
     "ci_fanout": "CI visible but no authorized workflow dispatch API in this connected runtime",
@@ -39,9 +42,9 @@
     "disposition": "DEGRADED_PARALLEL_UNPROVEN"
   },
   "blockers": [
-    "Canonical harness/contracts/prompt-parallel-dispatch.v1.json not found in currently inspected TokenCorridor or EscapeHatch trees",
-    "Canonical scripts/prompt_parallel_dispatch.py not found in currently inspected TokenCorridor or EscapeHatch trees",
-    "No live Windows runner connected to this chat; can't claim executed agent lanes or installed-host UI proof"
+    "Canonical harness/contracts/prompt-parallel-dispatch.v1.json and scripts/prompt_parallel_dispatch.py absent in EscapeHatch and inspected upstream checkout",
+    "Installed browser exposes saved-copy conflict; no copy selected or private state mutated",
+    "Exact-head installed source upgrade and UI observation remain unproven"
   ],
   "autonomy_gap": "Bind repo's installed local agent/runner to this tracked P04 manifest and persist checked launch/rejoin receipts using a real dispatch adapter; do not ask operator to download or schedule agents.",
   "protected_behavior": [
@@ -127,7 +130,7 @@
         "git log -1 --format=%H origin/main",
         "inspect PR #147, #152, #183 and issue #182"
       ],
-      "status": "PENDING_LOCAL_AGENT_PROOF"
+      "status": "READ_ONLY_REFRESH_AND_OWNERSHIP_REVIEW_COMPLETED"
     },
     {
       "forbidden_surfaces": [
@@ -181,18 +184,18 @@
       ],
       "branch": "isolated feat/profile-puzzle-projection-*",
       "adapter": {
-        "kind": "local_repo_agent",
-        "rung": 2,
-        "verified": false
+        "kind": "native_subagent",
+        "rung": 1,
+        "verified": true
       },
       "launch": {
         "mode": "runtime_tool",
-        "operation": "repo_agent_execute_p04_lane",
+        "tool": "collaboration",
+        "operation": "spawn_agent",
         "arguments": {
-          "plan_path": "docs/agent/P04_PROFILE_PUZZLE_ATELIER_CONVERGENCE_2026-11-03.md",
-          "lane_id": "EH-PA1"
+          "task_name": "model_evidence"
         },
-        "status": "NOT_DISPATCHED_REQUIRES_VERIFIED_RUNNER"
+        "status": "OBSERVED_LAUNCH_AND_RETURN"
       },
       "expected_artifacts": [
         "read-only projector",
@@ -204,7 +207,11 @@
         "npm run test:unit",
         "git diff --check"
       ],
-      "status": "PENDING_LOCAL_AGENT_PROOF"
+      "status": "REJOINED_AND_LOCAL_SOURCE_CHECKS_PASSED",
+      "returned_commits": [
+        "fc2c18c17c537c986f0eda3e7de7130f1d31a2c0",
+        "12c3a48fd4b77f0d58ab6fa5b33d165abf8c1433"
+      ]
     },
     {
       "forbidden_surfaces": [
@@ -259,18 +266,18 @@
       ],
       "branch": "isolated feat/profile-puzzle-ui-*",
       "adapter": {
-        "kind": "local_repo_agent",
-        "rung": 2,
-        "verified": false
+        "kind": "native_subagent",
+        "rung": 1,
+        "verified": true
       },
       "launch": {
         "mode": "runtime_tool",
-        "operation": "repo_agent_execute_p04_lane",
+        "tool": "collaboration",
+        "operation": "spawn_agent",
         "arguments": {
-          "plan_path": "docs/agent/P04_PROFILE_PUZZLE_ATELIER_CONVERGENCE_2026-11-03.md",
-          "lane_id": "EH-PA2"
+          "task_name": "ui_evidence"
         },
-        "status": "NOT_DISPATCHED_REQUIRES_VERIFIED_RUNNER"
+        "status": "OBSERVED_LAUNCH_AND_RETURN"
       },
       "expected_artifacts": [
         "single existing Today board, enhanced",
@@ -282,7 +289,10 @@
         "npm run test:browser",
         "git diff --check"
       ],
-      "status": "PENDING_LOCAL_AGENT_PROOF"
+      "status": "REJOINED_AND_LOCAL_SOURCE_CHECKS_PASSED",
+      "returned_commits": [
+        "47f2b05"
+      ]
     },
     {
       "forbidden_surfaces": [
@@ -366,7 +376,7 @@
         "python scripts/validate_application_autofill_parent.py",
         "git diff --check"
       ],
-      "status": "PENDING_LOCAL_AGENT_PROOF"
+      "status": "LOCAL_VALIDATION_PASSED_PROVIDER_CONVERGENCE_PENDING"
     },
     {
       "forbidden_surfaces": [

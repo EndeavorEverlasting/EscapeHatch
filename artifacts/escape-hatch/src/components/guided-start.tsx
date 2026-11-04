@@ -4,6 +4,7 @@ import { FolderInput, Layers, ListChecks, Volume2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { projectMascotGuidance } from '@/lib/mascot-guidance';
 import { ProfilePieceBoard } from './profile-piece-board';
+import type { ProfilePuzzleInput } from '@/lib/profile-puzzle-projection';
 import type { Profile, Application } from '@/lib/storage';
 
 /** A quiet, user-triggered original two-note chirp; never an automatic notification. */
@@ -33,7 +34,7 @@ function playChirp() {
   }
 }
 
-export function GuidedStart({ profile, applications, focusOpportunity }: { profile: Profile; applications: Application[]; focusOpportunity?: Application }) {
+export function GuidedStart({ profile, recovery, applications, focusOpportunity }: { recovery?: ProfilePuzzleInput['recovery']; profile: Profile; applications: Application[]; focusOpportunity?: Application }) {
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const guidance = projectMascotGuidance(profile, applications, focusOpportunity);
   const steps = [
@@ -57,7 +58,7 @@ export function GuidedStart({ profile, applications, focusOpportunity }: { profi
         </div>
       </div>
     </div>
-    <ProfilePieceBoard profile={profile} />
+    <ProfilePieceBoard profile={profile} recovery={recovery} />
     <details className="guided-journey mt-5" open={!focusOpportunity}>
       <summary className="min-h-11 cursor-pointer rounded-lg border border-border bg-card/70 px-4 py-3 text-sm font-bold text-primary">Explore your application path · sources, opportunities, and application assembly</summary>
     <ol className="mt-4 grid gap-4 md:grid-cols-3" aria-label="Application journey">{steps.map((step, index) => <li key={step.href} className={index === guidance.nextStep ? 'guide-step guide-step-current' : 'guide-step'}>

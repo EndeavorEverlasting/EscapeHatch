@@ -69,7 +69,7 @@ export function BirdsongControl() {
   return <button type="button" onClick={toggle} disabled={!supported} aria-pressed={enabled}
     aria-label={enabled ? 'Turn birdsong off' : 'Turn birdsong on'}
     data-testid="button-birdsong-control"
-    className="fixed bottom-3 right-3 z-20 inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-xs font-bold text-foreground shadow-lg hover:bg-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50 sm:bottom-5 sm:right-5">
+    className="relative ml-5 mt-3 sm:ml-8 lg:ml-0 lg:mt-0 lg:fixed lg:bottom-5 lg:right-5 z-20 inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-xs font-bold text-foreground shadow-lg hover:bg-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50">
     {enabled ? <Volume2 size={16} aria-hidden="true" /> : <VolumeX size={16} aria-hidden="true" />}
     {supported ? enabled ? 'Birdsong on' : 'Birdsong off' : 'Sound unavailable'}
   </button>;

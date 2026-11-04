@@ -33,7 +33,7 @@ export function resolvePhoneLanInstall(): PhoneLanInstallInfo {
     lanPort: PHONE_LAN_INSTALL_PORT,
     lanHost,
     lanUrl: lanHost ? `http://${lanHost}:${PHONE_LAN_INSTALL_PORT}/` : null,
-    serves: ['apk', 'offer', 'capsule', 'proof', 'qr'],
+    serves: ['apk', 'offer', 'capsule', 'proof', 'qr', 'beacon'],
     pairingCode: 'never_on_lan',
     phoneHint:
       'On the phone: install APK from lanUrl (or scan /qr.svg), Pair → Fetch sealed offer from PC, enter desktop code, Import → Fetch capsule, tap Send proof to PC (POST /proof).',

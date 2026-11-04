@@ -74,9 +74,10 @@ test('phone LAN server serves apk/offer/capsule and never pairing codes', async 
     await waitHealth(port);
     const health = await (await fetch(`http://127.0.0.1:${port}/health`)).json();
     assert.equal(health.pairingCode, 'never');
-    assert.deepEqual(health.serves, ['apk', 'offer', 'capsule', 'proof', 'qr']);
+    assert.deepEqual(health.serves, ['apk', 'offer', 'capsule', 'proof', 'qr', 'beacon']);
     assert.equal(health.proofPost, '/proof');
     assert.equal(health.qrSvg, '/qr.svg');
+    assert.equal(health.beaconUdp, 18767);
 
     const index = await (await fetch(`http://127.0.0.1:${port}/`)).text();
     assert.match(index, /Download EscapeHatchAssist-debug\.apk/);

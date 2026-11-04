@@ -331,11 +331,12 @@ const server = http.createServer(async (req, res) => {
       const body = JSON.stringify({
         ok: true,
         carrier,
-        serves: ['apk', 'offer', 'capsule', 'proof', 'qr'],
+        serves: ['apk', 'offer', 'capsule', 'proof', 'qr', 'beacon'],
         apkBytes,
         pairingCode: 'never',
         proofPost: '/proof',
         qrSvg: '/qr.svg',
+        beaconUdp: BEACON_PORT,
       });
       res.writeHead(200, {
         'content-type': 'application/json; charset=utf-8',

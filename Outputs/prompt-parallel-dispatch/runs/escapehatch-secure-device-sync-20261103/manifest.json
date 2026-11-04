@@ -147,7 +147,7 @@
       "expected_artifacts": [
         "Android native vector tests and Gradle build"
       ],
-      "status": "WAITING_DEVICE_HOST"
+      "status": "LOCAL_CODE_LANDED_UNIT_TESTS_GREEN_UNMERGED"
     },
     {
       "lane_id": "EH-CARRIER-LOCAL",

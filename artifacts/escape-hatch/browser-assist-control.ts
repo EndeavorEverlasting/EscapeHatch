@@ -22,6 +22,7 @@ import { readPreferences, updatePreferences, clearPreferences, mergePreferenceEd
 import { accessSync, constants as fsConstants } from 'node:fs';
 import { fillSavedPreferences, openApplicationForm } from './managed-form.ts';
 import { emptyPreferences } from './src/lib/application-preferences.ts';
+import { observePrivateSyncStatus } from './private-sync-status.ts';
 import { prepareToFinalReview, type PreparationResult } from './application-autopilot-executor.ts';
 import {
   ADAPTER_EVIDENCE_SCHEMA,
@@ -448,6 +449,25 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             });
           }
           catch { return respond(res, 422, { ok: false, error: 'Saved preferences could not be read; existing data preserved.' }); }
+        }
+        if (url.pathname === PREFIX + '/private-sync/status' && req.method === 'GET') {
+          if (req.headers.origin && req.headers.origin !== expectedOrigin || req.headers['sec-fetch-site'] === 'cross-site') {
+            return respond(res, 403, { ok: false, error: 'operator_origin_required' });
+          }
+          if (process.env.ESCAPEHATCH_EXPERIMENTAL_SYNC !== '1') {
+            return respond(res, 200, {
+              ok: true,
+              enabled: false,
+              status: 'DISABLED',
+              notes: ['Set ESCAPEHATCH_EXPERIMENTAL_SYNC=1 to observe private ciphertext sync.'],
+            });
+          }
+          try {
+            const report = await observePrivateSyncStatus({ dataHome: process.env.ESCAPEHATCH_DATA_HOME || userDataRoot() });
+            return respond(res, 200, { ok: true, enabled: true, ...report, values: 'redacted' });
+          } catch {
+            return respond(res, 422, { ok: false, error: 'Private sync status unavailable; existing profile preserved.' });
+          }
         }
         if (url.pathname.startsWith(PREFIX + '/documents/') && req.method === 'GET') {
           if (req.headers.origin && req.headers.origin !== expectedOrigin || req.headers['sec-fetch-site'] === 'cross-site') return respond(res, 403, { ok: false, error: 'operator_origin_required' });

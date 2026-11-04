@@ -1,5 +1,8 @@
 ﻿# Prepares value-free phone sync proof artifacts and sideloads when adb sees a device.
 # Never prints preference values or the pairing code to the console.
+param(
+  [int]$WaitMinutes = 20
+)
 $ErrorActionPreference = 'Stop'
 $env:ESCAPEHATCH_EXPERIMENTAL_SYNC = '1'
 if (-not $env:ESCAPEHATCH_DATA_HOME) {
@@ -92,7 +95,39 @@ Write-Output "apk=$apk"
 Write-Output "lanUrl=$lanUrl"
 Write-Output "qrPath=$qrPath"
 
-$deadline = (Get-Date).AddMinutes(20)
+$helper = Join-Path $od 'PHONE_PROOF_HELPER.html'
+$steps = Join-Path $od 'PHONE_PROOF_STEPS.txt'
+@(
+  'EscapeHatch phone proof (USB-free / OneDrive)',
+  '1. On the phone, open OneDrive and the EscapeHatchPrivateSync folder.',
+  '2. Install EscapeHatchAssist-debug.apk (allow unknown apps for this install).',
+  '3. Open EscapeHatch Assist → Pair this phone.',
+  '4. Enter the pairing code from the desktop TEMP file pairing-code.local.txt (never stored in OneDrive).',
+  '5. Choose sealed offer: pairing-offer.json in EscapeHatchPrivateSync.',
+  '6. Import encrypted answers: the newest .ehsync file in that folder.',
+  '7. In-app Save proof → escapehatch-phone-sync-proof.json appears in EscapeHatchPrivateSync.',
+  "Desktop digest to match: $($status.projectionDigest)",
+  'Values are never written to this helper or the proof receipt.'
+) | Set-Content -Path $steps -Encoding utf8
+@"
+<!doctype html><html lang="en"><meta charset="utf-8"><title>EscapeHatch phone proof</title>
+<body style="font:16px/1.45 Georgia,serif;max-width:40rem;margin:2rem;background:#0b1210;color:#e8efe9">
+<h1 style="font:700 1.6rem system-ui,sans-serif">Phone proof — OneDrive path</h1>
+<p>Install the APK from <code>EscapeHatchPrivateSync</code>, pair with the desktop code (TEMP only), import the sealed offer + <code>.ehsync</code>, then save the value-free proof JSON back into that folder.</p>
+<ol>
+<li>OneDrive → EscapeHatchPrivateSync → install <strong>EscapeHatchAssist-debug.apk</strong></li>
+<li>Assist → <strong>Pair this phone</strong> → enter desktop TEMP pairing code</li>
+<li>Choose sealed offer <code>pairing-offer.json</code></li>
+<li>Import newest <code>.ehsync</code></li>
+<li>Save proof → desktop watcher matches digest <code>$($status.projectionDigest.Substring(0,16))…</code></li>
+</ol>
+<p style="color:#9aab9e">No answer values are shown here. USB debugging is optional.</p>
+</body></html>
+"@ | Set-Content -Path $helper -Encoding utf8
+Write-Output "helper=$helper"
+Write-Output "steps=$steps"
+
+$deadline = (Get-Date).AddMinutes([Math]::Max(0, $WaitMinutes))
 while ((Get-Date) -lt $deadline) {
   $devices = & $adb devices | Select-Object -Skip 1 | Where-Object { $_ -match '\tdevice$' }
   if ($devices) {
@@ -112,6 +147,6 @@ while ((Get-Date) -lt $deadline) {
   Start-Sleep -Seconds 5
 }
 
-Write-Output "adb_device=none_within_20m"
-Write-Output "NEXT=Connect phone with USB debugging, rerun this script, or install APK manually from $apk"
+Write-Output "adb_device=none_within_${WaitMinutes}m"
+Write-Output "NEXT=Install from OneDrive helper $helper — or USB-debug and rerun with -WaitMinutes 20"
 exit 2

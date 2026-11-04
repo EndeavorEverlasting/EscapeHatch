@@ -75,6 +75,10 @@ def source_snapshot(repo: Path, source_commit: str | None = None) -> tuple[str, 
             raise PackageError("Extension source conflicts with package metadata or another filename.")
         folded.add(relative.casefold())
         files[relative] = git_bytes(repo, "cat-file", "blob", blob)
+    return commit, files, receipt_bytes(commit, files)
+
+
+def receipt_bytes(commit: str, files: dict[str, bytes]) -> bytes:
     if "manifest.json" not in files:
         raise PackageError("Committed extension manifest is missing.")
     try:
@@ -98,7 +102,7 @@ def source_snapshot(repo: Path, source_commit: str | None = None) -> tuple[str, 
         "files": {name: hashlib.sha256(content).hexdigest() for name, content in sorted(files.items())},
     }
     encoded = (json.dumps(receipt, sort_keys=True, indent=2) + "\n").encode("utf-8")
-    return commit, files, encoded
+    return encoded
 
 
 def assert_no_links(path: Path) -> None:

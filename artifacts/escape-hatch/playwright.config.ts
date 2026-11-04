@@ -9,7 +9,7 @@ const browserArgs = ['--no-sandbox', '--disable-dev-shm-usage',
 const { port, serverEnv } = createIsolatedBrowserTestEnvironment();
 export default defineConfig({
   testDir: './tests',
-  testIgnore: 'workspace-startup.spec.ts',
+  testIgnore: ['workspace-startup.spec.ts', 'host-workflow-recovery.spec.ts'],
   metadata: { syntheticWorkspace: true },
   fullyParallel: false,
   timeout: 30_000,

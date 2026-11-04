@@ -20,7 +20,7 @@ test('bootstrap addresses the exact packaged extension and sends no private work
 });
 
 test('missing extension, rejected connection and review states never report hydration', async () => {
-  assert.match(await refreshExtensionWorkspace(), /Open the EscapeHatch extension/);
+  assert.match(await refreshExtensionWorkspace(), /optional companion/);
   for (const result of [undefined, { ok: false }, { ok: true, status: 'NOT_PAIRED' }, { ok: true, status: 'PAUSED' }]) {
     const message = await refreshExtensionWorkspace({ sendMessage(_id, _input, done) { done(result); } });
     assert.doesNotMatch(message, /is current/);

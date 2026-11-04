@@ -284,3 +284,82 @@ from the operator; it cannot be inferred from launcher health or contact matches
 - `scripts/windows/EscapeHatch-Install.ps1`
 - `tests/test_escapehatch_installer_source_delivery.py`
 - `docs/agent/P04_PROFILE_PUZZLE_ATELIER_CONVERGENCE_2026-11-03.md`
+
+## Deterministic installed-host recovery (2026-11-04)
+
+The earlier request for the operator to use a workspace-review command was
+incorrect for the deployed companion: read-only installed metadata showed an
+older immutable package without that command. That deployment gap is not a
+prerequisite for the normal extension-free managed-browser workflow.
+
+The host now diagnoses the last-used Chrome profile's companion from actual
+compatibility-file bytes, offers immutable update staging, and explicitly keeps
+Chrome activation unverified. Staging never edits Chrome preferences, storage,
+extension enrollment, or employer pages. Installed Windows bundles carry the
+canonical build-generated companion receipt; runtime staging verifies it against
+the Windows file manifest without Git or Python. These unsigned preview hashes
+prove consistency, not publisher authenticity or successful installation.
+
+An authenticated, explicit managed preparation/resume/attachment action now
+initializes the shared host owner binding from the currently selected, nonempty
+installed workspace under the canonical workspace lock. Existing native IDs are
+adopted; malformed or conflicting owners and stale revisions fail closed. The
+optional native review uses the same owner record and envelope parser. This is
+selection of the existing workspace, not approval of its facts, answers or role
+documents. No contact match supplies identity. Private identifiers remain outside
+Git. The metadata-only owner endpoint supports revision-checked recovery and
+readback without asking the operator to reconstruct existing context.
+
+Parent authority remains issue #69 and
+`harness/contracts/application-autofill-parent.v1.json`. All nine parent proof
+gates remain unproven. Source tests do not prove real-workspace owner selection,
+fresh tracker access, approved Deloitte documents, live ATS acceptance, clean
+Windows installation, or final review readiness. Final Submit and protected
+attestations remain operator-controlled. The earlier Windows preview job's
+ReleaseInstall bootstrap timeout remains an independent unresolved release gate.
+
+### Host recovery changed-file inventory
+
+- `ARTIFACT_REGISTRY.md`
+- `docs/agent/P04_PROFILE_PUZZLE_ATELIER_CONVERGENCE_2026-11-03.md`
+- `artifacts/escape-hatch/browser-assist-control.ts`
+- `artifacts/escape-hatch/companion-package.ts`
+- `artifacts/escape-hatch/extension-host-control.ts`
+- `artifacts/escape-hatch/extension-host-control.test.ts`
+- `artifacts/escape-hatch/extension-profile-host.ts`
+- `artifacts/escape-hatch/workspace-owner-file.ts`
+- `artifacts/escape-hatch/workspace-owner-file.test.ts`
+- `artifacts/escape-hatch/workspace-control.ts`
+- `artifacts/escape-hatch/src/lib/extension-pairing.ts`
+- `artifacts/escape-hatch/src/lib/extension-workspace.ts`
+- `artifacts/escape-hatch/src/lib/extension-workspace.test.ts`
+- `artifacts/escape-hatch/src/components/extension-workspace-status.tsx`
+- `artifacts/escape-hatch/tests/host-workflow-recovery.spec.ts`
+- `artifacts/escape-hatch/tests/application-requirements-control.spec.ts`
+- `artifacts/escape-hatch/playwright.config.ts`
+- `artifacts/escape-hatch/playwright.bootstrap.config.ts`
+- `artifacts/escape-hatch/package.json`
+- `artifacts/escape-hatch/vite.config.ts`
+- `scripts/package_application_assist.py`
+- `scripts/package_windows_preview.py`
+- `tests/test_windows_preview_package.py`
+
+### Host recovery validation receipt
+
+Coordinator validation on the isolated host-recovery branch: 223 unit tests,
+16 managed startup/recovery Chromium checks, 148 regular Chromium checks with
+one pre-existing obsolete popup skip, 3 real-control middleware Chromium checks,
+4 required-field tests, 10 companion package tests and 6 Windows package tests
+PASS. Typecheck, production build, diff whitespace, harness/governance/application
+harness, parent, journey, and context-boundary self-test/validator PASS. The build
+retains its existing large-chunk advisory. A validator invocation from the cockpit
+subdirectory initially failed to resolve root scripts; rerun from repository root
+passed. These are local source/controlled-runtime results, not installed private
+workspace or employer proof.
+
+CI additionally exercised the existing managed controller suite and exposed a
+pre-existing missing `readWorkspace` import in existing-tab and community-resume
+routes. Restoring the canonical import resolves those paths: all 19 controller
+tests PASS locally, including preserved browser entries. The full 50-case
+bootstrap unit suite also PASS. This correction does not broaden preparation or
+submission authority.

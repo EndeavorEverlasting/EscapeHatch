@@ -279,3 +279,12 @@ No private state, generated user icon, shortcut bytes or applicant screenshot is
 included. Canonical dispatch validation remains UNPROVEN while its owner schema
 and runner are absent. Behavioral validation uses the existing installer source-
 delivery/Windows regression tests and the isolated extension-journey Chromium spec.
+
+## Installed host owner and companion recovery (2026-11-04)
+
+| Artifact | Canonical owner / producer | Retention and privacy | Validation / proof ceiling |
+| --- | --- | --- | --- |
+| Shared host identity | `workspace-owner-file.ts`; authenticated explicit preparation or revision-checked workspace selection | Private `workspace-owner-binding.v1.json` under existing user data root; opaque IDs only; preserve across upgrades/uninstall, never tracked | Owner-file tests, native admission and managed middleware tests; no automatic fact/document approval |
+| Native envelope parser | `src/lib/extension-pairing.ts`; existing native review owner | Code only; actual `extension-native-pairing.v1.json` stays private | Existing parser/admission tests; conflicting IDs fail closed |
+| Companion diagnosis / staging | `extension-host-control.ts`, `companion-package.ts` | Metadata-only HTTP responses; immutable private package cache; no Chrome preference writes | Host-control tests and managed browser recovery spec; staging is not Chrome activation |
+| Shipped companion receipt | `scripts/package_application_assist.py` formatter called by `scripts/package_windows_preview.py` | Generated `browser/application-assist/release.json` in Windows preview, covered by Windows hash manifest; no tracked generated copy | Both package suites plus no-Git/no-Python runtime staging test; unsigned consistency proof only |

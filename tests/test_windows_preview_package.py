@@ -140,6 +140,11 @@ catch { Write-Output $_.Exception.Message; exit 9 }
                 for name, digest in manifest['files'].items():
                     self.assertEqual(hashlib.sha256(archive.read(name)).hexdigest(), digest)
                 self.assertIn('harness/contracts/application-form-taxonomy.v1.json', manifest['files'])
+                extension = json.loads(archive.read('browser/application-assist/release.json'))
+                self.assertEqual(extension['sourceCommit'], manifest['sourceCommit'])
+                self.assertIn('native-profile-bridge.js', extension['files'])
+                for name, digest in extension['files'].items():
+                    self.assertEqual(hashlib.sha256(archive.read('browser/application-assist/' + name)).hexdigest(), digest)
                 # Runtime source imports must resolve inside the shipped bundle;
                 # checking the checkout alone hides omitted repository contracts.
                 for name in manifest['files']:

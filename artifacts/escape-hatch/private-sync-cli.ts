@@ -1,5 +1,6 @@
 /** Explicit local encrypted sync entrypoint; never prints applicant answers or key material. */
 import fs from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import {
   bindDriveCarrier,
@@ -70,7 +71,18 @@ if (!allowed.has(action) || (!['status', 'authorize-drive'].includes(action) && 
         if (err?.code !== 'ENOENT') throw e;
       }
       await fs.writeFile(outPath, JSON.stringify(sealed), { flag: 'wx', mode: 0o600 });
-      process.stdout.write(JSON.stringify({ state: 'PAIRING_EXPORTED', vaultId: sealed.vaultId, pairingFile: outPath, pairingCode }) + '\n');
+      // Pairing code stays in TEMP only — never echo it on stdout (agent/CI logs).
+      const codePath = path.join(os.tmpdir(), 'pairing-code.local.txt');
+      await fs.writeFile(codePath, pairingCode, { mode: 0o600 });
+      process.stdout.write(
+        JSON.stringify({
+          state: 'PAIRING_EXPORTED',
+          vaultId: sealed.vaultId,
+          pairingFile: outPath,
+          pairingCodePath: codePath,
+          pairingCode: 'written_to_temp_only',
+        }) + '\n',
+      );
     } else if (action === 'import-pairing') {
       const inPath = process.argv[4];
       const code = process.argv[5];

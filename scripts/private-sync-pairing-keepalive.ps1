@@ -44,10 +44,17 @@ function Refresh-Offer {
     if (Test-Path $offerOut) { Remove-Item $offerOut -Force }
     $exportRaw = node --experimental-strip-types private-sync-cli.ts export-pairing $od $offerOut 2>&1
     $export = ($exportRaw | Where-Object { $_ -match '^\s*\{' } | Select-Object -Last 1) | ConvertFrom-Json
-    if (-not $export.pairingCode) { throw 'export-pairing missing pairingCode' }
-    Set-Content -Path $codeLocal -Value $export.pairingCode -NoNewline
+    if ($export.pairingCode -and $export.pairingCode -ne 'written_to_temp_only') {
+      # Legacy CLI echoed the code — persist then treat stdout as untrusted.
+      Set-Content -Path $codeLocal -Value $export.pairingCode -NoNewline
+    }
+    if (-not (Test-Path $codeLocal) -or (Get-Item $codeLocal).Length -lt 16) {
+      throw 'export-pairing missing TEMP pairing-code.local.txt'
+    }
     Copy-Item $offerOut $offerPath -Force
-    Write-Output "refreshed_at=$((Get-Date).ToUniversalTime().ToString('o')) expiresAt=$($export.expiresAt) codePath=$codeLocal"
+    $expiresAt = $null
+    try { $expiresAt = (Get-Content $offerOut -Raw | ConvertFrom-Json).expiresAt } catch { }
+    Write-Output "refreshed_at=$((Get-Date).ToUniversalTime().ToString('o')) expiresAt=$expiresAt codePath=$codeLocal"
   } finally {
     Pop-Location
   }

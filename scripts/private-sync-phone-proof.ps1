@@ -118,7 +118,12 @@ try {
     if (Test-Path $offerOut) { Remove-Item $offerOut -Force }
     $exportRaw = node --experimental-strip-types private-sync-cli.ts export-pairing $od $offerOut 2>&1
     $export = ($exportRaw | Where-Object { $_ -match '^\s*\{' } | Select-Object -Last 1) | ConvertFrom-Json
-    Set-Content -Path $codeLocal -Value $export.pairingCode -NoNewline
+    if ($export.pairingCode -and $export.pairingCode -ne 'written_to_temp_only') {
+      Set-Content -Path $codeLocal -Value $export.pairingCode -NoNewline
+    }
+    if (-not (Test-Path $codeLocal) -or (Get-Content $codeLocal -Raw).Length -lt 16) {
+      throw 'export-pairing did not write TEMP\pairing-code.local.txt'
+    }
     Copy-Item $offerOut (Join-Path $od 'pairing-offer.json') -Force
   } else {
     if (-not (Test-Path (Join-Path $od 'pairing-offer.json'))) {

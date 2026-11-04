@@ -17,8 +17,8 @@ import java.time.Instant
 
 /**
  * Explicit operator import of a ciphertext preference capsule (.ehsync).
- * Never logs answer values; status shows field ids and digest only.
- * After import, operator can save a value-free proof JSON into OneDrive.
+ * Primary path: fixed-name escapehatch-answers.ehsync from the phone-pack
+ * folder; proof auto-writes back as escapehatch-phone-sync-proof.json.
  */
 class CapsuleImportActivity : AppCompatActivity() {
     private lateinit var status: TextView
@@ -33,6 +33,16 @@ class CapsuleImportActivity : AppCompatActivity() {
             PrivateSyncCapsuleImport.defaultProjectionFile(filesDir),
         )
     }
+
+    private val openPackFolder =
+        registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
+            if (uri == null) {
+                status.text = getString(R.string.pairing_offer_cancelled)
+                return@registerForActivityResult
+            }
+            PhonePackStore.saveTreeUri(this, uri)
+            loadAnswersFromPack()
+        }
 
     private val openCapsule =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
@@ -73,6 +83,10 @@ class CapsuleImportActivity : AppCompatActivity() {
         copyProof = findViewById(R.id.copyProof)
         lanBaseUrl = findViewById(R.id.lanBaseUrl)
         LanHostMemory.bind(lanBaseUrl, this)
+        findViewById<Button>(R.id.loadFromPack).setOnClickListener { loadAnswersFromPack() }
+        findViewById<Button>(R.id.choosePackFolder).setOnClickListener {
+            openPackFolder.launch(null)
+        }
         findViewById<Button>(R.id.chooseCapsule).setOnClickListener {
             openCapsule.launch(arrayOf("application/json", "text/*", "*/*"))
         }
@@ -91,6 +105,24 @@ class CapsuleImportActivity : AppCompatActivity() {
             clipboard.setPrimaryClip(ClipData.newPlainText("escapehatch-phone-sync-proof", payload))
             status.text = getString(R.string.capsule_proof_copied)
         }
+        if (PhonePackStore.treeUri(this) != null) {
+            loadAnswersFromPack()
+        } else {
+            status.text = getString(R.string.phone_pack_folder_missing)
+        }
+    }
+
+    private fun loadAnswersFromPack() {
+        if (PhonePackStore.treeUri(this) == null) {
+            status.text = getString(R.string.phone_pack_folder_missing)
+            return
+        }
+        val raw = PhonePackStore.readText(this, PhonePackStore.ANSWERS_FILE)
+        if (raw.isNullOrBlank()) {
+            status.text = getString(R.string.phone_pack_answers_missing)
+            return
+        }
+        applyImport(importer.importCapsuleJson(raw))
     }
 
     private fun sendProofToLan() {
@@ -153,12 +185,22 @@ class CapsuleImportActivity : AppCompatActivity() {
                     sendProofLan.isEnabled = true
                     saveProof.isEnabled = true
                     copyProof.isEnabled = true
-                    getString(
-                        R.string.capsule_imported,
-                        result.entryCount,
-                        result.cognizantFieldIds.joinToString(", "),
-                        result.projectionDigest ?: "",
-                    ) + "\n" + getString(R.string.capsule_proof_hint)
+                    val base =
+                        getString(
+                            R.string.capsule_imported,
+                            result.entryCount,
+                            result.cognizantFieldIds.joinToString(", "),
+                            result.projectionDigest ?: "",
+                        )
+                    val auto =
+                        proofJson?.let { payload ->
+                            if (PhonePackStore.writeText(this, PhonePackStore.PROOF_FILE, payload)) {
+                                "\n" + getString(R.string.phone_pack_proof_auto_saved)
+                            } else {
+                                "\n" + getString(R.string.capsule_proof_hint)
+                            }
+                        } ?: ""
+                    base + auto
                 }
                 CapsuleImportState.PAIRING_REQUIRED -> getString(R.string.capsule_pairing_required)
                 CapsuleImportState.INVALID_CAPSULE -> getString(R.string.capsule_invalid)

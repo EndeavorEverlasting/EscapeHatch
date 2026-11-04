@@ -13,7 +13,8 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 
 /**
- * Explicit operator-confirmed vault pairing. Never auto-pairs; never logs the SAS code.
+ * Explicit operator-confirmed vault pairing. Primary path: one phone-pack
+ * folder grant that auto-loads pairing-offer.json + PAIRING_CODE.txt.
  */
 class PairingImportActivity : AppCompatActivity() {
     private lateinit var status: TextView
@@ -30,6 +31,16 @@ class PairingImportActivity : AppCompatActivity() {
         confirmButton.isEnabled = loaded
         confirmButton.alpha = if (loaded) 1f else 0.45f
     }
+
+    private val openPackFolder =
+        registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
+            if (uri == null) {
+                setOfferLoaded(false, getString(R.string.pairing_offer_cancelled))
+                return@registerForActivityResult
+            }
+            PhonePackStore.saveTreeUri(this, uri)
+            loadFromPhonePack()
+        }
 
     private val openOffer =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
@@ -55,14 +66,36 @@ class PairingImportActivity : AppCompatActivity() {
         lanBaseUrl = findViewById(R.id.lanBaseUrl)
         confirmButton = findViewById(R.id.confirmPairing)
         LanHostMemory.bind(lanBaseUrl, this)
-        // Confirm stays disabled until a sealed offer is loaded — prevents the
-        // "Choose a pairing offer first" dead-end after typing the code early.
         setOfferLoaded(false, getString(R.string.pairing_offer_required))
+        findViewById<Button>(R.id.choosePackFolder).setOnClickListener {
+            openPackFolder.launch(null)
+        }
         findViewById<Button>(R.id.chooseOffer).setOnClickListener {
             openOffer.launch(arrayOf("application/json", "text/*", "*/*"))
         }
         findViewById<Button>(R.id.fetchOfferLan).setOnClickListener { fetchOfferFromLan() }
         confirmButton.setOnClickListener { confirmImport() }
+        // Resume a previously granted EscapeHatchPhoneDrop folder.
+        if (PhonePackStore.treeUri(this) != null) {
+            loadFromPhonePack()
+        }
+    }
+
+    private fun loadFromPhonePack() {
+        val offer = PhonePackStore.readText(this, PhonePackStore.OFFER_FILE)
+        if (offer.isNullOrBlank()) {
+            setOfferLoaded(false, getString(R.string.phone_pack_offer_missing))
+            return
+        }
+        offerJson = offer
+        val code = PhonePackStore.readText(this, PhonePackStore.CODE_FILE)
+            ?.trim()
+            ?.filter { !it.isWhitespace() }
+            ?.take(16)
+        if (!code.isNullOrBlank() && code.length == 16) {
+            codeInput.setText(code)
+        }
+        setOfferLoaded(true, getString(R.string.phone_pack_loaded))
     }
 
     private fun fetchOfferFromLan() {
@@ -119,7 +152,6 @@ class PairingImportActivity : AppCompatActivity() {
             }
         codeInput.text?.clear()
         if (result.state == PairingImportState.IMPORTED) {
-            // Continue straight into sealed capsule import / Send proof to PC.
             startActivity(Intent(this, CapsuleImportActivity::class.java))
         }
     }

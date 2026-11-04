@@ -1,0 +1,33 @@
+{
+  "schema": "escapehatch/private-sync-phone-pack/v1",
+  "purpose": "Fixed-name phone pack eliminates hash-filename and chat-title friction for sealed sync.",
+  "folderName": "EscapeHatchPhoneDrop",
+  "requiredFiles": {
+    "pairingOffer": "pairing-offer.json",
+    "pairingCode": "PAIRING_CODE.txt",
+    "answersCapsule": "escapehatch-answers.ehsync",
+    "apk": "EscapeHatchAssist-debug.apk"
+  },
+  "phoneWrittenFiles": {
+    "proof": "escapehatch-phone-sync-proof.json"
+  },
+  "operatorPath": [
+    "Install EscapeHatchAssist-debug.apk from the folder",
+    "Assist → Pair this phone → Choose EscapeHatchPhoneDrop folder once",
+    "Confirm pairing (offer + code auto-loaded)",
+    "Import loads escapehatch-answers.ehsync; proof auto-writes back"
+  ],
+  "forbiddenOperatorWork": [
+    "Hunting hash-named .ehsync files",
+    "Searching Drive by 32/64-character chat titles",
+    "Manually copying pairing codes from agent chat",
+    "Choosing offer and capsule as separate unknown files when the pack folder is available"
+  ],
+  "hostOwner": "scripts/private-sync-stage-phone-pack.ps1",
+  "androidOwner": "android/application-assist/.../PhonePackStore.kt",
+  "securityNotes": [
+    "PAIRING_CODE.txt is a short-lived SAS (pairing TTL), not a durable vault key",
+    "Capsule remains ciphertext-only; proof is value-free digests/counts",
+    "Never commit private carrier contents to git"
+  ]
+}

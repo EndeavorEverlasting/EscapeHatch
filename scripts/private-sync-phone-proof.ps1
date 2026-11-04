@@ -135,7 +135,27 @@ try {
   Pop-Location
 }
 
-$capsule = Get-ChildItem $od -Filter '*.ehsync' | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+$capsule = Get-ChildItem $od -Filter '*.ehsync' |
+  Where-Object { $_.Name -ne 'escapehatch-answers.ehsync' } |
+  Sort-Object LastWriteTime -Descending |
+  Select-Object -First 1
+if (-not $capsule) {
+  $capsule = Get-ChildItem $od -Filter '*.ehsync' | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+}
+# Fixed-name alias so the phone never hunts hash titles.
+if ($capsule) {
+  Copy-Item $capsule.FullName (Join-Path $od 'escapehatch-answers.ehsync') -Force
+  $deskDrop = Join-Path ([Environment]::GetFolderPath('Desktop')) 'EscapeHatchPhoneDrop'
+  New-Item -ItemType Directory -Force -Path $deskDrop | Out-Null
+  Copy-Item $capsule.FullName (Join-Path $deskDrop 'escapehatch-answers.ehsync') -Force
+  if (Test-Path (Join-Path $od 'pairing-offer.json')) {
+    Copy-Item (Join-Path $od 'pairing-offer.json') (Join-Path $deskDrop 'pairing-offer.json') -Force
+  }
+  if (Test-Path $codeLocal) {
+    Copy-Item $codeLocal (Join-Path $deskDrop 'PAIRING_CODE.txt') -Force
+    Copy-Item $codeLocal (Join-Path $od 'PAIRING_CODE.txt') -Force
+  }
+}
 
 if (-not $AttachOnly) {
   $proof = [ordered]@{
@@ -207,14 +227,13 @@ if (-not $AttachOnly) {
   $steps = Join-Path $od 'PHONE_PROOF_STEPS.txt'
   @(
     'EscapeHatch phone proof — prefer OneDrive (keeps NordVPN on)',
-    '1. Phone OneDrive app → EscapeHatchPrivateSync → install EscapeHatchAssist-debug.apk (current debug build).',
-    '2. Same folder: open pairing-offer.json in Assist Pair, then import newest .ehsync.',
-    '3. Desktop TEMP\pairing-code.local.txt is the ONLY place for the pairing code (never in OneDrive / never on :18765).',
-    '4. After import: Save proof JSON into EscapeHatchPrivateSync as escapehatch-phone-sync-proof.json (VPN-safe) OR Send proof to PC on LAN.',
-    'Optional LAN (needs short Nord pause on PC): lan-install-url.txt or http://<pc-ip>:18765/ — desktop auto-restores VPN.',
-    'Optional USB debugging: plug in; desktop AttachOnly installs + pushes offer/capsule.',
+    '1. Install EscapeHatchAssist-debug.apk from EscapeHatchPhoneDrop / EscapeHatchPrivateSync.',
+    '2. Assist → Pair → Choose EscapeHatchPhoneDrop folder once (auto-loads pairing-offer.json + PAIRING_CODE.txt).',
+    '3. Confirm → Import loads escapehatch-answers.ehsync; proof auto-writes escapehatch-phone-sync-proof.json.',
+    'Optional LAN (short Nord pause): lan-install-url.txt — desktop auto-restores VPN.',
+    'Optional USB: AttachOnly installs + pushes fixed files.',
     "Desktop digest to match: $($status.projectionDigest)",
-    'Values never written here. Emulator cannot close phone 3/3.'
+    'Fixed names only. Values never written here. Emulator cannot close phone 3/3.'
   ) | Set-Content -Path $steps -Encoding utf8
   $digestShort = $status.projectionDigest.Substring(0, 16)
   $lanLine = if ($lanUrl) { "<p style=`"color:#9aab9e`">Optional LAN (PC Nord briefly paused, then auto-restored): <a href=`"$lanUrl`" style=`"color:#c8f542`">$lanUrl</a> — or open <code>lan-install-url.txt</code>.</p>" } else { '' }
@@ -226,11 +245,10 @@ if (-not $AttachOnly) {
 <strong>Keep NordVPN on:</strong> install from this OneDrive folder — no PC LAN required.
 </p>
 <ol>
-<li>Install <strong>EscapeHatchAssist-debug.apk</strong> from this folder (current debug build)</li>
-<li>Assist → <strong>Pair this phone</strong> → desktop TEMP pairing code (not stored here)</li>
-<li>Open sealed offer <code>pairing-offer.json</code> from this folder</li>
-<li>Import newest <code>.ehsync</code> from this folder</li>
-<li>Save <code>escapehatch-phone-sync-proof.json</code> back here (or Send proof to PC on LAN)</li>
+<li>Install <strong>EscapeHatchAssist-debug.apk</strong></li>
+<li>Assist → <strong>Pair this phone</strong> → Choose this folder once</li>
+<li>Confirm pairing (code + offer auto-load from fixed names)</li>
+<li>Import loads <code>escapehatch-answers.ehsync</code>; proof auto-saves here</li>
 </ol>
 $lanLine
 <p>Desktop digest to match: <code>${digestShort}…</code></p>
@@ -282,9 +300,17 @@ while ((Get-Date) -lt $deadline) {
     }
     $remoteDir = '/sdcard/Download/EscapeHatchPrivateSync'
     & $adb -s $serial shell mkdir -p $remoteDir
-    if ($capsule) { & $adb -s $serial push $capsule.FullName "$remoteDir/" }
-    & $adb -s $serial push (Join-Path $od 'pairing-offer.json') "$remoteDir/"
-    Write-Output "pushed_files=$remoteDir"
+    $answersAlias = Join-Path $od 'escapehatch-answers.ehsync'
+    if (Test-Path $answersAlias) {
+      & $adb -s $serial push $answersAlias "$remoteDir/escapehatch-answers.ehsync"
+    } elseif ($capsule) {
+      & $adb -s $serial push $capsule.FullName "$remoteDir/escapehatch-answers.ehsync"
+    }
+    & $adb -s $serial push (Join-Path $od 'pairing-offer.json') "$remoteDir/pairing-offer.json"
+    if (Test-Path (Join-Path $od 'PAIRING_CODE.txt')) {
+      & $adb -s $serial push (Join-Path $od 'PAIRING_CODE.txt') "$remoteDir/PAIRING_CODE.txt"
+    }
+    Write-Output "pushed_files=$remoteDir (fixed names)"
     # Launch pair UI via exported deep link (activities stay non-exported for release).
     # Pairing code stays on desktop TEMP only (never pushed).
     & $adb -s $serial shell am start -a android.intent.action.VIEW -d 'escapehatch://assist/pair' | Out-Null

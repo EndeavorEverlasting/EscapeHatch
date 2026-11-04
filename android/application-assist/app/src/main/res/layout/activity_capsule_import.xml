@@ -19,12 +19,28 @@
         android:text="@string/capsule_instructions" />
 
     <Button
-        android:id="@+id/chooseCapsule"
+        android:id="@+id/loadFromPack"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:minHeight="48dp"
-        android:text="@string/capsule_choose" />
+        android:text="@string/phone_pack_load_answers" />
+
+    <Button
+        android:id="@+id/choosePackFolder"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:minHeight="48dp"
+        android:text="@string/phone_pack_choose_folder" />
+
+    <Button
+        android:id="@+id/chooseCapsule"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:minHeight="48dp"
+        android:text="@string/capsule_choose_fallback" />
 
     <EditText
         android:id="@+id/lanBaseUrl"

@@ -155,5 +155,11 @@ Write-Output 'corridor=http://127.0.0.1:18766/corridor'
 Write-Output 'lanInstall=http://<this-pc-wifi-ip>:18765/ (QR opened when available)'
 Write-Output "lanHealth=$(if ($lanHealth) { 'ok' } else { 'down' })"
 Write-Output 'nord_restore=scripts\private-sync-nord-lan-window.ps1 -Mode RestoreOnly'
-Write-Output 'NEXT=Phone: Google Drive folder EscapeHatchPhoneDrop (see GOOGLE_DRIVE_FOLDER.txt) - install APK, pair from TEMP notepad, import .ehsync, upload escapehatch-phone-sync-proof.json back to that Drive folder. Nord stays on.'
+# Re-stage fixed-name phone pack so Drive/Desktop never asks humans to hunt hashes.
+$stagePack = Join-Path $PSScriptRoot 'private-sync-stage-phone-pack.ps1'
+if (Test-Path $stagePack) {
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $stagePack | ForEach-Object { Write-Output $_ }
+}
+
+Write-Output 'NEXT=Phone: open EscapeHatchPhoneDrop → install APK → Pair → Choose that folder once → Confirm. Answers + proof use fixed names. Nord stays on.'
 exit 0

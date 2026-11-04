@@ -19,18 +19,39 @@
         android:text="@string/pairing_instructions" />
 
     <Button
-        android:id="@+id/chooseOffer"
+        android:id="@+id/choosePackFolder"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:minHeight="48dp"
-        android:text="@string/pairing_choose_offer" />
+        android:text="@string/phone_pack_choose_folder" />
+
+    <EditText
+        android:id="@+id/pairingCode"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:hint="@string/pairing_code_hint"
+        android:importantForAutofill="no"
+        android:inputType="textVisiblePassword"
+        android:maxLength="16"
+        android:minHeight="48dp" />
+
+    <Button
+        android:id="@+id/confirmPairing"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:alpha="0.45"
+        android:enabled="false"
+        android:minHeight="48dp"
+        android:text="@string/pairing_confirm" />
 
     <EditText
         android:id="@+id/lanBaseUrl"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="16dp"
         android:hint="@string/lan_base_hint"
         android:importantForAutofill="no"
         android:inputType="textUri"
@@ -42,26 +63,15 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:minHeight="48dp"
-        android:text="@string/pairing_fetch_offer_lan" />
-
-    <EditText
-        android:id="@+id/pairingCode"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:hint="@string/pairing_code_hint"
-        android:importantForAutofill="no"
-        android:inputType="textVisiblePassword|textCapCharacters"
-        android:maxLength="16"
-        android:minHeight="48dp" />
+        android:text="@string/pairing_fetch_lan" />
 
     <Button
-        android:id="@+id/confirmPairing"
+        android:id="@+id/chooseOffer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="8dp"
         android:minHeight="48dp"
-        android:text="@string/pairing_confirm" />
+        android:text="@string/pairing_choose_offer_fallback" />
 
     <TextView
         android:id="@+id/pairingStatus"

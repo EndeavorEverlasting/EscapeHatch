@@ -182,7 +182,7 @@ function qrSvgFor(lanBase: string): string | null {
 function installPageHtml(lanBase: string, apkBytes: number | null): string {
   const apkHint =
     apkBytes && apkBytes > 0
-      ? `${(apkBytes / (1024 * 1024)).toFixed(1)}&nbsp;MB — Keystore build; refuse a ~5.5&nbsp;MB stale copy`
+      ? `${(apkBytes / (1024 * 1024)).toFixed(1)}&nbsp;MB — current Keystore debug build`
       : 'download size shown after APK is staged on the PC';
   const hostForApp = lanBase.replace(/^https?:\/\//, '').replace(/\/$/, '');
   return `<!doctype html>

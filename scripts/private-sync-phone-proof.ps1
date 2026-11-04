@@ -202,7 +202,7 @@ if (-not $AttachOnly) {
   $steps = Join-Path $od 'PHONE_PROOF_STEPS.txt'
   @(
     'EscapeHatch phone proof — prefer OneDrive (keeps NordVPN on)',
-    '1. Phone OneDrive app → EscapeHatchPrivateSync → install EscapeHatchAssist-debug.apk (~6.5 MB).',
+    '1. Phone OneDrive app → EscapeHatchPrivateSync → install EscapeHatchAssist-debug.apk (current debug build).',
     '2. Same folder: open pairing-offer.json in Assist Pair, then import newest .ehsync.',
     '3. Desktop TEMP\pairing-code.local.txt is the ONLY place for the pairing code (never in OneDrive / never on :18765).',
     '4. After import: Save proof JSON into EscapeHatchPrivateSync as escapehatch-phone-sync-proof.json (VPN-safe) OR Send proof to PC on LAN.',
@@ -221,7 +221,7 @@ if (-not $AttachOnly) {
 <strong>Keep NordVPN on:</strong> install from this OneDrive folder — no PC LAN required.
 </p>
 <ol>
-<li>Install <strong>EscapeHatchAssist-debug.apk</strong> from this folder (~6.5&nbsp;MB)</li>
+<li>Install <strong>EscapeHatchAssist-debug.apk</strong> from this folder (current debug build)</li>
 <li>Assist → <strong>Pair this phone</strong> → desktop TEMP pairing code (not stored here)</li>
 <li>Open sealed offer <code>pairing-offer.json</code> from this folder</li>
 <li>Import newest <code>.ehsync</code> from this folder</li>

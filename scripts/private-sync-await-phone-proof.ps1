@@ -26,7 +26,8 @@ try {
   Pop-Location
 }
 
-Write-Output "watching=$od\$proofName (+Downloads/Desktop + clipboard JSON)"
+$phoneDrop = Join-Path ([Environment]::GetFolderPath('Desktop')) 'EscapeHatchPhoneDrop'
+Write-Output "watching=$od\$proofName (+Downloads/Desktop/EscapeHatchPhoneDrop + clipboard JSON)"
 Write-Output "expectedDigest=$expectedDigest"
 
 do {
@@ -49,7 +50,13 @@ do {
     # clipboard unavailable
   }
 
-  $candidate = Get-ChildItem -Path $od,$env:USERPROFILE\Downloads,(Join-Path $env:USERPROFILE 'Desktop') -Filter $proofName -ErrorAction SilentlyContinue |
+  $searchRoots = @(
+    $od,
+    (Join-Path $env:USERPROFILE 'Downloads'),
+    (Join-Path $env:USERPROFILE 'Desktop'),
+    $phoneDrop
+  )
+  $candidate = Get-ChildItem -Path $searchRoots -Filter $proofName -ErrorAction SilentlyContinue |
     Sort-Object LastWriteTime -Descending |
     Select-Object -First 1
   if ($candidate) {

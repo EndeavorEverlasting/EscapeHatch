@@ -1,4 +1,4 @@
-﻿# One operator command to prepare the USB-free Android 3/3 proof session.
+# One operator command to prepare the USB-free Android 3/3 proof session.
 # Stages APK/offer/helper, starts LAN APK server (18765), localhost corridor (18766),
 # background ADB attach installer, and the OneDrive proof watcher.
 # Never prints preference values or the pairing code.
@@ -109,6 +109,21 @@ if (-not $lanWatchers) {
 # Do NOT auto-disconnect NordVPN here. Operator opens a short LAN window only when the
 # phone is in hand: Desktop\Open-PhoneLanNordWindow.cmd (always restores in finally).
 # Prefer OneDrive / EscapeHatchPhoneDrop so Nord can stay connected.
+
+# Google Drive phone pack (when OneDrive is not on the phone)
+$driveState = Join-Path $env:LOCALAPPDATA 'EscapeHatch\eh-phone-drive-folder.json'
+if (Test-Path $driveState) {
+  try {
+    $df = Get-Content $driveState -Raw | ConvertFrom-Json
+    $deskDrop = Join-Path ([Environment]::GetFolderPath('Desktop')) 'EscapeHatchPhoneDrop'
+    foreach ($d in @($od, $deskDrop)) {
+      if (-not (Test-Path $d)) { continue }
+      Set-Content (Join-Path $d 'GOOGLE_DRIVE_FOLDER.txt') $df.webViewLink -Encoding utf8
+    }
+    Write-Output "google_drive_phone_pack=$($df.webViewLink)"
+  } catch { }
+}
+
 Write-Output 'nord_lan_window=operator_gated use=Desktop\Open-PhoneLanNordWindow.cmd (auto-restore)'
 & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'private-sync-nord-lan-window.ps1') -Mode RestoreOnly |
   ForEach-Object { Write-Output $_ }
@@ -140,5 +155,5 @@ Write-Output 'corridor=http://127.0.0.1:18766/corridor'
 Write-Output 'lanInstall=http://<this-pc-wifi-ip>:18765/ (QR opened when available)'
 Write-Output "lanHealth=$(if ($lanHealth) { 'ok' } else { 'down' })"
 Write-Output 'nord_restore=scripts\private-sync-nord-lan-window.ps1 -Mode RestoreOnly'
-Write-Output 'NEXT=Prefer OneDrive/Desktop EscapeHatchPhoneDrop APK (Nord stays on). LAN only when phone is ready: Open-PhoneLanNordWindow.cmd → Chrome :18765 → pair → Save proof'
+Write-Output 'NEXT=Phone: Google Drive folder EscapeHatchPhoneDrop (see GOOGLE_DRIVE_FOLDER.txt) - install APK, pair from TEMP notepad, import .ehsync, upload escapehatch-phone-sync-proof.json back to that Drive folder. Nord stays on.'
 exit 0

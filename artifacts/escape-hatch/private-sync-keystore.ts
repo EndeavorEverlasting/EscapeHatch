@@ -14,8 +14,19 @@ export const KEYSTORE_SCHEMA = 'escapehatch/private-sync-keystore/v1';
 export const PAIRING_SCHEMA = 'escapehatch/private-sync-pairing/v1';
 const RAW_KEY = 'private-sync.key';
 const DPAPI_KEY = 'private-sync.key.dpapi';
-/** Long enough for phone sideload + offer pick; still short-lived SAS. */
-const PAIRING_TTL_MS = 60 * 60 * 1000;
+/**
+ * Operator phone install + Drive pick is slow; default 8h keeps one attention window
+ * alive without turning the SAS into a durable key. Must match Android PAIRING_TTL_MS
+ * once that APK is installed. Override with ESCAPEHATCH_PAIRING_TTL_MS (ms) when
+ * pairing against an older phone build that still validates a 60m max span.
+ */
+const DEFAULT_PAIRING_TTL_MS = 8 * 60 * 60 * 1000;
+export const PAIRING_TTL_MS = (() => {
+  const raw = process.env.ESCAPEHATCH_PAIRING_TTL_MS;
+  if (!raw) return DEFAULT_PAIRING_TTL_MS;
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 60_000 ? Math.floor(n) : DEFAULT_PAIRING_TTL_MS;
+})();
 
 export type KeyBackend = 'windows-dpapi' | 'file-prototype';
 export type StoredKey = { key: Buffer; backend: KeyBackend; vaultId: string };
@@ -196,7 +207,13 @@ export function openPairingOffer(offer: Omit<PairingOffer, 'pairingCode'> & { pa
   }
   const expires = Date.parse(offer.expiresAt);
   const created = Date.parse(offer.createdAt);
-  if (!Number.isFinite(expires) || !Number.isFinite(created) || now > expires || expires - created > PAIRING_TTL_MS + 1000) {
+  const ttlSlackMs = 5 * 60 * 1000;
+  if (
+    !Number.isFinite(expires) ||
+    !Number.isFinite(created) ||
+    now > expires + ttlSlackMs ||
+    expires - created > PAIRING_TTL_MS + ttlSlackMs
+  ) {
     throw new Error('PAIRING_EXPIRED');
   }
   const aad = Buffer.from(JSON.stringify([PAIRING_SCHEMA, offer.vaultId, offer.createdAt, offer.expiresAt]));

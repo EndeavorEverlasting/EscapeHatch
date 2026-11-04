@@ -19,26 +19,32 @@ class PairingImportActivity : AppCompatActivity() {
     private lateinit var status: TextView
     private lateinit var codeInput: EditText
     private lateinit var lanBaseUrl: EditText
+    private lateinit var confirmButton: Button
     private var offerJson: String? = null
     private val importer by lazy {
         PrivateSyncPairingImport(AndroidKeystoreSyncVaultKeyRepository(applicationContext))
     }
 
+    private fun setOfferLoaded(loaded: Boolean, message: String) {
+        status.text = message
+        confirmButton.isEnabled = loaded
+        confirmButton.alpha = if (loaded) 1f else 0.45f
+    }
+
     private val openOffer =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
             if (uri == null) {
-                status.text = getString(R.string.pairing_offer_cancelled)
+                setOfferLoaded(false, getString(R.string.pairing_offer_cancelled))
                 return@registerForActivityResult
             }
             offerJson = contentResolver.openInputStream(uri)?.use { stream ->
                 BufferedReader(InputStreamReader(stream, Charsets.UTF_8)).readText()
             }
-            status.text =
-                if (offerJson.isNullOrBlank()) {
-                    getString(R.string.pairing_offer_unreadable)
-                } else {
-                    getString(R.string.pairing_offer_loaded)
-                }
+            if (offerJson.isNullOrBlank()) {
+                setOfferLoaded(false, getString(R.string.pairing_offer_unreadable))
+            } else {
+                setOfferLoaded(true, getString(R.string.pairing_offer_loaded))
+            }
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,16 +53,20 @@ class PairingImportActivity : AppCompatActivity() {
         status = findViewById(R.id.pairingStatus)
         codeInput = findViewById(R.id.pairingCode)
         lanBaseUrl = findViewById(R.id.lanBaseUrl)
+        confirmButton = findViewById(R.id.confirmPairing)
         LanHostMemory.bind(lanBaseUrl, this)
+        // Confirm stays disabled until a sealed offer is loaded — prevents the
+        // "Choose a pairing offer first" dead-end after typing the code early.
+        setOfferLoaded(false, getString(R.string.pairing_offer_required))
         findViewById<Button>(R.id.chooseOffer).setOnClickListener {
             openOffer.launch(arrayOf("application/json", "text/*", "*/*"))
         }
         findViewById<Button>(R.id.fetchOfferLan).setOnClickListener { fetchOfferFromLan() }
-        findViewById<Button>(R.id.confirmPairing).setOnClickListener { confirmImport() }
+        confirmButton.setOnClickListener { confirmImport() }
     }
 
     private fun fetchOfferFromLan() {
-        status.text = getString(R.string.lan_fetching)
+        setOfferLoaded(false, getString(R.string.lan_fetching))
         val raw = lanBaseUrl.text?.toString().orEmpty()
         LanSealedFetch.fetchText(raw, "/offer") { outcome ->
             runOnUiThread {
@@ -64,10 +74,10 @@ class PairingImportActivity : AppCompatActivity() {
                     is LanSealedFetch.Outcome.Ok -> {
                         LanHostMemory.write(this, raw)
                         offerJson = outcome.body
-                        status.text = getString(R.string.pairing_offer_loaded)
+                        setOfferLoaded(true, getString(R.string.pairing_offer_loaded))
                     }
                     is LanSealedFetch.Outcome.Err -> {
-                        status.text = getString(R.string.lan_fetch_failed, outcome.reason)
+                        setOfferLoaded(false, getString(R.string.lan_fetch_failed, outcome.reason))
                     }
                 }
             }

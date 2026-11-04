@@ -65,7 +65,15 @@ if (!allowed.has(action) || (!['status', 'authorize-drive'].includes(action) && 
       const code = process.argv[5];
       if (!inPath || !path.isAbsolute(inPath) || !code) throw new Error('PAIRING_IMPORT_ARGS_REQUIRED');
       const sealed = JSON.parse(await fs.readFile(inPath, 'utf8'));
-      process.stdout.write(JSON.stringify(await importPairingOffer({ carrier, dataHome }, sealed, code)) + '\n');
+      const imported = await importPairingOffer({ carrier, dataHome }, sealed, code);
+      // Paired devices need the same absolute folder carrier binding for status/push/pull.
+      const bound = await bindFolderCarrier({ carrier, dataHome }, 'paired-folder');
+      process.stdout.write(JSON.stringify({
+        ...imported,
+        carrierBound: bound.state,
+        folderPath: bound.folderPath,
+        principal: bound.principal,
+      }) + '\n');
     } else if (action === 'bind-folder') {
       process.stdout.write(JSON.stringify(await bindFolderCarrier({ carrier, dataHome }, process.argv[4] || 'local-folder')) + '\n');
     } else if (action === 'bind-drive') {

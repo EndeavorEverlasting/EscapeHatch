@@ -23,6 +23,13 @@ test('sealed preference capsule authenticates saved Cognizant answers without le
   assert.match(envelopeDigest(sealed),/^[a-f0-9]{64}$/);
   assert.throws(()=>openProjection(sealed,generateSyncKey()),/WRONG_VAULT_KEY/);
   assert.throws(()=>openProjection({...sealed,parent:'f'.repeat(64)},key),/CAPSULE_AUTHENTICATION_FAILED/);
-  assert.throws(()=>openProjection({...sealed,ciphertext:sealed.ciphertext.slice(0,-1)+'A'},key),/CAPSULE_AUTHENTICATION_FAILED|INVALID_CAPSULE/);
+  // Corrupt an interior ciphertext character so AEAD/canonical base64url cannot silently accept it.
+  const flipped = sealed.ciphertext[10] === 'A' ? 'B' : 'A';
+  const tamperedCipher = sealed.ciphertext.slice(0, 10) + flipped + sealed.ciphertext.slice(11);
+  assert.throws(
+    () => openProjection({ ...sealed, ciphertext: tamperedCipher }, key),
+    /CAPSULE_AUTHENTICATION_FAILED|INVALID_CAPSULE/,
+  );
   assert.throws(()=>validateProjection({...projected,entries:{...projected.entries,'credential.password': projected.entries['talent_community.primary_areas']}}),/FORBIDDEN_SYNC_FIELD/);
 });
+

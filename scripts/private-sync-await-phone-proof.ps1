@@ -24,11 +24,30 @@ try {
   Pop-Location
 }
 
-Write-Output "watching=$od\$proofName"
+Write-Output "watching=$od\$proofName (+Downloads/Desktop + clipboard JSON)"
 Write-Output "expectedDigest=$expectedDigest"
 
 while ((Get-Date) -lt $deadline) {
-  $candidate = Get-ChildItem -Path $od,$env:USERPROFILE\Downloads -Filter $proofName -ErrorAction SilentlyContinue |
+  # Clipboard / Nearby Share path: phone copies value-free proof JSON; never logs values.
+  try {
+    $clip = Get-Clipboard -Raw -ErrorAction Stop
+    if (
+      $clip -and
+      $clip.TrimStart().StartsWith('{') -and
+      $clip -match 'escapehatch/private-sync-phone-proof-receipt/v1' -and
+      $clip -notmatch 'password|ssn|Bearer |@gmail\.com'
+    ) {
+      $clipDest = Join-Path $od $proofName
+      if (-not (Test-Path -LiteralPath $clipDest)) {
+        Set-Content -LiteralPath $clipDest -Value $clip.Trim() -Encoding utf8
+        Write-Output "phone_proof=CLIPBOARD_INGESTED path=$clipDest"
+      }
+    }
+  } catch {
+    # clipboard unavailable
+  }
+
+  $candidate = Get-ChildItem -Path $od,$env:USERPROFILE\Downloads,(Join-Path $env:USERPROFILE 'Desktop') -Filter $proofName -ErrorAction SilentlyContinue |
     Sort-Object LastWriteTime -Descending |
     Select-Object -First 1
   if ($candidate) {

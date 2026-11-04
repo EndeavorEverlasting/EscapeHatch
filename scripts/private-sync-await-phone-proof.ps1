@@ -33,6 +33,17 @@ while ((Get-Date) -lt $deadline) {
     Select-Object -First 1
   if ($candidate) {
     $proof = Get-Content $candidate.FullName -Raw | ConvertFrom-Json
+    # Emulator Keystore lab proofs must never close android-phone / threeOfThree.
+    if ($proof.notPhoneThreeOfThree -eq $true -or $proof.deviceKind -eq 'android-emulator') {
+      Write-Output "phone_proof=REJECTED_EMULATOR_LAB path=$($candidate.FullName)"
+      Start-Sleep -Seconds 15
+      continue
+    }
+    if ($proof.device -and $proof.device -ne 'android-phone') {
+      Write-Output "phone_proof=REJECTED_DEVICE device=$($proof.device)"
+      Start-Sleep -Seconds 15
+      continue
+    }
     $match = ($proof.projectionDigest -eq $expectedDigest) -and ($proof.reusableAnswerCount -eq $status.reusableAnswerCount)
     $phoneCog = @($proof.cognizantTalentCommunityFieldsPresent) | Sort-Object
     $deskCog = @($status.cognizantTalentCommunityFieldsPresent) | Sort-Object

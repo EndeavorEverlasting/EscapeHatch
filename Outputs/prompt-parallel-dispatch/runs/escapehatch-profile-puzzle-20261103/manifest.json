@@ -1,0 +1,450 @@
+{
+  "schema_version": "prompt-parallel-dispatch/v1",
+  "run_id": "escapehatch-profile-puzzle-20261103",
+  "repository": "EndeavorEverlasting/EscapeHatch",
+  "parent_issue": "https://github.com/EndeavorEverlasting/EscapeHatch/issues/69",
+  "design_issue": "https://github.com/EndeavorEverlasting/EscapeHatch/issues/182",
+  "plan_owner": "docs/agent/P04_PROFILE_PUZZLE_ATELIER_CONVERGENCE_2026-11-03.md",
+  "base_ref": {
+    "observed_default_branch": "main",
+    "observed_default_sha_at_authorship": "a09c0224f93a7a7253d397977a1d9d0fa6364036",
+    "refresh_before_mutation": true
+  },
+  "graph": {
+    "expression": "EH-PA0 -> {EH-PA1 || EH-PA2} -> EH-PA3 -> EH-PA4",
+    "max_width": 2,
+    "parallel_disposition": "REQUIRED_WHEN_VALIDATED_SAFE_ADAPTER_EXISTS",
+    "collisions": [
+      "EH-PA1 owns pure lib projection only; EH-PA2 owns existing Today board and browser spec, never creates a second board",
+      "EH-PA3 alone changes App.tsx/GuidedStart.tsx integration after both lanes return",
+      "open PR #147 and PR #152 remain separately owned",
+      "installed Windows user data and live browser sessions are not fixtures"
+    ]
+  },
+  "convergence_owner": "EH-PA3",
+  "manifest_path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-profile-puzzle-20261103/manifest.json",
+  "status": "DURABLE_P04_PLAN_COMMITTED_PENDING_VALIDATED_RUNTIME_DISPATCH",
+  "execution": {
+    "observed_parallelism": false,
+    "verified_dispatch_receipt": false,
+    "canonical_receipt_validation": "BLOCKED_SCHEMA_AND_RUNNER_ABSENT",
+    "chat_provider_handoff": "GitHub branch and draft PR only"
+  },
+  "adapter_ladder": {
+    "native_subagents": "not exposed in current chat",
+    "repository_local_runner": "local-agent runtime known from prior work but not currently attached to this chat",
+    "connected_remote_provider": "GitHub source/write supported; no proved independent code-execution adapter",
+    "ci_fanout": "CI visible but no authorized workflow dispatch API in this connected runtime",
+    "concurrent_local_processes": "current chat container has local deterministic shell but not operator Windows checkout",
+    "disposition": "DEGRADED_PARALLEL_UNPROVEN"
+  },
+  "blockers": [
+    "Canonical harness/contracts/prompt-parallel-dispatch.v1.json not found in currently inspected TokenCorridor or EscapeHatch trees",
+    "Canonical scripts/prompt_parallel_dispatch.py not found in currently inspected TokenCorridor or EscapeHatch trees",
+    "No live Windows runner connected to this chat; can't claim executed agent lanes or installed-host UI proof"
+  ],
+  "autonomy_gap": "Bind repo's installed local agent/runner to this tracked P04 manifest and persist checked launch/rejoin receipts using a real dispatch adapter; do not ask operator to download or schedule agents.",
+  "protected_behavior": [
+    "one local user profile owner; no extra persisted career store",
+    "existing eight-piece Today board and employer form puzzle are distinct",
+    "existing saved answers and Assist provenance authority",
+    "no automatic Submit",
+    "no cross-owner leakage",
+    "do not disturb PR #147/#152 independently owned surfaces"
+  ],
+  "lanes": [
+    {
+      "forbidden_surfaces": [
+        "real employer Submit or attestations",
+        "personal applicant data in public Git",
+        "other agents' branches / active PRs",
+        "unsanctioned main edits"
+      ],
+      "provider_access": [
+        {
+          "provider_family": "github",
+          "operation": "source read, branch PR, CI and exact-head fetch",
+          "authority_state": "VERIFIED",
+          "mutation_authority": "feature branches only with repository gates"
+        }
+      ],
+      "convergence_owner": "EH-PA3",
+      "lane_id": "EH-PA0",
+      "wave": 0,
+      "mission": "Refresh actual current local repository, worktrees, PRs and runtime; freeze ownership, source contracts and protected controls without UI writes",
+      "dependencies": [],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "required_capabilities": [
+        "clean isolated git worktree",
+        "GitHub repo read",
+        "node/npm/python scripts available",
+        "existing protected runtime identity only as read"
+      ],
+      "evidence_inputs": [
+        {
+          "evidence_type": "github_commit",
+          "source_owner": "EscapeHatch/main",
+          "sanitized_ref": "public:EscapeHatch/main@a09c0224f93a7a7253d397977a1d9d0fa6364036",
+          "revision_or_freshness": "read 2026-11-03; must refresh before mutation",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "repository source at observed head"
+        },
+        {
+          "evidence_type": "github_issue",
+          "source_owner": "EscapeHatch/issue#182",
+          "sanitized_ref": "public:EscapeHatch/issues/182",
+          "revision_or_freshness": "read 2026-11-03",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "design acceptance and recorded CI/disposable runtime evidence"
+        }
+      ],
+      "owned_mutation_surfaces": [
+        "bounded preflight receipt and path ownership manifest only"
+      ],
+      "branch": "new isolated planning/inspection worktree; preserve dirty existing checkout",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2,
+        "verified": false
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "repo_agent_execute_p04_lane",
+        "arguments": {
+          "plan_path": "docs/agent/P04_PROFILE_PUZZLE_ATELIER_CONVERGENCE_2026-11-03.md",
+          "lane_id": "EH-PA0"
+        },
+        "status": "NOT_DISPATCHED_REQUIRES_VERIFIED_RUNNER"
+      },
+      "expected_artifacts": [
+        "sanitized refreshed main SHA; PR collision and branch map",
+        "validated read-only owner model and tests baseline",
+        "verified capability/adapter selection"
+      ],
+      "validation": [
+        "git status --porcelain=v1",
+        "git fetch origin --prune",
+        "git log -1 --format=%H origin/main",
+        "inspect PR #147, #152, #183 and issue #182"
+      ],
+      "status": "PENDING_LOCAL_AGENT_PROOF"
+    },
+    {
+      "forbidden_surfaces": [
+        "real employer Submit or attestations",
+        "personal applicant data in public Git",
+        "other agents' branches / active PRs",
+        "unsanctioned main edits"
+      ],
+      "provider_access": [
+        {
+          "provider_family": "github",
+          "operation": "source read, branch PR, CI and exact-head fetch",
+          "authority_state": "VERIFIED",
+          "mutation_authority": "feature branches only with repository gates"
+        }
+      ],
+      "convergence_owner": "EH-PA3",
+      "lane_id": "EH-PA1",
+      "wave": 1,
+      "mission": "Implement pure read-only profile puzzle evidence projection + negative-case tests using current answer-recovery, Assist profile and approved source owners",
+      "dependencies": [
+        "EH-PA0"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "required_capabilities": [
+        "isolated owned worktree",
+        "TypeScript test runner",
+        "read-only local fixtures"
+      ],
+      "evidence_inputs": [
+        {
+          "evidence_type": "github_commit",
+          "source_owner": "EscapeHatch/main",
+          "sanitized_ref": "public:EscapeHatch/main@a09c0224f93a7a7253d397977a1d9d0fa6364036",
+          "revision_or_freshness": "read 2026-11-03; must refresh before mutation",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "repository source at observed head"
+        },
+        {
+          "evidence_type": "github_issue",
+          "source_owner": "EscapeHatch/issue#182",
+          "sanitized_ref": "public:EscapeHatch/issues/182",
+          "revision_or_freshness": "read 2026-11-03",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "design acceptance and recorded CI/disposable runtime evidence"
+        }
+      ],
+      "owned_mutation_surfaces": [
+        "artifacts/escape-hatch/src/lib/profile-puzzle-projection.ts",
+        "artifacts/escape-hatch/src/lib/profile-puzzle-projection.test.ts"
+      ],
+      "branch": "isolated feat/profile-puzzle-projection-*",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2,
+        "verified": false
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "repo_agent_execute_p04_lane",
+        "arguments": {
+          "plan_path": "docs/agent/P04_PROFILE_PUZZLE_ATELIER_CONVERGENCE_2026-11-03.md",
+          "lane_id": "EH-PA1"
+        },
+        "status": "NOT_DISPATCHED_REQUIRES_VERIFIED_RUNNER"
+      },
+      "expected_artifacts": [
+        "read-only projector",
+        "8+ negative/positive tests for contact, missing, accepted, conflict, unavailable, unbound source, privacy, no ATS readiness",
+        "exact-head commit and test receipt"
+      ],
+      "validation": [
+        "npm run typecheck",
+        "npm run test:unit",
+        "git diff --check"
+      ],
+      "status": "PENDING_LOCAL_AGENT_PROOF"
+    },
+    {
+      "forbidden_surfaces": [
+        "real employer Submit or attestations",
+        "personal applicant data in public Git",
+        "other agents' branches / active PRs",
+        "unsanctioned main edits"
+      ],
+      "provider_access": [
+        {
+          "provider_family": "github",
+          "operation": "source read, branch PR, CI and exact-head fetch",
+          "authority_state": "VERIFIED",
+          "mutation_authority": "feature branches only with repository gates"
+        }
+      ],
+      "convergence_owner": "EH-PA3",
+      "lane_id": "EH-PA2",
+      "wave": 1,
+      "mission": "Adapt existing ProfilePieceBoard interaction and visual states to frozen projector interface without duplicating the board or application puzzle",
+      "dependencies": [
+        "EH-PA0"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "required_capabilities": [
+        "isolated owned worktree",
+        "React/Vite UI source",
+        "Playwright browser fixture"
+      ],
+      "evidence_inputs": [
+        {
+          "evidence_type": "github_commit",
+          "source_owner": "EscapeHatch/main",
+          "sanitized_ref": "public:EscapeHatch/main@a09c0224f93a7a7253d397977a1d9d0fa6364036",
+          "revision_or_freshness": "read 2026-11-03; must refresh before mutation",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "repository source at observed head"
+        },
+        {
+          "evidence_type": "github_issue",
+          "source_owner": "EscapeHatch/issue#182",
+          "sanitized_ref": "public:EscapeHatch/issues/182",
+          "revision_or_freshness": "read 2026-11-03",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "design acceptance and recorded CI/disposable runtime evidence"
+        }
+      ],
+      "owned_mutation_surfaces": [
+        "artifacts/escape-hatch/src/components/profile-piece-board.tsx",
+        "artifacts/escape-hatch/src/index.css scoped puzzle styles",
+        "artifacts/escape-hatch/tests/mascot-guidance.spec.ts"
+      ],
+      "branch": "isolated feat/profile-puzzle-ui-*",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2,
+        "verified": false
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "repo_agent_execute_p04_lane",
+        "arguments": {
+          "plan_path": "docs/agent/P04_PROFILE_PUZZLE_ATELIER_CONVERGENCE_2026-11-03.md",
+          "lane_id": "EH-PA2"
+        },
+        "status": "NOT_DISPATCHED_REQUIRES_VERIFIED_RUNNER"
+      },
+      "expected_artifacts": [
+        "single existing Today board, enhanced",
+        "keyboard/touch/reduced-motion/mobile UI acceptance tests",
+        "no applicant values rendered in puzzle labels"
+      ],
+      "validation": [
+        "npm run typecheck",
+        "npm run test:browser",
+        "git diff --check"
+      ],
+      "status": "PENDING_LOCAL_AGENT_PROOF"
+    },
+    {
+      "forbidden_surfaces": [
+        "real employer Submit or attestations",
+        "personal applicant data in public Git",
+        "other agents' branches / active PRs",
+        "unsanctioned main edits"
+      ],
+      "provider_access": [
+        {
+          "provider_family": "github",
+          "operation": "source read, branch PR, CI and exact-head fetch",
+          "authority_state": "VERIFIED",
+          "mutation_authority": "feature branches only with repository gates"
+        }
+      ],
+      "convergence_owner": "EH-PA3",
+      "lane_id": "EH-PA3",
+      "wave": 2,
+      "mission": "Integrate PA1+PA2 on exact refreshed main after independent checks, wire minimum app props, run full tests/CI, review and safely converge without false application readiness",
+      "dependencies": [
+        "EH-PA1",
+        "EH-PA2"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "required_capabilities": [
+        "git rebase/cherry-pick with conflict protection",
+        "Node/Python validators",
+        "GitHub PR and CI evidence"
+      ],
+      "evidence_inputs": [
+        {
+          "evidence_type": "github_commit",
+          "source_owner": "EscapeHatch/main",
+          "sanitized_ref": "public:EscapeHatch/main@a09c0224f93a7a7253d397977a1d9d0fa6364036",
+          "revision_or_freshness": "read 2026-11-03; must refresh before mutation",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "repository source at observed head"
+        },
+        {
+          "evidence_type": "github_issue",
+          "source_owner": "EscapeHatch/issue#182",
+          "sanitized_ref": "public:EscapeHatch/issues/182",
+          "revision_or_freshness": "read 2026-11-03",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "design acceptance and recorded CI/disposable runtime evidence"
+        }
+      ],
+      "owned_mutation_surfaces": [
+        "artifacts/escape-hatch/src/App.tsx if required",
+        "artifacts/escape-hatch/src/components/guided-start.tsx if required",
+        "artifacts/escape-hatch/package.json if test wiring required",
+        "bounded receipts and PR text"
+      ],
+      "branch": "integration/eh-profile-puzzle-*",
+      "adapter": {
+        "kind": "local_repo_agent",
+        "rung": 2,
+        "verified": false
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "repo_agent_execute_p04_lane",
+        "arguments": {
+          "plan_path": "docs/agent/P04_PROFILE_PUZZLE_ATELIER_CONVERGENCE_2026-11-03.md",
+          "lane_id": "EH-PA3"
+        },
+        "status": "NOT_DISPATCHED_REQUIRES_VERIFIED_RUNNER"
+      },
+      "expected_artifacts": [
+        "exact-head integration PR/CI and readback",
+        "regression results and safe no-Submit controls",
+        "merged main only after authorized gates"
+      ],
+      "validation": [
+        "npm run typecheck",
+        "npm run test:unit",
+        "npm run build",
+        "npm run test:browser",
+        "python scripts/validate_application_journey.py",
+        "python scripts/validate_application_autofill_parent.py",
+        "git diff --check"
+      ],
+      "status": "PENDING_LOCAL_AGENT_PROOF"
+    },
+    {
+      "forbidden_surfaces": [
+        "real employer Submit or attestations",
+        "personal applicant data in public Git",
+        "other agents' branches / active PRs",
+        "unsanctioned main edits"
+      ],
+      "provider_access": [
+        {
+          "provider_family": "github",
+          "operation": "read exact merged SHA",
+          "authority_state": "VERIFIED",
+          "mutation_authority": "read-only"
+        }
+      ],
+      "convergence_owner": "EH-PA3",
+      "lane_id": "EH-PA4",
+      "wave": 3,
+      "mission": "P08 exact-head installed Windows EscapeHatch certificate for empty/partial/reviewed/conflict/unavailable and protected employer-puzzle controls",
+      "dependencies": [
+        "EH-PA3"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "required_capabilities": [
+        "verified Windows installed EscapeHatch launcher",
+        "user-safe disposable workspace",
+        "Chromium screenshot and interaction proof",
+        "exact commit/version provenance"
+      ],
+      "evidence_inputs": [
+        {
+          "evidence_type": "github_commit",
+          "source_owner": "EscapeHatch/main",
+          "sanitized_ref": "public:EscapeHatch/main@a09c0224f93a7a7253d397977a1d9d0fa6364036",
+          "revision_or_freshness": "read 2026-11-03; must refresh before mutation",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "repository source at observed head"
+        },
+        {
+          "evidence_type": "github_issue",
+          "source_owner": "EscapeHatch/issue#182",
+          "sanitized_ref": "public:EscapeHatch/issues/182",
+          "revision_or_freshness": "read 2026-11-03",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "design acceptance and recorded CI/disposable runtime evidence"
+        }
+      ],
+      "owned_mutation_surfaces": [
+        "sanitized live-runtime proof receipts only"
+      ],
+      "branch": "read-only installed application runtime",
+      "adapter": {
+        "kind": "local_runtime_proof",
+        "rung": 2,
+        "verified": false
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "run_owned_installed_escapehatch_p08",
+        "arguments": {
+          "plan_path": "docs/agent/P04_PROFILE_PUZZLE_ATELIER_CONVERGENCE_2026-11-03.md",
+          "lane_id": "EH-PA4"
+        },
+        "status": "NOT_DISPATCHED_REQUIRES_VERIFIED_WINDOWS_RUNNER"
+      },
+      "expected_artifacts": [
+        "installed-version/host proof with safe screenshots",
+        "protected employer page puzzle and manual final-Submit observation",
+        "remaining blockers if runtime unavailable"
+      ],
+      "validation": [
+        "owned launcher health and revision readback",
+        "desktop/mobile+keyboard+reduced motion",
+        "cross-source conflict and unavailable state",
+        "parent issue #69 remains separately open"
+      ],
+      "status": "PENDING_LOCAL_AGENT_PROOF"
+    }
+  ]
+}

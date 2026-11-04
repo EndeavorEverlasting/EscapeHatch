@@ -5,9 +5,11 @@ import path from 'node:path';
 import os from 'node:os';
 import { emptyPreferences } from './src/lib/application-preferences.ts';
 import { readPreferences, savePreferences } from './preference-file.ts';
-import { createLocalSyncKey, runPrivateSync } from './private-sync-device.ts';
+import { createLocalSyncKey, exportPairingOffer, importPairingOffer, runPrivateSync } from './private-sync-device.ts';
 
 test('two paired synthetic devices exchange encrypted answers and refuse conflicting offline edits', async () => {
+  const prev = process.env.ESCAPEHATCH_SYNC_KEY_BACKEND;
+  process.env.ESCAPEHATCH_SYNC_KEY_BACKEND = 'file';
   const root=await fs.mkdtemp(path.join(os.tmpdir(),'eh-encrypted-devices-'));
   const a=path.join(root,'desktop'),b=path.join(root,'laptop'),carrier=path.join(root,'carrier');
   const aa={dataHome:a,carrier},bb={dataHome:b,carrier};
@@ -20,8 +22,9 @@ test('two paired synthetic devices exchange encrypted answers and refuse conflic
   };
   try {
     await createLocalSyncKey(aa);
-    await fs.mkdir(b,{recursive:true});
-    await fs.copyFile(path.join(a,'private-sync.key'),path.join(b,'private-sync.key'));
+    const offer = await exportPairingOffer(aa);
+    const { pairingCode, ...sealed } = offer;
+    assert.equal((await importPairingOffer(bb, sealed, pairingCode)).state, 'PAIRING_IMPORTED');
     await savePreferences(record('Synthetic Alpha'),file(a));
     assert.equal((await runPrivateSync(aa,'push')).state,'PUSHED');
     const files=await fs.readdir(carrier);
@@ -41,5 +44,9 @@ test('two paired synthetic devices exchange encrypted answers and refuse conflic
     await assert.rejects(runPrivateSync(bb,'push'),/SYNC_CONFLICT_REMOTE_ADVANCED/);
     await assert.rejects(runPrivateSync(bb,'pull'),/SYNC_CONFLICT_LOCAL_CHANGES/);
     assert.equal((await readPreferences(file(b))).preferences['talent_community.primary_areas']?.value,'Offline B');
-  } finally { await fs.rm(root,{recursive:true,force:true}); }
+  } finally {
+    if (prev === undefined) delete process.env.ESCAPEHATCH_SYNC_KEY_BACKEND;
+    else process.env.ESCAPEHATCH_SYNC_KEY_BACKEND = prev;
+    await fs.rm(root,{recursive:true,force:true});
+  }
 });

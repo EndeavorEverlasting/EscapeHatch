@@ -1,0 +1,38 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import os from 'node:os';
+import { emptyPreferences } from './src/lib/application-preferences.ts';
+import { savePreferences } from './preference-file.ts';
+import { createLocalSyncKey } from './private-sync-device.ts';
+import { observePrivateSyncStatus } from './private-sync-status.ts';
+
+test('status reports Cognizant field ids without values and pairing-required when no vault', async () => {
+  const prev = process.env.ESCAPEHATCH_SYNC_KEY_BACKEND;
+  process.env.ESCAPEHATCH_SYNC_KEY_BACKEND = 'file';
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-sync-status-'));
+  try {
+    const prefs = emptyPreferences();
+    prefs.preferences['talent_community.primary_areas'] = {
+      scope: 'profile_preference',
+      source: 'user',
+      value: 'SECRET_SHOULD_NOT_APPEAR',
+      updated_at: '2026-11-03T00:00:00Z',
+    };
+    await savePreferences(prefs, path.join(root, 'application-question-preferences.json'));
+    const before = await observePrivateSyncStatus({ dataHome: root });
+    assert.equal(before.status, 'PAIRING_REQUIRED');
+    assert.deepEqual(before.cognizantTalentCommunityFieldsPresent, ['talent_community.primary_areas']);
+    assert.equal(JSON.stringify(before).includes('SECRET_SHOULD_NOT_APPEAR'), false);
+    const carrier = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-sync-status-carrier-'));
+    await createLocalSyncKey({ dataHome: root, carrier });
+    const after = await observePrivateSyncStatus({ dataHome: root });
+    assert.equal(after.status, 'LOCAL_ONLY');
+    assert.equal(after.vaultPresent, true);
+  } finally {
+    if (prev === undefined) delete process.env.ESCAPEHATCH_SYNC_KEY_BACKEND;
+    else process.env.ESCAPEHATCH_SYNC_KEY_BACKEND = prev;
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});

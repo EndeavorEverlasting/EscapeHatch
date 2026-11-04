@@ -180,7 +180,7 @@
       "expected_artifacts": [
         "provider revision readback and fault injection tests"
       ],
-      "status": "LOCAL_ADAPTER_LANDED_AWAITING_OPERATOR_DRIVE_AUTH"
+      "status": "LOCAL_FOLDER_CARRIER_PUSHED_AWAITING_DRIVE_OAUTH"
     },
     {
       "lane_id": "EH-CONVERGE",

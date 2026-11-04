@@ -10,7 +10,7 @@ import { userDataRoot } from './user-data.ts';
 import { readPreferences, updatePreferences } from './preference-file.ts';
 import { readCarrier } from './private-sync-carrier.ts';
 import { uniqueCarrierHead, isDescendantOf } from './private-sync-chain.ts';
-import { sealProjection, envelopeDigest, projectReusablePreferences, projectionDigest } from './private-sync-crypto.ts';
+import { sealProjection, openProjection, envelopeDigest, projectReusablePreferences, projectionDigest } from './private-sync-crypto.ts';
 import {
   createProtectedSyncKey,
   createPairingOffer,
@@ -19,10 +19,21 @@ import {
   storeSyncKey,
   type PairingOffer,
 } from './private-sync-keystore.ts';
+import { enqueueOfflineCapsule, flushOfflineQueue, folderTransport } from './private-sync-transport.ts';
+import {
+  defaultCarrierConfigPath,
+  defaultDriveTokenPath,
+  readCarrierConfig,
+  readDriveTokenFile,
+  writeCarrierConfig,
+  type CarrierConfig,
+} from './private-sync-config.ts';
+import { googleDriveTransport } from './private-sync-drive-transport.ts';
+import type { SyncTransport } from './private-sync-transport.ts';
 
 const SCHEMA = 'escapehatch/private-sync-device/v1';
 type State = { schema: typeof SCHEMA; vaultId: string; deviceId: string; head: string | null; localDigest: string };
-export type Options = { carrier: string; dataHome?: string; preferencesFile?: string };
+export type Options = { carrier: string; dataHome?: string; preferencesFile?: string; principal?: string };
 function paths(o: Options) {
   if (!path.isAbsolute(o.carrier)) throw new Error('ABSOLUTE_CARRIER_REQUIRED');
   const root = path.resolve(o.dataHome || userDataRoot()), carrier = path.resolve(o.carrier);
@@ -34,7 +45,26 @@ function paths(o: Options) {
     carrier,
     state: path.join(root, 'private-sync-device.json'),
     prefs: o.preferencesFile || path.join(root, 'application-question-preferences.json'),
+    queue: path.join(root, 'private-sync-offline-queue.json'),
+    config: defaultCarrierConfigPath(root),
   };
+}
+async function resolveTransport(o: Options, p: ReturnType<typeof paths>): Promise<SyncTransport> {
+  const config = await readCarrierConfig(p.config);
+  if (!config || config.kind === 'folder') {
+    return folderTransport(p.carrier, o.principal || config?.principal || 'local-folder');
+  }
+  const token = await readDriveTokenFile(config.tokenFile);
+  if (token.principal !== config.principal) throw new Error('PROVIDER_PRINCIPAL_CHANGED');
+  return googleDriveTransport({
+    folderId: config.folderId,
+    expectedPrincipal: config.principal,
+    tokenProvider: async () => ({
+      accessToken: token.accessToken,
+      principal: token.principal,
+      expiresAt: token.expiresAt,
+    }),
+  });
 }
 async function stateAt(p: string, vaultId: string): Promise<State | null> {
   let raw: string;
@@ -75,12 +105,54 @@ export async function importPairingOffer(o: Options, offer: Omit<PairingOffer, '
   const stored = await storeSyncKey(p.root, key); // fails closed if a vault key already exists
   return { state: 'PAIRING_IMPORTED', vaultId: stored.vaultId, backend: stored.backend };
 }
+export async function bindFolderCarrier(o: Options, principal = 'local-folder') {
+  const p = paths(o);
+  const config: CarrierConfig = { schema: 'escapehatch/private-sync-carrier-config/v1', kind: 'folder', principal };
+  await writeCarrierConfig(p.config, config);
+  return { state: 'CARRIER_BOUND_FOLDER', principal };
+}
+export async function bindDriveCarrier(o: Options, input: { principal: string; folderId: string; tokenFile?: string }) {
+  const p = paths(o);
+  const tokenFile = input.tokenFile || defaultDriveTokenPath();
+  const config: CarrierConfig = {
+    schema: 'escapehatch/private-sync-carrier-config/v1',
+    kind: 'google-drive-file',
+    principal: input.principal,
+    folderId: input.folderId,
+    tokenFile,
+  };
+  await writeCarrierConfig(p.config, config);
+  return { state: 'CARRIER_BOUND_DRIVE', principal: input.principal, folderId: input.folderId, tokenFile };
+}
 export async function runPrivateSync(o: Options, action: 'push' | 'pull') {
   const p = paths(o);
   const stored = await loadSyncKey(p.root);
   const key = stored.key;
   const vaultId = stored.vaultId;
-  const entries = await readCarrier(p.carrier, key);
+  const transport = await resolveTransport(o, p);
+  if (action === 'push') {
+    try {
+      await flushOfflineQueue(p.queue, transport);
+    } catch (e) {
+      const code = e instanceof Error ? e.message : 'SYNC_FAILED';
+      if (!['AUTH_REQUIRED', 'PROVIDER_REVOKED', 'PROVIDER_LIST_FAILED', 'PROVIDER_PUT_FAILED'].includes(code)) throw e;
+    }
+  }
+  const entries = transport.kind === 'folder'
+    ? await readCarrier(p.carrier, key)
+    : await (async () => {
+      const listed = await transport.list();
+      const found = [];
+      for (const item of listed) {
+        const obj = await transport.get(item.id);
+        found.push({
+          file: item.id + '.ehsync',
+          envelope: obj.envelope,
+          answers: openProjection(obj.envelope, key),
+        });
+      }
+      return found;
+    })();
   const tip = uniqueCarrierHead(entries), state = await stateAt(p.state, vaultId);
   const local = await readPreferences(p.prefs), projection = projectReusablePreferences(local), digest = projectionDigest(projection);
   const head = tip?.file.replace(/\.ehsync$/, '') || null;
@@ -92,8 +164,24 @@ export async function runPrivateSync(o: Options, action: 'push' | 'pull') {
     const deviceId = state?.deviceId || randomUUID().replaceAll('-', '');
     const capsule = sealProjection(projection, key, head, deviceId);
     const id = envelopeDigest(capsule);
-    await fs.mkdir(p.carrier, { recursive: true });
-    await fs.writeFile(path.join(p.carrier, id + '.ehsync'), JSON.stringify(capsule), { flag: 'wx', mode: 0o600 });
+    try {
+      await transport.put(capsule, null);
+      // Keep local folder mirror for folder carriers and offline inspection.
+      if (transport.kind === 'folder') {
+        await fs.mkdir(p.carrier, { recursive: true });
+        const target = path.join(p.carrier, id + '.ehsync');
+        try { await fs.access(target); } catch {
+          await fs.writeFile(target, JSON.stringify(capsule), { flag: 'wx', mode: 0o600 });
+        }
+      }
+    } catch (e) {
+      const code = e instanceof Error ? e.message : 'SYNC_FAILED';
+      if (['AUTH_REQUIRED', 'PROVIDER_REVOKED', 'PROVIDER_PUT_FAILED'].includes(code)) {
+        await enqueueOfflineCapsule(p.queue, transport.principal, capsule);
+        return { state: 'QUEUED_OFFLINE', vaultId, count: entries.length, backend: stored.backend, reason: code };
+      }
+      throw e;
+    }
     await stateWrite(p.state, { schema: SCHEMA, vaultId, deviceId, head: id, localDigest: digest });
     return { state: 'PUSHED', vaultId, count: entries.length + 1, backend: stored.backend };
   }

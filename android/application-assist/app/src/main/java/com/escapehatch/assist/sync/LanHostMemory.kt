@@ -24,6 +24,18 @@ object LanHostMemory {
         val remembered = read(context)
         if (!remembered.isNullOrBlank() && editText.text.isNullOrBlank()) {
             editText.setText(remembered)
+            return
+        }
+        if (!editText.text.isNullOrBlank()) return
+        // Auto-fill when the PC LAN :18765 health endpoint is reachable on Wi‑Fi.
+        LanHostProbe.discoverAsync { found ->
+            if (found.isNullOrBlank()) return@discoverAsync
+            editText.post {
+                if (editText.text.isNullOrBlank()) {
+                    editText.setText(found)
+                    write(context, found)
+                }
+            }
         }
     }
 }

@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { showNetworkEvent } from './network-event-notification';
 import type { MonitorSnapshot } from '../../network-quality-runtime.ts';
 
 const BASE = '/__escapehatch/network-path-quality/monitor';
@@ -6,6 +7,7 @@ export function AutomaticNetworkQualityCheck() {
   const [monitor, setMonitor] = useState<MonitorSnapshot | null>(null);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const lastSeenEvent = useRef<string | null>(null);
   useEffect(() => {
     let live = true;
     async function refresh() {
@@ -13,7 +15,15 @@ export function AutomaticNetworkQualityCheck() {
         const response = await fetch(BASE + '/health', { credentials: 'same-origin', cache: 'no-store' });
         if (!response.ok) throw Error('unavailable');
         const result = await response.json() as { monitor?: MonitorSnapshot };
-        if (live && result.monitor) setMonitor(result.monitor);
+        if (live && result.monitor) {
+          const event = result.monitor.event;
+          const key = event && result.monitor.event_observed_utc
+            ? event + ':' + result.monitor.event_observed_utc : '';
+          if (lastSeenEvent.current !== null && key && key !== lastSeenEvent.current &&
+              result.monitor.enabled && event) showNetworkEvent(event);
+          lastSeenEvent.current = key;
+          setMonitor(result.monitor);
+        }
       } catch {
         if (live) setMessage('Automatic checks require an installed Windows EscapeHatch runtime.');
       }
@@ -25,6 +35,9 @@ export function AutomaticNetworkQualityCheck() {
   async function setEnabled(enabled: boolean) {
     if (busy) return;
     setBusy(true);
+    if (enabled && 'Notification' in window && Notification.permission === 'default') {
+      void Notification.requestPermission().catch(() => undefined);
+    }
     try {
       const response = await fetch(BASE + (enabled ? '/enable' : '/disable'), {
         method: 'POST', credentials: 'same-origin',

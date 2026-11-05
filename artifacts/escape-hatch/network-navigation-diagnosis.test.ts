@@ -46,3 +46,58 @@ test('automatic diagnostic does not infer a device-wide issue from one slow targ
   receipt.source_id = 'external' as PathQualityReceipt['source_id'];
   assert.equal(evaluate(receipt), 'UNKNOWN');
 });
+
+import fs from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { AutomaticQualityRuntime } from './network-quality-runtime.ts';
+
+test('automatic monitor does not sample before consent, then remembers an explicit off', async () => {
+  const dir = await fs.mkdtemp(path.join(tmpdir(), 'eh-network-monitor-'));
+  const policy = path.join(dir, 'monitor.json');
+  let samples = 0;
+  const read = async () => { samples++; return sampled(25); };
+  const monitor = new AutomaticQualityRuntime(read, () => false,
+    () => Date.parse('2026-11-05T12:00:00Z'), policy);
+  try {
+    await monitor.load();
+    assert.equal(monitor.snapshot().enabled, false);
+    assert.equal(samples, 0);
+    await monitor.configure(true);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(monitor.snapshot().enabled, true);
+    assert.ok(samples >= 1);
+    await monitor.configure(false);
+    assert.equal(monitor.snapshot().enabled, false);
+    const restarted = new AutomaticQualityRuntime(read, () => false,
+      () => Date.parse('2026-11-05T12:00:00Z'), policy);
+    await restarted.load();
+    assert.equal(restarted.snapshot().enabled, false);
+    restarted.close();
+  } finally {
+    monitor.close();
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('automatic sensor loss cannot be presented as a verified recovery', async () => {
+  const dir = await fs.mkdtemp(path.join(tmpdir(), 'eh-network-sensor-'));
+  const policy = path.join(dir, 'monitor.json');
+  let value = sampled(250);
+  const monitor = new AutomaticQualityRuntime(async () => value, () => false,
+    () => Date.parse('2026-11-05T12:00:00Z'), policy);
+  try {
+    await monitor.configure(true);
+    await new Promise(resolve => setImmediate(resolve));
+    await monitor.tick();
+    assert.equal(monitor.snapshot().event, 'SLOW');
+    value = sampled(20);
+    await monitor.tick();
+    assert.notEqual(monitor.snapshot().event, 'RECOVERED');
+    await monitor.tick();
+    assert.equal(monitor.snapshot().event, 'RECOVERED');
+  } finally {
+    monitor.close();
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});

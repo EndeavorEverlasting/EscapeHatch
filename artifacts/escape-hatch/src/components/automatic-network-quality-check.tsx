@@ -20,7 +20,9 @@ export function AutomaticNetworkQualityCheck() {
           const key = event && result.monitor.event_observed_utc
             ? event + ':' + result.monitor.event_observed_utc : '';
           if (lastSeenEvent.current !== null && key && key !== lastSeenEvent.current &&
-              result.monitor.enabled && event) showNetworkEvent(event);
+              result.monitor.enabled && event &&
+              (event === 'RECOVERED' ? result.monitor.signal === 'GOOD'
+                : event === result.monitor.signal)) showNetworkEvent(event);
           lastSeenEvent.current = key;
           setMonitor(result.monitor);
         }
@@ -66,7 +68,8 @@ export function AutomaticNetworkQualityCheck() {
           '. Root cause unproven; bandwidth unknown.'
         : 'Off until you opt in on this personal device.')}
     </p>
-    {enabled && monitor?.event && <p className="mt-2 text-sm font-semibold" role="alert">
+    {enabled && monitor?.event && (monitor.event === 'RECOVERED'
+      ? monitor.signal === 'GOOD' : monitor.event === monitor.signal) && <p className="mt-2 text-sm font-semibold" role="alert">
       {monitor.event === 'RECOVERED' ? 'Connection checks recovered.' :
         'Connection degradation detected: ' + monitor.event.toLowerCase().replaceAll('_', ' ') + '.'}
     </p>}

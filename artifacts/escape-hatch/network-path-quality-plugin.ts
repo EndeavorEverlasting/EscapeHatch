@@ -7,6 +7,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Plugin } from 'vite';
 import { isLoopbackAddress, readManagedRuntime } from './runtime-control.ts';
 import { measureNetworkPath, type PathQualityReceipt } from './network-path-quality.ts';
+import { AutomaticQualityRuntime } from './network-quality-runtime.ts';
+import { handleAutomaticQualityRequest } from './network-quality-route.ts';
 
 const ENDPOINT = '/__escapehatch/network-path-quality';
 const CONSENT_HEADER = 'x-escapehatch-operator-action';
@@ -81,14 +83,25 @@ export async function handleNetworkPathRequest(
 export function createNetworkPathQualityPlugin(): Plugin {
   const managed = Boolean(readManagedRuntime());
   const state: DiagnosticState = { inFlight: false, lastStartedAt: null };
+  const eligible = managed && process.platform === 'win32';
+  const monitor = new AutomaticQualityRuntime();
   return {
     name: 'escapehatch-network-path-quality',
     configureServer(server) {
+      // Consent from private policy is loaded only for the owned managed Windows host.
+      const ready = eligible ? monitor.load() : Promise.resolve();
+      server.httpServer?.once('close', () => monitor.close());
       server.middlewares.use((req, res, next) => {
-        void handleNetworkPathRequest(req, res, {
-          managed, platform: process.platform, measure: measureNetworkPath,
-          now: Date.now, state,
-        }).then(handled => { if (!handled) next(); })
+        void (async () => {
+          if (req.url?.startsWith('/__escapehatch/network-path-quality/monitor/')) {
+            await ready;
+            return handleAutomaticQualityRequest(req, res, monitor, eligible);
+          }
+          return handleNetworkPathRequest(req, res, {
+            managed, platform: process.platform, measure: measureNetworkPath,
+            now: Date.now, state,
+          });
+        })().then(handled => { if (!handled) next(); })
           .catch(() => respond(res, 503, { ok: false, error: 'diagnostic_sensor_unavailable' }));
       });
     },

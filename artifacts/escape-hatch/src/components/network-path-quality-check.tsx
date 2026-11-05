@@ -43,10 +43,11 @@ function formatMs(value: number | null): string {
 /** Never probes on mount. A person must request one local diagnostic each time. */
 export function NetworkPathQualityCheck() {
   const [busy, setBusy] = useState(false);
+  const [personalScopeApproved, setPersonalScopeApproved] = useState(false);
   const [receipt, setReceipt] = useState<PathQualityReceipt | null>(null);
   const [error, setError] = useState('');
   async function check() {
-    if (busy) return;
+    if (busy || !personalScopeApproved) return;
     setBusy(true);
     setError('');
     setReceipt(null);
@@ -54,7 +55,10 @@ export function NetworkPathQualityCheck() {
       const response = await fetch('/__escapehatch/network-path-quality', {
         method: 'POST',
         credentials: 'same-origin',
-        headers: { 'x-escapehatch-operator-action': 'confirmed' },
+        headers: {
+          'x-escapehatch-operator-action': 'confirmed',
+          'x-escapehatch-network-scope': 'personal',
+        },
         cache: 'no-store',
       });
       const payload: unknown = await response.json();
@@ -85,10 +89,16 @@ export function NetworkPathQualityCheck() {
           </p>
         </div>
         <button className="rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-semibold hover:bg-muted disabled:opacity-60"
-          type="button" disabled={busy} onClick={() => void check()} data-testid="button-network-path-check">
+          type="button" disabled={busy || !personalScopeApproved} onClick={() => void check()} data-testid="button-network-path-check">
           {busy ? 'Checking…' : 'Check my connection'}
         </button>
       </div>
+      <label className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
+        <input type="checkbox" checked={personalScopeApproved}
+          onChange={event => setPersonalScopeApproved(event.target.checked)}
+          data-testid="network-path-personal-consent" />
+        I am using my personal Windows device and approve one fixed-target network diagnostic when I press the button.
+      </label>
       <div role="status" aria-live="polite" className="mt-2 text-sm" data-testid="network-path-result">
         {error && <p>{error}</p>}
         {result && receipt && <>

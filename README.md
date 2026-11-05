@@ -28,11 +28,11 @@ The canonical mapping is [`contracts/application-journey-scenes.v1.json`](contra
 
 Development entrypoint, for developers with an existing checkout: [artifacts/escape-hatch/README.md](artifacts/escape-hatch/README.md). Do not confuse the developer launcher with the clean-machine installer.
 
-## Local connection self-check (managed personal Windows)
+## Automatic network health (managed personal Windows)
 
-When an employer application loads slowly, open **Browser assist → Application checkpoints** and choose **Check my connection**. First confirm this is your personally owned Windows device. EscapeHatch will run one bounded read-only DNS, public TCP and TLS path diagnostic and show each check separately. It does not measure upload/download throughput, change the VPN, inspect employer forms, or blame the ISP.
+In Browser assist, choose **Enable automatic checks** once on your personal Windows device. EscapeHatch then runs bounded DNS/TCP/TLS checks every 60 seconds while its managed runtime is open, including after the panel closes. Two agreeing samples are required for degraded or recovered alerts; it avoids repeated warnings. The preference is saved locally, can be turned off, and does not alter the VPN, employer forms, or saved career data.
 
-The diagnostic is on-demand only and does not start monitoring in the background. It is unavailable on the static preview, Android, and non-managed runtimes. [Source ownership, safety contract and runtime certification](docs/agent/TRIFECTA_NETWORK_PATH_RECOVERY_2026-11-05.md).
+The panel displays contextual status, with optional browser-managed notifications when permission is granted and the browser remains open. A one-time detailed check is still available as a fallback. Upload/download speed and ISP cause are unproven. PiShark remains the independent device-wide network monitor. [Canonical P04 implementation and Windows live-cert handoff](docs/agent/P04_AUTOMATIC_NETWORK_DIAGNOSTICS_LIVE_CERT_2026-11-05.md).
 
 ## Product identity
 

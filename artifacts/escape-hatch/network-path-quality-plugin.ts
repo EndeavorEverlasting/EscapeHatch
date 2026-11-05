@@ -49,7 +49,8 @@ export async function handleNetworkPathRequest(
       !isLoopbackAddress(req.socket.remoteAddress) ||
       origin !== 'http://' + host ||
       req.headers['sec-fetch-site'] !== 'same-origin' ||
-      req.headers[CONSENT_HEADER] !== 'confirmed') {
+      req.headers[CONSENT_HEADER] !== 'confirmed' ||
+      req.headers['x-escapehatch-network-scope'] !== 'personal') {
     respond(res, 403, { ok: false, error: 'local_operator_action_required' });
     return true;
   }

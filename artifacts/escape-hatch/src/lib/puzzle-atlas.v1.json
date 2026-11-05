@@ -1,0 +1,499 @@
+{
+  "schema_version": "escapehatch-puzzle-atlas/v1",
+  "canonical_existing_gallery": "src/lib/profile-puzzle-gallery.v1.json",
+  "release_status": "source-atlas; nine illustration binaries staged in the attached source bundle until independently committed and hash-checked",
+  "rules": [
+    "Each module is a distinct evidence domain; do not recycle the ten profile-piece keys across modules.",
+    "Illustrations are decorative; uninspected data is unmeasured, not missing or saved.",
+    "Variants change presentation only, never approval, field state, ATS readiness, or reward authority.",
+    "No private answer values, resume text, employer links, or tokens belong in the public catalog."
+  ],
+  "answer_kinds": [
+    {
+      "id": "standard",
+      "label": "Standard answers",
+      "scope": "Reusable only with explicit reviewed preference",
+      "examples": [
+        "availability",
+        "work authorization",
+        "work mode",
+        "compensation"
+      ],
+      "policy": "Use existing question taxonomy and confirmation policy; sensitive or legal statements require the owning gate."
+    },
+    {
+      "id": "narrative",
+      "label": "Narrative answers",
+      "scope": "Reviewed reusable career story",
+      "examples": [
+        "professional summary",
+        "strengths",
+        "relevant experience"
+      ],
+      "policy": "Preserve authentic version and source; alternative phrasings are drafts until accepted."
+    },
+    {
+      "id": "rare",
+      "label": "Rare / exact-question answers",
+      "scope": "Exact question or exact opportunity only",
+      "examples": [
+        "unusual employer prompts",
+        "role-specific scenarios"
+      ],
+      "policy": "Do not promote to globally reusable memory merely because it is saved."
+    },
+    {
+      "id": "restricted",
+      "label": "Sensitive or attestation",
+      "scope": "Never silently reusable",
+      "examples": [
+        "EEO",
+        "legal consent",
+        "signatures"
+      ],
+      "policy": "Operator-only confirmation; an illustration or saved string is no authorization."
+    }
+  ],
+  "modules": [
+    {
+      "id": "identity-hatch",
+      "title": "Identity Hatch",
+      "description": "Name, identity, and public-facing profile.",
+      "href": "/profile",
+      "source_owner": "existing profile / answer-recovery / materials / runtime adapters",
+      "signals": [
+        "first_name",
+        "last_name",
+        "linkedin_url"
+      ],
+      "artwork": {
+        "asset_id": "identity-hatch-v1",
+        "target_path": "/puzzles/identity-hatch-v1.png",
+        "original_filename": "image-gen-2(4).png",
+        "sha256": "fd4c1925ecc5d1e68de5973da8bf48684d237c55b7692cd1ce2e534f66d6b996",
+        "width": 1448,
+        "height": 1086,
+        "status": "shipped",
+        "path": "/puzzles/identity-hatch-v1.png",
+        "provenance": "Original user-directed EscapeHatch puzzle art 2026-11-04"
+      },
+      "variations": [
+        {
+          "id": "illustrated",
+          "title": "Illustrated Hatch",
+          "mode": "illustrated"
+        },
+        {
+          "id": "quiet",
+          "title": "Quiet Board",
+          "mode": "minimal"
+        },
+        {
+          "id": "focus",
+          "title": "Focused Pieces",
+          "mode": "compact"
+        }
+      ],
+      "reward": {
+        "id": "identity-hatch-keepsake",
+        "title": "Identity Keeper",
+        "policy": "cosmetic-only; measured evidence required"
+      }
+    },
+    {
+      "id": "contact-nest",
+      "title": "Contact Nest",
+      "description": "Reachable contact details and preferred channels.",
+      "href": "/profile",
+      "source_owner": "existing profile / answer-recovery / materials / runtime adapters",
+      "signals": [
+        "email",
+        "phone"
+      ],
+      "artwork": {
+        "asset_id": "contact-nest-v1",
+        "target_path": "/puzzles/contact-nest-v1.png",
+        "original_filename": "image-gen-3(2).png",
+        "sha256": "8a6f74933bdf79eb1659e6d33ebb797219acd43d9a33236d2916bc463318b834",
+        "width": 1448,
+        "height": 1086,
+        "status": "source-recovered-not-yet-shipped",
+        "path": null,
+        "provenance": "Original user-directed EscapeHatch puzzle art 2026-11-04"
+      },
+      "variations": [
+        {
+          "id": "illustrated",
+          "title": "Illustrated Hatch",
+          "mode": "illustrated"
+        },
+        {
+          "id": "quiet",
+          "title": "Quiet Board",
+          "mode": "minimal"
+        },
+        {
+          "id": "focus",
+          "title": "Focused Pieces",
+          "mode": "compact"
+        }
+      ],
+      "reward": {
+        "id": "contact-nest-keepsake",
+        "title": "Nest Builder",
+        "policy": "cosmetic-only; measured evidence required"
+      }
+    },
+    {
+      "id": "location-compass",
+      "title": "Location Compass",
+      "description": "Geography, location and mobility details.",
+      "href": "/profile",
+      "source_owner": "existing profile / answer-recovery / materials / runtime adapters",
+      "signals": [
+        "city",
+        "region",
+        "country"
+      ],
+      "artwork": {
+        "asset_id": "location-compass-v1",
+        "target_path": "/puzzles/location-compass-v1.png",
+        "original_filename": "image-gen-4(2).png",
+        "sha256": "741ecf972b0b05c79cfd682bd98e705066b629554cfa34c05cfe79c5fdd601a8",
+        "width": 1448,
+        "height": 1086,
+        "status": "source-recovered-not-yet-shipped",
+        "path": null,
+        "provenance": "Original user-directed EscapeHatch puzzle art 2026-11-04"
+      },
+      "variations": [
+        {
+          "id": "illustrated",
+          "title": "Illustrated Hatch",
+          "mode": "illustrated"
+        },
+        {
+          "id": "quiet",
+          "title": "Quiet Board",
+          "mode": "minimal"
+        },
+        {
+          "id": "focus",
+          "title": "Focused Pieces",
+          "mode": "compact"
+        }
+      ],
+      "reward": {
+        "id": "location-compass-keepsake",
+        "title": "Pathfinder",
+        "policy": "cosmetic-only; measured evidence required"
+      }
+    },
+    {
+      "id": "experience-ladder",
+      "title": "Experience Ladder",
+      "description": "Verified experience and career milestones.",
+      "href": "/sources",
+      "source_owner": "existing profile / answer-recovery / materials / runtime adapters",
+      "signals": [
+        "answer:relevant-experience"
+      ],
+      "artwork": {
+        "asset_id": "experience-ladder-v1",
+        "target_path": "/puzzles/experience-ladder-v1.png",
+        "original_filename": "image-gen-6.png",
+        "sha256": "2525621a64e701b0a106a69c141f26b521c69d0995b6a3f57f957f2f57a5dc3b",
+        "width": 1448,
+        "height": 1086,
+        "status": "source-recovered-not-yet-shipped",
+        "path": null,
+        "provenance": "Original user-directed EscapeHatch puzzle art 2026-11-04"
+      },
+      "variations": [
+        {
+          "id": "illustrated",
+          "title": "Illustrated Hatch",
+          "mode": "illustrated"
+        },
+        {
+          "id": "quiet",
+          "title": "Quiet Board",
+          "mode": "minimal"
+        },
+        {
+          "id": "focus",
+          "title": "Focused Pieces",
+          "mode": "compact"
+        }
+      ],
+      "reward": {
+        "id": "experience-ladder-keepsake",
+        "title": "Career Climber",
+        "policy": "cosmetic-only; measured evidence required"
+      }
+    },
+    {
+      "id": "skills-garden",
+      "title": "Skills Garden",
+      "description": "Reviewed skills, strengths and practical competencies.",
+      "href": "/answers",
+      "source_owner": "existing profile / answer-recovery / materials / runtime adapters",
+      "signals": [
+        "answer:strengths"
+      ],
+      "artwork": {
+        "asset_id": "skills-garden-v1",
+        "target_path": "/puzzles/skills-garden-v1.png",
+        "original_filename": "image-gen-8.png",
+        "sha256": "9b43766ce96748427fddd10e19d2338bd41b71b9b5b158ffc34594ae1a8b1cb4",
+        "width": 1448,
+        "height": 1086,
+        "status": "source-recovered-not-yet-shipped",
+        "path": null,
+        "provenance": "Original user-directed EscapeHatch puzzle art 2026-11-04"
+      },
+      "variations": [
+        {
+          "id": "illustrated",
+          "title": "Illustrated Hatch",
+          "mode": "illustrated"
+        },
+        {
+          "id": "quiet",
+          "title": "Quiet Board",
+          "mode": "minimal"
+        },
+        {
+          "id": "focus",
+          "title": "Focused Pieces",
+          "mode": "compact"
+        }
+      ],
+      "reward": {
+        "id": "skills-garden-keepsake",
+        "title": "Skill Gardener",
+        "policy": "cosmetic-only; measured evidence required"
+      }
+    },
+    {
+      "id": "education-lantern",
+      "title": "Education Lantern",
+      "description": "Education, learning and credentials grounded in sources.",
+      "href": "/sources",
+      "source_owner": "existing profile / answer-recovery / materials / runtime adapters",
+      "signals": [
+        "source:education"
+      ],
+      "artwork": {
+        "asset_id": "education-lantern-v1",
+        "target_path": "/puzzles/education-lantern-v1.png",
+        "original_filename": "image-gen-7.png",
+        "sha256": "9c71c427ae8f535081e162cc97e3cf15f7f5e0b0d810ac13bb6fa4af99a592db",
+        "width": 1448,
+        "height": 1086,
+        "status": "source-recovered-not-yet-shipped",
+        "path": null,
+        "provenance": "Original user-directed EscapeHatch puzzle art 2026-11-04"
+      },
+      "variations": [
+        {
+          "id": "illustrated",
+          "title": "Illustrated Hatch",
+          "mode": "illustrated"
+        },
+        {
+          "id": "quiet",
+          "title": "Quiet Board",
+          "mode": "minimal"
+        },
+        {
+          "id": "focus",
+          "title": "Focused Pieces",
+          "mode": "compact"
+        }
+      ],
+      "reward": {
+        "id": "education-lantern-keepsake",
+        "title": "Learning Lantern",
+        "policy": "cosmetic-only; measured evidence required"
+      }
+    },
+    {
+      "id": "work-passport",
+      "title": "Work Passport",
+      "description": "Availability, authorization and role-fit facts.",
+      "href": "/assist",
+      "source_owner": "existing profile / answer-recovery / materials / runtime adapters",
+      "signals": [
+        "question:employment.work_authorization_proof",
+        "question:employment.sponsorship_required"
+      ],
+      "artwork": {
+        "asset_id": "work-passport-v1",
+        "target_path": "/puzzles/work-passport-v1.png",
+        "original_filename": "image-gen-5.png",
+        "sha256": "2a327e4cf4013fff4f3ef6ccd9a4718a80e958785b43a658632005e2fb057f67",
+        "width": 1448,
+        "height": 1086,
+        "status": "source-recovered-not-yet-shipped",
+        "path": null,
+        "provenance": "Original user-directed EscapeHatch puzzle art 2026-11-04"
+      },
+      "variations": [
+        {
+          "id": "illustrated",
+          "title": "Illustrated Hatch",
+          "mode": "illustrated"
+        },
+        {
+          "id": "quiet",
+          "title": "Quiet Board",
+          "mode": "minimal"
+        },
+        {
+          "id": "focus",
+          "title": "Focused Pieces",
+          "mode": "compact"
+        }
+      ],
+      "reward": {
+        "id": "work-passport-keepsake",
+        "title": "Passport Keeper",
+        "policy": "cosmetic-only; measured evidence required"
+      }
+    },
+    {
+      "id": "document-vault",
+      "title": "Document Vault",
+      "description": "Résumé, cover letters, portfolios and reviewed materials.",
+      "href": "/materials",
+      "source_owner": "existing profile / answer-recovery / materials / runtime adapters",
+      "signals": [
+        "document:resume",
+        "document:cover-letter",
+        "document:portfolio"
+      ],
+      "artwork": {
+        "asset_id": "document-vault-v1",
+        "target_path": "/puzzles/document-vault-v1.png",
+        "original_filename": "image-gen-9.png",
+        "sha256": "f7b374c980fb9e7eace046994eeeb73224714289644aba5f5befb1d0be77b0bf",
+        "width": 1448,
+        "height": 1086,
+        "status": "source-recovered-not-yet-shipped",
+        "path": null,
+        "provenance": "Original user-directed EscapeHatch puzzle art 2026-11-04"
+      },
+      "variations": [
+        {
+          "id": "illustrated",
+          "title": "Illustrated Hatch",
+          "mode": "illustrated"
+        },
+        {
+          "id": "quiet",
+          "title": "Quiet Board",
+          "mode": "minimal"
+        },
+        {
+          "id": "focus",
+          "title": "Focused Pieces",
+          "mode": "compact"
+        }
+      ],
+      "reward": {
+        "id": "document-vault-keepsake",
+        "title": "Vault Curator",
+        "policy": "cosmetic-only; measured evidence required"
+      }
+    },
+    {
+      "id": "answer-constellation",
+      "title": "Answer Constellation",
+      "description": "Standard, narrative and rare exact-question answers.",
+      "href": "/answers",
+      "source_owner": "existing profile / answer-recovery / materials / runtime adapters",
+      "signals": [
+        "answers:standard",
+        "answers:narrative",
+        "answers:rare"
+      ],
+      "artwork": {
+        "asset_id": "answer-constellation-v1",
+        "target_path": "/puzzles/answer-constellation-v1.png",
+        "original_filename": "image-gen-10.png",
+        "sha256": "7f8c685dde7fcfd9b4677617e83efd6be4fe923323c355c521e7f9beb8e54a0b",
+        "width": 1448,
+        "height": 1086,
+        "status": "source-recovered-not-yet-shipped",
+        "path": null,
+        "provenance": "Original user-directed EscapeHatch puzzle art 2026-11-04"
+      },
+      "variations": [
+        {
+          "id": "illustrated",
+          "title": "Illustrated Hatch",
+          "mode": "illustrated"
+        },
+        {
+          "id": "quiet",
+          "title": "Quiet Board",
+          "mode": "minimal"
+        },
+        {
+          "id": "focus",
+          "title": "Focused Pieces",
+          "mode": "compact"
+        }
+      ],
+      "reward": {
+        "id": "answer-constellation-keepsake",
+        "title": "Stargazer",
+        "policy": "cosmetic-only; measured evidence required"
+      }
+    },
+    {
+      "id": "companion-link",
+      "title": "Companion Link",
+      "description": "Private extension and device-workspace connection.",
+      "href": "/assist",
+      "source_owner": "existing profile / answer-recovery / materials / runtime adapters",
+      "signals": [
+        "integration:extension"
+      ],
+      "artwork": {
+        "asset_id": "companion-link-v1",
+        "target_path": "/puzzles/companion-link-v1.png",
+        "original_filename": "image-gen-1(4).png",
+        "sha256": "e56ecc50b1567cff80616fc111dac2435042812bdfd964f873be50004f8e7307",
+        "width": 1448,
+        "height": 1086,
+        "status": "source-recovered-not-yet-shipped",
+        "path": null,
+        "provenance": "Original user-directed EscapeHatch puzzle art 2026-11-04"
+      },
+      "variations": [
+        {
+          "id": "illustrated",
+          "title": "Illustrated Hatch",
+          "mode": "illustrated"
+        },
+        {
+          "id": "quiet",
+          "title": "Quiet Board",
+          "mode": "minimal"
+        },
+        {
+          "id": "focus",
+          "title": "Focused Pieces",
+          "mode": "compact"
+        }
+      ],
+      "reward": {
+        "id": "companion-link-keepsake",
+        "title": "Trusted Companion",
+        "policy": "cosmetic-only; measured evidence required"
+      }
+    }
+  ]
+}

@@ -296,3 +296,11 @@ delivery/Windows regression tests and the isolated extension-journey Chromium sp
 | Native envelope parser | `src/lib/extension-pairing.ts`; existing native review owner | Code only; actual `extension-native-pairing.v1.json` stays private | Existing parser/admission tests; conflicting IDs fail closed |
 | Companion diagnosis / staging | `extension-host-control.ts`, `companion-package.ts` | Metadata-only HTTP responses; immutable private package cache; no Chrome preference writes | Host-control tests and managed browser recovery spec; staging is not Chrome activation |
 | Shipped companion receipt | `scripts/package_application_assist.py` formatter called by `scripts/package_windows_preview.py` | Generated `browser/application-assist/release.json` in Windows preview, covered by Windows hash manifest; no tracked generated copy | Both package suites plus no-Git/no-Python runtime staging test; unsigned consistency proof only |
+
+## Selectable identity puzzle gallery (2026-11-05)
+The single canonical gallery catalog is `artifacts/escape-hatch/src/lib/profile-puzzle-gallery.v1.json`.
+Original immutable illustration: `artifacts/escape-hatch/public/puzzles/identity-hatch-v1.png`.
+Consumer/projector: `artifacts/escape-hatch/src/components/puzzle-gallery-display.tsx`, `src/lib/profile-puzzle-gallery.ts`, existing `src/lib/profile-puzzle-projection.ts`.
+New illustration intake: `scripts/add_profile_puzzle_set.py`; manifest/bytes integrity: `python scripts/validate_profile_puzzle_gallery.py`.
+Canonical P04/Trifecta local live-cert handoff: `docs/agent/IDENTITY_HATCH_PUZZLE_GALLERY_LIVE_CERT_2026-11-05.md`.
+Rewards are evidence-derived cosmetic milestones only; page-local selection grants no ATS or owner authority.

@@ -30,6 +30,9 @@ jobs:
       - name: Test private context leak negatives
         run: python scripts/validate_agent_context_boundaries.py --self-test
 
+      - name: Validate profile puzzle gallery asset and catalog
+        run: python scripts/validate_profile_puzzle_gallery.py
+
       - name: Validate product version
         run: python scripts/validate_product_version.py
 

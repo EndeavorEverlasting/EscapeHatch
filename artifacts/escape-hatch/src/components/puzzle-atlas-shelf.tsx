@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'wouter';
 import { Puzzle, Sparkles } from 'lucide-react';
-import { projectPuzzleAtlas } from '@/lib/puzzle-atlas';
+import { classifyRecoveredAnswer, projectPuzzleAtlas, PUZZLE_ANSWER_KINDS } from '@/lib/puzzle-atlas';
 import type { ProfilePuzzleSnapshot } from '@/lib/profile-puzzle-projection';
 import type { RecoveredKnowledge } from '@/lib/answer-recovery';
 import './puzzle-atlas-shelf.css';
@@ -77,6 +77,18 @@ export function PuzzleAtlasShelf({ snapshot, recovery }: {
             <small>{stateWords[piece.status]}</small>
           </span>) : <span className="text-xs">No open pieces in this measured view.</span>}
         </div>
+        {selected.id === 'answer-constellation' && <div className="puzzle-atlas-answer-kinds mt-4 w-full" aria-label="Kinds of private answers" data-testid="puzzle-answer-kinds">
+          <p className="mb-2 text-xs font-bold">Your answer types are not interchangeable.</p>
+          {PUZZLE_ANSWER_KINDS.map(kind => {
+            const measured = Boolean(recovery && !recovery.loading && !recovery.unavailable.length);
+            const items = measured ? recovery!.items.filter(item => classifyRecoveredAnswer(item) === kind.id) : [];
+            const review = items.filter(item => item.status === 'needs-review').length;
+            return <div className="puzzle-atlas-answer-kind" key={kind.id}>
+              <div><strong>{kind.label}</strong><p className="mt-1 text-xs">{kind.policy}</p></div>
+              <span>{measured ? `${items.length} observed${review ? ` · ${review} to review` : ''}` : 'Not measured'}</span>
+            </div>;
+          })}
+        </div>}
         <Link href={selected.href} className="puzzle-atlas-action mt-4" data-testid="puzzle-atlas-action">Explore {selected.title}</Link>
         <p className="mt-3 text-xs leading-5">Artwork and variations never change your verified facts, employer form, answer approvals, or Submit authority.</p>
         {selected.unlocked && <p className="mt-2 text-xs font-bold" data-testid="puzzle-atlas-reward">{selected.reward.title} — decorative milestone unlocked</p>}

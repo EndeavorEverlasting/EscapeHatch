@@ -28,6 +28,12 @@ The canonical mapping is [`contracts/application-journey-scenes.v1.json`](contra
 
 Development entrypoint, for developers with an existing checkout: [artifacts/escape-hatch/README.md](artifacts/escape-hatch/README.md). Do not confuse the developer launcher with the clean-machine installer.
 
+## Automatic network health (managed personal Windows)
+
+In Browser assist, choose **Enable automatic checks** once on your personal Windows device. EscapeHatch then runs bounded DNS/TCP/TLS checks every 60 seconds while its managed runtime is open, including after the panel closes. Two agreeing samples are required for degraded or recovered alerts; it avoids repeated warnings. The preference is saved locally, can be turned off, and does not alter the VPN, employer forms, or saved career data.
+
+The panel displays contextual status, with optional browser-managed notifications when permission is granted and the browser remains open. A one-time detailed check is still available as a fallback. Upload/download speed and ISP cause are unproven. PiShark remains the independent device-wide network monitor. [Canonical P04 implementation and Windows live-cert handoff](docs/agent/P04_AUTOMATIC_NETWORK_DIAGNOSTICS_LIVE_CERT_2026-11-05.md).
+
 ## Product identity
 
 The approved chick-and-hatch mascot, usage, provenance and release checks are recorded in [the cockpit brand identity contract](artifacts/escape-hatch/BRAND_IDENTITY.md). The real application journey, private career state and operator-only final submission are unchanged by branding.

@@ -39,3 +39,7 @@
  .puzzle-atlas-action:hover{filter:brightness(1.1)}
 }
 @media(prefers-reduced-motion:reduce){.puzzle-atlas *, .puzzle-atlas-stage{animation:none!important;transition:none!important}}
+
+.puzzle-atlas-answer-kind{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:.6rem;border-top:1px solid #a8dd7348;padding:.65rem 0;font-size:.75rem}
+.puzzle-atlas-answer-kind p{max-width:29rem;color:#c9e2bb}
+.puzzle-atlas-answer-kind span{font-size:.65rem;color:var(--atlas-lime);white-space:nowrap}

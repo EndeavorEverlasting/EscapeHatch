@@ -5,6 +5,7 @@ import type { Application } from '@/lib/storage';
 import { projectApplicationPuzzle, sameApplicationUrl, type FormInspection, type CurrentApplicationPage } from '@/lib/application-puzzle';
 import { OpportunityDocuments, type useOpportunityDocuments } from './opportunity-documents';
 import { NetworkPathQualityCheck } from './network-path-quality-check';
+import { AutomaticNetworkQualityCheck } from './automatic-network-quality-check';
 
 const inspectionErrors: Record<string, string> = {
   launch_browser_first: 'Launch this opportunity and open its application form, then inspect again.',
@@ -88,7 +89,10 @@ export function ApplicationPuzzle({ opportunity, url, documents, disabled, onByp
       </article>)}</div>
     </> : <p className="my-4 text-sm font-bold">{inspection ? 'Inspection expired or the current page changed or is unavailable. Inspect this form again.' : 'Requirements not inspected yet. No readiness score is inferred.'}</p>}
     <OpportunityDocuments documents={documents} disabled={disabled || !opportunity || opportunity.url !== url} onBypass={onBypass} />
+    <AutomaticNetworkQualityCheck />
+    <details className="mt-3 text-sm"><summary className="cursor-pointer">One-time detailed check</summary>
     <NetworkPathQualityCheck />
+    </details>
     <div className="mt-4 flex flex-wrap gap-5 text-sm"><Link href="/materials" className="font-bold text-primary underline" data-testid="puzzle-open-materials">Open materials desk</Link><Link href="/sources" className="font-bold text-primary underline">Review career sources</Link><Link href="/answers" className="font-bold text-primary underline">Open reusable answers</Link></div>
   </section>;
 }

@@ -11,6 +11,11 @@ test('all ten puzzle families and three visual variations are selectable without
   await page.keyboard.press('Enter');
   await expect(chosen).toHaveAttribute('aria-pressed', 'true');
   await expect(atlas.getByRole('heading', { name: 'Answer Constellation' })).toBeVisible();
+  const kinds = page.getByTestId('puzzle-answer-kinds');
+  await expect(kinds).toContainText('Standard answers');
+  await expect(kinds).toContainText('Narrative answers');
+  await expect(kinds).toContainText('Rare / exact-question answers');
+  await expect(kinds).toContainText('Sensitive or attestation');
   await expect(atlas).toContainText('source coverage not fully measured');
   const variation = page.getByTestId('puzzle-atlas-variation');
   await expect(variation.locator('option')).toHaveCount(3);

@@ -6,7 +6,8 @@
     "Each module is a distinct evidence domain; do not recycle the ten profile-piece keys across modules.",
     "Illustrations are decorative; uninspected data is unmeasured, not missing or saved.",
     "Variants change presentation only, never approval, field state, ATS readiness, or reward authority.",
-    "No private answer values, resume text, employer links, or tokens belong in the public catalog."
+    "No private answer values, resume text, employer links, or tokens belong in the public catalog.",
+    "Future illustration variants are independent hashed assets attached to a module and never overwrite an earlier original or make unrelated evidence complete."
   ],
   "answer_kinds": [
     {
@@ -81,24 +82,28 @@
         {
           "id": "illustrated",
           "title": "Illustrated Hatch",
-          "mode": "illustrated"
+          "mode": "illustrated",
+          "artwork_asset_id": "identity-hatch-v1"
         },
         {
           "id": "quiet",
           "title": "Quiet Board",
-          "mode": "minimal"
+          "mode": "minimal",
+          "artwork_asset_id": null
         },
         {
           "id": "focus",
           "title": "Focused Pieces",
-          "mode": "compact"
+          "mode": "compact",
+          "artwork_asset_id": null
         }
       ],
       "reward": {
         "id": "identity-hatch-keepsake",
         "title": "Identity Keeper",
         "policy": "cosmetic-only; measured evidence required"
-      }
+      },
+      "additional_artworks": []
     },
     {
       "id": "contact-nest",
@@ -125,24 +130,28 @@
         {
           "id": "illustrated",
           "title": "Illustrated Hatch",
-          "mode": "illustrated"
+          "mode": "illustrated",
+          "artwork_asset_id": "contact-nest-v1"
         },
         {
           "id": "quiet",
           "title": "Quiet Board",
-          "mode": "minimal"
+          "mode": "minimal",
+          "artwork_asset_id": null
         },
         {
           "id": "focus",
           "title": "Focused Pieces",
-          "mode": "compact"
+          "mode": "compact",
+          "artwork_asset_id": null
         }
       ],
       "reward": {
         "id": "contact-nest-keepsake",
         "title": "Nest Builder",
         "policy": "cosmetic-only; measured evidence required"
-      }
+      },
+      "additional_artworks": []
     },
     {
       "id": "location-compass",
@@ -170,24 +179,28 @@
         {
           "id": "illustrated",
           "title": "Illustrated Hatch",
-          "mode": "illustrated"
+          "mode": "illustrated",
+          "artwork_asset_id": "location-compass-v1"
         },
         {
           "id": "quiet",
           "title": "Quiet Board",
-          "mode": "minimal"
+          "mode": "minimal",
+          "artwork_asset_id": null
         },
         {
           "id": "focus",
           "title": "Focused Pieces",
-          "mode": "compact"
+          "mode": "compact",
+          "artwork_asset_id": null
         }
       ],
       "reward": {
         "id": "location-compass-keepsake",
         "title": "Pathfinder",
         "policy": "cosmetic-only; measured evidence required"
-      }
+      },
+      "additional_artworks": []
     },
     {
       "id": "experience-ladder",
@@ -213,24 +226,28 @@
         {
           "id": "illustrated",
           "title": "Illustrated Hatch",
-          "mode": "illustrated"
+          "mode": "illustrated",
+          "artwork_asset_id": "experience-ladder-v1"
         },
         {
           "id": "quiet",
           "title": "Quiet Board",
-          "mode": "minimal"
+          "mode": "minimal",
+          "artwork_asset_id": null
         },
         {
           "id": "focus",
           "title": "Focused Pieces",
-          "mode": "compact"
+          "mode": "compact",
+          "artwork_asset_id": null
         }
       ],
       "reward": {
         "id": "experience-ladder-keepsake",
         "title": "Career Climber",
         "policy": "cosmetic-only; measured evidence required"
-      }
+      },
+      "additional_artworks": []
     },
     {
       "id": "skills-garden",
@@ -256,24 +273,28 @@
         {
           "id": "illustrated",
           "title": "Illustrated Hatch",
-          "mode": "illustrated"
+          "mode": "illustrated",
+          "artwork_asset_id": "skills-garden-v1"
         },
         {
           "id": "quiet",
           "title": "Quiet Board",
-          "mode": "minimal"
+          "mode": "minimal",
+          "artwork_asset_id": null
         },
         {
           "id": "focus",
           "title": "Focused Pieces",
-          "mode": "compact"
+          "mode": "compact",
+          "artwork_asset_id": null
         }
       ],
       "reward": {
         "id": "skills-garden-keepsake",
         "title": "Skill Gardener",
         "policy": "cosmetic-only; measured evidence required"
-      }
+      },
+      "additional_artworks": []
     },
     {
       "id": "education-lantern",
@@ -299,24 +320,28 @@
         {
           "id": "illustrated",
           "title": "Illustrated Hatch",
-          "mode": "illustrated"
+          "mode": "illustrated",
+          "artwork_asset_id": "education-lantern-v1"
         },
         {
           "id": "quiet",
           "title": "Quiet Board",
-          "mode": "minimal"
+          "mode": "minimal",
+          "artwork_asset_id": null
         },
         {
           "id": "focus",
           "title": "Focused Pieces",
-          "mode": "compact"
+          "mode": "compact",
+          "artwork_asset_id": null
         }
       ],
       "reward": {
         "id": "education-lantern-keepsake",
         "title": "Learning Lantern",
         "policy": "cosmetic-only; measured evidence required"
-      }
+      },
+      "additional_artworks": []
     },
     {
       "id": "work-passport",
@@ -343,24 +368,28 @@
         {
           "id": "illustrated",
           "title": "Illustrated Hatch",
-          "mode": "illustrated"
+          "mode": "illustrated",
+          "artwork_asset_id": "work-passport-v1"
         },
         {
           "id": "quiet",
           "title": "Quiet Board",
-          "mode": "minimal"
+          "mode": "minimal",
+          "artwork_asset_id": null
         },
         {
           "id": "focus",
           "title": "Focused Pieces",
-          "mode": "compact"
+          "mode": "compact",
+          "artwork_asset_id": null
         }
       ],
       "reward": {
         "id": "work-passport-keepsake",
         "title": "Passport Keeper",
         "policy": "cosmetic-only; measured evidence required"
-      }
+      },
+      "additional_artworks": []
     },
     {
       "id": "document-vault",
@@ -388,24 +417,28 @@
         {
           "id": "illustrated",
           "title": "Illustrated Hatch",
-          "mode": "illustrated"
+          "mode": "illustrated",
+          "artwork_asset_id": "document-vault-v1"
         },
         {
           "id": "quiet",
           "title": "Quiet Board",
-          "mode": "minimal"
+          "mode": "minimal",
+          "artwork_asset_id": null
         },
         {
           "id": "focus",
           "title": "Focused Pieces",
-          "mode": "compact"
+          "mode": "compact",
+          "artwork_asset_id": null
         }
       ],
       "reward": {
         "id": "document-vault-keepsake",
         "title": "Vault Curator",
         "policy": "cosmetic-only; measured evidence required"
-      }
+      },
+      "additional_artworks": []
     },
     {
       "id": "answer-constellation",
@@ -433,24 +466,28 @@
         {
           "id": "illustrated",
           "title": "Illustrated Hatch",
-          "mode": "illustrated"
+          "mode": "illustrated",
+          "artwork_asset_id": "answer-constellation-v1"
         },
         {
           "id": "quiet",
           "title": "Quiet Board",
-          "mode": "minimal"
+          "mode": "minimal",
+          "artwork_asset_id": null
         },
         {
           "id": "focus",
           "title": "Focused Pieces",
-          "mode": "compact"
+          "mode": "compact",
+          "artwork_asset_id": null
         }
       ],
       "reward": {
         "id": "answer-constellation-keepsake",
         "title": "Stargazer",
         "policy": "cosmetic-only; measured evidence required"
-      }
+      },
+      "additional_artworks": []
     },
     {
       "id": "companion-link",
@@ -476,24 +513,28 @@
         {
           "id": "illustrated",
           "title": "Illustrated Hatch",
-          "mode": "illustrated"
+          "mode": "illustrated",
+          "artwork_asset_id": "companion-link-v1"
         },
         {
           "id": "quiet",
           "title": "Quiet Board",
-          "mode": "minimal"
+          "mode": "minimal",
+          "artwork_asset_id": null
         },
         {
           "id": "focus",
           "title": "Focused Pieces",
-          "mode": "compact"
+          "mode": "compact",
+          "artwork_asset_id": null
         }
       ],
       "reward": {
         "id": "companion-link-keepsake",
         "title": "Trusted Companion",
         "policy": "cosmetic-only; measured evidence required"
-      }
+      },
+      "additional_artworks": []
     }
   ]
 }

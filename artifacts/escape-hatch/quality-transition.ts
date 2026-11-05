@@ -20,7 +20,8 @@ export class TransitionGate {
   private active: Signal = 'GOOD';
   private lastAlertAt = -Infinity;
   private lastSampleAt: number | null = null;
-  constructor(private now: () => number = Date.now) {}
+  private readonly now: () => number;
+  constructor(now: () => number = Date.now) { this.now = now; }
   observe(receipt: PathQualityReceipt | null): AlertKind | null {
     const now = this.now();
     if (this.lastSampleAt !== null && now - this.lastSampleAt > 150_000) {

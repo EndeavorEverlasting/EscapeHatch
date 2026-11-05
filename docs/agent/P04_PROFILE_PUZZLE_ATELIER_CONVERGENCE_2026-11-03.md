@@ -372,3 +372,34 @@ checks the extension-free Assist route. The local native-browser run correctly
 SKIPPED because the existing native host belongs to the selected installation;
 it was preserved. Windows CI must supply this proof. The complete managed-assist
 suite passed 148 checks with one host-symlink capability skip.
+
+## 2026-11-05 — P141 correction: TEN puzzle families, not an eight-piece product
+
+**Parent correction (binding):** An earlier Today sprint treated an eight-piece contact board as the finished puzzle concept. The operator explicitly requires *all* original illustrated modules, future sets/variants, and category-aware private answers. Do not silently narrow this into profile-contact completeness or re-generate the original images.
+
+**Recovered art evidence:** Ten immutable original 1448×1086 PNGs were recovered from prior user-directed image artifacts in ChatGPT Library, paired against the operator's contact sheet and SHA256-verified. Their stable filename/hash identities are tracked in `artifacts/escape-hatch/src/lib/puzzle-atlas.v1.json`. The ten families are Identity Hatch, Contact Nest, Location Compass, Experience Ladder, Skills Garden, Education Lantern, Work Passport, Document Vault, Answer Constellation, Companion Link. Exactly one illustration (Identity Hatch) was already in GitHub main from merged PR #193/194; nine original PNGs remain outside GitHub until binary transfer proves otherwise.
+
+**New existing-owner extension:** PR #195, branch `feat/multi-family-puzzle-atlas-20261105`, adds a ten-world `PuzzleAtlasShelf` inside **the same** `ProfilePieceBoard`; it does not create a parallel profile state store or replace the original Identity Hatch gallery. Each module has its own signal list, link to current owner, an independent known/unmeasured status, decorative-only reward policy and three initial visual modes (Illustrated Hatch, Quiet Board, Focused Pieces). Additional original visual styles use `additional_artworks` plus immutable `artwork_asset_id`; no overwrites.
+
+**Answer classification contract:** `classifyRecoveredAnswer` reads existing `RecoveredKnowledge` from `answer-recovery.ts`: (a) standard question/preference with exact taxonomy and review policy, (b) reusable reviewed career narratives, (c) rare exact-question/discovered employer prompts that do **not** become global answers, (d) restricted EEO/legal/attestation requiring manual approval. Category display **never** grants fill authority. The actual private answer bytes remain with their owning store. Identical-looking questions from different employers can retain different scopes and variants.
+
+**Evidence safety:** Contact and reviewed narrative projection consume `profile-puzzle-projection.ts` / `answer-recovery.ts`; source-dependent education, document, and extension signals are **unmeasured** until their owner-specific adapters are observed. The original reusable profile count is not a job-application percentage. Saved docs are distinct from ATS-uploaded/accepted files. Awards require all signals in that particular module measured and saved; cosmetics never unlock ATS actions.
+
+**Artifact bridge (NOT a claim of GitHub asset integration):** The source-only host generated `EscapeHatch_Ten_Puzzle_Original_Art_2026-11-05.zip` with `originals/image-gen-1(4).png` through `image-gen-10.png`, plus hash/dimension manifest. The GitHub connector supports UTF-8 writes, not local binary `source_file_ref`; this chat's container cannot resolve github.com. The zip was independently re-read and all ten SHA256 bytes matched. As of this receipt, the nine art binaries have **NOT** been pushed or installed, and no runtime proof of new visual art may be reported.
+
+**Deterministic safe asset intake (local-agent owner, after actual source/branch recovery):**
+```bash
+python scripts/import_puzzle_atlas_art.py --source-dir PATH_TO_EXTRACTED_ORIGINALS
+python scripts/import_puzzle_atlas_art.py --source-dir PATH_TO_EXTRACTED_ORIGINALS --apply
+python scripts/validate_puzzle_atlas.py
+npm --prefix artifacts/escape-hatch run typecheck
+npm --prefix artifacts/escape-hatch run test:unit
+npm --prefix artifacts/escape-hatch run build
+```
+The importer checks all nine source files, PNG signatures, dimensions and expected SHA256 before mutating any originals. It never overwrites Identity Hatch or unrelated artwork. Stage/commit the resulting nine PNGs and updated canonical catalog on the **actual current** branch, then run full Chromium/mobile/browser acceptance and required promotion gates. For *new* user-supplied visual versions, use `python scripts/add_puzzle_atlas_variation.py --help` first; this appends a new hashed asset/variation instead of replacing an existing image.
+
+**Protected last-known-good:** Merged PR #193/#194 original Identity Hatch gallery and profile-projection tests; issue #69 ATS preparation parent; owner identity and private answers; #147/#148 learning; #152 installer; final operator-only Submit. Do not reset local worktrees or change active private profile for proof.
+
+**P08 live certificate:** On the actual Windows installation, after source/asset integration, demonstrate all ten illustrated worlds, 3+ modes, keyboard/pointer/touch, 320px and desktop/200% zoom, reduced-motion, fresh/missing/conflict/unavailable answer states, exact-question rare answers not generalized, old Identity gallery, normal selected opportunity, original employer-form inspection and no automatic Submit. Save sanitized proof receipts and exact installation revision. A green source PR is not this certificate.
+
+**Status ledger:** FOUND ten original art files; READ source bytes and mainline owners; APPLIED ten-module registry/projector/UI/importer/test changes in PR #195; OBSERVED remote-source commits only. The asset bundle is transport staging until pushed; installed-host/ATS runtime and P08 proof remain independently open.

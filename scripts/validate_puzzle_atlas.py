@@ -28,6 +28,16 @@ def validate():
         assert keys and len(keys) == len(set(keys))
         assert len(module['variations']) >= 3
         assert {x['id'] for x in module['variations']} >= {'illustrated','quiet','focus'}
+        extra_ids = {x['asset_id'] for x in module['additional_artworks']}
+        assert len(extra_ids) == len(module['additional_artworks'])
+        assert all(v['artwork_asset_id'] is None or v['artwork_asset_id'] in extra_ids | {module['artwork']['asset_id']} for v in module['variations'])
+        for extra in module['additional_artworks']:
+            assert extra['path'] == extra['target_path']
+            assert re.fullmatch(r'/puzzles/[a-z0-9-]+[.]png', extra['path'])
+            payload = (APP / 'public' / extra['path'].lstrip('/')).read_bytes()
+            assert hashlib.sha256(payload).hexdigest() == extra['sha256']
+            assert payload[:8] == bytes([137,80,78,71,13,10,26,10])
+            assert struct.unpack('>II', payload[16:24]) == (extra['width'], extra['height'])
         assert module['reward']['id'] not in rewards
         assert module['reward']['policy'].startswith('cosmetic-only')
         rewards.add(module['reward']['id'])

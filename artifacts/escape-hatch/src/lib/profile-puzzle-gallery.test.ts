@@ -1,0 +1,30 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { PUZZLE_GALLERY_SETS, projectPuzzleGallery } from './profile-puzzle-gallery.ts';
+import type { ProfilePuzzleSnapshot } from './profile-puzzle-projection.ts';
+const keys = PUZZLE_GALLERY_SETS[0].piece_keys;
+const sample: ProfilePuzzleSnapshot = {
+  pieces: keys.map(key => ({ key, label: key, status: 'missing', sourceOwner: 'profile', nextAction: { label: 'Review', href: '/profile' } })),
+  savedCount: 0, total: 10, coverageMeasured: true
+};
+test('selection only changes art, not profile state', () => {
+  const one = projectPuzzleGallery(sample, 'identity-hatch-v1');
+  const two = projectPuzzleGallery(sample, 'classic-board-v1');
+  assert.deepEqual(one.pieces, two.pieces);
+  assert.equal(one.total, 10);
+  assert.equal(one.unlocked, false);
+});
+
+test('milestone is derived only from a fully measured ten-piece board', () => {
+  const savedPieces = sample.pieces.map(piece => ({...piece, status: 'saved' as const}));
+  const complete = {...sample, pieces: savedPieces, savedCount: savedPieces.length};
+  assert.equal(projectPuzzleGallery(complete, 'identity-hatch-v1').unlocked, true);
+  assert.equal(projectPuzzleGallery({...complete, coverageMeasured: false}, 'identity-hatch-v1').unlocked, false);
+  assert.equal(projectPuzzleGallery({...complete, pieces: savedPieces.slice(1)}, 'identity-hatch-v1').unlocked, false);
+  assert.equal(projectPuzzleGallery({...complete, pieces: savedPieces.map((piece, index) => index === 0 ? {...piece, status: 'needs_review'} : piece)}, 'identity-hatch-v1').unlocked, false);
+});
+test('unknown set fails to the registered first choice with no data mutation', () => {
+  const before = JSON.stringify(sample);
+  assert.equal(projectPuzzleGallery(sample, 'unregistered').set.id, 'identity-hatch-v1');
+  assert.equal(JSON.stringify(sample), before);
+});

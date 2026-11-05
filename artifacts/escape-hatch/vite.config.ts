@@ -7,6 +7,7 @@ import { createManagedBrowserAssistPlugin } from './browser-assist-control';
 import { createTrackerControlPlugin } from './tracker-control';
 import { createWorkspaceControlPlugin } from './workspace-control';
 import { createExtensionHostControlPlugin } from './extension-host-control';
+import { createNetworkPathQualityPlugin } from './network-path-quality-plugin';
 
 const port = Number(process.env.PORT ?? '5173');
 if (!Number.isFinite(port) || port <= 0) throw new Error(`Invalid PORT value: ${process.env.PORT}`);
@@ -15,7 +16,7 @@ const host = process.env.HOST ?? '127.0.0.1';
 
 export default defineConfig({
   base: basePath,
-  plugins: [createRuntimeControlPlugin(), createWorkspaceControlPlugin(), createExtensionHostControlPlugin(), createManagedBrowserAssistPlugin(), createTrackerControlPlugin(), react(), tailwindcss()],
+  plugins: [createRuntimeControlPlugin(), createWorkspaceControlPlugin(), createExtensionHostControlPlugin(), createNetworkPathQualityPlugin(), createManagedBrowserAssistPlugin(), createTrackerControlPlugin(), react(), tailwindcss()],
   resolve: {
     alias: { '@': path.resolve(import.meta.dirname, 'src') },
     dedupe: ['react', 'react-dom'],

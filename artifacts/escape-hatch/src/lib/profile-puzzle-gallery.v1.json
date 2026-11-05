@@ -1,0 +1,74 @@
+{
+  "schema_version": "escapehatch-profile-puzzle-gallery/v1",
+  "source_projection": "src/lib/profile-puzzle-projection.ts",
+  "piece_keys": [
+    "first_name",
+    "last_name",
+    "email",
+    "phone",
+    "city",
+    "region",
+    "country",
+    "linkedin_url",
+    "professional-summary",
+    "reusable-answers"
+  ],
+  "sets": [
+    {
+      "id": "identity-hatch-v1",
+      "title": "Identity Hatch",
+      "blurb": "Build an identity piece by piece.",
+      "kind": "illustrated",
+      "artwork": {
+        "path": "/puzzles/identity-hatch-v1.png",
+        "alt": "A cheerful hatchling with luminous green puzzle tiles; artwork checkmarks are decorative.",
+        "sha256": "fd4c1925ecc5d1e68de5973da8bf48684d237c55b7692cd1ce2e534f66d6b996",
+        "bytes": 1653212,
+        "width": 1448,
+        "height": 1086,
+        "provenance": "Operator-provided image 2026-11-05"
+      },
+      "piece_keys": [
+        "first_name",
+        "last_name",
+        "email",
+        "phone",
+        "city",
+        "region",
+        "country",
+        "linkedin_url",
+        "professional-summary",
+        "reusable-answers"
+      ],
+      "reward": {
+        "id": "hatchling-keepsake",
+        "label": "Hatchling Keepsake",
+        "type": "decorative-local-milestone"
+      }
+    },
+    {
+      "id": "classic-board-v1",
+      "title": "Classic Board",
+      "blurb": "Quiet tactile profile tiles.",
+      "kind": "minimal",
+      "artwork": null,
+      "piece_keys": [
+        "first_name",
+        "last_name",
+        "email",
+        "phone",
+        "city",
+        "region",
+        "country",
+        "linkedin_url",
+        "professional-summary",
+        "reusable-answers"
+      ],
+      "reward": {
+        "id": "steady-builder",
+        "label": "Steady Builder",
+        "type": "decorative-local-milestone"
+      }
+    }
+  ]
+}

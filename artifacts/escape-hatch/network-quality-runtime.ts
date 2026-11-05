@@ -25,12 +25,22 @@ export class AutomaticQualityRuntime {
   private eventTime: string | null = null;
   private delivery: MonitorSnapshot['delivery'] = 'NOT_REQUESTED_OR_UNAVAILABLE';
   private gate: TransitionGate;
+  private readonly measure: () => Promise<PathQualityReceipt>;
+  private readonly notify: (kind: AlertKind) => boolean;
+  private readonly now: () => number;
+  private readonly policyPath: string;
   constructor(
-    private measure: () => Promise<PathQualityReceipt> = measureNetworkPath,
-    private notify: (kind: AlertKind) => boolean = () => false,
-    private now: () => number = Date.now,
-    private policyPath: string = path.join(userDataRoot(), POLICY),
-  ) { this.gate = new TransitionGate(now); }
+    measure: () => Promise<PathQualityReceipt> = measureNetworkPath,
+    notify: (kind: AlertKind) => boolean = () => false,
+    now: () => number = Date.now,
+    policyPath: string = path.join(userDataRoot(), POLICY),
+  ) {
+    this.measure = measure;
+    this.notify = notify;
+    this.now = now;
+    this.policyPath = policyPath;
+    this.gate = new TransitionGate(now);
+  }
   snapshot(): MonitorSnapshot {
     const fresh = this.last && Number.isFinite(Date.parse(this.last.observed_utc)) &&
       this.now() - Date.parse(this.last.observed_utc) <= INTERVAL * 3 &&

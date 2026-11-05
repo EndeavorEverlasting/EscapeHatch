@@ -22,8 +22,12 @@ export function PuzzleAtlasShelf({ snapshot, recovery }: {
   const [variation, setVariation] = useState('illustrated');
   const selected = modules.find(item => item.id === selectedId) || modules[0];
   const setSelection = (id: string) => { setSelectedId(id); setVariation('illustrated'); };
+  const selectedVariation = selected.variations.find(item => item.id === variation);
+  const extraArt = selected.additional_artworks as readonly { asset_id: string; path: string | null; width: number; height: number }[];
+  const chosenArtwork = selectedVariation?.artwork_asset_id === selected.artwork.asset_id
+    ? selected.artwork : extraArt.find(item => item.asset_id === selectedVariation?.artwork_asset_id);
+  const availableArtwork = selectedVariation?.mode === 'illustrated' ? chosenArtwork?.path : null;
   const visiblePieces = variation === 'focus' ? selected.pieces.filter(piece => piece.status !== 'saved') : selected.pieces;
-  const availableArtwork = variation === 'illustrated' ? selected.artwork.path : null;
   const status = selected.fullyMeasured ? `${selected.saved} / ${selected.total} locally saved signals`
     : `${selected.saved} confirmed locally · source coverage not fully measured`;
   return <section className="puzzle-atlas mt-5" aria-labelledby="puzzle-atlas-title" data-testid="puzzle-atlas">
@@ -47,7 +51,7 @@ export function PuzzleAtlasShelf({ snapshot, recovery }: {
     </div>
     <div className="puzzle-atlas-stage" data-variation={variation}>
       <div className="puzzle-atlas-stage-art">
-        {availableArtwork ? <img src={availableArtwork} width={selected.artwork.width} height={selected.artwork.height}
+        {availableArtwork ? <img src={availableArtwork} width={chosenArtwork?.width || 1448} height={chosenArtwork?.height || 1086}
           loading="lazy" alt={selected.title + ' original illustrated puzzle world'} data-testid="puzzle-atlas-artwork"/> :
           <div className="puzzle-atlas-stage-motif" aria-label="Illustration unavailable in this installed release">
             <Puzzle size={48} aria-hidden="true" />

@@ -6,17 +6,23 @@ import { PUZZLE_GALLERY_SETS, projectPuzzleGallery } from '@/lib/profile-puzzle-
 export function PuzzleGalleryDisplay({ snapshot }: { snapshot: ProfilePuzzleSnapshot }) {
   const [choice, setChoice] = useState(PUZZLE_GALLERY_SETS[0].id);
   const view = projectPuzzleGallery(snapshot, choice);
+  const artwork = view.set.artwork;
   return <section className="profile-gallery mt-4" aria-label="Choose a profile puzzle" data-testid="profile-puzzle-gallery">
     <label className="profile-gallery-choice">Choose your puzzle
       <select value={choice} onChange={event => setChoice(event.target.value)} data-testid="profile-puzzle-set-select">
         {PUZZLE_GALLERY_SETS.map(set => <option key={set.id} value={set.id}>{set.title}</option>)}
       </select>
     </label>
-    {view.set.artwork ? <figure className="profile-gallery-art">
-      <img src={view.set.artwork.path} alt={view.set.artwork.alt} width={view.set.artwork.width}
-        height={view.set.artwork.height} loading="lazy" data-testid="profile-puzzle-artwork" />
+    {artwork ? <figure className="profile-gallery-art">
+      <img src={artwork.path} alt={artwork.alt} width={artwork.width}
+        height={artwork.height} loading="lazy" data-testid="profile-puzzle-artwork" />
       <div className="profile-gallery-art-overlay" aria-hidden="true">
-        {view.pieces.map(piece => <span key={piece.key} data-state={piece.status} />)}
+        {view.pieces.map((piece, index) => <span key={piece.key} data-state={piece.status}
+          style={piece.status === 'saved' ? {
+            backgroundImage: 'url(' + artwork.path + ')',
+            backgroundSize: '500% 200%',
+            backgroundPosition: ((index % 5) * 25) + '% ' + (Math.floor(index / 5) * 100) + '%',
+          } : undefined} />)}
       </div>
       <figcaption>Illustrative checkmarks in the artwork are not your live status.</figcaption>
     </figure> : <div className="profile-gallery-classic" data-testid="profile-puzzle-classic">Your story, your pace.</div>}

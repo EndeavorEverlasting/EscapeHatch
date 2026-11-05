@@ -101,3 +101,53 @@ test('automatic sensor loss cannot be presented as a verified recovery', async (
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
+
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import { handleAutomaticQualityRequest } from './network-quality-route.ts';
+import { readAutomaticQualityStatus } from './network-quality-state.ts';
+
+function networkReq(url: string, method = 'POST', origin = 'http://127.0.0.1:5173'): IncomingMessage {
+  return {
+    url, method,
+    headers: {
+      host: '127.0.0.1:5173', origin, 'sec-fetch-site': 'same-origin',
+      'x-escapehatch-operator-action': 'confirmed', 'x-escapehatch-network-scope': 'personal',
+    },
+    socket: { remoteAddress: '127.0.0.1' },
+  } as unknown as IncomingMessage;
+}
+function networkRes() {
+  const state = { code: 0, body: null as unknown };
+  const res = {
+    statusCode: 0,
+    setHeader() { return this; },
+    end(body: string) { state.code = this.statusCode; state.body = JSON.parse(body); return this; },
+  } as unknown as ServerResponse;
+  return { res, state };
+}
+test('monitor route refuses foreign origin without executing diagnostics', async () => {
+  let samples = 0;
+  const runtime = new AutomaticQualityRuntime(async () => { samples++; return sampled(20); });
+  try {
+    const response = networkRes();
+    await handleAutomaticQualityRequest(
+      networkReq('/__escapehatch/network-path-quality/monitor/enable', 'POST', 'https://outside.example'),
+      response.res, runtime, true);
+    assert.equal(response.state.code, 403);
+    assert.equal(samples, 0);
+    assert.equal(runtime.snapshot().enabled, false);
+  } finally { runtime.close(); }
+});
+test('status route reads approved runtime state but never starts sampling', () => {
+  let samples = 0;
+  const runtime = new AutomaticQualityRuntime(async () => { samples++; return sampled(20); });
+  const response = networkRes();
+  try {
+    const request = networkReq('/__escapehatch/network-path-quality/monitor/health', 'GET');
+    delete request.headers.origin;
+    assert.equal(readAutomaticQualityStatus(request, response.res, runtime, true), true);
+    assert.equal(response.state.code, 200);
+    assert.equal(samples, 0);
+    assert.equal(runtime.snapshot().enabled, false);
+  } finally { runtime.close(); }
+});

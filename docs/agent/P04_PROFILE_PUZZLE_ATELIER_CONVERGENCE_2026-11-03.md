@@ -389,8 +389,8 @@ suite passed 148 checks with one host-symlink capability skip.
 
 **Deterministic safe asset intake (local-agent owner, after actual source/branch recovery):**
 ```bash
-python scripts/import_puzzle_atlas_art.py --source-dir PATH_TO_EXTRACTED_ORIGINALS
-python scripts/import_puzzle_atlas_art.py --source-dir PATH_TO_EXTRACTED_ORIGINALS --apply
+python scripts/import_puzzle_atlas_art.py --archive PATH_TO_EXACT_ORIGINAL_ZIP
+python scripts/import_puzzle_atlas_art.py --archive PATH_TO_EXACT_ORIGINAL_ZIP --apply
 python scripts/validate_puzzle_atlas.py
 npm --prefix artifacts/escape-hatch run typecheck
 npm --prefix artifacts/escape-hatch run test:unit

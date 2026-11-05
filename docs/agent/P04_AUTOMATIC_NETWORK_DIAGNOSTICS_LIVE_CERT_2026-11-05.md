@@ -4,6 +4,14 @@
 
 **Provider truth at setup:** EscapeHatch `main@4b3f84f3866498cf174944825b074b0b8dce63db`; owned working branch `feat/native-path-quality-diagnostics-20261105`; draft PR #196. Refresh exact HEAD, checks, pending reviews and main before any integration. Trifecta = canonical TokenCorridor P08 → P82 → P07. P04 owns dependency factoring and the successor handoff; the user's final requested host gate is a local-agent P08 live cert.
 
+## 2026-11-05 source continuation — supersedes earlier unresolved implementation notes
+
+- Active entrypoint: `managed-network-quality-plugin.ts` is registered by `vite.config.ts`; it composes the original one-shot source with the opt-in automatic runtime. `network-quality-state.ts` serves the side-effect-free GET `/monitor/health`; the enable/disable route retains strict origin, localhost and personal-scope checks.
+- Browser-level notifications are now implemented in `src/components/network-event-notification.ts` and called from `automatic-network-quality-check.tsx` only for a newly observed confirmed event after OS/browser permission. **No browser-open means no browser toast**; the host sampler continues in the managed runtime. Native Windows notifications with browser fully closed are not implemented; device-wide alerts remain PiShark's separate responsibility.
+- Dedicated automatic quality, persistence, malformed-evidence and same-origin refusal cases are now in the already-registered `network-navigation-diagnosis.test.ts`, not only in the standalone `quality-transition.test.ts`. They run under `npm run test:managed-assist`.
+- GitHub Actions identified Node 22 `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX` from TypeScript constructor parameter properties at earlier head `44a9b7e4`. Both `quality-transition.ts` and `network-quality-runtime.ts` have since been repaired using explicit constructor assignments. Recheck the **current** head's managed-assist test result; older green runs or the failed intermediate run do not prove current source.
+- P08 acceptance includes automatic samples without repeatedly pressing Run, permission/notification observation while browser is open, contextual in-app status, and the protected employer tab / saved-answer controls. **Do not claim native notification center delivery with browser closed.**
+
 ## Launch order and runtime placement
 
 1. **CURRENT_CHAT_RUNTIME / GitHub provider:** implementation, source readback, CI inspection, branch/PR preservation. Own `artifacts/escape-hatch/network-*.ts`, `quality-transition.ts`, `src/components/automatic-network-quality-check.tsx`, `src/components/application-puzzle.tsx`, and this handoff. No private Windows proof claims.

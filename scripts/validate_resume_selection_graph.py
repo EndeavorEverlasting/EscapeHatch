@@ -22,6 +22,20 @@ def main() -> None:
     assert p["default_when_unknown"] == "REVIEW_REQUIRED_NO_UPLOAD"
     assert p["never_auto_replace_persistent_resume"] is True
     assert p["never_auto_submit"] is True
+    indeed = p["indeed_default_master"]
+    assert "approved canonical master" in indeed["admission"]
+    assert "KEEP_CURRENT" in indeed["admission"]
+    assert "not an Indeed-native" in indeed["separation"]
+    assert "explicit operator approval" in indeed["exception"]
+    temporary = p["temporary_domain_switch"]
+    assert temporary["activation"] == "explicit_user_approval_of_temporary_switch"
+    assert temporary["restore_without_new_approval"].startswith("Only when")
+    assert "before_slot_readback" in temporary["required_before_switch"]
+    assert "durable_private_restoration_checkpoint" in temporary["required_before_switch"]
+    assert "verify_canonical_digest_and_slot_readback" in temporary["runtime_sequence"]
+    assert "BLOCK_RELATED_INDEED_QUEUE" in temporary["no_restore_proof"]
+    assert "automatic account-wide switch" in contract["queue_effective_master"]["indeed_exception"]
+    assert "restoring and verifying" in contract["queue_effective_master"]["reversion_rule"]
     assert "candidate_resume_id" in p["user_consent_must_name"]
     assert "content_digest" in p["user_consent_must_name"]
     assert contract["invariants"]["no_private_fixtures"] is True

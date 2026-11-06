@@ -23,7 +23,7 @@
     "parallel_disposition": "CONDITIONAL_AFTER_LOCAL_RUNTIME_AND_SINGLE_WRITER_COLLISION_CHECK"
   },
   "convergence_owner": "EH-R4",
-  "status": "PROVIDER_HANDOFF_AUTHORED_UNVALIDATED_PORTABLE_MANIFEST",
+  "status": "P83_USER_DIRECTED_SWITCHER_POLICY_AND_PURE_RESOLVER_COMMITTED_LOCAL_UI_AND_PROVIDER_PROOF_PENDING",
   "canonical_target_disposition": "PRESERVE_GLOBAL_MANIFEST_RUN_SCOPED_ONLY",
   "manifest_path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-master-resume-routing-20261105/manifest.json",
   "lanes": [
@@ -71,7 +71,7 @@
     {
       "lane_id": "EH-R3",
       "wave": 1,
-      "mission": "Prepare up to three genuine unsubmitted applications in existing authenticated managed browser; Indeed default approved master, custom document review as needed; no final submit.",
+      "mission": "Prepare up to three genuine unsubmitted applications using the active operator-selected approved canonical or domain résumé, with custom-document review only when needed; no final Submit.",
       "dependencies": [
         "EH-R0 verified"
       ],
@@ -80,7 +80,7 @@
         "existing authenticated employer form within bounded opportunity"
       ],
       "forbidden_surfaces": [
-        "global account-wide domain resume swap without approval",
+        "silently replacing account-wide selected résumé",
         "final Submit and legal/EEO",
         "synthetic jobs",
         "duplicated applications",
@@ -114,7 +114,7 @@
     {
       "lane_id": "EH-R1",
       "wave": 1,
-      "mission": "Implement and test original resume-selection graph consumer: Indeed KEEP_CURRENT, one approved domain switch, pinned canonical restoration, private crash checkpoint and block on failed restore.",
+      "mission": "Wire existing explicit approved-resume choice resolver and picker to the local EscapeHatch user-owned UI and controlled Indeed browser action; support unlimited master/domain/domain/master choices, per-action authorization, exact provider readback, and targeted failure recovery; no automatic rollback.",
       "dependencies": [
         "EH-R0 source/owner readback",
         "P01 contract validated"
@@ -203,7 +203,7 @@
     {
       "lane_id": "EH-R4",
       "wave": 2,
-      "mission": "Rejoin exact-head results, validate and merge authorized code; certify installed P08 Indeed no-switch, consented switch-restore and external ATS protected comparator.",
+      "mission": "Converge exact-head gates, ensure authorized integration, then P08 certify on host the visible resume switcher, verified multi-direction Indeed switches, persistent user choice, no queue-wide halt, and external ATS comparator.",
       "dependencies": [
         "EH-R1 tested",
         "EH-R2 tested",
@@ -238,18 +238,20 @@
         "required_action": "The actual local agent must inspect its available executor and bind a real tool or command; this provider session did not dispatch a lane."
       },
       "validation": [
-        "full affected repository validators",
-        "merged main readback",
-        "installed host current source",
-        "observed account-slot master restoration",
-        "private original tracker receipt"
+        "python scripts/validate_resume_selection_graph.py",
+        "node --experimental-strip-types --test artifacts/escape-hatch/src/lib/resume-selection-graph.test.ts",
+        "full affected repo validators",
+        "provider exact-head green integration",
+        "installed private owner-bound UI/browser selector action",
+        "multiple real Indeed selected resume readbacks",
+        "no unrelated application queue block"
       ],
       "status": "WAITING_CONVERGENCE"
     }
   ],
   "receipt_contract": {
     "local_agent_dispatched": false,
-    "canonical_manifest_validation": "NOT_RUN_NO_CONFIRMED_TOKENCORRIDOR_SCHEMA_OR_RUNTIME_TOOL",
+    "canonical_manifest_validation": "UNVERIFIED_PORTABLE_DESCRIPTION_NOT_EXECUTED",
     "observed_parallelism": false,
     "private_resume_bytes_published": false,
     "product_implementation_complete": false,
@@ -258,8 +260,8 @@
   },
   "first_next_command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\\Status-EscapeHatch.ps1",
   "authorship_blockers": [
-    "GitHub connector does not access installed Windows host or user's authenticated employer session.",
-    "Exact private ATS PDF approval and Indeed platform slot require actual owner-bound local readback.",
-    "EscapeHatch has run-scoped prior manifests but no confirmed installed canonical TokenCorridor dispatch runner/schema in this remote runtime."
+    "No local Windows installed managed-browser interface in this provider session to certify the UI/Indeed adapter.",
+    "Current checked-in pure planner and unit test do not imply uploaded résumé changes on a real provider.",
+    "Existing private career graph/applicant bytes must stay out of public GitHub."
   ]
 }

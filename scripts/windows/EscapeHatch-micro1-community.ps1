@@ -1,5 +1,5 @@
-# Deterministic local micro1 community preparation through EscapeHatch's owned managed Chrome.
-# It opens the official Talent Platform, never signs in, joins Discord or submits an application.
+# Deterministic micro1 community preparation through the installed, owned managed Chrome.
+# Opens the official Talent Platform. Never logs in, joins Discord, or submits an application.
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
@@ -24,7 +24,9 @@ if ($workspace.managed -ne $true -or $workspace.state -ne 'READY') {
 }
 $assist = Invoke-RestMethod -Uri ($api + '/status') -Method Get -TimeoutSec 15
 if ($assist.ok -ne $true) { throw 'MANAGED_BROWSER_UNAVAILABLE' }
-$listenerState = if ($assist.listeners -and $assist.listeners.submission) { [string]$assist.listeners.submission.state } else { 'NOT_BOUND' }
+$listenerState = if ($assist.listeners -and $assist.listeners.submission) {
+    [string]$assist.listeners.submission.state
+} else { 'NOT_BOUND' }
 
 if ($Action -eq 'Status') {
     [pscustomobject]@{
@@ -43,33 +45,9 @@ if ($Action -eq 'Status') {
 if (-not $OperatorInitiated) {
     throw 'OPERATOR_INITIATED_ACTION_REQUIRED: no surprise foreground browser during silent jobs.'
 }
-# A community is account-scoped, not one role's application. A job link is optional.
-# Do not force reentry of an existing submitted opportunity merely to open community access.
-if ($SourceOpportunityId -and $SourceOpportunityId -notmatch '^[A-Za-z0-9:_-]{1,160}
-if ($listenerState -in @('ARMED', 'PENDING', 'PROCESSING')) {
-    throw 'ACTIVE_SUBMISSION_LISTENER: preserve current browser session and reconcile it first.'
-}
-$payload = @{
-    opportunityId = $communityId
-    url = $communityUrl
-    employerName = 'micro1 Certified Talent Community'
-} | ConvertTo-Json -Compress
-$launch = Invoke-RestMethod -Uri ($api + '/launch') -Method Post -Headers $headers -ContentType 'application/json' -Body $payload -TimeoutSec 40
-if ($launch.ok -ne $true) { throw 'MICRO1_PORTAL_LAUNCH_UNVERIFIED' }
-[pscustomobject]@{
-    schema = 'escapehatch/micro1-community-preparation/v1'
-    ok = $true
-    sourceOpportunityId = $SourceOpportunityId
-    jobLedgerWriteAttempted = $false
-    communityScope = $communityId
-    browserState = [string]$launch.state
-    inviteResolved = $false
-    membership = 'NOT_VERIFIED'
-    authenticated = 'NOT_OBSERVED'
-    submitIssued = $false
-    next = 'Use the authenticated Talent Platform Join Discord CTA; require consent and fresh guild membership proof.'
-} | ConvertTo-Json -Depth 5
-) {
+# Community access is account-scoped, not dependent on entering another job URL.
+# Keep source opportunity parameters optional and preserve submitted job state.
+if ($SourceOpportunityId -and $SourceOpportunityId -notmatch '^[A-Za-z0-9:_-]{1,160}$') {
     throw 'INVALID_OPTIONAL_OPPORTUNITY_ID'
 }
 if ($listenerState -in @('ARMED', 'PENDING', 'PROCESSING')) {
@@ -86,7 +64,7 @@ if ($launch.ok -ne $true) { throw 'MICRO1_PORTAL_LAUNCH_UNVERIFIED' }
     schema = 'escapehatch/micro1-community-preparation/v1'
     ok = $true
     sourceOpportunityId = $SourceOpportunityId
-    jobApplicationUnchanged = $true
+    jobLedgerWriteAttempted = $false
     communityScope = $communityId
     browserState = [string]$launch.state
     inviteResolved = $false

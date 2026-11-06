@@ -19,8 +19,9 @@ For the micro1 email: **certification SOURCE_CONFIRMED; talent profile SOURCE_RE
 - `artifacts/escape-hatch/src/lib/discord-community-flow.ts` + focused tests: partner vs Discord URL allowlists; stages for partner login, invite discovery, Discord login, consent, screening and actual membership; exact opportunity/user/guild/session identity and freshness; no self-bots, automated joins or terminal Submit.
 - `scripts/import_micro1_milestone_eml.py` + unittest: extract source-grounded states locally without mailbox access, PII in output, or generic link-clicking.
 - `scripts/windows/EscapeHatch-Discord-Bootstrap.ps1`: optional status, expressly approved install and operator-initiated official portal/invite opening. Discord desktop installation is NOT required for a browser join. Never run foreground launch as a silent cron action.
+- `scripts/windows/EscapeHatch-micro1-community.ps1`: one-shot partner-dashboard launch through the **existing managed EscapeHatch Chrome session**, without requiring the operator to reenter an unrelated submitted job URL. Status read is side-effect free; Prepare needs explicit user initiation and preserves active submission listeners.
 - `tracker-refresh.ts`, `src/lib/tracker-bridge.ts`, `tracker-refresh.test.ts`, `src/App.tsx`: expand read-only projection through AT; leave job submission writer's A:AJ/36-column write authority unchanged. Add independent cockpit statuses.
-- `artifacts/escape-hatch/package.json`: include new deterministic tests in normal unit suite.
+- `artifacts/escape-hatch/package.json` and `.github/workflows/harness.yml`: register TypeScript unit tests, Python importer tests, and Windows PowerShell AST/consent guard tests.
 
 ## Execute next: local agent P04 with P08/P82/P07
 
@@ -42,6 +43,7 @@ npm run typecheck
 npm run build
 cd ../..
 python -m unittest discover -s scripts -p 'test_import_micro1_milestone_eml.py' -v
+powershell -NoProfile -File tests/windows/Test-EscapeHatch-Discord-Bootstrap.ps1 # Windows runner only
 python scripts/validate_application_journey.py
 python scripts/validate_application_autofill_parent.py
 git diff --check

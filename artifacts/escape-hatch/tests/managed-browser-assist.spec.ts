@@ -607,7 +607,7 @@ test('stale pending binding is preserved for review instead of selecting another
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('escape-hatch-journey-resume')!).opportunityId)).toBe('old-job');
 });
 
-test('resume platform switcher lists approved choices and requires consent before replacement', async ({ page }) => {
+test('resume switcher saves approved choices while keeping Indeed status unverified', async ({ page }) => {
   const choices = [
     { resumeId: 'master', tier: 'canonical', digest: 'a'.repeat(64), current: true },
     { resumeId: 'it-domain', tier: 'domain', digest: 'b'.repeat(64), current: false },
@@ -667,9 +667,17 @@ test('resume platform switcher lists approved choices and requires consent befor
   await expect(page.getByTestId('resume-switcher-choices')).toContainText('master');
   await expect(page.getByTestId('resume-switcher-choices')).toContainText('it-domain');
   await page.getByTestId('resume-switcher-select-it-domain').click();
-  await expect(page.getByTestId('resume-switcher-consent')).toContainText('account-wide');
+  await expect(page.getByTestId('resume-switcher-consent')).toContainText('your Indeed profile');
+  await expect(page.getByTestId('resume-switcher-confirm-replacement')).toBeFocused();
   await page.getByTestId('resume-switcher-confirm-replacement').click();
   await expect.poll(() => consented).toBe(true);
   await expect(page.getByTestId('resume-switcher-status')).toContainText('Selected it-domain');
-  await expect(page.getByTestId('resume-switcher-slot')).toContainText('queue lock off');
+  await expect(page.getByTestId('resume-switcher-slot')).toContainText('Unverified');
+  await expect(page.getByRole('button', { name: 'Mark provider readback matched' })).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByTestId('resume-switcher-select-it-domain')).toHaveText('Selected');
+  await page.getByTestId('resume-switcher-select-master').click();
+  await page.getByTestId('resume-switcher-confirm-replacement').click();
+  await expect(page.getByTestId('resume-switcher-select-master')).toHaveText('Selected');
+  await expect(page.getByTestId('resume-switcher-slot')).toContainText('Unverified');
 });

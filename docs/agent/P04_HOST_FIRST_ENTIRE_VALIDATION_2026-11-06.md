@@ -49,6 +49,12 @@ python tests/test_host_validation.py
 
 Windows default receipts: `%LOCALAPPDATA%\EscapeHatch\proof\host-validation\`. Unix: `$XDG_STATE_HOME/EscapeHatch/proof/host-validation/` or `~/.local/state/EscapeHatch/proof/host-validation/`. No raw console output, applicant data, passwords, OAuth tokens, session transcripts or original EML in receipts. A receipt SHA is a **consistency digest, not a digital signature or provider attestation**. Every receipt explicitly sets `provider_checks_verified=false`, `merged=false`, `installed_runtime_observed=false`, `discord_membership_observed=false`. Never promote these fields automatically from a local source-validation pass.
 
+## Regression repairs found during this integration
+
+- **Micro1 Windows parser:** Earlier merged PR #205 had malformed/duplicated `scripts/windows/EscapeHatch-micro1-community.ps1`. This branch restores one parseable, single-use consented launcher, preserving existing private managed Chrome and active submission listeners. `tests/windows/Test-EscapeHatch-Discord-Bootstrap.ps1` is the independent Windows AST/consent proof; its job must pass on the exact candidate.
+- **Context routing:** The first application context exceeded 32 KiB because the optional application-mapping skill was always loaded in full. It is now a demand-load outline; `--require application_mapping` still retrieves the full text. An existing runtime safety test requires the complete compact `contracts/local-runtime-lifecycle.v1.json` at baseline. **Do not shorten it:** the CLI allocates a measured 36 KiB for the runtime lane while retaining 32 KiB for application/general; the exact complete lifecycle and digest remain validated. Focused regression tests cover optional application-mapping escalation and the full runtime lane. A source budget failure cannot silently be recast as a PASS.
+- **Convergence policy:** This is a repair of actual source failures revealed by CI, not a GitHub Actions dependency waiver. Local source receipts, CI check results and provider-side promotion are independent dimensions; do not fabricate statuses. Source changes require exact-head retesting.
+
 ## P08 proof handoff / next source owner
 
 1. On the actual Windows host, fetch remote safely, inspect active worktrees without reset/clean/stash, and choose an isolated clean worktree at the exact intended candidate HEAD. Do not replace an active browser or private source.

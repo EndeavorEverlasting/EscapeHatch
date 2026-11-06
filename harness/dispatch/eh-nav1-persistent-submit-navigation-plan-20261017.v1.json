@@ -1,0 +1,617 @@
+{
+  "schema_version": "prompt-parallel-dispatch/v1",
+  "run_id": "eh-nav1-plan-only-20261017",
+  "parent_objective": "Operator-owned final application submission; consequence-aware automated intermediate navigation despite persistent Submit labels",
+  "plan_status": "PROVISIONAL_DESIGN_REVIEW",
+  "operator_authority": "PLAN_ONLY_NO_IMPLEMENTATION_OR_REAL_ATS_ACTION",
+  "launch_order": [
+    "PRE-0",
+    "POL-1 || FIX-1",
+    "OBS-2",
+    "CTRL-3",
+    "P08-4",
+    "EH-NAV1-CONVERGE"
+  ],
+  "graph_width": 2,
+  "parallel_disposition": "REQUIRED",
+  "autonomy_gap": "Future dispatch awaits plan approval and fresh local execution-adapter verification; no lane launched in this planning turn. Canonical TokenCorridor main lacked scripts/prompt_parallel_dispatch.py at retrieval, so its required validator/dispatch receipt is UNPROVEN.",
+  "lanes": [
+    {
+      "lane_id": "PRE-0",
+      "mission": "Recover local checkout and exact PR ancestry, test owners, canonical generator and installed Chrome process flags; do not mutate user browser/profile",
+      "dependencies": [],
+      "owned_mutation_surfaces": [],
+      "forbidden_surfaces": [
+        "dirty worktree mutation",
+        "ATS submission",
+        "private preference export"
+      ],
+      "runtime_partition": {
+        "execution_environment": "LOCAL_AGENT_RUNTIME",
+        "provider_access": [
+          {
+            "provider_family": "github",
+            "operation": "read code, write isolated owned branch once approved",
+            "authority_state": "AVAILABLE_UNVERIFIED",
+            "mutation_authority": false
+          }
+        ],
+        "required_capabilities": [
+          "verified local EscapeHatch checkout",
+          "isolation-safe Git worktree",
+          "Node/Playwright test runner"
+        ],
+        "evidence_inputs": [
+          {
+            "evidence_type": "operator_screenshot_claim",
+            "source_owner": "operator",
+            "sanitized_ref": "opaque:savantage-persistent-submit-flow-20261017",
+            "revision_or_freshness": "2026-10-17 operator correction",
+            "visibility": "PROTECTED_EXTERNAL",
+            "proof_ceiling": "User-observed Submit label remains unchanged across pages; no independently proven endpoint/handler semantics."
+          },
+          {
+            "evidence_type": "repository_floor",
+            "source_owner": "EndeavorEverlasting/EscapeHatch",
+            "sanitized_ref": "commit:5787fc0d72fd973f939ecc5652d4423ddb55961a",
+            "revision_or_freshness": "GitHub main read 2026-10-17",
+            "visibility": "PUBLIC_TRACKED",
+            "proof_ceiling": "Main contains a manual Next/Submit policy; current local checkout/runtime not verified."
+          },
+          {
+            "evidence_type": "candidate_branch",
+            "source_owner": "EndeavorEverlasting/EscapeHatch",
+            "sanitized_ref": "pull:64",
+            "revision_or_freshness": "PR head 9a7ef5cf1a115c9e57193bdc96c95c448844823e, 2026-10-17",
+            "visibility": "PUBLIC_TRACKED",
+            "proof_ceiling": "Managed-browser saved-answer feature branch; not merged or deployed."
+          }
+        ],
+        "execute_now": false
+      },
+      "adapter": {
+        "kind": "repo_runner",
+        "rung": 2,
+        "evidence": "PLANNED ONLY — no autonomous agent invocation, local checkout, CI job or dispatch proven this turn"
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "tool": "locally verified EscapeHatch agent runner (resolve at PRE-0)",
+        "operation": "execute_lane_only_after_plan_approval_and_fresh_checkout",
+        "arguments": {
+          "repository": "EndeavorEverlasting/EscapeHatch",
+          "lane": "PRE-0",
+          "plan": "docs/plans/eh-nav1-persistent-submit-consequence-aware-navigation-20261017.md"
+        }
+      },
+      "expected_artifacts": [
+        "sanitized preflight evidence with Git SHAs, branches, branch/PR collision map, runtime and tool availability"
+      ],
+      "validation": [
+        "git fetch --all --prune --tags",
+        "git status --short",
+        "git worktree list",
+        "git branch -avv",
+        "record no-sandbox process-flag provenance from sanitized local evidence"
+      ],
+      "convergence_owner": "EH-NAV1-CONVERGE",
+      "status": "PLANNED_NOT_DISPATCHED"
+    },
+    {
+      "lane_id": "POL-1",
+      "mission": "Implement versioned consequence classifier/authority contract. Default unknown Submit to fail-closed and preserve final submit manual-only",
+      "dependencies": [
+        "PRE-0"
+      ],
+      "owned_mutation_surfaces": [
+        "contracts/application-navigation-authority.v1.json",
+        "artifacts/escape-hatch/application-navigation-policy.ts",
+        "artifacts/escape-hatch/application-navigation-policy.test.ts"
+      ],
+      "forbidden_surfaces": [
+        "managed browser UI",
+        "PR #64 managed-form.ts",
+        "career-state reducer",
+        "actual ATS click"
+      ],
+      "runtime_partition": {
+        "execution_environment": "LOCAL_AGENT_RUNTIME",
+        "provider_access": [
+          {
+            "provider_family": "github",
+            "operation": "read code, write isolated owned branch once approved",
+            "authority_state": "AVAILABLE_UNVERIFIED",
+            "mutation_authority": false
+          }
+        ],
+        "required_capabilities": [
+          "verified local EscapeHatch checkout",
+          "isolation-safe Git worktree",
+          "Node/Playwright test runner"
+        ],
+        "evidence_inputs": [
+          {
+            "evidence_type": "operator_screenshot_claim",
+            "source_owner": "operator",
+            "sanitized_ref": "opaque:savantage-persistent-submit-flow-20261017",
+            "revision_or_freshness": "2026-10-17 operator correction",
+            "visibility": "PROTECTED_EXTERNAL",
+            "proof_ceiling": "User-observed Submit label remains unchanged across pages; no independently proven endpoint/handler semantics."
+          },
+          {
+            "evidence_type": "repository_floor",
+            "source_owner": "EndeavorEverlasting/EscapeHatch",
+            "sanitized_ref": "commit:5787fc0d72fd973f939ecc5652d4423ddb55961a",
+            "revision_or_freshness": "GitHub main read 2026-10-17",
+            "visibility": "PUBLIC_TRACKED",
+            "proof_ceiling": "Main contains a manual Next/Submit policy; current local checkout/runtime not verified."
+          },
+          {
+            "evidence_type": "candidate_branch",
+            "source_owner": "EndeavorEverlasting/EscapeHatch",
+            "sanitized_ref": "pull:64",
+            "revision_or_freshness": "PR head 9a7ef5cf1a115c9e57193bdc96c95c448844823e, 2026-10-17",
+            "visibility": "PUBLIC_TRACKED",
+            "proof_ceiling": "Managed-browser saved-answer feature branch; not merged or deployed."
+          }
+        ],
+        "execute_now": false
+      },
+      "adapter": {
+        "kind": "repo_runner",
+        "rung": 2,
+        "evidence": "PLANNED ONLY — no autonomous agent invocation, local checkout, CI job or dispatch proven this turn"
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "tool": "locally verified EscapeHatch agent runner (resolve at PRE-0)",
+        "operation": "execute_lane_only_after_plan_approval_and_fresh_checkout",
+        "arguments": {
+          "repository": "EndeavorEverlasting/EscapeHatch",
+          "lane": "POL-1",
+          "plan": "docs/plans/eh-nav1-persistent-submit-consequence-aware-navigation-20261017.md"
+        }
+      },
+      "expected_artifacts": [
+        "pure policy implementation and adversarial negative tests"
+      ],
+      "validation": [
+        "no UNKNOWN click",
+        "no TERMINAL_COMMIT automation",
+        "untrusted label/type cannot authorize",
+        "unit tests"
+      ],
+      "convergence_owner": "EH-NAV1-CONVERGE",
+      "status": "PLANNED_NOT_DISPATCHED"
+    },
+    {
+      "lane_id": "FIX-1",
+      "mission": "Build standalone synthetic multi-step ATS where all pages show Submit but progression and terminal effects differ, plus draft-disclosure and adversarial mutations",
+      "dependencies": [
+        "PRE-0"
+      ],
+      "owned_mutation_surfaces": [
+        "fixtures/application-navigation-ats",
+        "artifacts/escape-hatch/tests/application-navigation.spec.ts"
+      ],
+      "forbidden_surfaces": [
+        "contract files",
+        "managed-browser app source",
+        "real site/account mutation"
+      ],
+      "runtime_partition": {
+        "execution_environment": "LOCAL_AGENT_RUNTIME",
+        "provider_access": [
+          {
+            "provider_family": "github",
+            "operation": "read code, write isolated owned branch once approved",
+            "authority_state": "AVAILABLE_UNVERIFIED",
+            "mutation_authority": false
+          }
+        ],
+        "required_capabilities": [
+          "verified local EscapeHatch checkout",
+          "isolation-safe Git worktree",
+          "Node/Playwright test runner"
+        ],
+        "evidence_inputs": [
+          {
+            "evidence_type": "operator_screenshot_claim",
+            "source_owner": "operator",
+            "sanitized_ref": "opaque:savantage-persistent-submit-flow-20261017",
+            "revision_or_freshness": "2026-10-17 operator correction",
+            "visibility": "PROTECTED_EXTERNAL",
+            "proof_ceiling": "User-observed Submit label remains unchanged across pages; no independently proven endpoint/handler semantics."
+          },
+          {
+            "evidence_type": "repository_floor",
+            "source_owner": "EndeavorEverlasting/EscapeHatch",
+            "sanitized_ref": "commit:5787fc0d72fd973f939ecc5652d4423ddb55961a",
+            "revision_or_freshness": "GitHub main read 2026-10-17",
+            "visibility": "PUBLIC_TRACKED",
+            "proof_ceiling": "Main contains a manual Next/Submit policy; current local checkout/runtime not verified."
+          },
+          {
+            "evidence_type": "candidate_branch",
+            "source_owner": "EndeavorEverlasting/EscapeHatch",
+            "sanitized_ref": "pull:64",
+            "revision_or_freshness": "PR head 9a7ef5cf1a115c9e57193bdc96c95c448844823e, 2026-10-17",
+            "visibility": "PUBLIC_TRACKED",
+            "proof_ceiling": "Managed-browser saved-answer feature branch; not merged or deployed."
+          }
+        ],
+        "execute_now": false
+      },
+      "adapter": {
+        "kind": "repo_runner",
+        "rung": 2,
+        "evidence": "PLANNED ONLY — no autonomous agent invocation, local checkout, CI job or dispatch proven this turn"
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "tool": "locally verified EscapeHatch agent runner (resolve at PRE-0)",
+        "operation": "execute_lane_only_after_plan_approval_and_fresh_checkout",
+        "arguments": {
+          "repository": "EndeavorEverlasting/EscapeHatch",
+          "lane": "FIX-1",
+          "plan": "docs/plans/eh-nav1-persistent-submit-consequence-aware-navigation-20261017.md"
+        }
+      },
+      "expected_artifacts": [
+        "synthetic ATS fixture and network/DOM assertion harness"
+      ],
+      "validation": [
+        "one label on all steps",
+        "different verified side effects",
+        "Next-is-final decoy",
+        "native form submit and SPA routes",
+        "keyboard/Enter regression"
+      ],
+      "convergence_owner": "EH-NAV1-CONVERGE",
+      "status": "PLANNED_NOT_DISPATCHED"
+    },
+    {
+      "lane_id": "OBS-2",
+      "mission": "Integrate one-step observation/event evidence with existing EVT authority owner and stable opportunity/session identity after POL-1 and FIX-1",
+      "dependencies": [
+        "POL-1",
+        "FIX-1"
+      ],
+      "owned_mutation_surfaces": [
+        "bounded new event projection tests",
+        "own integration adapter only after resolving #59/#61/#62 ancestry"
+      ],
+      "forbidden_surfaces": [
+        "rewrite of #59/#61/#62 branch",
+        "duplicate reducer",
+        "PII journal"
+      ],
+      "runtime_partition": {
+        "execution_environment": "LOCAL_AGENT_RUNTIME",
+        "provider_access": [
+          {
+            "provider_family": "github",
+            "operation": "read code, write isolated owned branch once approved",
+            "authority_state": "AVAILABLE_UNVERIFIED",
+            "mutation_authority": false
+          }
+        ],
+        "required_capabilities": [
+          "verified local EscapeHatch checkout",
+          "isolation-safe Git worktree",
+          "Node/Playwright test runner"
+        ],
+        "evidence_inputs": [
+          {
+            "evidence_type": "operator_screenshot_claim",
+            "source_owner": "operator",
+            "sanitized_ref": "opaque:savantage-persistent-submit-flow-20261017",
+            "revision_or_freshness": "2026-10-17 operator correction",
+            "visibility": "PROTECTED_EXTERNAL",
+            "proof_ceiling": "User-observed Submit label remains unchanged across pages; no independently proven endpoint/handler semantics."
+          },
+          {
+            "evidence_type": "repository_floor",
+            "source_owner": "EndeavorEverlasting/EscapeHatch",
+            "sanitized_ref": "commit:5787fc0d72fd973f939ecc5652d4423ddb55961a",
+            "revision_or_freshness": "GitHub main read 2026-10-17",
+            "visibility": "PUBLIC_TRACKED",
+            "proof_ceiling": "Main contains a manual Next/Submit policy; current local checkout/runtime not verified."
+          },
+          {
+            "evidence_type": "candidate_branch",
+            "source_owner": "EndeavorEverlasting/EscapeHatch",
+            "sanitized_ref": "pull:64",
+            "revision_or_freshness": "PR head 9a7ef5cf1a115c9e57193bdc96c95c448844823e, 2026-10-17",
+            "visibility": "PUBLIC_TRACKED",
+            "proof_ceiling": "Managed-browser saved-answer feature branch; not merged or deployed."
+          }
+        ],
+        "execute_now": false
+      },
+      "adapter": {
+        "kind": "repo_runner",
+        "rung": 2,
+        "evidence": "PLANNED ONLY — no autonomous agent invocation, local checkout, CI job or dispatch proven this turn"
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "tool": "locally verified EscapeHatch agent runner (resolve at PRE-0)",
+        "operation": "execute_lane_only_after_plan_approval_and_fresh_checkout",
+        "arguments": {
+          "repository": "EndeavorEverlasting/EscapeHatch",
+          "lane": "OBS-2",
+          "plan": "docs/plans/eh-nav1-persistent-submit-consequence-aware-navigation-20261017.md"
+        }
+      },
+      "expected_artifacts": [
+        "typed event correlation with redacted receipts"
+      ],
+      "validation": [
+        "no click_ACK=>applied",
+        "replay dedupe",
+        "no EEO/value/file name capture"
+      ],
+      "convergence_owner": "EH-NAV1-CONVERGE",
+      "status": "PLANNED_NOT_DISPATCHED"
+    },
+    {
+      "lane_id": "CTRL-3",
+      "mission": "Integrate guarded Navigation Plan and clear pre-action consequence explanation into managed assist after controlling #63/#64 owner collision",
+      "dependencies": [
+        "POL-1",
+        "FIX-1",
+        "OBS-2"
+      ],
+      "owned_mutation_surfaces": [
+        "approved managed-browser navigation seam after #63/#64 ancestry resolution",
+        "cockpit navigation status UX",
+        "docs/MANAGED_BROWSER_ASSIST.md"
+      ],
+      "forbidden_surfaces": [
+        "unbounded clicker",
+        "existing manual attestation",
+        "private preferences",
+        "extension bypass"
+      ],
+      "runtime_partition": {
+        "execution_environment": "LOCAL_AGENT_RUNTIME",
+        "provider_access": [
+          {
+            "provider_family": "github",
+            "operation": "read code, write isolated owned branch once approved",
+            "authority_state": "AVAILABLE_UNVERIFIED",
+            "mutation_authority": false
+          }
+        ],
+        "required_capabilities": [
+          "verified local EscapeHatch checkout",
+          "isolation-safe Git worktree",
+          "Node/Playwright test runner"
+        ],
+        "evidence_inputs": [
+          {
+            "evidence_type": "operator_screenshot_claim",
+            "source_owner": "operator",
+            "sanitized_ref": "opaque:savantage-persistent-submit-flow-20261017",
+            "revision_or_freshness": "2026-10-17 operator correction",
+            "visibility": "PROTECTED_EXTERNAL",
+            "proof_ceiling": "User-observed Submit label remains unchanged across pages; no independently proven endpoint/handler semantics."
+          },
+          {
+            "evidence_type": "repository_floor",
+            "source_owner": "EndeavorEverlasting/EscapeHatch",
+            "sanitized_ref": "commit:5787fc0d72fd973f939ecc5652d4423ddb55961a",
+            "revision_or_freshness": "GitHub main read 2026-10-17",
+            "visibility": "PUBLIC_TRACKED",
+            "proof_ceiling": "Main contains a manual Next/Submit policy; current local checkout/runtime not verified."
+          },
+          {
+            "evidence_type": "candidate_branch",
+            "source_owner": "EndeavorEverlasting/EscapeHatch",
+            "sanitized_ref": "pull:64",
+            "revision_or_freshness": "PR head 9a7ef5cf1a115c9e57193bdc96c95c448844823e, 2026-10-17",
+            "visibility": "PUBLIC_TRACKED",
+            "proof_ceiling": "Managed-browser saved-answer feature branch; not merged or deployed."
+          }
+        ],
+        "execute_now": false
+      },
+      "adapter": {
+        "kind": "repo_runner",
+        "rung": 2,
+        "evidence": "PLANNED ONLY — no autonomous agent invocation, local checkout, CI job or dispatch proven this turn"
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "tool": "locally verified EscapeHatch agent runner (resolve at PRE-0)",
+        "operation": "execute_lane_only_after_plan_approval_and_fresh_checkout",
+        "arguments": {
+          "repository": "EndeavorEverlasting/EscapeHatch",
+          "lane": "CTRL-3",
+          "plan": "docs/plans/eh-nav1-persistent-submit-consequence-aware-navigation-20261017.md"
+        }
+      },
+      "expected_artifacts": [
+        "single-step gate, UI policy and typed outcomes"
+      ],
+      "validation": [
+        "safe intermediate Submit advances only with adapter+authority",
+        "terminal Submit never automated",
+        "origin/content drift stops"
+      ],
+      "convergence_owner": "EH-NAV1-CONVERGE",
+      "status": "PLANNED_NOT_DISPATCHED"
+    },
+    {
+      "lane_id": "P08-4",
+      "mission": "Test requested flow and protected fill/attach/session controls in actual synthetic Chromium through canonical owner launcher; do not replay Savantage",
+      "dependencies": [
+        "CTRL-3"
+      ],
+      "owned_mutation_surfaces": [
+        "harness/reports/eh-nav1-synthetic-runtime-receipt.v1.json"
+      ],
+      "forbidden_surfaces": [
+        "live ATS submission",
+        "user EEO decisions",
+        "untrusted network probe"
+      ],
+      "runtime_partition": {
+        "execution_environment": "LOCAL_AGENT_RUNTIME",
+        "provider_access": [
+          {
+            "provider_family": "github",
+            "operation": "read code, write isolated owned branch once approved",
+            "authority_state": "AVAILABLE_UNVERIFIED",
+            "mutation_authority": false
+          }
+        ],
+        "required_capabilities": [
+          "verified local EscapeHatch checkout",
+          "isolation-safe Git worktree",
+          "Node/Playwright test runner"
+        ],
+        "evidence_inputs": [
+          {
+            "evidence_type": "operator_screenshot_claim",
+            "source_owner": "operator",
+            "sanitized_ref": "opaque:savantage-persistent-submit-flow-20261017",
+            "revision_or_freshness": "2026-10-17 operator correction",
+            "visibility": "PROTECTED_EXTERNAL",
+            "proof_ceiling": "User-observed Submit label remains unchanged across pages; no independently proven endpoint/handler semantics."
+          },
+          {
+            "evidence_type": "repository_floor",
+            "source_owner": "EndeavorEverlasting/EscapeHatch",
+            "sanitized_ref": "commit:5787fc0d72fd973f939ecc5652d4423ddb55961a",
+            "revision_or_freshness": "GitHub main read 2026-10-17",
+            "visibility": "PUBLIC_TRACKED",
+            "proof_ceiling": "Main contains a manual Next/Submit policy; current local checkout/runtime not verified."
+          },
+          {
+            "evidence_type": "candidate_branch",
+            "source_owner": "EndeavorEverlasting/EscapeHatch",
+            "sanitized_ref": "pull:64",
+            "revision_or_freshness": "PR head 9a7ef5cf1a115c9e57193bdc96c95c448844823e, 2026-10-17",
+            "visibility": "PUBLIC_TRACKED",
+            "proof_ceiling": "Managed-browser saved-answer feature branch; not merged or deployed."
+          }
+        ],
+        "execute_now": false
+      },
+      "adapter": {
+        "kind": "repo_runner",
+        "rung": 2,
+        "evidence": "PLANNED ONLY — no autonomous agent invocation, local checkout, CI job or dispatch proven this turn"
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "tool": "locally verified EscapeHatch agent runner (resolve at PRE-0)",
+        "operation": "execute_lane_only_after_plan_approval_and_fresh_checkout",
+        "arguments": {
+          "repository": "EndeavorEverlasting/EscapeHatch",
+          "lane": "P08-4",
+          "plan": "docs/plans/eh-nav1-persistent-submit-consequence-aware-navigation-20261017.md"
+        }
+      },
+      "expected_artifacts": [
+        "synthetic runtime proof packet; protected control regression receipt"
+      ],
+      "validation": [
+        "actual navigation observed",
+        "actual terminal suppression observed",
+        "protected fill/attach/Stop preserved",
+        "no-sandbox risk disposition"
+      ],
+      "convergence_owner": "EH-NAV1-CONVERGE",
+      "status": "PLANNED_NOT_DISPATCHED"
+    },
+    {
+      "lane_id": "EH-NAV1-CONVERGE",
+      "mission": "Audit last-known-good, exact PR ancestry and validated heads; synchronize contracts/docs/tests and integrate only after plan acceptance and CI/review",
+      "dependencies": [
+        "P08-4"
+      ],
+      "owned_mutation_surfaces": [
+        "ARTIFACT_REGISTRY.md",
+        "applicable tests/CI docs/contract references",
+        "bounded integration merge after approval"
+      ],
+      "forbidden_surfaces": [
+        "unreviewed merge",
+        "separately owned dirty worktrees",
+        "false live employer proof"
+      ],
+      "runtime_partition": {
+        "execution_environment": "LOCAL_AGENT_RUNTIME",
+        "provider_access": [
+          {
+            "provider_family": "github",
+            "operation": "read code, write isolated owned branch once approved",
+            "authority_state": "AVAILABLE_UNVERIFIED",
+            "mutation_authority": false
+          }
+        ],
+        "required_capabilities": [
+          "verified local EscapeHatch checkout",
+          "isolation-safe Git worktree",
+          "Node/Playwright test runner"
+        ],
+        "evidence_inputs": [
+          {
+            "evidence_type": "operator_screenshot_claim",
+            "source_owner": "operator",
+            "sanitized_ref": "opaque:savantage-persistent-submit-flow-20261017",
+            "revision_or_freshness": "2026-10-17 operator correction",
+            "visibility": "PROTECTED_EXTERNAL",
+            "proof_ceiling": "User-observed Submit label remains unchanged across pages; no independently proven endpoint/handler semantics."
+          },
+          {
+            "evidence_type": "repository_floor",
+            "source_owner": "EndeavorEverlasting/EscapeHatch",
+            "sanitized_ref": "commit:5787fc0d72fd973f939ecc5652d4423ddb55961a",
+            "revision_or_freshness": "GitHub main read 2026-10-17",
+            "visibility": "PUBLIC_TRACKED",
+            "proof_ceiling": "Main contains a manual Next/Submit policy; current local checkout/runtime not verified."
+          },
+          {
+            "evidence_type": "candidate_branch",
+            "source_owner": "EndeavorEverlasting/EscapeHatch",
+            "sanitized_ref": "pull:64",
+            "revision_or_freshness": "PR head 9a7ef5cf1a115c9e57193bdc96c95c448844823e, 2026-10-17",
+            "visibility": "PUBLIC_TRACKED",
+            "proof_ceiling": "Managed-browser saved-answer feature branch; not merged or deployed."
+          }
+        ],
+        "execute_now": false
+      },
+      "adapter": {
+        "kind": "repo_runner",
+        "rung": 2,
+        "evidence": "PLANNED ONLY — no autonomous agent invocation, local checkout, CI job or dispatch proven this turn"
+      },
+      "launch": {
+        "mode": "runtime_tool",
+        "tool": "locally verified EscapeHatch agent runner (resolve at PRE-0)",
+        "operation": "execute_lane_only_after_plan_approval_and_fresh_checkout",
+        "arguments": {
+          "repository": "EndeavorEverlasting/EscapeHatch",
+          "lane": "EH-NAV1-CONVERGE",
+          "plan": "docs/plans/eh-nav1-persistent-submit-consequence-aware-navigation-20261017.md"
+        }
+      },
+      "expected_artifacts": [
+        "final exact-head validation and merge/deploy/proof receipt or typed blocker"
+      ],
+      "validation": [
+        "fresh remote before integration",
+        "test gates",
+        "PR dependency order",
+        "default branch containment"
+      ],
+      "convergence_owner": "EH-NAV1-CONVERGE",
+      "status": "PLANNED_NOT_DISPATCHED"
+    }
+  ]
+}

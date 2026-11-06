@@ -199,14 +199,15 @@ export function listApprovedResumeChoices(
 ): Array<{ resumeId: string; tier: ResumeTier; digest: string; current: boolean }> {
   const nodes = validateResumeGraph(g);
   const slot = nodes.get(platformSlotId);
-  if (slot?.type !== 'platform_slot' || slot.scope !== 'persistent_global') return [];
+  // Browsing private choices is safe even before provider slot semantics are known.
+  // Only the subsequent upload planner must refuse an unverified account-wide write.
+  if (slot?.type !== 'platform_slot' || slot.scope === 'isolated_application') return [];
   const parents = new Map(g.edges.filter(e => e.kind === 'derives_from').map(e => [e.from, e]));
   const cache = new Map<string, boolean>();
   const current = g.edges.find(e => e.kind === 'slot_points_to' && e.from === platformSlotId)?.to;
   const tierRank: Record<ResumeTier,number> = {canonical:0,domain:1,job:2};
   return g.nodes.filter((n): n is ResumeNode => n.type === 'resume')
-    .filter(n => (slot.scope !== 'persistent_global' || n.tier !== 'job') &&
-      fresh(n, nodes, parents, cache))
+    .filter(n => n.tier !== 'job' && fresh(n, nodes, parents, cache))
     .sort((a,b) => tierRank[a.tier]-tierRank[b.tier] || a.id.localeCompare(b.id))
     .map(n => ({resumeId:n.id,tier:n.tier,digest:n.digest,current:n.id===current}));
 }

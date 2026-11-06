@@ -94,7 +94,8 @@ test('cockpit owns Launch, Fill and Attach without a Chrome extension', async ({
   await page.getByTestId('button-managed-fill').click();
   await expect(page.getByTestId('managed-browser-feedback')).toContainText('No fields filled');
   await expect(page.getByText('No fields verified — review the employer form')).toBeVisible();
-  await page.getByTestId('managed-browser-assist').locator('input[type="file"]').first().setInputFiles({
+  // Target the opportunity résumé dropzone, not the account-wide switcher register control.
+  await page.getByLabel('Choose résumé PDF', { exact: true }).setInputFiles({
     name: 'synthetic-resume.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\\nfixture'),
   });
   await expect(page.getByTestId('button-managed-attach')).toBeDisabled();

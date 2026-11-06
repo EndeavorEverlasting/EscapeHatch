@@ -65,46 +65,20 @@
     ],
     "preserve_existing_content": true,
     "server_claims": "A private candidate document URL, file upload event, or ATS navigation does not prove platform persistence or employer acceptance.",
-    "indeed_default_master": {
-      "policy": "Use the same already-approved canonical master for ordinary Indeed-native applications. Do not request new resume review or upload merely because another matching Indeed opportunity is selected.",
-      "admission": "Verify applicant owner, exact approved canonical revision/digest and the observed account-wide resume slot; if that same master is present, KEEP_CURRENT and continue.",
-      "no_per_application_switch": "Indeed opportunity domain/type does not automatically change the account-wide resume. Job-specific tailoring scores cannot silently select a different default.",
-      "exception": "A distinct domain resume may be temporarily substituted only after explicit operator approval of the candidate, digest, target slot and restoration plan.",
-      "separation": "An external company ATS reached from an Indeed listing is not an Indeed-native persistent resume slot; use observed form/slot semantics."
-    },
-    "temporary_domain_switch": {
-      "activation": "explicit_user_approval_of_temporary_switch",
-      "approval_covers": "one named candidate/domain resume plus automatic return to approved canonical master for the same owner and verified persistent account slot",
-      "required_before_switch": [
-        "verified_applicant_owner",
-        "verified_persistent_slot",
-        "approved_current_canonical_master_digest",
-        "approved_domain_candidate_digest",
-        "exact_opportunity_binding",
-        "before_slot_readback",
-        "durable_private_restoration_checkpoint"
-      ],
-      "runtime_sequence": [
-        "snapshot_slot_state",
-        "obtain_one_approval_for_switch_and_restore",
-        "upload_selected_domain_resume",
-        "verify_domain_readback",
-        "work_the_exact_opportunity_with_existing_submission_gates",
-        "restore_approved_canonical_master",
-        "verify_canonical_digest_and_slot_readback",
-        "close_private_restoration_checkpoint"
-      ],
-      "restore_on": [
-        "opportunity_completed",
-        "operator_abort",
-        "application_blocked",
-        "agent_handoff",
-        "crash_recovery_when_authenticated"
-      ],
-      "restore_without_new_approval": "Only when the preceding approval explicitly covered return to the pinned master digest and current owner/session/slot proof still holds.",
-      "no_restore_proof": "BLOCK_RELATED_INDEED_QUEUE_AND_SURFACE_EXACT_RESTORATION_ACTION",
-      "never_infer_success": "An upload click, local selected file, browser route or private document URL is not observed account slot content.",
-      "consent_reuse_limit": "Approval for one domain switch never authorizes an unrelated domain candidate, different account or changed master digest."
+    "operator_directed_switching": {
+      "objective": "EscapeHatch expands beyond any single job board's resume-management UX: the operator can freely switch between approved canonical and domain resumes and switch back at any time.",
+      "selection_owner": "The verified applicant selects an explicit approved resume and account slot; no role, domain scorer, application completion, queue scan, or agent preference forces a switch or rollback.",
+      "default": "Canonical master is the initial preference only when no valid prior user-selected resume is present; a valid approved current domain selection is equally reusable.",
+      "one_action": "One user-confirmed account-wide replacement action names the exact candidate digest and the observed effect of overwriting a shared slot; do not require a separate editorial review of already approved unchanged content.",
+      "repeated_switches": "Unlimited user-directed master-to-domain, domain-to-domain, and domain-to-master selections through the same planner, whenever the operator chooses.",
+      "planner": "artifacts/escape-hatch/src/lib/resume-selection-graph.ts#resolveUserSelectedResume",
+      "picker": "artifacts/escape-hatch/src/lib/resume-selection-graph.ts#listApprovedResumeChoices",
+      "persistence": "Store current operator selection in the existing private owner-bound graph; do not reset to master automatically after one job or an interrupted session.",
+      "readback": "Only observed ATS/provider account-slot content confirms a successful change. Until verified, show pending/unknown actual slot state without claiming a successful switch.",
+      "no_queue_wide_lock": "An uncertain/failed slot change cannot justify globally blocking unrelated applications; block only an unsafe mutation into that exact unverified slot, show the mismatch and allow other safe work.",
+      "unknown_scope": "Show private approved resume choices even if provider slot is unknown; disable only unsafe upload until slot ownership and persistence semantics are verified.",
+      "redirected_forms": "An Indeed-origin listing redirected to employer ATS uses that employer's observed slot rules, not Indeed-account-wide selection policy.",
+      "no_automatic_submit": true
     }
   },
   "invariants": {
@@ -131,7 +105,8 @@
       "harness/contracts/application-autofill-parent.v1.json"
     ],
     "platform_adapter_integration": "Must invoke resolver before a persistent or unknown-scope employer/platform resume mutation; currently pending live wiring.",
-    "proof_ceiling": "Graph planning/validation and CI do not certify live Indeed persistence, attached PDF, account selection, browser action or application submission."
+    "proof_ceiling": "Graph planning/validation and CI do not certify live Indeed persistence, attached PDF, account selection, browser action or application submission.",
+    "manual_switcher_api": "resolveUserSelectedResume and listApprovedResumeChoices; actual per-provider browser call-site wiring and UI proof still separate"
   },
   "queue_effective_master": {
     "purpose": "Score all selected, reviewed queued job domains to select one reusable account-wide master; prevent upload thrash from per-job matching.",
@@ -142,7 +117,8 @@
     "output": "KEEP_CURRENT if the exact effective resume already occupies the observed platform slot, otherwise UPLOAD_REQUIRES_CONSENT. Never mutate/upload.",
     "never_use_job_derivative_for_global": true,
     "stable_under_queue_order_permutation": true,
-    "indeed_exception": "For Indeed-native opportunities, the operator's approved canonical master is the stable default; score/queue domain affinity is advisory for drafting only, never an automatic account-wide switch.",
-    "reversion_rule": "A user-authorized temporary domain switch must finish by restoring and verifying the pinned canonical master before unrelated Indeed work resumes."
+    "indeed_operator_selection": "Indeed may recommend canonical when there is no prior verified selection, but once a user chooses an approved canonical/domain resume, both per-job and queue scoring must preserve that exact selection; recommendations never override a user choice.",
+    "no_forced_rollback": "No automatic restore after one job, abort, crash, or another application. Returning to master is a normal user-directed switch.",
+    "no_global_lock": "Provider readback uncertainty blocks only unsafe writes to the affected slot, not the job queue or unrelated apps."
   }
 }

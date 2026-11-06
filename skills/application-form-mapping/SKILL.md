@@ -2,47 +2,34 @@
 
 ## Trigger
 
-Use this skill when EscapeHatch encounters a new application page, unfamiliar question wording, reordered questions, or an ATS option set that does not map cleanly to the existing application-form taxonomy.
+Use for unfamiliar ATS form wording, reordered questions, new pages, or unmatched option sets.
 
 ## Required inputs
 
-- sanitized field label/prompt;
-- control type;
-- sanitized option labels when applicable;
-- current `harness/contracts/application-form-taxonomy.v1.json`;
-- current `harness/contracts/application-preference-cache.v1.json`;
-- application opportunity identifier when an opportunity-specific preference may apply.
+- Sanitized field prompt, control type, and available sanitized option labels.
+- Current `harness/contracts/application-form-taxonomy.v1.json` and `harness/contracts/application-preference-cache.v1.json`.
+- Opportunity ID if an opportunity-specific preference applies.
 
-Do not use or commit real selected answers as mapping fixtures.
+Never use real selected answers as fixtures.
 
 ## Procedure
 
-1. Normalize the prompt text using the taxonomy matching rules.
-2. Search aliases for an existing canonical question ID.
-3. Prefer semantic reuse over employer-specific IDs.
-4. Verify family, sensitivity, answer scope, automation policy, and confirmation policy.
-5. If the question is known, record only a generic alias when necessary.
-6. If it is new, create one canonical ID with the narrowest stable meaning.
-7. Keep page archetypes descriptive only; do not bind matching to page number/order.
-8. For EEO/demographic questions, require explicit preference and forbid inference.
-9. For legal/compliance questions, require per-application confirmation.
-10. Keep attestation/certification manual-only.
-11. Add or update sanitized validator fixtures.
-12. Run `python scripts/validate_application_harness.py`, `python scripts/validate_harness.py`, and `git diff --check`.
+1. Normalize the prompt using taxonomy rules; search existing canonical IDs and aliases.
+2. Reuse a semantically equivalent question ID before creating one; never match by form position.
+3. Verify family, sensitivity, answer scope, automation policy and confirmation policy.
+4. For known questions, add only necessary generic aliases; for new questions, choose the narrowest stable ID.
+5. Keep page archetypes descriptive, never dependent on page number or DOM order.
+6. EEO/demographics: explicit preference only; no inference.
+7. Legal/compliance: fresh per-application confirmation; certification and attestation are manual.
+8. Add sanitized tests and run `python scripts/validate_application_harness.py`, `python scripts/validate_harness.py`, and `git diff --check`.
 
 ## Failure behavior
 
-- If wording could map to multiple IDs, leave it unresolved rather than guessing.
-- If the saved preference is not among the page's available options, leave it blank.
-- If an application asks for a materially different legal fact, create a new canonical ID rather than overloading an old one.
-- Never print, commit, or place real user preference values in fixtures, reports, logs, or PR text.
-- Never broaden the skill into form submission, scraping, or automatic attestation.
+- Multiple plausible question IDs or an unavailable saved choice: do not guess; leave unresolved/blank.
+- Different legal facts require distinct IDs rather than aliasing an older answer.
+- Never publish real profile/preferences to fixtures, logs, reports or PRs.
+- Do not extend mapping into form submission, scraping or automatic attestation.
 
 ## Expected outputs
 
-- reused or new canonical question ID;
-- generic alias/fixture changes when required;
-- updated page archetype only when it improves discovery;
-- explicit sensitivity/scope/freshness policy;
-- passing application-harness and harness validators;
-- unresolved questions listed without personal answers.
+Reused/new canonical question ID; minimal sanitized aliases/fixtures; page archetype when useful; explicit sensitivity/scope/freshness; passed validators; unresolved questions without personal values.

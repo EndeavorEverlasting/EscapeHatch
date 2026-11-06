@@ -1,0 +1,270 @@
+{
+  "schema_version": "prompt-parallel-dispatch/v1",
+  "run_id": "escapehatch-master-resume-routing-20261105",
+  "repository": "EndeavorEverlasting/EscapeHatch",
+  "parent_issue": "https://github.com/EndeavorEverlasting/EscapeHatch/issues/69",
+  "plan_owner": "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md",
+  "handoff_owner": "docs/agent/P04_MASTER_RESUME_APPLICATION_ROUTING_2026-11-05.md",
+  "base_ref": {
+    "provider_default_branch": "main",
+    "provider_default_head_at_authorship": "4b3f84f3866498cf174944825b074b0b8dce63db",
+    "freshness": "PROVIDER_READ_RECHECK_BEFORE_MUTATION"
+  },
+  "partition": {
+    "CURRENT_CHAT_RUNTIME": "GitHub contract/harness and handoff provider writes only",
+    "LOCAL_AGENT_RUNTIME": "private source, Windows managed browser, runtime implementation, real application queue and receipts",
+    "CI_OR_REMOTE_RUNNER": "source/synthetic validation only",
+    "OPERATOR_OR_PHYSICAL_RUNTIME": "document/domain-switch review and protected employer actions"
+  },
+  "graph": {
+    "expression": "EH-R0 -> { EH-R3 || EH-R1 || EH-R2 } -> EH-R4",
+    "initial_width": 1,
+    "max_width": 3,
+    "parallel_disposition": "CONDITIONAL_AFTER_LOCAL_RUNTIME_AND_SINGLE_WRITER_COLLISION_CHECK"
+  },
+  "convergence_owner": "EH-R4",
+  "status": "PROVIDER_HANDOFF_AUTHORED_LOCAL_DISPATCH_NOT_OBSERVED",
+  "canonical_target_disposition": "PRESERVE_GLOBAL_MANIFEST_RUN_SCOPED_ONLY",
+  "manifest_path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-master-resume-routing-20261105/manifest.json",
+  "lanes": [
+    {
+      "lane_id": "EH-R0",
+      "wave": 0,
+      "mission": "Recover installed selected source, exact applicant owner, current private canonical master PDF approval/hash, career evidence, real tracker and browser source.",
+      "dependencies": [
+        "verify current default branch and installed path"
+      ],
+      "owned_mutation_surfaces": [
+        "private workspace source/connection provenance and read-only selected runtime inspection"
+      ],
+      "forbidden_surfaces": [
+        "synthetic private fixture substitution",
+        "new auth credentials by default",
+        "public user metadata",
+        "foreign 21033 process"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "private existing authorized Drive source and original tracker",
+        "GitHub"
+      ],
+      "required_capabilities": [
+        "Windows installed source resolution",
+        "read-only private provider access",
+        "user/workspace owner check"
+      ],
+      "posture": "read-only recovery and private receipt",
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "existing_local_agent_execute_handoff_lane",
+        "arguments": {
+          "handoff": "docs/agent/P04_MASTER_RESUME_APPLICATION_ROUTING_2026-11-05.md",
+          "lane": "EH-R0"
+        }
+      },
+      "validation": [
+        "Status-EscapeHatch.ps1 on installed selected source",
+        "private source revision/readback",
+        "installed workspace owner and tracker currency"
+      ],
+      "status": "WAITING_LOCAL_AGENT_RUNTIME"
+    },
+    {
+      "lane_id": "EH-R3",
+      "wave": 1,
+      "mission": "Prepare up to three genuine unsubmitted applications in existing authenticated managed browser; Indeed default approved master, custom document review as needed; no final submit.",
+      "dependencies": [
+        "EH-R0 verified"
+      ],
+      "owned_mutation_surfaces": [
+        "existing private per-opportunity workspace checkpoints",
+        "existing authenticated employer form within bounded opportunity"
+      ],
+      "forbidden_surfaces": [
+        "global account-wide domain resume swap without approval",
+        "final Submit and legal/EEO",
+        "synthetic jobs",
+        "duplicated applications",
+        "public user state"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "local private original tracker",
+        "existing managed browser"
+      ],
+      "required_capabilities": [
+        "current installed EscapeHatch controller",
+        "PDF digest verification",
+        "form field and upload readback"
+      ],
+      "posture": "private applicant-workspace writer, serialized per opportunity",
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "existing_local_agent_execute_handoff_lane",
+        "arguments": {
+          "handoff": "docs/agent/P04_MASTER_RESUME_APPLICATION_ROUTING_2026-11-05.md",
+          "lane": "EH-R3"
+        }
+      },
+      "validation": [
+        "actual employer form readback",
+        "exact URL/opportunity binding",
+        "per-opportunity private receipt and truthful tracker phase"
+      ],
+      "status": "WAITING_EH_R0"
+    },
+    {
+      "lane_id": "EH-R1",
+      "wave": 1,
+      "mission": "Implement and test original resume-selection graph consumer: Indeed KEEP_CURRENT, one approved domain switch, pinned canonical restoration, private crash checkpoint and block on failed restore.",
+      "dependencies": [
+        "EH-R0 source/owner readback",
+        "P01 contract validated"
+      ],
+      "owned_mutation_surfaces": [
+        "artifacts/escape-hatch/src/lib/resume-selection-graph.ts",
+        "artifacts/escape-hatch/src/lib/resume-selection-graph.test.ts",
+        "narrow existing browser/pdf adapter consumer after collision check",
+        "focused synthetic tests"
+      ],
+      "forbidden_surfaces": [
+        "private data in Git",
+        "new applicant graph",
+        "active managed session mutation during coding",
+        "open PR #139 owned adapter files"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "GitHub"
+      ],
+      "required_capabilities": [
+        "isolated local worktree",
+        "Node and Python tests",
+        "trusted managed browser P08 after integration"
+      ],
+      "posture": "isolated product writer",
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "existing_local_agent_execute_handoff_lane",
+        "arguments": {
+          "handoff": "docs/agent/P04_MASTER_RESUME_APPLICATION_ROUTING_2026-11-05.md",
+          "lane": "EH-R1"
+        }
+      },
+      "validation": [
+        "python scripts/validate_resume_selection_graph.py",
+        "node --experimental-strip-types --test artifacts/escape-hatch/src/lib/resume-selection-graph.test.ts",
+        "managed-assist regression",
+        "actual Indeed account slot readback is later P08"
+      ],
+      "status": "WAITING_EH_R0"
+    },
+    {
+      "lane_id": "EH-R2",
+      "wave": 1,
+      "mission": "Prepare and gate non-Indeed employer-specific derivative documents from current master and evidence bank; preserve exact PDF, opportunity and review receipts.",
+      "dependencies": [
+        "EH-R0 source/version recovered"
+      ],
+      "owned_mutation_surfaces": [
+        "existing career-artifact-propagation consumer and private document-generation owner",
+        "focused derivative-format QA tests"
+      ],
+      "forbidden_surfaces": [
+        "resume-selection graph shared writer",
+        "browser-assist-control.ts while EH-R1 owns it",
+        "unapproved upload",
+        "approved master mutation",
+        "real user data committed"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "existing private career source",
+        "GitHub"
+      ],
+      "required_capabilities": [
+        "isolated nonoverlap worktree",
+        "private PDF rendering and QA",
+        "document hashes and reviewed source binding"
+      ],
+      "posture": "isolated product writer, collision-check first",
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "existing_local_agent_execute_handoff_lane",
+        "arguments": {
+          "handoff": "docs/agent/P04_MASTER_RESUME_APPLICATION_ROUTING_2026-11-05.md",
+          "lane": "EH-R2"
+        }
+      },
+      "validation": [
+        "python scripts/validate_career_artifact_propagation.py",
+        "python scripts/validate_career_claim_fidelity.py",
+        "python scripts/validate_resume_presentation.py",
+        "private PDF rendered pages and text integrity"
+      ],
+      "status": "WAITING_EH_R0"
+    },
+    {
+      "lane_id": "EH-R4",
+      "wave": 2,
+      "mission": "Rejoin exact-head results, validate and merge authorized code; certify installed P08 Indeed no-switch, consented switch-restore and external ATS protected comparator.",
+      "dependencies": [
+        "EH-R1 tested",
+        "EH-R2 tested",
+        "EH-R3 checkpoints recorded"
+      ],
+      "owned_mutation_surfaces": [
+        "PR integration and sanitized proof receipt",
+        "private restored platform slot evidence"
+      ],
+      "forbidden_surfaces": [
+        "unproven real-platform restoration claim",
+        "unapproved final application submit",
+        "force reset or dirty data overwrite",
+        "closing parent #69 from synthetic green"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        "GitHub",
+        "actual installed managed browser"
+      ],
+      "required_capabilities": [
+        "exact-head CI/promotion",
+        "safe Windows managed browser",
+        "observed platform slot readback"
+      ],
+      "posture": "convergence owner",
+      "launch": {
+        "mode": "runtime_tool",
+        "operation": "existing_local_agent_execute_handoff_lane",
+        "arguments": {
+          "handoff": "docs/agent/P04_MASTER_RESUME_APPLICATION_ROUTING_2026-11-05.md",
+          "lane": "EH-R4"
+        }
+      },
+      "validation": [
+        "full affected repository validators",
+        "merged main readback",
+        "installed host current source",
+        "observed account-slot master restoration",
+        "private original tracker receipt"
+      ],
+      "status": "WAITING_CONVERGENCE"
+    }
+  ],
+  "receipt_contract": {
+    "local_agent_dispatched": false,
+    "canonical_manifest_validation": "NOT_RUN_NO_CONFIRMED_TOKENCORRIDOR_SCHEMA_OR_RUNTIME_TOOL",
+    "observed_parallelism": false,
+    "private_resume_bytes_published": false,
+    "product_implementation_complete": false,
+    "live_browser_observed": false,
+    "employer_submit_executed": false
+  },
+  "first_next_command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\\Status-EscapeHatch.ps1",
+  "authorship_blockers": [
+    "GitHub connector does not access installed Windows host or user's authenticated employer session.",
+    "Exact private ATS PDF approval and Indeed platform slot require actual owner-bound local readback.",
+    "EscapeHatch has run-scoped prior manifests but no confirmed installed canonical TokenCorridor dispatch runner/schema in this remote runtime."
+  ]
+}

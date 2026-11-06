@@ -662,7 +662,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       <ResumePlatformSwitcher
         opportunityId={selectedOpportunityId || undefined}
         url={url.trim() || undefined}
-        refresh={formObservation}
+        refresh={formObservation?.revision ?? 0}
         disabled={busy || autoPrepareRequested}
       />
       <ApplicationPuzzle opportunity={applications.find(item => item.id === selectedOpportunityId)} url={url} documents={documents} disabled={busy || autoPrepareRequested} refresh={formObservation} currentPage={currentPage} onBypass={() => { if (browserOpen) setAutoPrepareRequested(true); }} />

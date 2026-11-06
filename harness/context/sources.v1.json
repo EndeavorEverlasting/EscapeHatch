@@ -92,7 +92,8 @@
         "application"
       ],
       "owner": "harness/contracts/application-autofill-parent.v1.json",
-      "required": true
+      "required": true,
+      "encoding": "compact_json"
     },
     "application_plan": {
       "path": "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md",

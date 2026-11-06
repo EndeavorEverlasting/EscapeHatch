@@ -23,7 +23,7 @@
     "parallel_disposition": "CONDITIONAL_AFTER_LOCAL_RUNTIME_AND_SINGLE_WRITER_COLLISION_CHECK"
   },
   "convergence_owner": "EH-R4",
-  "status": "P83_USER_DIRECTED_SWITCHER_POLICY_AND_PURE_RESOLVER_COMMITTED_LOCAL_UI_AND_PROVIDER_PROOF_PENDING",
+  "status": "EH_R1_UI_AND_MANAGED_ASSIST_WIRING_IMPLEMENTED_LIVE_INDEED_P08_PENDING",
   "canonical_target_disposition": "PRESERVE_GLOBAL_MANIFEST_RUN_SCOPED_ONLY",
   "manifest_path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-master-resume-routing-20261105/manifest.json",
   "lanes": [

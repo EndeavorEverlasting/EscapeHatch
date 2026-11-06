@@ -1,10 +1,15 @@
-import { selectInstalledHostWorkspace } from './workspace-owner-file.ts';
+import { selectInstalledHostWorkspace, readHostWorkspaceOwner } from './workspace-owner-file.ts';
 import { readWorkspace } from './workspace-file.ts';
 import { prepareWithoutTrustedNavigation } from './managed-prepare-fallback.ts';
 import { INITIAL_CHECKPOINT, advanceAuthCheckpoint, inspectAuthObservation, resumeAllowed, type AuthCheckpoint } from './managed-auth-checkpoint.ts';
 import { fieldProgressState, attachmentProgressState, evidenceDescription } from './managed-progress-evidence.ts';
 import { assertInspectionScope, inspectApplicationRequirements, inspectRequiredFieldBlockers, assertSubmitFormComplete } from './application-requirements.ts';
 import { OpportunityDocumentStore, documentScope, type DocumentKind } from './opportunity-documents.ts';
+import {
+  ResumeSelectionStore,
+  INDEED_ACCOUNT_SLOT_ID,
+  indeedSlotIdForUrl,
+} from './resume-selection-store.ts';
 import { ManagedListeners } from './managed-listeners.ts';
 import { enqueueSubmissionSync, retrySubmissionSync, readSubmissionSyncStatus, startSubmissionSync } from './tracker-writeback.ts';
 import { APPLICATIONS_KEY } from './src/lib/storage.ts';
@@ -356,6 +361,30 @@ export async function attachPdfs(page: Page, resume: ReturnType<typeof parsePriv
   return outcome;
 }
 
+async function preferPlatformSelectedResume(
+  resumeSelectionStore: ResumeSelectionStore,
+  packageFiles: { resume: { name: string; mimeType: 'application/pdf'; buffer: Buffer } | null; cover: { name: string; mimeType: 'application/pdf'; buffer: Buffer } | null; reviewPolicy: string },
+  applicationUrl: string,
+) {
+  const slotId = indeedSlotIdForUrl(applicationUrl);
+  if (!slotId) return { ...packageFiles, platformResume: null as null };
+  const owner = await readHostWorkspaceOwner();
+  if (!owner) return { ...packageFiles, platformResume: null as null };
+  const selected = await resumeSelectionStore.currentSelectedPdf(owner.ownerId, slotId);
+  if (!selected) return { ...packageFiles, platformResume: null as null };
+  return {
+    ...packageFiles,
+    resume: selected.file,
+    platformResume: {
+      resumeId: selected.resumeId,
+      digest: selected.digest,
+      providerVerified: selected.providerVerified,
+      platformSlotId: slotId,
+      queueWideLock: false as const,
+    },
+  };
+}
+
 export function createManagedBrowserAssistPlugin(): Plugin {
   const managed = readManagedRuntime();
   // Vite reloads its config in the same process. Keep the live browser connection
@@ -373,6 +402,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
   let applicationOrigin = cache.applicationOrigin;
   let applicationUrl = cache.applicationUrl;
   const documentStore = new OpportunityDocumentStore();
+  const resumeSelectionStore = new ResumeSelectionStore();
   let opportunityId = cache.opportunityId;
   let preparation = cache.preparation;
   let authCheckpoint = cache.authCheckpoint || INITIAL_CHECKPOINT;
@@ -463,6 +493,27 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             });
           }
           catch { return respond(res, 422, { ok: false, error: 'Saved preferences could not be read; existing data preserved.' }); }
+        }
+        if (url.pathname === PREFIX + '/resume-selection' && req.method === 'GET') {
+          if (req.headers.origin && req.headers.origin !== expectedOrigin || req.headers['sec-fetch-site'] === 'cross-site') {
+            return respond(res, 403, { ok: false, error: 'operator_origin_required' });
+          }
+          try {
+            const owner = await readHostWorkspaceOwner();
+            if (!owner) return respond(res, 409, { ok: false, error: 'workspace_owner_required' });
+            const platformSlotId = typeof url.searchParams.get('platformSlotId') === 'string' && url.searchParams.get('platformSlotId')
+              ? url.searchParams.get('platformSlotId')!
+              : INDEED_ACCOUNT_SLOT_ID;
+            const listed = await resumeSelectionStore.listChoices(owner.ownerId, platformSlotId);
+            return respond(res, 200, {
+              ok: true,
+              ...listed,
+              values: 'redacted',
+              note: 'Choices are private approved résumés. Account-wide replacement still needs explicit consent and provider readback.',
+            });
+          } catch {
+            return respond(res, 422, { ok: false, error: 'Résumé selection unavailable; existing data preserved.' });
+          }
         }
         if (url.pathname === PREFIX + '/private-sync/status' && req.method === 'GET') {
           if (req.headers.origin && req.headers.origin !== expectedOrigin || req.headers['sec-fetch-site'] === 'cross-site') {
@@ -588,6 +639,91 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             return respond(res, 200, { ok: true, preferences, privateSync });
           }
           if (url.pathname === PREFIX + '/preferences/clear') { await listeners.setRecording(false); await clearPreferences(); return respond(res, 200, { ok: true }); }
+          if (url.pathname === PREFIX + '/resume-selection/register') {
+            await selectInstalledHostWorkspace();
+            const owner = await readHostWorkspaceOwner();
+            if (!owner) throw new Error('Verified applicant workspace owner is required.');
+            const file = parsePrivatePdf(payload.file);
+            if (!file) throw new Error('Choose an approved résumé PDF.');
+            if (typeof payload.resumeId !== 'string' || typeof payload.tier !== 'string' || typeof payload.revision !== 'string') {
+              throw new Error('Résumé registration requires id, tier, and revision.');
+            }
+            const store = await resumeSelectionStore.registerApprovedResume({
+              ownerId: owner.ownerId,
+              resumeId: payload.resumeId,
+              tier: payload.tier as 'canonical' | 'domain',
+              revision: payload.revision,
+              domainTags: Array.isArray(payload.domainTags) ? payload.domainTags.filter((tag: unknown): tag is string => typeof tag === 'string') : undefined,
+              parentResumeId: typeof payload.parentResumeId === 'string' ? payload.parentResumeId : undefined,
+              file,
+            });
+            const listed = await resumeSelectionStore.listChoices(owner.ownerId);
+            return respond(res, 200, { ok: true, registered: true, choiceCount: listed.choices.length, queueWideLock: false, values: 'redacted', ownerBound: store.ownerId === owner.ownerId });
+          }
+          if (url.pathname === PREFIX + '/resume-selection/select') {
+            await selectInstalledHostWorkspace();
+            const owner = await readHostWorkspaceOwner();
+            if (!owner) throw new Error('Verified applicant workspace owner is required.');
+            if (typeof payload.resumeId !== 'string') throw new Error('Select an approved résumé.');
+            const result = await resumeSelectionStore.planSelect({
+              ownerId: owner.ownerId,
+              platformSlotId: typeof payload.platformSlotId === 'string' ? payload.platformSlotId : INDEED_ACCOUNT_SLOT_ID,
+              resumeId: payload.resumeId,
+              consentAccountWideReplacement: payload.consentAccountWideReplacement === true,
+            });
+            // Optional: bind the chosen approved PDF into the current opportunity package
+            // so Attach/Prepare reuse the same bytes without a second editorial review.
+            if (result.selected && typeof payload.opportunityId === 'string' && typeof payload.url === 'string') {
+              const scope = documentScope(payload.opportunityId, payload.url);
+              validateApplicationUrl(scope.url);
+              const selected = await resumeSelectionStore.currentSelectedPdf(owner.ownerId, result.decision.platformSlotId);
+              if (selected) {
+                const existing = await documentStore.read(scope.opportunityId, scope.url);
+                const prior = existing.documents.resume;
+                if (!prior || prior.sha256 === selected.digest) {
+                  await documentStore.stage(
+                    scope.opportunityId,
+                    scope.url,
+                    'resume',
+                    selected.file,
+                    { provider: 'local' },
+                    prior?.sha256 ?? null,
+                  );
+                  // Already-approved switcher content does not need another editorial pass.
+                  await documentStore.review(scope.opportunityId, scope.url, 'resume', selected.digest);
+                }
+              }
+            }
+            return respond(res, 200, {
+              ok: true,
+              selected: result.selected,
+              requiresConsent: result.requiresConsent,
+              disclosure: result.disclosure,
+              decision: result.decision,
+              queueWideLock: false,
+              values: 'redacted',
+            });
+          }
+          if (url.pathname === PREFIX + '/resume-selection/provider-readback') {
+            await selectInstalledHostWorkspace();
+            const owner = await readHostWorkspaceOwner();
+            if (!owner) throw new Error('Verified applicant workspace owner is required.');
+            const result = await resumeSelectionStore.markProviderReadback({
+              ownerId: owner.ownerId,
+              platformSlotId: typeof payload.platformSlotId === 'string' ? payload.platformSlotId : INDEED_ACCOUNT_SLOT_ID,
+              observedDigest: typeof payload.observedDigest === 'string' ? payload.observedDigest : null,
+              verified: payload.verified === true,
+            });
+            return respond(res, 200, {
+              ok: true,
+              matched: result.matched,
+              queueWideLock: false,
+              values: 'redacted',
+              note: result.matched
+                ? 'Provider readback matched the selected résumé digest.'
+                : 'Slot marked unverified for further unsafe writes; unrelated applications remain available.',
+            });
+          }
           if (url.pathname === PREFIX + '/private-sync/pair') {
             if (process.env.ESCAPEHATCH_EXPERIMENTAL_SYNC !== '1') {
               return respond(res, 422, { ok: false, error: 'experimental_sync_disabled' });
@@ -773,8 +909,12 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               (kind === 'resume' && anonymousTalentResume));
             const requiredKinds = (['resume', 'cover'] as const).filter(kind =>
               formRequirements.requirements.some(field => field.kind === kind && field.requirement === 'required'));
-            const packageFiles = await documentStore.forCurrentEmployerForm(
-              opportunityId, applicationUrl, requestedKinds, uploadPolicy);
+            const packageFiles = await preferPlatformSelectedResume(
+              resumeSelectionStore,
+              await documentStore.forCurrentEmployerForm(
+                opportunityId, applicationUrl, requestedKinds, uploadPolicy),
+              applicationUrl,
+            );
             const contact = reviewedContactFields(payload.profile);
             const now = new Date().toISOString();
             const ids: Record<string, string> = { linkedin_url: 'linkedin', region: 'region' };
@@ -824,8 +964,12 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               registry,
               preferences: approvedPreferences,
               prepareAttachments: async () => {
-                const current = await documentStore.forCurrentEmployerForm(
-                  opportunityId, applicationUrl, requestedKinds, (await readPreferences()).require_document_review !== false);
+                const current = await preferPlatformSelectedResume(
+                  resumeSelectionStore,
+                  await documentStore.forCurrentEmployerForm(
+                    opportunityId, applicationUrl, requestedKinds, (await readPreferences()).require_document_review !== false),
+                  applicationUrl,
+                );
                 await attachPdfs(page!, current.resume, current.cover);
               },
               verifyAttachments: async () => {
@@ -908,10 +1052,23 @@ export function createManagedBrowserAssistPlugin(): Plugin {
           if (url.pathname === PREFIX + '/attach') {
             await selectInstalledHostWorkspace();
             if (payload.resume || payload.cover) throw new Error('Save the selected documents to this opportunity before attaching.');
-            const packageFiles = await documentStore.forUpload(opportunityId, applicationUrl, (await readPreferences()).require_document_review !== false);
+            const packageFiles = await preferPlatformSelectedResume(
+              resumeSelectionStore,
+              await documentStore.forUpload(opportunityId, applicationUrl, (await readPreferences()).require_document_review !== false),
+              applicationUrl,
+            );
             const outcome = await attachPdfs(page, packageFiles.resume, packageFiles.cover);
             state = attachmentProgressState(outcome);
-            return respond(res, 200, { ok: true, state, evidenceSummary: evidenceDescription(state), attachments: outcome, reviewPolicy: packageFiles.reviewPolicy, requiresOperatorSubmission: true });
+            return respond(res, 200, {
+              ok: true,
+              state,
+              evidenceSummary: evidenceDescription(state),
+              attachments: outcome,
+              reviewPolicy: packageFiles.reviewPolicy,
+              platformResume: packageFiles.platformResume,
+              queueWideLock: false,
+              requiresOperatorSubmission: true,
+            });
           }
           if (url.pathname === PREFIX + '/toggle-labeled-checkbox') {
             const labelText = typeof payload.label === 'string' ? payload.label.trim() : '';

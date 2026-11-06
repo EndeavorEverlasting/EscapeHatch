@@ -94,7 +94,8 @@ test('cockpit owns Launch, Fill and Attach without a Chrome extension', async ({
   await page.getByTestId('button-managed-fill').click();
   await expect(page.getByTestId('managed-browser-feedback')).toContainText('No fields filled');
   await expect(page.getByText('No fields verified — review the employer form')).toBeVisible();
-  await page.getByTestId('managed-browser-assist').locator('input[type="file"]').first().setInputFiles({
+  // Target the opportunity résumé dropzone, not the account-wide switcher register control.
+  await page.getByLabel('Choose résumé PDF', { exact: true }).setInputFiles({
     name: 'synthetic-resume.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\\nfixture'),
   });
   await expect(page.getByTestId('button-managed-attach')).toBeDisabled();
@@ -604,4 +605,71 @@ test('stale pending binding is preserved for review instead of selecting another
   await expect(page.getByLabel('Saved opportunity')).toHaveValue('');
   await expect(page.getByRole('alert').filter({ hasText: 'saved pending application changed' })).toBeVisible();
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('escape-hatch-journey-resume')!).opportunityId)).toBe('old-job');
+});
+
+test('resume platform switcher lists approved choices and requires consent before replacement', async ({ page }) => {
+  const choices = [
+    { resumeId: 'master', tier: 'canonical', digest: 'a'.repeat(64), current: true },
+    { resumeId: 'it-domain', tier: 'domain', digest: 'b'.repeat(64), current: false },
+  ];
+  let current = 'master';
+  let consented = false;
+  await page.route('**/__escapehatch/managed-assist/**', async route => {
+    const pathname = new URL(route.request().url()).pathname;
+    if (pathname.endsWith('/resume-selection') && route.request().method() === 'GET') {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: true,
+          platformSlotId: 'indeed-account',
+          observation: 'unverified',
+          queueWideLock: false,
+          choices: choices.map(choice => ({ ...choice, current: choice.resumeId === current })),
+        }),
+      });
+      return;
+    }
+    if (pathname.endsWith('/resume-selection/select')) {
+      const body = route.request().postDataJSON();
+      if (!body.consentAccountWideReplacement) {
+        await route.fulfill({
+          contentType: 'application/json',
+          body: JSON.stringify({
+            ok: true,
+            selected: false,
+            requiresConsent: true,
+            queueWideLock: false,
+            disclosure: 'Replacing the account-wide indeed-account résumé with approved domain résumé it-domain.',
+            decision: { action: 'UPLOAD_REQUIRES_CONSENT', reason: 'USER_SELECTED_RESUME_SWITCH', candidateId: body.resumeId },
+          }),
+        });
+        return;
+      }
+      consented = true;
+      current = body.resumeId;
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: true,
+          selected: true,
+          requiresConsent: false,
+          queueWideLock: false,
+          decision: { action: 'KEEP_CURRENT', reason: 'USER_SELECTED_RESUME_ALREADY_CURRENT', candidateId: body.resumeId },
+        }),
+      });
+      return;
+    }
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, state: 'idle', browserOpen: false }) });
+  });
+  await mockDocuments(page);
+  await page.goto('/assist');
+  await expect(page.getByTestId('resume-platform-switcher')).toBeVisible();
+  await expect(page.getByTestId('resume-switcher-choices')).toContainText('master');
+  await expect(page.getByTestId('resume-switcher-choices')).toContainText('it-domain');
+  await page.getByTestId('resume-switcher-select-it-domain').click();
+  await expect(page.getByTestId('resume-switcher-consent')).toContainText('account-wide');
+  await page.getByTestId('resume-switcher-confirm-replacement').click();
+  await expect.poll(() => consented).toBe(true);
+  await expect(page.getByTestId('resume-switcher-status')).toContainText('Selected it-domain');
+  await expect(page.getByTestId('resume-switcher-slot')).toContainText('queue lock off');
 });

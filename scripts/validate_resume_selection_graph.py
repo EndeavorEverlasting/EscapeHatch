@@ -22,20 +22,17 @@ def main() -> None:
     assert p["default_when_unknown"] == "REVIEW_REQUIRED_NO_UPLOAD"
     assert p["never_auto_replace_persistent_resume"] is True
     assert p["never_auto_submit"] is True
-    indeed = p["indeed_default_master"]
-    assert "approved canonical revision/digest" in indeed["admission"]
-    assert "KEEP_CURRENT" in indeed["admission"]
-    assert "not an Indeed-native" in indeed["separation"]
-    assert "explicit operator approval" in indeed["exception"]
-    temporary = p["temporary_domain_switch"]
-    assert temporary["activation"] == "explicit_user_approval_of_temporary_switch"
-    assert temporary["restore_without_new_approval"].startswith("Only when")
-    assert "before_slot_readback" in temporary["required_before_switch"]
-    assert "durable_private_restoration_checkpoint" in temporary["required_before_switch"]
-    assert "verify_canonical_digest_and_slot_readback" in temporary["runtime_sequence"]
-    assert "BLOCK_RELATED_INDEED_QUEUE" in temporary["no_restore_proof"]
-    assert "automatic account-wide switch" in contract["queue_effective_master"]["indeed_exception"]
-    assert "restoring and verifying" in contract["queue_effective_master"]["reversion_rule"]
+    switching = p["operator_directed_switching"]
+    assert "freely switch" in switching["objective"]
+    assert "Unlimited user-directed" in switching["repeated_switches"]
+    assert "no role, domain scorer" in switching["selection_owner"]
+    assert "No automatic" in contract["queue_effective_master"]["no_forced_rollback"]
+    assert "not the job queue" in contract["queue_effective_master"]["no_global_lock"]
+    assert switching["no_automatic_submit"] is True
+    assert "resolveUserSelectedResume" in switching["planner"]
+    assert "listApprovedResumeChoices" in switching["picker"]
+    assert "temporary_domain_switch" not in p
+    assert "indeed_default_master" not in p
     assert "candidate_resume_id" in p["user_consent_must_name"]
     assert "content_digest" in p["user_consent_must_name"]
     assert contract["invariants"]["no_private_fixtures"] is True
@@ -49,6 +46,8 @@ def main() -> None:
         "export function validateResumeGraph(",
         "export function resolveResumeForPlatform(",
         "export function resolveEffectiveMasterForQueue(",
+        "export function resolveUserSelectedResume(",
+        "export function listApprovedResumeChoices(",
         "QUEUE_DOMAIN_CONFLICT_REVIEW_REQUIRED",
         "export function impactedResumeDescendants(",
         "PLATFORM_SLOT_SEMANTICS_UNVERIFIED",
@@ -62,18 +61,20 @@ def main() -> None:
     for disallowed in (".submit(", ".requestSubmit(", "chrome.tabs", "fetch(", "XMLHttpRequest"):
         assert disallowed not in code
     assert "never" in tests.lower() and "unknown" in tests.lower()
-    # P01 durable routing guard: a future agent cannot revive a per-Indeed-job
-    # resume review requirement by following the older generic queue plan.
+    # P83 prevents a rigid default from overriding a user-chosen résumé.
     handoff = (ROOT / "docs/agent/P04_MASTER_RESUME_APPLICATION_ROUTING_2026-11-05.md").read_text(encoding="utf-8")
     operator_light = (ROOT / "docs/agent/P04_OPERATOR_LIGHT_APPLICATION_SPRINT_2026-10-27.md").read_text(encoding="utf-8")
     domain_plan = (ROOT / "docs/agent/P04_DOMAIN_RESUME_GRAPH_PLATFORM_POLICY_2026-10-28.md").read_text(encoding="utf-8")
     workflow = (ROOT / "harness/WORKFLOWS.md").read_text(encoding="utf-8")
-    assert "Ordinary Indeed-native application" in handoff
-    assert "restore the canonical master and verify" in handoff.lower() or "restore the canonical master and verify" in handoff
-    assert "temporary switch and return" in operator_light
-    assert "KEEP_CURRENT" in domain_plan
-    assert "block subsequent Indeed applications" in domain_plan
-    assert "without repeatedly asking for review" in workflow
+    assert "switch back and forth" in handoff
+    assert "operator-directed" in operator_light
+    assert "switch back and forth" in domain_plan and "operator" in domain_plan
+    assert "user-directed" in workflow
+    for bad in ("BLOCK_RELATED_INDEED_QUEUE", "block subsequent Indeed applications",
+                "must finish by restoring", "temporary switch and return"):
+        assert bad not in (handoff + operator_light + domain_plan + workflow)
+    assert "resolveUserSelectedResume" in tests
+    assert "listApprovedResumeChoices" in tests
     assert "synthetic-owner-a" in tests
     print("RESUME_SELECTION_GRAPH_CONTRACT: PASS (static; does not prove provider/browser writes)")
 

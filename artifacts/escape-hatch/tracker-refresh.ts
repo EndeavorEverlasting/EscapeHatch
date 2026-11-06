@@ -30,6 +30,8 @@ const headers: Record<string, keyof TrackerRow> = {
   'internal profile completed on': 'internalProfileCompletedOn',
   'internal profile evidence': 'internalProfileEvidence',
   'employer profile key': 'employerProfileKey',
+  'internal platform submitted?': 'internalPlatformSubmittedCheckbox',
+  'discord community joined?': 'discordCommunityJoinedCheckbox',
 };
 const required = ['company', 'role', 'status', 'priority', 'applyUrl', 'appliedCheckbox'] as const;
 
@@ -37,9 +39,10 @@ const required = ['company', 'role', 'status', 'priority', 'applyUrl', 'appliedC
 export function createTrackerSnapshotFromValues(values: unknown, target: TrackerTarget, authPath: string, capturedAt: Date): TrackerSnapshot {
   if (!validTarget(target) || Number.isNaN(capturedAt.getTime())) fail('INVALID_TARGET');
   if (!Array.isArray(values) || values.length < 1 || values.length >= ROW_LIMIT) fail('INCOMPLETE_RESPONSE');
-  // Read A–AR: prior role/portal columns A–AJ and independent profile milestones AK–AR.
+  // Read A–AT: prior role/portal columns A–AJ, independent profile milestones AK–AS,
+  // and Discord membership AT. New read fields do not authorize submission writes.
   // Legacy A–AJ snapshots remain valid. This read width grants NO new write authority.
-  if (!values.every(row => Array.isArray(row) && row.length <= 44 && row.every(cell => ['string', 'number', 'boolean'].includes(typeof cell)))) fail('INVALID_ROWS');
+  if (!values.every(row => Array.isArray(row) && row.length <= 46 && row.every(cell => ['string', 'number', 'boolean'].includes(typeof cell)))) fail('INVALID_ROWS');
   const heading = values[0] as (string | number | boolean)[];
   const seen = new Set<string>();
   const columns = heading.map(cell => {
@@ -63,6 +66,13 @@ export function createTrackerSnapshotFromValues(values: unknown, target: Tracker
       if (key === 'appliedCheckbox') {
         if (cell === true || ['TRUE', '☑', '☒'].includes(String(cell).trim().toUpperCase())) row.appliedCheckbox = true;
         else if (cell === false || ['', 'FALSE', '☐'].includes(String(cell).trim().toUpperCase())) row.appliedCheckbox = false;
+        else fail('INVALID_ROWS');
+      } else if (key === 'internalPlatformSubmittedCheckbox' || key === 'discordCommunityJoinedCheckbox') {
+        const check = String(cell).trim().toUpperCase();
+        // Empty means unknown; it does not certify that enrollment was rejected.
+        if (check === '') return;
+        if (cell === true || ['TRUE', '☑', '☒'].includes(check)) Object.assign(row, { [key]: true });
+        else if (cell === false || ['FALSE', '☐'].includes(check)) Object.assign(row, { [key]: false });
         else fail('INVALID_ROWS');
       } else {
         const text = String(cell).trim();
@@ -182,7 +192,7 @@ async function refreshTrackerSnapshotNow(snapshotFile: string, options: RefreshO
   let response: Response | undefined;
   try {
     if (auth.token.length > 16384 || /[\r\n]/.test(auth.token)) fail('AUTH_REQUIRED');
-    const range = `'${current.sheetName.replace(/'/g, "''")}'!A1:AR${ROW_LIMIT}`;
+    const range = `'${current.sheetName.replace(/'/g, "''")}'!A1:AT${ROW_LIMIT}`;
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(current.spreadsheetId)}/values/${encodeURIComponent(range)}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE`;
     response = await (options.fetch || fetch)(url, { headers: { authorization: `Bearer ${auth.token}` }, signal: controller.signal, redirect: 'error' });
     if (response.status === 401 || response.status === 403) return { ok: false, refreshed: false, error: 'AUTH_REQUIRED' };

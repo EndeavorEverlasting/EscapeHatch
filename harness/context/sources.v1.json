@@ -115,7 +115,8 @@
     },
     "runtime_lifecycle": {
       "path": "contracts/local-runtime-lifecycle.v1.json",
-      "mode": "outline",
+      "mode": "full",
+      "encoding": "compact_json",
       "authority": 3,
       "triggers": [
         "runtime"

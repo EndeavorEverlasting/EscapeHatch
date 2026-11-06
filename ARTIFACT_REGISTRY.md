@@ -21,6 +21,11 @@ This file is the canonical registry for durable EscapeHatch artifacts. A plausib
 
 | Artifact | Path | Policy | Update trigger | Validation |
 | --- | --- | --- | --- | --- |
+| Host-first validation manifest | `contracts/host-validation.v1.json` | fixed local read-only commands; provider checks remain independent | validator inventory/timeout/profile changes | `python tests/test_host_validation.py` |
+| Host-first source validator | `scripts/host_validation.py` | tracked; private exact-SHA receipts outside checkout | local source-gate changes | `python tests/test_host_validation.py` |
+| Windows host validation entrypoint | `scripts/windows/EscapeHatch-HostValidate.ps1` | tracked; no foreground windows or installation | user-owned source gate | PowerShell AST and operator runtime |
+| Host-validation negative tests | `tests/test_host_validation.py` | tracked disposable Git fixtures; no private output | checkpoint/receipt/source-integrity changes | `python tests/test_host_validation.py` |
+| P04 host-first validation handoff | `docs/agent/P04_HOST_FIRST_ENTIRE_VALIDATION_2026-11-06.md` | tracked; no private session transcripts | host/runtime merge proof or prior-art update | repo exact-head review |
 | Installation lifecycle owner | `scripts/windows/EscapeHatch-Install.ps1` | tracked; preserves user-owned resources | install/bootstrap/remove behavior | `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/windows/Test-EscapeHatch-Install.ps1` |
 | Install adapter | `Install-EscapeHatch.cmd` | tracked thin entrypoint | installation owner changes | installer safety suite |
 | Uninstall adapter | `Uninstall-EscapeHatch.cmd` | tracked preservation-first entrypoint | installation owner changes | installer safety suite |

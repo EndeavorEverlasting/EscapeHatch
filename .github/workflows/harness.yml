@@ -70,6 +70,9 @@ jobs:
       - name: Test micro1 offline EML milestone classifier
         run: python -m unittest discover -s scripts -p 'test_import_micro1_milestone_eml.py' -v
 
+      - name: Test independent host-first validation receipts and fail-closed guards
+        run: python tests/test_host_validation.py
+
       - name: Validate local runtime lifecycle
         run: python scripts/validate_local_runtime_lifecycle.py
 

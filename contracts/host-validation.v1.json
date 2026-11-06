@@ -1,0 +1,20 @@
+{
+  "schema": "escapehatch/host-validation/v1",
+  "purpose": "Run source validators on the operator's host without waiting for GitHub Actions; does not bypass provider merge or live certification gates.",
+  "profiles": {
+    "core": ["governance", "promotion-policy", "application-parent", "journey", "micro1-email", "discord-core"],
+    "full": ["governance", "promotion-policy", "application-parent", "journey", "micro1-email", "discord-core", "tracker", "managed-assist", "typecheck", "build"]
+  },
+  "steps": {
+    "governance": {"argv": ["{python}", "scripts/validate_governance.py"], "timeout_seconds": 75},
+    "promotion-policy": {"argv": ["{python}", "scripts/validate_repository_promotion.py"], "timeout_seconds": 75},
+    "application-parent": {"argv": ["{python}", "scripts/validate_application_autofill_parent.py"], "timeout_seconds": 75},
+    "journey": {"argv": ["{python}", "scripts/validate_application_journey.py"], "timeout_seconds": 75},
+    "micro1-email": {"argv": ["{python}", "-m", "unittest", "discover", "-s", "scripts", "-p", "test_import_micro1_milestone_eml.py", "-v"], "timeout_seconds": 60},
+    "discord-core": {"argv": ["{node}", "--experimental-strip-types", "--test", "artifacts/escape-hatch/src/lib/discord-community-flow.test.ts", "artifacts/escape-hatch/src/lib/discord-membership-verifier.test.ts"], "timeout_seconds": 90},
+    "tracker": {"argv": ["{npm}", "--prefix", "artifacts/escape-hatch", "run", "test:tracker"], "timeout_seconds": 120},
+    "managed-assist": {"argv": ["{npm}", "--prefix", "artifacts/escape-hatch", "run", "test:managed-assist"], "timeout_seconds": 300},
+    "typecheck": {"argv": ["{npm}", "--prefix", "artifacts/escape-hatch", "run", "typecheck"], "timeout_seconds": 180},
+    "build": {"argv": ["{npm}", "--prefix", "artifacts/escape-hatch", "run", "build"], "timeout_seconds": 180}
+  }
+}

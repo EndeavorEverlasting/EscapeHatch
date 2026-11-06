@@ -134,7 +134,7 @@
     },
     "application_mapping": {
       "path": "skills/application-form-mapping/SKILL.md",
-      "mode": "full",
+      "mode": "outline",
       "authority": 3,
       "triggers": [
         "application"

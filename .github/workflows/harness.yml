@@ -67,6 +67,9 @@ jobs:
       - name: Validate career-state contract
         run: python scripts/validate_career_state.py
 
+      - name: Test micro1 offline EML milestone classifier
+        run: python -m unittest discover -s scripts -p 'test_import_micro1_milestone_eml.py' -v
+
       - name: Validate local runtime lifecycle
         run: python scripts/validate_local_runtime_lifecycle.py
 
@@ -119,6 +122,10 @@ jobs:
       - name: Regression guard for explicit completion and disputed receipts
         shell: powershell
         run: ./tests/windows/Test-EscapeHatch-CompleteApplication-Guard.ps1
+
+      - name: Validate Discord companion and user-action consent guards
+        shell: powershell
+        run: ./tests/windows/Test-EscapeHatch-Discord-Bootstrap.ps1
 
   windows-lifecycle:
     runs-on: windows-latest

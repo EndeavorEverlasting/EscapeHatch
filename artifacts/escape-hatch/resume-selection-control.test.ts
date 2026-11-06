@@ -4,6 +4,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
+import { ResumeSelectionStore } from './resume-selection-store.ts';
 import { ManagedListeners } from './managed-listeners.ts';
 import { createManagedBrowserAssistPlugin } from './browser-assist-control.ts';
 import { OWNER_BINDING_SCHEMA } from './src/lib/workspace-owner-binding.ts';
@@ -136,26 +137,47 @@ test('managed-assist resume-selection routes support free switching without queu
       verified: false,
       observedDigest: null,
     });
-    assert.equal(failed.code, 200);
+    assert.equal(failed.code, 422);
     assert.equal(failed.body.queueWideLock, false);
-    assert.equal(failed.body.matched, false);
+    assert.equal(failed.body.error, 'indeed_provider_readback_unavailable');
 
     const afterFail = await call('GET', '/resume-selection');
     assert.equal(afterFail.body.observation, 'unverified');
     assert.equal(afterFail.body.choices.find((c: { current: boolean }) => c.current)?.resumeId, 'it-domain');
 
+    const external = { opportunityId: 'external-job', url: 'https://jobs.example.org/apply' };
     const back = await call('POST', '/resume-selection/select', {
       resumeId: 'master',
       consentAccountWideReplacement: true,
+      ...external,
     });
     assert.equal(back.body.selected, true);
+    const externalDocuments = await call('GET', '/documents/status?' + new URLSearchParams(external));
+    assert.equal(externalDocuments.code, 200);
+    assert.equal(externalDocuments.body.package.documents.resume ?? null, null);
 
     const matched = await call('POST', '/resume-selection/provider-readback', {
       verified: true,
       observedDigest: createHash('sha256').update(masterBytes).digest('hex'),
     });
-    assert.equal(matched.body.matched, true);
+    assert.equal(matched.code, 422);
+    assert.equal(matched.body.error, 'indeed_provider_readback_unavailable');
     assert.equal(matched.body.queueWideLock, false);
+    const afterForgedMatch = await call('GET', '/resume-selection');
+    assert.equal(afterForgedMatch.body.observation, 'unverified');
+    assert.equal(afterForgedMatch.body.pending.providerVerified, false);
+
+    // Simulate a receipt written by a previous installation's browser endpoint.
+    const legacy = await new ResumeSelectionStore().markProviderReadback({
+      ownerId: OWNER,
+      verified: true,
+      observedDigest: createHash('sha256').update(masterBytes).digest('hex'),
+    });
+    assert.equal(legacy.matched, true);
+    const afterLegacyMatch = await call('GET', '/resume-selection');
+    assert.equal(afterLegacyMatch.body.observation, 'unverified');
+    assert.equal(afterLegacyMatch.body.pending.providerVerified, false);
+    assert.equal(afterLegacyMatch.body.choices.find((c: { current: boolean }) => c.current)?.resumeId, 'master');
   } finally {
     await listeners.dispose();
     delete (globalThis as Record<symbol, unknown>)[symbol];

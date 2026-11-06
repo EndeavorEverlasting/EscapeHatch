@@ -5,18 +5,12 @@ const API = '/__escapehatch/managed-assist/resume-selection';
 type ResumeChoice = {
   resumeId: string;
   tier: 'canonical' | 'domain' | 'job';
-  digest: string;
   current: boolean;
 };
 
 type Listed = {
   ok?: boolean;
-  platformSlotId?: string;
-  platform?: string | null;
-  observation?: string | null;
   choices?: ResumeChoice[];
-  pending?: { resumeId: string; digest: string; providerVerified: boolean } | null;
-  queueWideLock?: boolean;
   error?: string;
 };
 
@@ -26,7 +20,6 @@ type SelectResult = {
   requiresConsent?: boolean;
   disclosure?: string | null;
   decision?: { action: string; reason: string; candidateId: string | null };
-  queueWideLock?: boolean;
   error?: string;
 };
 
@@ -44,7 +37,7 @@ export function ResumePlatformSwitcher({
   const [listed, setListed] = useState<Listed | null>(null);
   const [message, setMessage] = useState('Loading approved résumé choices…');
   const [busy, setBusy] = useState(false);
-  const [pendingConsent, setPendingConsent] = useState<{ resumeId: string; disclosure: string } | null>(null);
+  const [pendingConsent, setPendingConsent] = useState<string | null>(null);
   const [registerId, setRegisterId] = useState('');
   const [registerTier, setRegisterTier] = useState<'canonical' | 'domain'>('canonical');
   const [domainTags, setDomainTags] = useState('technology');
@@ -57,13 +50,13 @@ export function ResumePlatformSwitcher({
       if (!response.ok) {
         setListed(null);
         setMessage(json.error === 'workspace_owner_required'
-          ? 'Select the installed workspace owner before switching account-wide résumés.'
+          ? 'Recover your workspace before choosing a résumé.'
           : 'Résumé choices unavailable. Existing private data was preserved.');
         return;
       }
       setListed(json);
       setMessage(json.choices?.length
-        ? 'Choose any approved master or domain résumé. Your choice stays selected across jobs until you change it.'
+        ? 'Choose an approved résumé below.'
         : 'Register an approved canonical master (and optional domain variants) to enable switching.');
     } catch {
       setListed(null);
@@ -93,43 +86,17 @@ export function ResumePlatformSwitcher({
       const json = await response.json() as SelectResult;
       if (!response.ok) throw new Error(json.error || 'select_failed');
       if (json.requiresConsent && json.disclosure) {
-        setPendingConsent({ resumeId, disclosure: json.disclosure });
-        setMessage('Confirm the account-wide replacement below. This does not submit any application.');
+        setPendingConsent(resumeId);
+        setMessage('Review where this choice will be used.');
         return;
       }
       setPendingConsent(null);
       await load();
       setMessage(json.selected
-        ? `Selected ${resumeId}. Provider readback still required before claiming the live Indeed slot changed.`
+        ? `Selected ${resumeId}. Saved in EscapeHatch. Indeed account status is unverified.`
         : `Selection not applied (${json.decision?.reason || 'review required'}). Unrelated applications stay available.`);
     } catch {
       setMessage('Résumé switch did not complete. Existing selection and queue were preserved.');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function markReadback(verified: boolean) {
-    setBusy(true);
-    try {
-      const digest = listed?.pending?.digest || listed?.choices?.find(c => c.current)?.digest || null;
-      const response = await fetch(API + '/provider-readback', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: {
-          'content-type': 'application/json',
-          'x-escapehatch-operator-action': 'confirmed',
-        },
-        body: JSON.stringify({ verified, observedDigest: verified ? digest : null }),
-      });
-      const json = await response.json();
-      if (!response.ok) throw new Error(json.error || 'readback_failed');
-      setMessage(verified && json.matched
-        ? 'Provider readback matched the selected résumé.'
-        : 'Slot marked unverified for further unsafe writes. The Indeed application queue is not locked.');
-      await load();
-    } catch {
-      setMessage('Provider readback was not recorded. Existing selection preserved; queue remains available.');
     } finally {
       setBusy(false);
     }
@@ -183,15 +150,13 @@ export function ResumePlatformSwitcher({
     >
       <h3 className="font-display text-xl">Indeed résumé switcher</h3>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
-        Switch freely between your approved master and domain résumés. The selected résumé stays active across
-        opportunities until you change it. EscapeHatch does not restore the master after one application.
-        Account-wide replacement still needs your confirmation and provider readback.
+        Choose the approved résumé EscapeHatch should use when preparing Indeed applications.
+        Your choice carries across jobs until you change it.
       </p>
-      <p className="mt-2 text-xs text-muted-foreground" data-testid="resume-switcher-slot">
-        Slot: {listed?.platformSlotId || 'indeed-account'}
-        {listed?.observation ? ` · observation ${listed.observation}` : ''}
-        {listed?.queueWideLock === false ? ' · queue lock off' : ''}
-      </p>
+      <div className="mt-3 border-l-2 border-border pl-3 text-sm" data-testid="resume-switcher-slot">
+        <p className="font-medium">Indeed account résumé · Unverified</p>
+        <p className="text-muted-foreground">Manage the shared copy in your Indeed profile. EscapeHatch cannot verify it yet.</p>
+      </div>
       {choices.length > 0 ? (
         <ul className="mt-3 grid gap-2" data-testid="resume-switcher-choices">
           {choices.map(choice => (
@@ -199,14 +164,13 @@ export function ResumePlatformSwitcher({
               <div>
                 <p className="text-sm font-semibold">{choice.resumeId}</p>
                 <p className="text-xs text-muted-foreground">
-                  {choice.tier} · digest {choice.digest.slice(0, 12)}…
-                  {choice.current ? ' · currently selected' : ''}
+                  {choice.tier === 'canonical' ? 'Master résumé' : 'Domain résumé'}
                 </p>
               </div>
               <button
                 type="button"
                 className="rounded border border-primary px-3 py-2 text-sm font-medium text-primary disabled:opacity-50"
-                disabled={disabled || busy || choice.current}
+                disabled={disabled || busy || choice.current || pendingConsent !== null}
                 data-testid={'resume-switcher-select-' + choice.resumeId}
                 onClick={() => void select(choice.resumeId, false)}
               >
@@ -220,16 +184,18 @@ export function ResumePlatformSwitcher({
       )}
       {pendingConsent && (
         <div className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-3" data-testid="resume-switcher-consent">
-          <p className="text-sm">{pendingConsent.disclosure}</p>
+          <p className="text-sm">Save {pendingConsent} for future Indeed application preparation.
+            To replace the shared account résumé, upload the approved PDF in your Indeed profile.</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
               className="rounded bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
               disabled={disabled || busy}
               data-testid="resume-switcher-confirm-replacement"
-              onClick={() => void select(pendingConsent.resumeId, true)}
+              autoFocus
+              onClick={() => void select(pendingConsent, true)}
             >
-              Confirm account-wide replacement
+              Save choice
             </button>
             <button
               type="button"
@@ -242,26 +208,6 @@ export function ResumePlatformSwitcher({
           </div>
         </div>
       )}
-      <div className="mt-4 flex flex-wrap gap-2">
-        <button
-          type="button"
-          className="rounded border border-border px-3 py-2 text-sm"
-          disabled={busy}
-          data-testid="resume-switcher-readback-ok"
-          onClick={() => void markReadback(true)}
-        >
-          Mark provider readback matched
-        </button>
-        <button
-          type="button"
-          className="rounded border border-border px-3 py-2 text-sm"
-          disabled={busy}
-          data-testid="resume-switcher-readback-fail"
-          onClick={() => void markReadback(false)}
-        >
-          Mark provider readback failed
-        </button>
-      </div>
       <details className="mt-4 rounded-lg border border-border p-3 text-sm">
         <summary className="cursor-pointer font-semibold">Register an approved résumé PDF</summary>
         <p className="mt-2 text-xs text-muted-foreground">

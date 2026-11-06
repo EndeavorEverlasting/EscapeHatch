@@ -378,7 +378,7 @@ async function preferPlatformSelectedResume(
     platformResume: {
       resumeId: selected.resumeId,
       digest: selected.digest,
-      providerVerified: selected.providerVerified,
+      providerVerified: false,
       platformSlotId: slotId,
       queueWideLock: false as const,
     },
@@ -508,6 +508,9 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             return respond(res, 200, {
               ok: true,
               ...listed,
+              // Existing stores may contain matches asserted by the old browser endpoint.
+              observation: 'unverified',
+              pending: listed.pending ? { ...listed.pending, providerVerified: false } : null,
               values: 'redacted',
               note: 'Choices are private approved résumés. Account-wide replacement still needs explicit consent and provider readback.',
             });
@@ -673,7 +676,12 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             });
             // Optional: bind the chosen approved PDF into the current opportunity package
             // so Attach/Prepare reuse the same bytes without a second editorial review.
-            if (result.selected && typeof payload.opportunityId === 'string' && typeof payload.url === 'string') {
+            if (
+              result.selected &&
+              typeof payload.opportunityId === 'string' &&
+              typeof payload.url === 'string' &&
+              indeedSlotIdForUrl(payload.url) === result.decision.platformSlotId
+            ) {
               const scope = documentScope(payload.opportunityId, payload.url);
               validateApplicationUrl(scope.url);
               const selected = await resumeSelectionStore.currentSelectedPdf(owner.ownerId, result.decision.platformSlotId);
@@ -705,23 +713,12 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             });
           }
           if (url.pathname === PREFIX + '/resume-selection/provider-readback') {
-            await selectInstalledHostWorkspace();
-            const owner = await readHostWorkspaceOwner();
-            if (!owner) throw new Error('Verified applicant workspace owner is required.');
-            const result = await resumeSelectionStore.markProviderReadback({
-              ownerId: owner.ownerId,
-              platformSlotId: typeof payload.platformSlotId === 'string' ? payload.platformSlotId : INDEED_ACCOUNT_SLOT_ID,
-              observedDigest: typeof payload.observedDigest === 'string' ? payload.observedDigest : null,
-              verified: payload.verified === true,
-            });
-            return respond(res, 200, {
-              ok: true,
-              matched: result.matched,
+            // This route previously accepted the local candidate's own digest as provider evidence.
+            // Keep stale clients fail-closed until a trusted account-slot observer exists.
+            return respond(res, 422, {
+              ok: false,
+              error: 'indeed_provider_readback_unavailable',
               queueWideLock: false,
-              values: 'redacted',
-              note: result.matched
-                ? 'Provider readback matched the selected résumé digest.'
-                : 'Slot marked unverified for further unsafe writes; unrelated applications remain available.',
             });
           }
           if (url.pathname === PREFIX + '/private-sync/pair') {

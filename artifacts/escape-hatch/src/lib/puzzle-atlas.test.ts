@@ -20,7 +20,7 @@ test('all ten independently named modules have safe varied presentations', () =>
   assert.equal(PUZZLE_ATLAS_MODULES.length, 10);
   assert.equal(new Set(PUZZLE_ATLAS_MODULES.map(x => x.id)).size, 10);
   assert.equal(PUZZLE_ATLAS_MODULES.every(x => x.variations.length >= 3), true);
-  assert.equal(PUZZLE_ATLAS_MODULES.filter(x => x.artwork.path).length, 1, 'only verified shipped images are browser paths');
+  assert.equal(PUZZLE_ATLAS_MODULES.filter(x => x.artwork.path).length, 10, 'all ten original illustrations have shipped browser paths');
   assert.equal(PUZZLE_ATLAS_MODULES.some(x => x.id === 'answer-constellation'), true);
   assert.equal(PUZZLE_ATLAS_MODULES.some(x => x.id === 'document-vault'), true);
 });

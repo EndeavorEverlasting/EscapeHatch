@@ -23,7 +23,7 @@ def main() -> None:
     assert p["never_auto_replace_persistent_resume"] is True
     assert p["never_auto_submit"] is True
     indeed = p["indeed_default_master"]
-    assert "approved canonical master" in indeed["admission"]
+    assert "approved canonical revision/digest" in indeed["admission"]
     assert "KEEP_CURRENT" in indeed["admission"]
     assert "not an Indeed-native" in indeed["separation"]
     assert "explicit operator approval" in indeed["exception"]

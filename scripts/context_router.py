@@ -231,13 +231,20 @@ def compact_trace(source: str, maximum_lines: int = 48) -> list[str]:
             for number, kind, text in selected]
 
 
+def default_cli_budget(root: Path, task: str, lane: str) -> int:
+    """Retain complete runtime lifecycle safety policy; other lanes remain 32 KiB."""
+    picked = resolve_lane(task, lane, load_policy(root))
+    return 36 * 1024 if picked == "runtime" else 32 * 1024
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--task", default="repository maintenance")
     parser.add_argument("--lane", default="auto")
     parser.add_argument("--require", action="append", default=[], metavar="SOURCE_ID", help="Admit exact registered source with full content or block on budget")
-    parser.add_argument("--budget-bytes", type=int, default=32768)
+    parser.add_argument("--budget-bytes", type=int, default=None,
+                        help="Explicit source budget; default 32 KiB, runtime lane 36 KiB for the complete safety contract")
     parser.add_argument("--trace", type=Path)
     parser.add_argument("--max-trace-lines", type=int, default=48)
     parser.add_argument("--output", type=Path)
@@ -248,14 +255,15 @@ def main() -> int:
     try:
         if args.verify_receipt:
             verify_receipt(args.root.resolve(), json.loads(args.verify_receipt.read_text(encoding="utf-8")))
-        result = select(args.root.resolve(), args.task, args.lane, args.budget_bytes, tuple(args.require))
+        budget = args.budget_bytes if args.budget_bytes is not None else default_cli_budget(args.root.resolve(), args.task, args.lane)
+        result = select(args.root.resolve(), args.task, args.lane, budget, tuple(args.require))
         if args.mission_file:
             if (not args.output or args.mission_file.resolve().is_relative_to(args.root.resolve())
                     or args.output.resolve().is_relative_to(args.root.resolve())):
                 raise ValueError("CONTEXT_PRIVATE_BRIEF_REQUIRES_EXTERNAL_INPUT_OUTPUT")
             result["mission_brief"] = compact_mission(json.loads(args.mission_file.read_text(encoding="utf-8")))
             total = len(json.dumps(result["mission_brief"], ensure_ascii=False).encode("utf-8"))
-            if total + result["candidate_payload_bytes"] > args.budget_bytes:
+            if total + result["candidate_payload_bytes"] > budget:
                 raise ValueError("CONTEXT_MISSION_PLUS_SOURCE_BUDGET_EXCEEDED")
         if args.trace:
             result["trace_signatures"] = compact_trace(args.trace.read_text(encoding="utf-8"),

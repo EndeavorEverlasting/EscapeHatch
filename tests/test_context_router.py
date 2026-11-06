@@ -43,6 +43,20 @@ class ContextRoutingTests(unittest.TestCase):
                          "application_mapping"}.issubset(ids))
         self.assertNotIn("runtime_manager", ids)
 
+    def test_application_mapping_defaults_to_outline_and_supports_full_escalation(self):
+        outlined = router.select(self.root, "prepare ATS application", "application", 50000)
+        entry = next(item for item in outlined["selected"] if item["id"] == "application_mapping")
+        self.assertEqual(entry["mode"], "outline")
+        self.assertIn("Ownership", entry["payload"])
+        self.assertIn("application_parent", [item["id"] for item in outlined["selected"]])
+
+        full = router.select(self.root, "prepare ATS application", "application", 50000,
+                             require_full=("application_mapping",))
+        full_entry = next(item for item in full["selected"] if item["id"] == "application_mapping")
+        self.assertEqual(full_entry["mode"], "full")
+        self.assertIn("SOURCE_ID=application_mapping", full_entry["payload"])
+        self.assertGreater(full["candidate_payload_bytes"], outlined["candidate_payload_bytes"])
+
     def test_ambiguous_auto_task_fail_closed_to_general(self):
         self.assertEqual(router.resolve_lane("fix startup and application", "auto",
                                              router.load_policy(self.root)), "general")

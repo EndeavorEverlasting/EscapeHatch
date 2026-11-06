@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { impactedResumeDescendants, resolveResumeForPlatform, resolveEffectiveMasterForQueue, validateResumeGraph,
+import { impactedResumeDescendants, resolveResumeForPlatform, resolveEffectiveMasterForQueue, resolveUserSelectedResume, listApprovedResumeChoices, validateResumeGraph,
   type ResumeGraph, type ResumeNode } from './resume-selection-graph.ts';
 const H = (c: string) => c.repeat(64);
 function fixture(): ResumeGraph {
@@ -13,7 +13,7 @@ function fixture(): ResumeGraph {
       { id: 'construction', type: 'resume', owner: 'synthetic-owner-a', tier: 'domain', domainTags: ['construction'], revision: 'c1', digest: H('d'), review: 'approved' },
       { id: 'job-specific', type: 'resume', owner: 'synthetic-owner-a', tier: 'job', revision: 'j1', digest: H('e'), review: 'approved' },
       { id: 'example-role', type: 'opportunity', owner: 'synthetic-owner-a', postingDigest: H('f'), domainWeights: { management: 4, it: 2, construction: 1 } },
-      { id: 'global', type: 'platform_slot', owner: 'synthetic-owner-a', platform: 'indeed', scope: 'persistent_global', observation: 'verified', observationReceiptDigest: H('a') },
+      { id: 'global', type: 'platform_slot', owner: 'synthetic-owner-a', platform: 'generic-board', scope: 'persistent_global', observation: 'verified', observationReceiptDigest: H('a') },
       { id: 'perapp', type: 'platform_slot', owner: 'synthetic-owner-a', platform: 'employer-ats', scope: 'isolated_application', observation: 'verified', observationReceiptDigest: H('b') },
       { id: 'unknown', type: 'platform_slot', owner: 'synthetic-owner-a', platform: 'glassdoor', scope: 'unknown', observation: 'unverified' },
       { id: 'draft-application', type: 'application', owner: 'synthetic-owner-a', opportunityId: 'example-role', state: 'in_progress' },
@@ -168,4 +168,82 @@ test('queue must be opportunity-bound and must target an observed global slot',(
  assert.equal(resolveEffectiveMasterForQueue(g,{platformSlotId:'global',opportunityIds:['unknown-role']}).reason,'QUEUE_HAS_UNKNOWN_OPPORTUNITY');
  assert.equal(resolveEffectiveMasterForQueue(g,{platformSlotId:'global',opportunityIds:['example-role','example-role']}).reason,'MISSING_QUEUE_OPPORTUNITIES');
  assert.equal(resolveEffectiveMasterForQueue(g,{platformSlotId:'perapp',opportunityIds:['example-role']}).reason,'PERSISTENT_PLATFORM_SCOPE_UNVERIFIED');
+});
+
+
+function indeedFixture(): ResumeGraph {
+  const g = fixture();
+  const slot = g.nodes.find(n => n.id === 'global');
+  if (!slot || slot.type !== 'platform_slot') throw new Error('fixture slot missing');
+  slot.platform = 'indeed';
+  return g;
+}
+test('Indeed preserves the approved user-selected domain across unlike opportunities', () => {
+  const g = indeedFixture();
+  const r = resolveResumeForPlatform(g, select);
+  assert.deepEqual([r.action, r.candidateId, r.reason],
+    ['KEEP_CURRENT', 'it', 'INDEED_USER_CHOICE_PRESERVED']);
+  g.nodes.push({ id:'another-domain-role',type:'opportunity',owner:g.owner,
+    postingDigest:H('1'),domainWeights:{management:4,construction:2} });
+  const next = resolveResumeForPlatform(g,
+    { opportunityId:'another-domain-role',platformSlotId:'global' });
+  assert.deepEqual([next.action,next.candidateId],['KEEP_CURRENT','it']);
+});
+test('Indeed account-wide resume queue does not override a chosen master or domain', () => {
+  const g = indeedFixture();
+  g.nodes.push({ id:'other-role',type:'opportunity',owner:g.owner,
+    postingDigest:H('1'),domainWeights:{construction:4} });
+  const r = resolveEffectiveMasterForQueue(g,
+    { opportunityIds:['example-role','other-role'],platformSlotId:'global' });
+  assert.deepEqual([r.action,r.candidateId],['KEEP_CURRENT','it']);
+  g.edges = g.edges.map(e => e.kind === 'slot_points_to' ? {...e,to:'base'} : e);
+  const back = resolveEffectiveMasterForQueue(g,
+    { opportunityIds:['other-role','example-role'],platformSlotId:'global' });
+  assert.deepEqual([back.action,back.candidateId],['KEEP_CURRENT','base']);
+});
+test('user can explicitly switch master to domain and domain to master with the same API', () => {
+  const g = indeedFixture();
+  const choices = listApprovedResumeChoices(g,'global');
+  assert.deepEqual(choices.map(c => [c.resumeId,c.current]),
+    [['base',false],['construction',false],['it',true],['pm',false]]);
+  assert.equal(resolveUserSelectedResume(g,{platformSlotId:'global',resumeId:'base'}).action,'UPLOAD_REQUIRES_CONSENT');
+  assert.equal(resolveUserSelectedResume(g,{platformSlotId:'global',resumeId:'pm'}).candidateId,'pm');
+  assert.equal(resolveUserSelectedResume(g,{platformSlotId:'global',resumeId:'it'}).action,'KEEP_CURRENT');
+  g.edges = g.edges.map(e => e.kind === 'slot_points_to' ? {...e,to:'base'} : e);
+  assert.equal(resolveUserSelectedResume(g,{platformSlotId:'global',resumeId:'it'}).action,'UPLOAD_REQUIRES_CONSENT');
+  assert.equal(resolveUserSelectedResume(g,{platformSlotId:'global',resumeId:'base'}).action,'KEEP_CURRENT');
+});
+test('domain selection is not an irreversible one-job exception or automatic reset', () => {
+  const g = indeedFixture();
+  // Choose a different reusable domain in the same verified Indeed account slot.
+  const choice = resolveUserSelectedResume(g,{platformSlotId:'global',resumeId:'construction'});
+  assert.equal(choice.action,'UPLOAD_REQUIRES_CONSENT');
+  assert.equal(choice.reason,'USER_SELECTED_RESUME_SWITCH');
+  // An application state change does not plan any implicit rollback.
+  (g.nodes.find(n => n.id === 'draft-application') as {state:string}).state='submitted';
+  g.edges = g.edges.map(e => e.kind === 'slot_points_to' ? {...e,to:'construction'} : e);
+  assert.equal(resolveResumeForPlatform(g,select).candidateId,'construction');
+  assert.equal(resolveUserSelectedResume(g,{platformSlotId:'global',resumeId:'construction'}).action,'KEEP_CURRENT');
+  // The user can return to master later, on their own timing.
+  assert.equal(resolveUserSelectedResume(g,{platformSlotId:'global',resumeId:'base'}).action,'UPLOAD_REQUIRES_CONSENT');
+});
+test('explicit switcher still rejects unapproved, stale, cross-owner and unknown-scope choices', () => {
+  const g = indeedFixture();
+  assert.equal(resolveUserSelectedResume(g,{platformSlotId:'global',resumeId:'job-specific'}).reason,'JOB_DERIVATIVE_NOT_ACCOUNT_WIDE');
+  assert.equal(resolveUserSelectedResume(g,{platformSlotId:'global',resumeId:'unknown'}).reason,'UNKNOWN_RESUME_CHOICE');
+  assert.equal(resolveUserSelectedResume(g,{platformSlotId:'unknown',resumeId:'it'}).reason,'PLATFORM_SLOT_SEMANTICS_UNVERIFIED');
+  assert.equal(resolveUserSelectedResume(g,{platformSlotId:'perapp',resumeId:'it'}).reason,'PLATFORM_SLOT_NOT_ACCOUNT_WIDE');
+  (g.nodes.find(n => n.id === 'pm') as ResumeNode).review='draft';
+  assert.equal(resolveUserSelectedResume(g,{platformSlotId:'global',resumeId:'pm'}).reason,'SELECTED_RESUME_NOT_APPROVED_OR_STALE');
+  assert.equal(listApprovedResumeChoices(g,'global').some(c=>c.resumeId==='pm'),false);
+  (g.nodes.find(n => n.id === 'it') as ResumeNode).owner='other-user';
+  assert.equal(resolveUserSelectedResume(g,{platformSlotId:'global',resumeId:'base'}).reason,'INVALID_GRAPH');
+});
+test('unknown or failed provider readback never silently claims a user-selected switch', () => {
+  const g=indeedFixture();
+  const slot=g.nodes.find(n=>n.id==='global');
+  if(!slot || slot.type!=='platform_slot') throw Error('fixture slot missing');
+  slot.observation='unverified';
+  assert.equal(resolveUserSelectedResume(g,{platformSlotId:'global',resumeId:'base'}).action,'REVIEW_REQUIRED');
+  assert.equal(resolveResumeForPlatform(g,select).reason,'PLATFORM_SLOT_SEMANTICS_UNVERIFIED');
 });

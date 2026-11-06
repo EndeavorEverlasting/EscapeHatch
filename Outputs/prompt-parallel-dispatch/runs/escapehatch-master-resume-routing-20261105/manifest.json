@@ -23,7 +23,7 @@
     "parallel_disposition": "CONDITIONAL_AFTER_LOCAL_RUNTIME_AND_SINGLE_WRITER_COLLISION_CHECK"
   },
   "convergence_owner": "EH-R4",
-  "status": "PROVIDER_HANDOFF_AUTHORED_LOCAL_DISPATCH_NOT_OBSERVED",
+  "status": "PROVIDER_HANDOFF_AUTHORED_UNVALIDATED_PORTABLE_MANIFEST",
   "canonical_target_disposition": "PRESERVE_GLOBAL_MANIFEST_RUN_SCOPED_ONLY",
   "manifest_path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-master-resume-routing-20261105/manifest.json",
   "lanes": [
@@ -55,12 +55,11 @@
       ],
       "posture": "read-only recovery and private receipt",
       "launch": {
-        "mode": "runtime_tool",
-        "operation": "existing_local_agent_execute_handoff_lane",
-        "arguments": {
-          "handoff": "docs/agent/P04_MASTER_RESUME_APPLICATION_ROUTING_2026-11-05.md",
-          "lane": "EH-R0"
-        }
+        "mode": "UNRESOLVED_LOCAL_ADAPTER",
+        "handoff": "docs/agent/P04_MASTER_RESUME_APPLICATION_ROUTING_2026-11-05.md",
+        "lane_id": "EH-R0",
+        "run_id": "escapehatch-master-resume-routing-20261105",
+        "required_action": "The actual local agent must inspect its available executor and bind a real tool or command; this provider session did not dispatch a lane."
       },
       "validation": [
         "Status-EscapeHatch.ps1 on installed selected source",
@@ -99,12 +98,11 @@
       ],
       "posture": "private applicant-workspace writer, serialized per opportunity",
       "launch": {
-        "mode": "runtime_tool",
-        "operation": "existing_local_agent_execute_handoff_lane",
-        "arguments": {
-          "handoff": "docs/agent/P04_MASTER_RESUME_APPLICATION_ROUTING_2026-11-05.md",
-          "lane": "EH-R3"
-        }
+        "mode": "UNRESOLVED_LOCAL_ADAPTER",
+        "handoff": "docs/agent/P04_MASTER_RESUME_APPLICATION_ROUTING_2026-11-05.md",
+        "lane_id": "EH-R3",
+        "run_id": "escapehatch-master-resume-routing-20261105",
+        "required_action": "The actual local agent must inspect its available executor and bind a real tool or command; this provider session did not dispatch a lane."
       },
       "validation": [
         "actual employer form readback",
@@ -144,12 +142,11 @@
       ],
       "posture": "isolated product writer",
       "launch": {
-        "mode": "runtime_tool",
-        "operation": "existing_local_agent_execute_handoff_lane",
-        "arguments": {
-          "handoff": "docs/agent/P04_MASTER_RESUME_APPLICATION_ROUTING_2026-11-05.md",
-          "lane": "EH-R1"
-        }
+        "mode": "UNRESOLVED_LOCAL_ADAPTER",
+        "handoff": "docs/agent/P04_MASTER_RESUME_APPLICATION_ROUTING_2026-11-05.md",
+        "lane_id": "EH-R1",
+        "run_id": "escapehatch-master-resume-routing-20261105",
+        "required_action": "The actual local agent must inspect its available executor and bind a real tool or command; this provider session did not dispatch a lane."
       },
       "validation": [
         "python scripts/validate_resume_selection_graph.py",
@@ -189,12 +186,11 @@
       ],
       "posture": "isolated product writer, collision-check first",
       "launch": {
-        "mode": "runtime_tool",
-        "operation": "existing_local_agent_execute_handoff_lane",
-        "arguments": {
-          "handoff": "docs/agent/P04_MASTER_RESUME_APPLICATION_ROUTING_2026-11-05.md",
-          "lane": "EH-R2"
-        }
+        "mode": "UNRESOLVED_LOCAL_ADAPTER",
+        "handoff": "docs/agent/P04_MASTER_RESUME_APPLICATION_ROUTING_2026-11-05.md",
+        "lane_id": "EH-R2",
+        "run_id": "escapehatch-master-resume-routing-20261105",
+        "required_action": "The actual local agent must inspect its available executor and bind a real tool or command; this provider session did not dispatch a lane."
       },
       "validation": [
         "python scripts/validate_career_artifact_propagation.py",
@@ -235,12 +231,11 @@
       ],
       "posture": "convergence owner",
       "launch": {
-        "mode": "runtime_tool",
-        "operation": "existing_local_agent_execute_handoff_lane",
-        "arguments": {
-          "handoff": "docs/agent/P04_MASTER_RESUME_APPLICATION_ROUTING_2026-11-05.md",
-          "lane": "EH-R4"
-        }
+        "mode": "UNRESOLVED_LOCAL_ADAPTER",
+        "handoff": "docs/agent/P04_MASTER_RESUME_APPLICATION_ROUTING_2026-11-05.md",
+        "lane_id": "EH-R4",
+        "run_id": "escapehatch-master-resume-routing-20261105",
+        "required_action": "The actual local agent must inspect its available executor and bind a real tool or command; this provider session did not dispatch a lane."
       },
       "validation": [
         "full affected repository validators",

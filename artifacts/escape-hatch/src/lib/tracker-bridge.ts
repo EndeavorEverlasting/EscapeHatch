@@ -38,6 +38,10 @@ export type TrackerRow = {
   internalProfileCompletedOn?: string;
   internalProfileEvidence?: string;
   employerProfileKey?: string;
+  /** Distinct from Applied?: portal enrollment accepted, not an application. */
+  internalPlatformSubmittedCheckbox?: boolean;
+  /** Distinct from all employer statuses: Discord membership checked in tracker. */
+  discordCommunityJoinedCheckbox?: boolean;
 };
 
 export type TrackerMetrics = {

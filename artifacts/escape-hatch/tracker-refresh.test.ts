@@ -63,7 +63,7 @@ test('real request is fixed to existing binding and only a validated response up
     const url = new URL(String(input));
     assert.equal(url.hostname, 'sheets.googleapis.com');
     assert.equal(url.searchParams.get('valueRenderOption'), 'FORMATTED_VALUE');
-    assert.equal(decodeURIComponent(url.pathname), `/v4/spreadsheets/${target.spreadsheetId}/values/'Applications'' history'!A1:AR1500`);
+    assert.equal(decodeURIComponent(url.pathname), `/v4/spreadsheets/${target.spreadsheetId}/values/'Applications'' history'!A1:AT1500`);
     assert.equal(init?.redirect, 'error');
     assert.equal((init?.headers as Record<string, string>).authorization, 'Bearer synthetic-secret');
     assert.ok(init?.signal);
@@ -272,26 +272,34 @@ test('timeout during body reading cancels the stream and releases the reader wit
 }));
 
 test('expanded tracker reads separate profile milestones without inventing saved answers', () => {
-  const heading44 = Array(44).fill('');
-  const row44 = Array(44).fill('');
+  const heading44 = Array(46).fill('');
+  const row44 = Array(46).fill('');
   for (const [index, header] of [[0,'Applied?'],[1,'Priority'],[2,'Status'],[3,'Company'],[4,'Role'],[16,'Apply Link'],
     [36,'Talent Community Status'],[37,'Talent Community Confirmed On'],[38,'Talent Community Evidence'],
     [39,'Talent Community Answer Evidence'],[40,'Internal Employer Profile Status'],[41,'Internal Profile Completed On'],
-    [42,'Internal Profile Evidence'],[43,'Employer Profile Key']] as const) heading44[index] = header;
+    [42,'Internal Profile Evidence'],[43,'Employer Profile Key'],
+    [44,'Internal Platform Submitted?'],[45,'Discord Community Joined?']] as const) heading44[index] = header;
   for (const [index, value] of [[0,'☑'],[1,'High'],[2,'Submitted'],[3,'Synthetic Cognizant'],[4,'Synthetic Team Lead'],
     [16,'https://example.test/apply'],[36,'Confirmed'],[37,'11/03/2026'],
     [38,'Employer thank-you confirmation screenshot'],[39,'Saved answer keys only; values not cloud-observed'],
     [40,'Not Assessed'],[42,'No separate internal account proof'],
-    [43,'synthetic-company:us-en:community']] as const) row44[index] = value;
+    [43,'synthetic-company:us-en:community'],[44,'☑'],[45,'☐']] as const) row44[index] = value;
   const snap = createTrackerSnapshotFromValues([heading44,row44],target,'synthetic',date);
   assert.equal(snap.applications[0].status,'Submitted');
   assert.equal(snap.applications[0].talentCommunityStatus,'Confirmed');
   assert.equal(snap.applications[0].internalEmployerProfileStatus,'Not Assessed');
+  assert.equal(snap.applications[0].internalPlatformSubmittedCheckbox,true);
+  assert.equal(snap.applications[0].discordCommunityJoinedCheckbox,false);
   assert.equal(snap.metrics.submittedStatus,1);
   assert.equal(snap.metrics.talentCommunitiesConfirmed,1);
   assert.equal(snap.metrics.internalProfilesCompleted,0);
   assert.equal(snap.applications[0].talentCommunityAnswerEvidence?.includes('keys only'),true);
-  assert.throws(() => createTrackerSnapshotFromValues([Array(45).fill('header')],target,'synthetic',date));
+  assert.throws(() => createTrackerSnapshotFromValues([Array(47).fill('header')],target,'synthetic',date));
+  const blankDiscord = [...row44]; blankDiscord[45] = '';
+  const blank = createTrackerSnapshotFromValues([heading44,blankDiscord],target,'synthetic',date);
+  assert.equal(blank.applications[0].discordCommunityJoinedCheckbox, undefined);
+  const invalidDiscord = [...row44]; invalidDiscord[45] = 'joined by bot';
+  assert.throws(() => createTrackerSnapshotFromValues([heading44,invalidDiscord],target,'synthetic',date));
   assert.equal(createTrackerSnapshotFromValues(values,target,'synthetic',date).metrics.talentCommunitiesConfirmed,0,
     'legacy narrower snapshots remain usable and have zero asserted community completions');
 });

@@ -647,7 +647,8 @@ function HomePage({ profile, answers, assistProfile, applications, setApplicatio
   const documentedProfiles = liveSnapshot
     ? [...new Map(liveSnapshot.applications.filter(row =>
         (row.talentCommunityStatus?.toLowerCase() === 'confirmed' && row.talentCommunityConfirmedOn && row.talentCommunityEvidence) ||
-        (row.internalEmployerProfileStatus?.toLowerCase() === 'completed' && row.internalProfileCompletedOn && row.internalProfileEvidence)
+        (row.internalEmployerProfileStatus?.toLowerCase() === 'completed' && row.internalProfileCompletedOn && row.internalProfileEvidence) ||
+        row.internalPlatformSubmittedCheckbox === true || row.discordCommunityJoinedCheckbox === true
       ).map(row => [row.employerProfileKey || row.company.trim().toLowerCase(), row] as const)).values()].slice(0, 5)
     : [];
   const stats = metrics
@@ -714,15 +715,19 @@ function HomePage({ profile, answers, assistProfile, applications, setApplicatio
           <h2 className="mt-1 font-display text-2xl">Employer profile milestones</h2></div>
         <Link href="/assist" className="text-sm font-bold text-primary underline">Review saved application answers</Link>
       </div>
-      {documentedProfiles.map(row => <div key={row.employerProfileKey || row.company} className="mt-4 grid gap-3 rounded-xl border border-border/70 bg-secondary/30 p-4 md:grid-cols-3">
+      {documentedProfiles.map(row => <div key={row.employerProfileKey || row.company} className="mt-4 grid gap-3 rounded-xl border border-border/70 bg-secondary/30 p-4 md:grid-cols-4">
         <div><p className="text-sm font-bold">{row.company}</p><p className="mt-1 text-xs text-muted-foreground">Talent community</p>
           <p className="text-sm font-semibold" data-testid="home-community-profile-status">{row.talentCommunityStatus || 'Not Assessed'}{row.talentCommunityConfirmedOn ? ' · ' + row.talentCommunityConfirmedOn : ''}</p></div>
         <div><p className="text-xs text-muted-foreground">Private saved answers</p>
           <p className="mt-1 text-sm" data-testid="home-community-answer-status">{row.talentCommunityAnswerEvidence ? 'Tracker records answer evidence; open local review to see actual values' : 'No answer snapshot evidence in tracker'}</p></div>
         <div><p className="text-xs text-muted-foreground">Internal employer account</p>
-          <p className="mt-1 text-sm font-semibold" data-testid="home-internal-profile-status">{row.internalEmployerProfileStatus || 'Not Assessed'}</p></div>
+          <p className="mt-1 text-sm font-semibold" data-testid="home-internal-profile-status">{row.internalEmployerProfileStatus || 'Not Assessed'}</p>
+          <p className="mt-1 text-xs" data-testid="home-internal-platform-checked">Platform submitted: {row.internalPlatformSubmittedCheckbox === true ? '☑' : row.internalPlatformSubmittedCheckbox === false ? '☐' : 'Not assessed'}</p></div>
+        <div><p className="text-xs text-muted-foreground">Discord community</p>
+          <p className="mt-1 text-sm font-semibold" data-testid="home-discord-community-checked">{row.discordCommunityJoinedCheckbox === true ? '☑ Marked joined' : row.discordCommunityJoinedCheckbox === false ? '☐ Not joined' : 'Not assessed'}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Tracker mark alone is not membership verification</p></div>
       </div>)}
-      <p className="mt-3 text-xs text-muted-foreground">These are independent employer-profile facts. A submitted job, a saved local answer, and an accepted community enrollment do not certify one another.</p>
+      <p className="mt-3 text-xs text-muted-foreground">These are independent employer-profile facts. A submitted job, a saved local answer, platform enrollment, and Discord membership remain independently evidenced.</p>
     </section>}
     <div className="mt-10 flex flex-col gap-5 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
       <div><p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-muted-foreground">quiet reminder</p><p className="mt-2 font-display text-2xl">You do not have to finish the whole search today.</p></div>

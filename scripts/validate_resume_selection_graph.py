@@ -62,6 +62,18 @@ def main() -> None:
     for disallowed in (".submit(", ".requestSubmit(", "chrome.tabs", "fetch(", "XMLHttpRequest"):
         assert disallowed not in code
     assert "never" in tests.lower() and "unknown" in tests.lower()
+    # P01 durable routing guard: a future agent cannot revive a per-Indeed-job
+    # resume review requirement by following the older generic queue plan.
+    handoff = (ROOT / "docs/agent/P04_MASTER_RESUME_APPLICATION_ROUTING_2026-11-05.md").read_text(encoding="utf-8")
+    operator_light = (ROOT / "docs/agent/P04_OPERATOR_LIGHT_APPLICATION_SPRINT_2026-10-27.md").read_text(encoding="utf-8")
+    domain_plan = (ROOT / "docs/agent/P04_DOMAIN_RESUME_GRAPH_PLATFORM_POLICY_2026-10-28.md").read_text(encoding="utf-8")
+    workflow = (ROOT / "harness/WORKFLOWS.md").read_text(encoding="utf-8")
+    assert "Ordinary Indeed-native application" in handoff
+    assert "restore the canonical master and verify" in handoff.lower() or "restore the canonical master and verify" in handoff
+    assert "temporary switch and return" in operator_light
+    assert "KEEP_CURRENT" in domain_plan
+    assert "block subsequent Indeed applications" in domain_plan
+    assert "without repeatedly asking for review" in workflow
     assert "synthetic-owner-a" in tests
     print("RESUME_SELECTION_GRAPH_CONTRACT: PASS (static; does not prove provider/browser writes)")
 

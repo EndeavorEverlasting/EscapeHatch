@@ -1,0 +1,45 @@
+/* The modular puzzle atlas is a navigable surface, not an ATS readiness score.
+ * Existing brand tokens and source-owned profile tiles stay unchanged.
+ */
+.puzzle-atlas{--atlas-lime:#dcfa6d;--atlas-ink:#09261d;background:linear-gradient(125deg,#072019,#164530 62%,#0a271f);border:1px solid #a7d96155;border-radius:1.2rem;overflow:hidden;color:#f5ffe5;padding:clamp(.8rem,2.5vw,1.3rem);box-shadow:0 18px 40px #091f1738}
+.puzzle-atlas-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.puzzle-atlas-eyebrow{color:var(--atlas-lime);font-size:.65rem;font-family:var(--app-font-mono,monospace);letter-spacing:.12em;text-transform:uppercase;display:flex;align-items:center;gap:.45rem;font-weight:700}
+.puzzle-atlas-heading p:not(.puzzle-atlas-eyebrow){color:#d9e7d7}
+.puzzle-atlas-number{white-space:nowrap;font-size:.7rem;border:1px solid #dafa6d55;border-radius:999px;padding:.45rem .7rem;color:var(--atlas-lime)}
+.puzzle-atlas-rail{display:flex;overflow-x:auto;gap:.6rem;padding:.9rem .1rem 1rem;scroll-snap-type:x proximity;scrollbar-color:#779b59 transparent}
+.puzzle-atlas-card{position:relative;flex:0 0 clamp(9rem,18vw,11.5rem);scroll-snap-align:start;min-height:8.6rem;text-align:left;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;gap:.7rem;padding:.85rem;background:linear-gradient(140deg,#173c2e,#0e2c23);border:1px solid #91c76655;border-radius:1rem;color:#f3ffe7;box-shadow:0 4px 14px #071b1740;cursor:pointer}
+.puzzle-atlas-card[data-selected="true"]{border-color:var(--atlas-lime);background:linear-gradient(130deg,#284d25,#123c27);box-shadow:inset 0 0 0 1px #dafa6d77,0 0 24px #b5e74a30}
+.puzzle-atlas-card-icon{color:var(--atlas-lime)}
+.puzzle-atlas-card-title{font-family:var(--app-font-serif,Georgia,serif);font-size:1.22rem;font-weight:700;line-height:1.05}
+.puzzle-atlas-card-caption{font-size:.65rem;color:#c1d8b9}
+.puzzle-atlas-stage{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:clamp(.75rem,2vw,1.3rem);background:#092a21;border:1px solid #d3fb6f3b;border-radius:1rem;padding:clamp(.65rem,1.6vw,1rem);overflow:hidden}
+.puzzle-atlas-stage-art{min-width:0;position:relative;background:radial-gradient(circle,#4c742d 0%,#103829 48%,#071e18 95%);border-radius:.85rem;align-self:start;min-height:12rem;display:grid;place-items:center;overflow:hidden}
+.puzzle-atlas-stage-art img{display:block;width:100%;height:auto;object-fit:contain}
+.puzzle-atlas-stage-motif{min-height:14rem;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;padding:2rem;text-align:center;font-size:.75rem;line-height:1.6;color:#d3ecb0}
+.puzzle-atlas-stage-info{min-width:0;display:flex;flex-direction:column;align-items:flex-start}
+.puzzle-atlas-stage-info>p:not(.puzzle-atlas-eyebrow){color:#d6e6cd}
+.puzzle-atlas-variation{width:100%;min-height:2.75rem;padding:.55rem .7rem;color:#f4ffe7;background:#153b2d;border:1px solid #a9cd618c;border-radius:.65rem;cursor:pointer}
+.puzzle-atlas-pieces{display:flex;flex-wrap:wrap;gap:.5rem}
+.puzzle-atlas-piece{display:grid;grid-template-columns:1rem auto;column-gap:.45rem;align-items:center;border:1px solid #b3e56a55;background:#163c2e;padding:.5rem .7rem;border-radius:.65rem;font-size:.73rem;line-height:1.4;max-width:100%}
+.puzzle-atlas-piece small{grid-column:2;display:block;font-size:.62rem;color:#bfdaa6}
+.puzzle-atlas-piece-mark{color:var(--atlas-lime)}
+.puzzle-atlas-piece[data-state="saved"]{border-color:#e3ff788c;background:#214930}
+.puzzle-atlas-piece[data-state="needs_review"]{border-color:#ffd292;background:#493a1d}
+.puzzle-atlas-piece[data-state="unmeasured"]{border-style:dashed;color:#d4ddca}
+.puzzle-atlas-action{display:inline-flex;align-items:center;justify-content:center;min-height:2.75rem;border-radius:.65rem;background:var(--atlas-lime);padding:.55rem .9rem;color:var(--atlas-ink);font-weight:800;font-size:.8rem}
+.puzzle-atlas :is(button,select,a):focus-visible{outline:3px solid var(--atlas-lime);outline-offset:3px}
+@media(max-width:750px){.puzzle-atlas-stage{grid-template-columns:minmax(0,1fr)}.puzzle-atlas-card{flex-basis:9.2rem}.puzzle-atlas-stage-art{max-height:21rem}.puzzle-atlas-stage-art img{max-height:21rem}}
+@media(prefers-reduced-motion:no-preference){
+ @keyframes atlas-rise{from{transform:translateY(.65rem);opacity:.6}to{transform:none;opacity:1}}
+ .puzzle-atlas-stage{animation:atlas-rise 350ms ease-out both}
+ .puzzle-atlas-card{transition:transform 180ms ease,box-shadow 180ms ease}
+ .puzzle-atlas-card:hover{transform:translateY(-3px)}
+ .puzzle-atlas-card:active{transform:translateY(1px) scale(.98)}
+ .puzzle-atlas-action{transition:filter 120ms ease}
+ .puzzle-atlas-action:hover{filter:brightness(1.1)}
+}
+@media(prefers-reduced-motion:reduce){.puzzle-atlas *, .puzzle-atlas-stage{animation:none!important;transition:none!important}}
+
+.puzzle-atlas-answer-kind{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:.6rem;border-top:1px solid #a8dd7348;padding:.65rem 0;font-size:.75rem}
+.puzzle-atlas-answer-kind p{max-width:29rem;color:#c9e2bb}
+.puzzle-atlas-answer-kind span{font-size:.65rem;color:var(--atlas-lime);white-space:nowrap}

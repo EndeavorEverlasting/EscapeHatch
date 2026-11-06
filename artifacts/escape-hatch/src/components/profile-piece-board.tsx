@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { PuzzleGalleryDisplay } from './puzzle-gallery-display';
+import { PuzzleAtlasShelf } from './puzzle-atlas-shelf';
 import { Link } from 'wouter';
 import { Check, CircleHelp, Plus, TriangleAlert } from 'lucide-react';
 import type { RecoveredKnowledge } from '@/lib/answer-recovery';
@@ -42,6 +43,7 @@ export function ProfilePieceBoard({ profile, recovery }: {
         <span className="block font-normal text-muted-foreground" data-testid="profile-puzzle-coverage">{snapshot.coverageMeasured ? `${snapshot.savedCount} of ${snapshot.total} local profile signals saved` : 'Coverage not measured'}</span>
       </div>
     </div>
+    <PuzzleAtlasShelf snapshot={snapshot} recovery={recovery} />
     <PuzzleGalleryDisplay snapshot={snapshot} />
     {groups.map(group => <div key={group.label} className="mt-4">
       <h4 className="mb-2 text-xs font-semibold text-muted-foreground">{group.label}</h4>

@@ -25,6 +25,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: '3.13' }
       - run: python scripts/validate_replit_transfer.py
+      - run: python scripts/validate_puzzle_atlas.py
       - run: npm install --prefix artifacts/escape-hatch --ignore-scripts
       - run: npm --prefix artifacts/escape-hatch run typecheck
       - run: npm --prefix artifacts/escape-hatch run test:unit

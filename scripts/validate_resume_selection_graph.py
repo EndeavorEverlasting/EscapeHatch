@@ -68,7 +68,7 @@ def main() -> None:
     workflow = (ROOT / "harness/WORKFLOWS.md").read_text(encoding="utf-8")
     assert "switch back and forth" in handoff
     assert "operator-directed" in operator_light
-    assert "user-selected" in domain_plan
+    assert "switch back and forth" in domain_plan and "operator" in domain_plan
     assert "user-directed" in workflow
     for bad in ("BLOCK_RELATED_INDEED_QUEUE", "block subsequent Indeed applications",
                 "must finish by restoring", "temporary switch and return"):

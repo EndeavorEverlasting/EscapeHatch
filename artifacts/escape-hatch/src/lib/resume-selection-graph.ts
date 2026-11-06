@@ -179,8 +179,9 @@ export function resolveUserSelectedResume(
   if (slot.scope === 'unknown' || slot.observation !== 'verified') {
     return fail(slot.id, 'PLATFORM_SLOT_SEMANTICS_UNVERIFIED');
   }
+  if (slot.scope !== 'persistent_global') return fail(slot.id, 'PLATFORM_SLOT_NOT_ACCOUNT_WIDE');
   if (selected?.type !== 'resume') return fail(slot.id, 'UNKNOWN_RESUME_CHOICE');
-  if (slot.scope === 'persistent_global' && selected.tier === 'job') {
+  if (selected.tier === 'job') {
     return fail(slot.id, 'JOB_DERIVATIVE_NOT_ACCOUNT_WIDE');
   }
   const parents = new Map(g.edges.filter(e => e.kind === 'derives_from').map(e => [e.from, e]));
@@ -198,7 +199,7 @@ export function listApprovedResumeChoices(
 ): Array<{ resumeId: string; tier: ResumeTier; digest: string; current: boolean }> {
   const nodes = validateResumeGraph(g);
   const slot = nodes.get(platformSlotId);
-  if (slot?.type !== 'platform_slot') return [];
+  if (slot?.type !== 'platform_slot' || slot.scope !== 'persistent_global') return [];
   const parents = new Map(g.edges.filter(e => e.kind === 'derives_from').map(e => [e.from, e]));
   const cache = new Map<string, boolean>();
   const current = g.edges.find(e => e.kind === 'slot_points_to' && e.from === platformSlotId)?.to;

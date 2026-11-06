@@ -161,6 +161,56 @@ function domainScore(n: ResumeNode, weights: Record<string, number>): number {
   return (n.domainTags ?? []).reduce((score, tag) => score + (Object.hasOwn(weights, tag) ? weights[tag] : 0), 0);
 }
 /**
+ * Explicit résumé choice for an account-wide platform slot.
+ *
+ * This is an operator-directed *selection plan*, not an upload or an ATS action.
+ * It deliberately does not infer a new résumé from a job's domain score and
+ * does not require the operator to return to a preferred master after applying.
+ * Callers show an approval/overwrite disclosure and verify the provider readback.
+ * A previously confirmed selected résumé remains usable across unrelated jobs.
+ */
+export function resolveUserSelectedResume(
+  g: ResumeGraph, input: { platformSlotId: string; resumeId: string }
+): Decision {
+  let nodes: Map<string, Node>;
+  try { nodes = validateResumeGraph(g); } catch { return fail(input.platformSlotId, 'INVALID_GRAPH'); }
+  const slot = nodes.get(input.platformSlotId), selected = nodes.get(input.resumeId);
+  if (slot?.type !== 'platform_slot') return fail(input.platformSlotId, 'MISSING_PLATFORM_SLOT');
+  if (slot.scope === 'unknown' || slot.observation !== 'verified') {
+    return fail(slot.id, 'PLATFORM_SLOT_SEMANTICS_UNVERIFIED');
+  }
+  if (selected?.type !== 'resume') return fail(slot.id, 'UNKNOWN_RESUME_CHOICE');
+  if (slot.scope === 'persistent_global' && selected.tier === 'job') {
+    return fail(slot.id, 'JOB_DERIVATIVE_NOT_ACCOUNT_WIDE');
+  }
+  const parents = new Map(g.edges.filter(e => e.kind === 'derives_from').map(e => [e.from, e]));
+  if (!fresh(selected, nodes, parents, new Map())) return fail(slot.id, 'SELECTED_RESUME_NOT_APPROVED_OR_STALE');
+  const current = g.edges.find(e => e.kind === 'slot_points_to' && e.from === slot.id);
+  if (current?.to === selected.id) {
+    return decision(slot.id, 'KEEP_CURRENT', 'USER_SELECTED_RESUME_ALREADY_CURRENT', selected.id);
+  }
+  return decision(slot.id, 'UPLOAD_REQUIRES_CONSENT', 'USER_SELECTED_RESUME_SWITCH', selected.id);
+}
+
+/** Stable private selector options, including both directions of a switch. */
+export function listApprovedResumeChoices(
+  g: ResumeGraph, platformSlotId: string
+): Array<{ resumeId: string; tier: ResumeTier; digest: string; current: boolean }> {
+  const nodes = validateResumeGraph(g);
+  const slot = nodes.get(platformSlotId);
+  if (slot?.type !== 'platform_slot') return [];
+  const parents = new Map(g.edges.filter(e => e.kind === 'derives_from').map(e => [e.from, e]));
+  const cache = new Map<string, boolean>();
+  const current = g.edges.find(e => e.kind === 'slot_points_to' && e.from === platformSlotId)?.to;
+  const tierRank: Record<ResumeTier,number> = {canonical:0,domain:1,job:2};
+  return g.nodes.filter((n): n is ResumeNode => n.type === 'resume')
+    .filter(n => (slot.scope !== 'persistent_global' || n.tier !== 'job') &&
+      fresh(n, nodes, parents, cache))
+    .sort((a,b) => tierRank[a.tier]-tierRank[b.tier] || a.id.localeCompare(b.id))
+    .map(n => ({resumeId:n.id,tier:n.tier,digest:n.digest,current:n.id===current}));
+}
+
+/**
  * The planner never uploads. An unverified/unknown platform slot fails closed.
  * Persistent/global slots may ONLY take approved domain masters or canonical
  * master. Job-specific derivatives are restricted to proven isolated slots.
@@ -179,6 +229,18 @@ export function resolveResumeForPlatform(g: ResumeGraph, selection: Selection): 
   const previous = g.edges.find(e => e.kind === 'slot_points_to' && e.from === slot.id);
   const current = previous && nodes.get(previous.to);
   const parentsCurrent = current?.type === 'resume' && match.some(x => x.id === current.id);
+  // A verified Indeed account-wide choice belongs to the operator, not to a
+  // per-opportunity scoring heuristic. Keep an approved master/domain selection
+  // until the user actually chooses another résumé in the switcher.
+  if (slot.platform.toLowerCase() === 'indeed' && slot.scope === 'persistent_global') {
+    if (parentsCurrent && (current?.type === 'resume') &&
+        (current.tier === 'canonical' || current.tier === 'domain')) {
+      return decision(slot.id, 'KEEP_CURRENT', 'INDEED_USER_CHOICE_PRESERVED', current.id);
+    }
+    const approvedCanonical = match.find(x => x.tier === 'canonical');
+    if (!approvedCanonical) return fail(slot.id, 'CANONICAL_MASTER_NOT_APPROVED_OR_STALE');
+    return decision(slot.id, 'UPLOAD_REQUIRES_CONSENT', 'INDEED_DEFAULT_MASTER_AVAILABLE', approvedCanonical.id);
+  }
   const opportunityWeights = opportunity.domainWeights;
   // Matching a domain is independent of job board; never derive a domain from title alone.
   const domains = match.filter(x => x.tier === 'domain').map(node => ({ node, score: domainScore(node, opportunityWeights) }))
@@ -228,6 +290,19 @@ export function resolveEffectiveMasterForQueue(
     x.type === 'resume' && x.review === 'approved' && fresh(x, nodes, ancestors, memo));
   const canonical = available.find(x => x.tier === 'canonical');
   if (!canonical) return fail(slot.id, 'CANONICAL_MASTER_NOT_APPROVED_OR_STALE');
+  // Job-queue ranking cannot override a user's active Indeed résumé choice.
+  // The same master or domain can be used across jobs without queue conflicts.
+  if (slot.platform.toLowerCase() === 'indeed') {
+    const active = g.edges.find(e => e.kind === 'slot_points_to' && e.from === slot.id);
+    const current = active && nodes.get(active.to);
+    if (current?.type === 'resume' &&
+        (current.tier === 'canonical' || current.tier === 'domain') &&
+        available.some(n => n.id === current.id)) {
+      return decision(slot.id, 'KEEP_CURRENT', 'INDEED_USER_CHOICE_PRESERVED', current.id);
+    }
+    return decision(slot.id, 'UPLOAD_REQUIRES_CONSENT',
+      'INDEED_DEFAULT_MASTER_AVAILABLE', canonical.id);
+  }
   const ranked = available.filter(x => x.tier === 'domain')
     .map(x => ({node:x, score:domainScore(x,weights)}))
     .filter(x => x.score > 0)

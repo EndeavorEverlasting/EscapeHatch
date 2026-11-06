@@ -4,7 +4,7 @@ Date: 2026-11-06. Parent: [EscapeHatch #69](https://github.com/EndeavorEverlasti
 
 ## Verified operator-provided source
 
-A saved October 30 micro1 message titled **Your Next Steps with micro1** confirms certification, reports an active talent profile, offers matching against certified skills, and directs the operator to **https://talent.micro1.ai/dashboard?discord=join** for an exclusive community. This is a **partner portal**, NOT a direct Discord invite. The email and screenshots DO NOT prove Discord membership, a new application, or a live role match. Never commit the operator's name, address, personal certificate URL, raw message, cookies or auth material.
+The micro1 next-steps email format contains distinct certification, talent-profile, role-matching and community-invitation facts. The public entry point is **https://talent.micro1.ai/dashboard?discord=join**. A private user's milestone values are never part of this public repository. This is a **partner portal**, NOT a direct Discord invite. The email and screenshots DO NOT prove Discord membership, a new application, or a live role match. Never commit the operator's name, address, personal certificate URL, raw message, cookies or auth material.
 
 Use `python scripts/import_micro1_milestone_eml.py --input "<private .eml path>"` with the already-provided private EML on the Windows host. The importer is offline/read-only, yields a sanitized digest and separate states, and never invokes Gmail/Contacts. `reportedDkimPass` is only a header claim and not independently verified cryptography.
 
@@ -12,7 +12,7 @@ Use `python scripts/import_micro1_milestone_eml.py --input "<private .eml path>"
 
 The existing connected Google Sheet `Applications` has: A job Applied; AS Internal Platform Submitted; AT Discord Community Joined. They must remain independent. Additional opportunities can involve certification, eligibility, skills, interviews, matching, contractor onboarding, training or legal acknowledgments. Treat each as independently scoped evidence with identity and date; do not add an automatic inference that completing one means all are done. Do not count locally stored candidate answers or a visible link as accepted employer responses. A checked AT field needs a separate real membership receipt in the private host proof store. Blank means not assessed.
 
-For the micro1 email: **certification SOURCE_CONFIRMED; talent profile SOURCE_REPORTED_ACTIVE; community NOT_VERIFIED; role matching SOURCE_REPORTED_PENDING; further application NOT_ASSESSED.** Preserve micro1 job/interview submissions separately, with no reapplication.
+For a qualifying operator-owned EML, the importer may yield **certification SOURCE_CONFIRMED**, **talent profile SOURCE_REPORTED_ACTIVE**, **community NOT_VERIFIED**, **role matching SOURCE_REPORTED_PENDING** and **further application NOT_ASSESSED**. These are generic code outcomes, not a public record of any individual's status. Keep live evidence and prior job/interview outcomes private.
 
 ## Source changed in this sprint
 

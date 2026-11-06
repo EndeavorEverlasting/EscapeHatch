@@ -57,17 +57,14 @@ class ContextRoutingTests(unittest.TestCase):
         self.assertIn("SOURCE_ID=application_mapping", full_entry["payload"])
         self.assertGreater(full["candidate_payload_bytes"], outlined["candidate_payload_bytes"])
 
-    def test_runtime_lifecycle_is_targeted_outline_but_can_escalate_to_full(self):
-        lean = router.select(self.root, "recover Windows launch", "runtime", 50000)
-        item = next(source for source in lean["selected"] if source["id"] == "runtime_lifecycle")
-        self.assertEqual(item["mode"], "outline")
-        self.assertIn("JSON keys:", item["payload"])
-        full = router.select(self.root, "recover Windows launch", "runtime", 50000,
-                             require_full=("runtime_lifecycle",))
-        expanded = next(source for source in full["selected"] if source["id"] == "runtime_lifecycle")
-        self.assertEqual(expanded["mode"], "full")
-        self.assertIn("{}", expanded["payload"])
-        self.assertGreater(full["candidate_payload_bytes"], lean["candidate_payload_bytes"])
+    def test_runtime_cli_budget_preserves_full_canonical_safety_contract(self):
+        self.assertEqual(router.default_cli_budget(self.root, "recover Windows launch", "runtime"), 36 * 1024)
+        self.assertEqual(router.default_cli_budget(self.root, "prepare ATS application", "application"), 32 * 1024)
+        self.assertEqual(router.default_cli_budget(self.root, "fix startup", "auto"), 36 * 1024)
+        receipt = router.select(self.root, "Windows startup", "runtime", 36 * 1024)
+        entry = next(item for item in receipt["selected"] if item["id"] == "runtime_lifecycle")
+        self.assertEqual(entry["mode"], "full")
+        self.assertEqual(entry["encoding"], "compact_json")
 
     def test_ambiguous_auto_task_fail_closed_to_general(self):
         self.assertEqual(router.resolve_lane("fix startup and application", "auto",

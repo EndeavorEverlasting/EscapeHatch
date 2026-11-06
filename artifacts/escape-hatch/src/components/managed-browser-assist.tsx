@@ -9,6 +9,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type Dispatch, type SetS
 import { ArrowUpRight, CheckCircle2, FileUp, LoaderCircle, ShieldCheck } from 'lucide-react';
 import { getLocalStorage, readStoredValue, writeStoredValue, type Application, type Profile } from '@/lib/storage';
 import { ApplicationPreferences } from './application-preferences';
+import { ResumePlatformSwitcher } from './resume-platform-switcher';
 import { connectionFromSnapshot, isSubmittedLocked, mergeTrackerIntoApplications, parseTrackerSnapshot, selectNextActionableOpportunity, trackerOpportunityId } from '@/lib/tracker-bridge';
 import { refreshBoundTrackerOnStartup, type TrackerStatusEnvelope } from '@/lib/tracker-refresh-client';
 import { consumeManagedLaunchIntent } from '@/lib/managed-launch-intent';
@@ -658,6 +659,12 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         {!!url.trim() && !selectedOpportunityId && <p className="mt-3 text-xs text-muted-foreground">This pasted URL is not yet bound to a saved opportunity. Save it to retain role-specific documents and answers across sessions.</p>}
         {!!selectedOpportunityId && !documents.canUpload && <p className="mt-3 text-xs text-muted-foreground">You may prepare this application without a cover letter. EscapeHatch checks the live employer form and asks for documents only when required. File uploads still require review.</p>}
       </section>
+      <ResumePlatformSwitcher
+        opportunityId={selectedOpportunityId || undefined}
+        url={url.trim() || undefined}
+        refresh={formObservation}
+        disabled={busy || autoPrepareRequested}
+      />
       <ApplicationPuzzle opportunity={applications.find(item => item.id === selectedOpportunityId)} url={url} documents={documents} disabled={busy || autoPrepareRequested} refresh={formObservation} currentPage={currentPage} onBypass={() => { if (browserOpen) setAutoPrepareRequested(true); }} />
       <div className="mt-5 rounded-xl bg-secondary/55 p-4">
         <div className="flex items-center gap-2 text-sm font-bold"><CheckCircle2 className="text-primary" size={16} />

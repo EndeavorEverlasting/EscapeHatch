@@ -1,0 +1,62 @@
+{
+  "schema_version": "escapehatch/p04-local-work-item/v1",
+  "run_id": "escapehatch-ten-puzzle-postmerge-20261106",
+  "owner": "EndeavorEverlasting/EscapeHatch",
+  "parent_pr": "https://github.com/EndeavorEverlasting/EscapeHatch/pull/195",
+  "governing_source": "AGENTS.md",
+  "canonical_handoff": "docs/agent/P04_PROFILE_PUZZLE_ATELIER_CONVERGENCE_2026-11-03.md",
+  "mode": "P04_REPO_SPRINT_HANDOFF__P07_INTEGRATION__P08_LIVE",
+  "dispatch_state": "NOT_DISPATCHED_FROM_CHAT__LOCAL_RUNNER_NOT_ATTACHED",
+  "current_source": {
+    "ref": "main",
+    "head": "resolve_fresh_on_windows_host",
+    "rule": "Never assume the pre-merge branch or the main branch checked out on Windows matches the running installation"
+  },
+  "source_archive": {
+    "name": "EscapeHatch_Ten_Puzzle_Original_Art_2026-11-05.zip",
+    "sha256": "14e7adde9aa809bcab156b1bc29928964e8611f40546e83106948b609ed180cd",
+    "count": 10,
+    "unshipped_count_at_authoring": 9,
+    "lookup": "Only operator-authorized local inbox/Downloads or directly supplied ZIP path; never crawl private drives"
+  },
+  "graph": {
+    "order": [
+      "EH-PZ0",
+      "EH-PZ1",
+      "EH-PZ2"
+    ],
+    "lanes": [
+      {
+        "id": "EH-PZ0",
+        "owner": "Windows local agent",
+        "task": "Resolve selected installation and source ownership, find exact ZIP and checksum; preserve all existing workspaces and existing browser sessions",
+        "gate": "selected runtime identity and ZIP proof or BLOCKED_ARTIFACT"
+      },
+      {
+        "id": "EH-PZ1",
+        "owner": "Windows local agent / isolated repository worktree",
+        "task": "Import exactly nine original PNGs through canonical importer; update catalog; run hash validation, unit, typecheck, build, Chromium desktop+mobile checks, parent/scene/CI; PR through P07 into current main",
+        "gate": "provider readback 10/10 PNG byte hashes + exact-head CI + PR merged"
+      },
+      {
+        "id": "EH-PZ2",
+        "owner": "Windows local agent / P08",
+        "task": "On operator-selected installed runtime after source synchronization, visually certify ten illustrated modules, each of three variations, answer taxonomy, old gallery, accessibility, protected old application control and no Submit",
+        "gate": "actual installed launcher/selected-commit/UI-observation evidence and sanitized receipt"
+      }
+    ]
+  },
+  "protections": [
+    "No Gmail or corporate connectors",
+    "No private applicant value published",
+    "No changes to operator's active applications, credentials, PDFs, or employer sessions",
+    "No forced process termination, protected 21033, no synthetic data over owner workspace",
+    "No unverified image regeneration or image replacement",
+    "Do not mark source CI as Windows live proof",
+    "Preserve existing main resume/application work"
+  ],
+  "expected_receipt": "Outputs/prompt-parallel-dispatch/runs/escapehatch-ten-puzzle-postmerge-20261106/live-cert-receipt.json",
+  "receipt_initial_state": "ABSENT__NO_LOCAL_AGENT_EXECUTION_OBSERVED",
+  "proof_ceiling": "provider source integration after verified PR; no host certification without independent runtime receipt",
+  "next_host_command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\\Status-EscapeHatch.ps1"
+}

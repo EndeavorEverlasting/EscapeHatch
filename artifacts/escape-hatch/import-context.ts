@@ -3,7 +3,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
-import { createTrackerSnapshotFromValues } from './tracker-refresh.ts';
+import { driveResumeAvailability, driveResumeErrorCode, stageDriveResume, verifyDriveResume } from './drive-resume-source.ts';
+import { createTrackerSnapshotFromValues, readBoundedFile } from './tracker-refresh.ts';
 import { userDataRoot } from './user-data.ts';
 import { saveWorkspace, readWorkspace } from './workspace-file.ts';
 import { parseSavedWorkspace } from './src/lib/workspace-bootstrap.ts';
@@ -83,6 +84,28 @@ export async function importContext(kind: string, input: unknown, destination = 
 }
 async function main() {
   const [kind, inputFile] = process.argv.slice(2);
+  if (kind === 'drive-status' || kind === 'drive-verify' || kind === 'drive-resume') {
+    const root = userDataRoot();
+    const sources = path.join(root, 'career-sources.v1.json');
+    try {
+      if (kind === 'drive-status' && !inputFile) {
+        const result = await driveResumeAvailability(sources);
+        console.log(JSON.stringify(result));
+        if (result.status === 'DRIVE_SOURCE_CONFIG_INVALID') process.exitCode = 1;
+      } else if (kind === 'drive-verify' && inputFile) {
+        console.log(await verifyDriveResume(sources, inputFile));
+      } else if (kind === 'drive-resume' && inputFile) {
+        const input = JSON.parse(await readBoundedFile(inputFile, 64 * 1024));
+        console.log(await stageDriveResume(root, input));
+      } else {
+        throw new Error('INVALID_DRIVE_RESUME_REQUEST');
+      }
+    } catch (error) {
+      console.error(driveResumeErrorCode(error));
+      process.exitCode = 1;
+    }
+    return;
+  }
   if (!inputFile) throw new Error('Usage: npm run import:context -- workspace|tracker|document <private-export.json>');
   if ((await fs.stat(inputFile)).size > 2 * 1024 * 1024) throw new Error('INPUT_TOO_LARGE');
   const result = await importContext(kind, JSON.parse((await fs.readFile(inputFile, 'utf8')).replace(/^\uFEFF/, '')));

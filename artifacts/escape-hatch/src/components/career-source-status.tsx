@@ -17,7 +17,7 @@ export function CareerSourceStatus() {
       const response = await fetch('/__escapehatch/tracker/refresh', { method: 'POST', headers: { 'content-type': 'application/json', 'x-escapehatch-tracker': '1' }, body: '{}' });
       const result = await response.json() as { ok?: boolean; state?: string; reason?: string };
       setFeedback(result.ok ? 'Tracker refreshed. Return to Today to load current progress.' : result.state === 'AUTH_REQUIRED'
-        ? 'Google is not connected to this local app. Your saved progress is preserved. Your connected assistant can refresh the original tracker without creating new credentials.'
+        ? 'Google rejected or could not find the local credential. Restore the existing connection or use an authorized connected assistant to refresh the tracker.'
         : 'Cloud refresh could not complete. Your saved local progress is preserved. Retry when the existing connection is available.');
     } catch { setFeedback('Cloud refresh is unavailable. Your saved local context is preserved.'); }
     finally { setBusy(false); }

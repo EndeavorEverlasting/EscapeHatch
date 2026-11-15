@@ -98,19 +98,27 @@ export function createTrackerSnapshotFromValues(values: unknown, target: Tracker
     authPath, localGoogleAuthPresent: true, metrics: computeTrackerMetrics(applications), applications };
 }
 
-async function readBoundedFile(file: string, limit: number) {
+export async function readBoundedFile(file: string, limit: number) {
   const handle = await fs.open(file, 'r');
   try {
-    if ((await handle.stat()).size > limit) fail('INVALID_LOCAL_SOURCE');
-    const bytes = await handle.readFile();
-    if (bytes.length > limit) fail('INVALID_LOCAL_SOURCE');
-    return bytes.toString('utf8').replace(/^\uFEFF/, '');
+    const stat = await handle.stat();
+    if (!stat.isFile() || stat.size > limit) fail('INVALID_LOCAL_SOURCE');
+    const bytes = Buffer.alloc(stat.size + 1);
+    let offset = 0;
+    while (offset < bytes.length) {
+      const { bytesRead } = await handle.read(bytes, offset, bytes.length - offset, null);
+      if (!bytesRead) break;
+      offset += bytesRead;
+    }
+    if (offset !== stat.size) fail('INVALID_LOCAL_SOURCE');
+    return bytes.subarray(0, offset).toString('utf8').replace(/^\uFEFF/, '');
   } finally { await handle.close(); }
 }
-export async function acquireToken(env: NodeJS.ProcessEnv) {
-  if (env.TOKEN_CORRIDOR_GOOGLE_TOKEN?.trim()) {
-    const token = env.TOKEN_CORRIDOR_GOOGLE_TOKEN.trim();
-    return token.length <= 16384 && !/[\r\n]/.test(token) ? { token, source: 'TokenCorridor process credential' } : null;
+
+export async function acquireToken(env: NodeJS.ProcessEnv, useProcessCredential = true) {
+  const injected = useProcessCredential ? env.TOKEN_CORRIDOR_GOOGLE_TOKEN?.trim() : undefined;
+  if (injected && injected.length <= 16384 && !/[\r\n]/.test(injected)) {
+    return { token: injected, source: 'TokenCorridor process credential' };
   }
   const base = env.LOCALAPPDATA || path.join(homedir(), 'AppData', 'Local');
   try {
@@ -129,14 +137,14 @@ export async function readTrackerRefreshAvailability(snapshotFile: string, env: 
     return { refreshState: 'NOT_CONFIGURED' as const, message: 'Select an existing career tracker to enable refresh. Your local data is preserved.' };
   }
   if (!await acquireToken(env)) return { refreshState: 'AUTH_REQUIRED' as const,
-    message: 'Your local tracker is available. Reconnect Google to refresh it; existing context remains preserved.' };
+    message: 'Your saved tracker is available. Restore an existing local Google connection to refresh it.' };
   return { refreshState: 'AVAILABLE' as const,
     message: 'An existing local Google credential can be used to attempt refresh. Authentication is verified by the provider response.' };
 }
 
-export async function boundedJson(response: Response, signal: AbortSignal) {
+export async function boundedBytes(response: Response, signal: AbortSignal, maxBytes: number) {
   const size = response.headers.get('content-length');
-  if (size && (!/^\d+$/.test(size) || Number(size) > MAX_BYTES)) fail('RESPONSE_TOO_LARGE');
+  if (size && (!/^\d+$/.test(size) || Number(size) > maxBytes)) fail('RESPONSE_TOO_LARGE');
   if (!response.body) fail('INCOMPLETE_RESPONSE');
   if (signal.aborted) fail('TIMEOUT');
   const reader = response.body.getReader();
@@ -152,7 +160,7 @@ export async function boundedJson(response: Response, signal: AbortSignal) {
       const next = await reader.read();
       if (next.done) { complete = true; break; }
       count += next.value.byteLength;
-      if (count > MAX_BYTES) fail('RESPONSE_TOO_LARGE');
+      if (count > maxBytes) fail('RESPONSE_TOO_LARGE');
       chunks.push(next.value);
     }
   } finally {
@@ -160,7 +168,12 @@ export async function boundedJson(response: Response, signal: AbortSignal) {
     if (!complete) cancelReader();
     reader.releaseLock();
   }
-  try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { fail('INVALID_RESPONSE'); }
+  if (signal.aborted) fail('TIMEOUT');
+  return Buffer.concat(chunks, count);
+}
+export async function boundedJson(response: Response, signal: AbortSignal) {
+  const bytes = await boundedBytes(response, signal, MAX_BYTES);
+  try { return JSON.parse(bytes.toString('utf8')); } catch { fail('INVALID_RESPONSE'); }
 }
 const safeErrors = new Set(['INVALID_TARGET', 'INCOMPLETE_RESPONSE', 'INVALID_ROWS', 'INVALID_HEADERS', 'DUPLICATE_HEADERS', 'MISSING_HEADERS', 'RESPONSE_TOO_LARGE', 'INVALID_RESPONSE']);
 
@@ -233,7 +246,9 @@ async function refreshTrackerSnapshotNow(snapshotFile: string, options: RefreshO
   }
 }
 
-export type RememberedSource = { label: string; kind: 'drive_folder' | 'google_doc' | 'local_file'; locator: string };
+export type RememberedDrivePdf = { label: string; kind: 'google_drive_pdf'; locator: string; expectedSha256: string };
+export type RememberedSource = RememberedDrivePdf |
+  { label: string; kind: 'drive_folder' | 'google_doc' | 'local_file'; locator: string };
 /** Metadata only: selected local artifacts are listed, never opened through this endpoint. */
 export async function readRememberedSources(file: string): Promise<{ ok: boolean; sources: RememberedSource[]; error?: string }> {
   try {
@@ -247,6 +262,14 @@ export async function readRememberedSources(file: string): Promise<{ ok: boolean
         if ((!path.win32.isAbsolute(item.locator) && !path.posix.isAbsolute(item.locator)) || (item.locator.startsWith('\\\\') || item.locator.startsWith('//'))) fail('INVALID_SOURCES');
       } else {
         const url = new URL(item.locator);
+        if (item.kind === 'google_drive_pdf') {
+          if (url.origin !== 'https://drive.google.com' || url.username || url.password || url.hash ||
+            !['', '?usp=drivesdk', '?usp=sharing'].includes(url.search) ||
+            !/^\/file\/d\/[A-Za-z0-9_-]{10,200}(?:\/view)?\/?$/.test(url.pathname) ||
+            typeof item.expectedSha256 !== 'string' || !/^[a-f0-9]{64}$/.test(item.expectedSha256) ||
+            Object.keys(item).sort().join(',') !== 'expectedSha256,kind,label,locator') fail('INVALID_SOURCES');
+          return { label: item.label, kind: item.kind, locator: item.locator, expectedSha256: item.expectedSha256 };
+        }
         if (url.protocol !== 'https:' || url.username || url.password ||
           (item.kind === 'drive_folder' ? url.hostname !== 'drive.google.com' || !/^\/drive\/folders\/[\w-]+\/?$/.test(url.pathname) :
           item.kind === 'google_doc' ? url.hostname !== 'docs.google.com' || !/^\/document\/d\/[\w-]+(?:\/edit)?\/?$/.test(url.pathname) : true)) fail('INVALID_SOURCES');

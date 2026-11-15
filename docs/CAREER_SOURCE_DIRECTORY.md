@@ -9,6 +9,73 @@ EscapeHatch owns candidate state and opportunity mapping. TokenCorridor owns the
 - Other established access: existing Google application-default credentials, user-approved synced Drive folders, and connected provider adapters are recovery candidates. Never copy browser cookies or secrets, or pretend ChatGPT account authorization transfers to a local agent.
 - The source registry at `scripts/career_source_directory.py` saves only user-selected local/Google folder and tracker locators in a private file outside Git. It supports idempotency and privacy-preserving local metadata counts. It does NOT yet import data into the UI or prove a cloud read.
 
+## Recover a registered Drive résumé on the local host
+
+Use the installed EscapeHatch checkout and its existing private data root. Run
+`npm --prefix artifacts/escape-hatch run import:context -- drive-status` before
+concluding that local Google access is unavailable. It reports whether a host
+credential is available to attempt a read and how many PDFs are registered.
+The app reuses a process credential supplied by the existing MoonWake connector
+or the legacy TokenCorridor host credential store. Keep credential values in the
+credential owner. ChatGPT can read Drive separately through an authorized
+connector, and local files or a user-selected synced folder work without Google
+authorization.
+
+To register an approved frozen PDF, add an entry to the existing private
+`career-sources.v1.json` with schema `escapehatch-career-sources/v1`. Preserve
+its other entries. Use the stable local app data root
+(`ESCAPEHATCH_DATA_HOME` for an explicit installation override, otherwise
+`%LOCALAPPDATA%/EscapeHatch` on Windows). The Sources screen lists the
+registered file. Keep the editable Google Doc, frozen PDF, and role-specific
+files in their existing Drive locations. Register only the approved PDF, with
+the SHA-256 from its existing approval record.
+
+```json
+{
+  "label": "Approved master resume",
+  "kind": "google_drive_pdf",
+  "locator": "https://drive.google.com/file/d/synthetic_file_identifier/view",
+  "expectedSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}
+```
+
+Run the following commands from the installed repository root. Use the private
+source label and a request file outside Git.
+
+```powershell
+npm --prefix artifacts/escape-hatch run import:context -- drive-verify 'Approved master resume'
+npm --prefix artifacts/escape-hatch run import:context -- drive-resume '<absolute-private-request.json>'
+```
+
+`drive-verify` reads the exact registered PDF from Drive and compares its bytes
+with the approved digest. It changes no local documents. `drive-resume` does the
+same verification and stages the PDF for the exact existing saved opportunity
+in the selected workspace. The request uses this shape.
+
+```json
+{
+  "sourceLabel": "Approved master resume",
+  "opportunityId": "saved-opportunity-id",
+  "url": "https://jobs.example.test/role/apply",
+  "expectedPreviousSha256": null
+}
+```
+
+Use `null` for a new résumé slot. For an approved replacement, use the digest
+currently staged for that opportunity. In Application Assist, refresh saved
+documents and preview the staged PDF through the usual review flow. Keep the
+application's document selection and any subsequent attachment in the existing
+per-opportunity flow.
+
+| Result | Next action |
+| --- | --- |
+| `GOOGLE_AUTH_REQUIRED` | Recover the existing local Google credential, use an authorized connected-agent export, or choose a local/synced file. |
+| `DRIVE_ACCESS_DENIED` or `DRIVE_FILE_UNAVAILABLE` | Check the registered original in the authorized account and its ability to download. |
+| `DRIVE_PDF_HASH_MISMATCH` | Return to the approval record and reconcile the exact PDF. |
+| `DRIVE_SOURCE_SELECTION_REQUIRED` | Register or select one unique private PDF label. |
+| `WORKSPACE_OWNER_REQUIRED` or `SAVED_OPPORTUNITY_REQUIRED` | Restore the intended workspace and select the existing opportunity before staging. |
+| `DOCUMENT_STAGE_CONFLICT` | Read the current document package before retrying. |
+
 ## Mandatory live P08 steps
 
 1. On the **actual Windows host**, recover active local branches, installed providers and existing credential stores; check existing OAuth readiness safely. **Do not re-create Google credentials.**
@@ -25,7 +92,7 @@ Support selectable local directories, synchronized cloud folders and provider-na
 
 ## Current proof ceiling
 
-The source registry and selected-PDF connector-export ingress have synthetic coverage. The document UI previews saved snapshots and exposes an explicit refresh action. This does not certify native Drive OAuth, a Drive picker, automatic folder ingestion, or generalized end-to-end application readiness. Each actual connected read, private import, UI review and employer attachment requires its own runtime evidence. Preserve parallel worktrees/PRs and keep final submission manual.
+The registry, host credential discovery, and selected-PDF staging have synthetic coverage. The document UI previews saved snapshots and exposes an explicit refresh action. Verify local Drive access with `drive-verify` on the installed host. Evidence for document review, employer attachment, and employer acceptance comes from the application workflow.
 
 ## Selected PDF ingress and early review
 

@@ -303,3 +303,13 @@ test('expanded tracker reads separate profile milestones without inventing saved
   assert.equal(createTrackerSnapshotFromValues(values,target,'synthetic',date).metrics.talentCommunitiesConfirmed,0,
     'legacy narrower snapshots remain usable and have zero asserted community completions');
 });
+
+test('tracker status distinguishes a cached snapshot from a usable local credential', async () => fixture(async (file, env) => {
+  const bound = { ...env, ESCAPEHATCH_TRACKER_SNAPSHOT: file };
+  assert.equal((await readTrackerStatus(bound)).localGoogleAuthPresent, true);
+  delete bound.TOKEN_CORRIDOR_GOOGLE_TOKEN;
+  const status = await readTrackerStatus(bound);
+  assert.equal(status.localGoogleAuthPresent, false);
+  assert.equal(status.connection, 'CONNECTED');
+  assert.ok(status.snapshot);
+}));

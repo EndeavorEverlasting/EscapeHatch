@@ -23,7 +23,7 @@ test('submission, legal decisions, login and install consent stay operator-owned
     assert.equal(map.get(id)?.operatorOnly, true);
   }
   assert.equal(map.get('FINAL_REVIEW')?.route, '/assist');
-  assert.equal(registry.final_submission, 'operator_only');
+  assert.equal(registry.final_submission, 'operator_authorization_required');
   assert.ok(registry.scenes.every(scene => scene.terminal_submit_automated === false));
   assert.deepEqual([...map.values()].filter(scene => scene.operatorOnly).map(scene => scene.id),
     ['INSTALL_APPROVAL', 'AUTH_HANDOFF', 'MANUAL_DECISION', 'FINAL_REVIEW']);

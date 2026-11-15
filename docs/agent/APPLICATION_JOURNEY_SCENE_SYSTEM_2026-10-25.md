@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-25. **Parent:** https://github.com/EndeavorEverlasting/EscapeHatch/issues/69. **Registry:** `contracts/application-journey-scenes.v1.json`. **Repository governance:** `AGENTS.md`. **Owner plan:** `docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md`. **Runtime source:** `artifacts/escape-hatch/browser-assist-control.ts`. **UX owner:** `artifacts/escape-hatch/src/components/managed-browser-assist.tsx`.
 
-**Decision status:** The design and permitted behaviors below are decided; local agents own implementation, integration, test evidence, and deterministic repairs, not new strategic or aesthetic decisions. No final submission, MFA/CAPTCHA answer, password collection, live VPN toggle, or unapproved alteration of career text is authorized.
+**Decision status:** The design and permitted behaviors below are decided; local agents own implementation, integration, test evidence, and deterministic repairs, not new strategic or aesthetic decisions. Final submission requires exact-application approval after review. MFA/CAPTCHA answers, password collection, live VPN toggles, and unapproved alterations of career text remain outside this workflow.
 
 ## 1. Product commitment
 
@@ -36,7 +36,7 @@ The authored wireflow is:
 | Auth recheck | subtle detecting state, same-window continuation | two stable observations of same recognized form and origin | poll again or user-triggered Check again |
 | Form preparation | current and pending mapped fields, document effects | per-field DOM readback, file-picker state and separate employer accepted receipt | ask one missing allowed question |
 | Manual decision | explicit question, impact, destination and provenance | user-entered saved value or protected manual-only decision | never guess eligibility, EEO, attestation |
-| Final review | reviewed details and employer final action | trusted final boundary; no terminal automation | user personally reviews/ submits |
+| Final review | reviewed details and employer final action | trusted final boundary; no unattended submit | operator reviews and authorizes a supported click or submits directly |
 | Recovery | exact blocked step with retry/resume, never silent reset | typed error, safe same-session/installation readback | re-enter named preceding scene |
 
 ### Authentication continuity acceptance
@@ -146,7 +146,7 @@ Workbooks' own pending gates remain: some upstream licenses unverified, examples
 - FIELDS_READBACK: actually returned verified field identities; empty array means zero fields filled.
 - DOCUMENT_INPUT_STAGED: file-control insertion only, not employer acceptance.
 - EMPLOYER_DOCUMENT_ACCEPTED: requires ATS-specific independent acceptance signal.
-- FINAL_REVIEW: independent trusted terminal control, operator-only.
+- FINAL_REVIEW: independent trusted terminal control, exact-application authorization required.
 - SUBMITTED: requires external employer receipt after the operator's action, never route inference.
 
 ## 8. Exact next handoff command
@@ -182,7 +182,7 @@ The visible /answers empty state is misleading when the app has previously appro
 
 ### 9.3 Preserve and finish login-to-resume
 
-Maintain #101's same Chrome context, stable two-observation employer-form recognition, automatic continuation of at most one previously authorized nonterminal Fill, visible I've signed in — check again and Resume filling this application, and guarded same-opportunity URL rebinding. Do not collect credential values or inspect external identity-provider DOM content. Reconcile #100's field-progress and attachment evidence so zero verified fields are never called filled and staged file controls are not called employer-accepted uploads. Integrate with main's current Application Puzzle without regressing verified safe form navigation. Preserve operator-only Submit and every #69 adversarial control; buttons labeled Submit can be intermediate or terminal depending on independently proven effect.
+Maintain #101's same Chrome context, stable two-observation employer-form recognition, automatic continuation of at most one previously authorized nonterminal Fill, visible I've signed in — check again and Resume filling this application, and guarded same-opportunity URL rebinding. Do not collect credential values or inspect external identity-provider DOM content. Reconcile #100's field-progress and attachment evidence so zero verified fields are never called filled and staged file controls are not called employer-accepted uploads. Integrate with main's current Application Puzzle without regressing verified safe form navigation. Preserve operator authority over Submit and every #69 adversarial control; buttons labeled Submit can be intermediate or terminal depending on independently proven effect.
 
 ### 9.4 Guided interface and search discovery (downstream of durable state)
 

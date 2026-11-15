@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import type { Page } from '@playwright/test';
 import { updatePreferences } from './preference-file.ts';
-import { installAnswerMemory, mergeCapturedAnswer, mergeQuestionCatalog, scanQuestionCatalog } from './managed-answer-memory.ts';
+import { installAnswerMemory, mergeCapturedAnswer, mergeQuestionCatalog, readReviewedAnswers, scanQuestionCatalog } from './managed-answer-memory.ts';
 import { installManagedSubmissionObserver, type ManagedSubmissionReceipt } from './managed-submission-observer.ts';
 import { parseSubmissionEvidence } from './src/lib/submission-reconciliation.ts';
 import { userDataRoot, legacyPrivateRoots } from './user-data.ts';
@@ -85,7 +85,8 @@ export function submissionAdapter(applicationUrl: string) {
 }
 
 export class ManagedListeners {
-  readonly implementationVersion = 4;
+  readonly implementationVersion = 5;
+  private page: Page | null = null;
   private stopMemory: (() => Promise<void>) | null = null;
   private observer: Awaited<ReturnType<typeof installManagedSubmissionObserver>> | null = null;
   private serial: Promise<void> = Promise.resolve();
@@ -108,6 +109,9 @@ export class ManagedListeners {
   async attach(page: Page, scope: ListenerScope, recording = true) {
     await this.dispose();
     this.scope = scope;
+    this.page = page;
+    this.savedAnswers = 0;
+    this.error = '';
     this.recording = recording;
     const generation = this.generation;
     this.stopMemory = await installAnswerMemory(page, event => {
@@ -176,6 +180,25 @@ export class ManagedListeners {
     return this.status();
   }
   async setRecording(enabled: boolean) { this.recording = enabled; return this.status(); }
+  isBoundTo(page: Page, opportunityId: string) {
+    return this.page === page && this.scope?.opportunityId === opportunityId;
+  }
+  async captureReviewedAnswers(page: Page, opportunityId: string) {
+    const status = await this.status();
+    if (!status.recordingAnswers || status.submission?.state !== 'ARMED' || status.error ||
+        !this.scope || !this.isBoundTo(page, opportunityId) || page.url() !== this.scope.applicationUrl) {
+      throw new Error('Start answer recording and arm the submission listener on the existing application.');
+    }
+    const answers = await readReviewedAnswers(page, this.scope.employerName);
+    if (page.url() !== this.scope.applicationUrl) throw new Error('Application changed during answer capture.');
+    let saved = 0;
+    await updatePreferences(current => answers.reduce((data, event) => {
+      const next = mergeCapturedAnswer(data, event);
+      if (next !== data) saved++;
+      return next;
+    }, current), this.preferencesPath);
+    this.savedAnswers += saved;
+  }
   async catalog(page: Page) {
     const catalog = await scanQuestionCatalog(page);
     this.serial = this.serial.then(async () => {
@@ -199,5 +222,6 @@ export class ManagedListeners {
     this.stopMemory = null;
     this.observer = null;
     this.scope = null;
+    this.page = null;
   }
 }

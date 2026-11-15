@@ -14,6 +14,7 @@ export async function inspectApplicationRequirements(page: Page, opportunityId: 
   const pageUrl = page.url();
   assertInspectionScope(opportunityId, applicationUrl, opportunityId, applicationUrl, pageUrl);
   const requirements = await page.evaluate(() => {
+    const lever = location.origin === 'https://jobs.lever.co';
     const controls = Array.from(document.querySelectorAll('input, textarea, select, [role="combobox"], [role="textbox"], [role="checkbox"], [role="radio"]'));
     return controls.flatMap((element, index) => {
       const control = element as HTMLElement;
@@ -30,9 +31,11 @@ export async function inspectApplicationRequirements(page: Page, opportunityId: 
       // Asterisk-based labels are an employer-facing required signal even when
       // native HTML validation and aria-required are absent (common in Lever/SPA forms).
       // Radios often carry only an option label: use their fieldset/role-group prompt.
-      const group = control.closest('fieldset, [role="group"], [role="radiogroup"]');
-      const groupLabel = (group?.querySelector('legend, [aria-label], [class*="question-label"]')?.textContent || group?.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim().slice(0, 240);
-      const prompt = control.getAttribute('aria-label') || labelledBy || (type === 'radio' ? groupLabel || labels : labels || groupLabel) || control.getAttribute('placeholder') || 'Unlabelled field';
+      const leverQuestion = lever ? control.closest('#application-form .application-question') : null;
+      const leverLabel = leverQuestion?.querySelector('.application-label');
+      const group = leverQuestion || control.closest('fieldset, [role="group"], [role="radiogroup"]');
+      const groupLabel = (leverLabel?.textContent || group?.querySelector('legend, [aria-label], [class*="question-label"]')?.textContent || group?.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim().slice(0, 240);
+      const prompt = control.getAttribute('aria-label') || labelledBy || (leverLabel || type === 'radio' ? groupLabel || labels : labels || groupLabel) || control.getAttribute('placeholder') || 'Unlabelled field';
       const label = prompt.replace(/\s+/g, ' ').slice(0, 240);
       const ariaRequired = control.getAttribute('aria-required');
       const labelElements = native ? Array.from(control.labels || []) : [];
@@ -43,7 +46,8 @@ export async function inspectApplicationRequirements(page: Page, opportunityId: 
       const cssRequiredMark = labelElements.some(node => ['::before', '::after'].some(pseudo =>
         /^['"]?\*['"]?$/.test(getComputedStyle(node, pseudo).content.replace(/\s/g, ''))));
       const explicitRequired = Boolean(native && control.required || ariaRequired === 'true' || requiredAttribute);
-      const indicatedRequired = /\*|\brequired\b/i.test([label, labels, groupLabel].join(' ')) || cssRequiredMark;
+      const leverRequired = Boolean(leverQuestion && (leverLabel?.querySelector('.required') || control.closest('.application-field.required-field')));
+      const indicatedRequired = leverRequired || /[*✱＊]|\brequired\b/i.test([label, labels, groupLabel].join(' ')) || cssRequiredMark;
       // Prefer a false positive requiring review to silently losing a marked requirement.
       const requirement = explicitRequired || indicatedRequired ? 'required' as const :
         ariaRequired === 'false' || native ? 'optional' as const : 'unknown' as const;
@@ -55,7 +59,13 @@ export async function inspectApplicationRequirements(page: Page, opportunityId: 
       const groupRadios = group && type === 'radio' ?
         Array.from(group.querySelectorAll('input[type="radio"]')) as HTMLInputElement[] : [];
       const radioGroupSelected = groupRadios.some(peer => peer.checked && !peer.disabled);
-      const populated = native ? (type === 'checkbox' ? (control as HTMLInputElement).checked :
+      // Lever renders one required answer across a same-name checkbox group.
+      // A different question or an unchecked standalone agreement never qualifies.
+      const leverCheckboxGroup = leverQuestion && type === 'checkbox' && control instanceof HTMLInputElement && control.name &&
+        control.closest('.application-field.required-field');
+      const leverCheckboxSelected = leverCheckboxGroup && Array.from(leverCheckboxGroup.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:enabled'))
+        .some(peer => peer.name === control.name && peer.checked && visible(peer));
+      const populated = native ? (type === 'checkbox' ? ((control as HTMLInputElement).checked || leverCheckboxSelected) :
         type === 'radio' ? ((control as HTMLInputElement).checked || radioSelected || (!explicitRequired && indicatedRequired && radioGroupSelected)) :
         (type === 'file' ? ((control as HTMLInputElement).files?.length || 0) > 0 : Boolean(control.value.trim()))) &&
         control.validity.valid : false;

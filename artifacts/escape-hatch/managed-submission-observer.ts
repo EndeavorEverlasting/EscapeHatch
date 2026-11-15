@@ -197,7 +197,10 @@ export async function installManagedSubmissionObserver(page: Page, options: Subm
       const hasQuestions = questionControls().length > 0;
       const success = controls.length === 0 && !hasQuestions && distinct.length === 1;
       const rejected = Array.from(document.querySelectorAll('#root div')).some(element => visible(element) && /^we couldn.t submit your application\b/i.test(normalize((element as HTMLElement).innerText)));
-      const invalid = rejected || Array.from(document.querySelectorAll('[role="alert"], [aria-invalid="true"], .ashby-application-form-error, .application-error, .application-errors')).some(element => visible(element) && (element.getAttribute('aria-invalid') === 'true' || /required|invalid|error|failed|could not|couldn.t|unable|try again|possible spam|flagged|captcha/i.test((element as HTMLElement).innerText)));
+      const leverVerificationError = location.origin === 'https://jobs.lever.co' &&
+        Array.from(document.querySelectorAll('h1, h2, [role="alert"], .error-message')).some(element =>
+          visible(element) && /^there was an error verifying your application[.!]?$/.test(normalize((element as HTMLElement).innerText)));
+      const invalid = rejected || leverVerificationError || Array.from(document.querySelectorAll('[role="alert"], [aria-invalid="true"], .ashby-application-form-error, .application-error, .application-errors, #application-form-error, .application-form-error')).some(element => visible(element) && (element.getAttribute('aria-invalid') === 'true' || /required|invalid|error|failed|could not|couldn.t|unable|try again|possible spam|flagged|captcha/i.test((element as HTMLElement).innerText)));
       await report({ kind, url: location.href, documentId, stageKey: stageKey(), hasQuestions, success,
         processing: processing && controls.length === 0 && !hasQuestions, invalid, nonce });
       return { success, invalid, receiptText, terminalCount: controls.length, terminalEnabled: controls.length === 1 && !controls[0].matches(':disabled, [aria-disabled="true"]') };
@@ -244,6 +247,9 @@ export async function installManagedSubmissionObserver(page: Page, options: Subm
       if (confirmed) throw new Error('Submission already confirmed; start a new bound session for another application.');
       const actual = new URL(page.url());
       if (actual.origin !== application.origin || actual.pathname !== application.pathname) throw new Error('Cannot arm on a different application.');
+      if (application.origin === 'https://jobs.lever.co' && ['PENDING', 'PROCESSING'].includes(current.state)) {
+        throw new Error('The existing Lever attempt is still awaiting an employer response.');
+      }
       const baseline = await page.evaluate(name => (window as unknown as Record<string, any>)[`${name}Inspect`](), name);
       if (baseline.receiptText) throw new Error('Preexisting confirmation cannot prove this submission.');
       if (baseline.terminalCount !== 1 || !baseline.terminalEnabled) throw new Error('A unique enabled application form transition control is required before arming.');

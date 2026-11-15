@@ -169,8 +169,8 @@
         "verified_documents",
         "operator_review"
       ],
-      "coach_prompt": "Review everything; submit yourself",
-      "primary_action": "FINAL_OPERATOR_ONLY",
+      "coach_prompt": "Review this application and authorize Submit",
+      "primary_action": "REVIEW_AND_AUTHORIZE_SUBMIT",
       "completion": "specific_observed_evidence_only",
       "resume_key": "opportunity_id_and_application_url",
       "terminal_submit_automated": false
@@ -407,7 +407,7 @@
     "on_page_mismatch": "block and preserve session; do not navigate or submit",
     "on_browser_close": "record interrupted state; offer reopen without declaring completion"
   },
-  "final_submission": "operator_only",
+  "final_submission": "operator_authorization_required",
   "privacy": {
     "repository": "synthetic_only",
     "credential_values": "never_collect_or_store",

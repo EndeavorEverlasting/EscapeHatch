@@ -61,3 +61,17 @@ export function projectApplicationPuzzle(inspection: FormInspection | null, oppo
     finalSubmitAuthorized: false as const,
   };
 }
+
+export function isLeverApplicationForm(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.origin === 'https://jobs.lever.co' &&
+      /^\/[a-z0-9_-]+\/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\/apply\/?$/i.test(url.pathname);
+  } catch { return false; }
+}
+
+export function leverApplicationKey(value: string): string | null {
+  if (!isLeverApplicationForm(value)) return null;
+  const url = new URL(value);
+  return url.origin + url.pathname.replace(/\/$/, '');
+}

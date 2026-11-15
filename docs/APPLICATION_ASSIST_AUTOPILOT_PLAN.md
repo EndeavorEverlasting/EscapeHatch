@@ -4,7 +4,7 @@
 >
 > This document owns the implementation path to **deterministic end-to-end preparation of many employers' browser job-application forms**, starting in EscapeHatch with an opportunity and approved profile, selecting current role-specific documents, mapping and filling authorized native/SPA/React fields, attaching PDFs, advancing only evidence-verified nonterminal steps, maintaining session state and user edits, and stopping **before** final submission for the operator. Source directories, Google credential reuse, résumé ingestion, question preference caches, single-page filling, synthetic fixture tests and navigation classifiers are dependencies **not the project objective or completion**.
 >
-> The dated planning-only and historical branch references below describe earlier floors; they **do not** restrict subsequent authorized implementation. Recover actual current main, merged policy/fixture PRs #67/#68, open managed browser PRs #63/#64, source PR #66 and event-chain branches before further P04 dispatch. Use the nine conjunctive acceptance gates and fail-closed closeout projection in `harness/contracts/application-autofill-parent.v1.json`; verify with `python scripts/validate_application_autofill_parent.py`. P08 must observe actual locally launched multi-step application preparation and a second distinct ATS/form archetype before claiming portability. Final submission, certification and legal/sensitive attestations remain manual.
+> The dated planning-only and historical branch references below describe earlier floors; they **do not** restrict subsequent authorized implementation. Recover actual current main, merged policy/fixture PRs #67/#68, open managed browser PRs #63/#64, source PR #66 and event-chain branches before further P04 dispatch. Use the nine conjunctive acceptance gates and fail-closed closeout projection in `harness/contracts/application-autofill-parent.v1.json`; verify with `python scripts/validate_application_autofill_parent.py`. P08 must observe actual locally launched multi-step application preparation and a second distinct ATS/form archetype before claiming portability. Final submission requires explicit approval for the reviewed application. Certification and legal/sensitive attestations remain manual.
 >
 > **Current parent state: OPEN / NOT YET END-TO-END PROVEN.** Do not stop or report complete at an intermediate capability milestone.
 
@@ -62,7 +62,7 @@ That policy no longer matches the intended product.
 
 ### New invariant
 
-> **EscapeHatch may advance an intermediate application/account page only through a typed Progression Plan whose live gate proves that the destination action is non-terminal, expected for the recognized page archetype, and the current page has no unresolved blocking mismatch. Final submission, certification, attestation, CAPTCHA, MFA/verification secrets, and ambiguous progression remain manual.**
+> **EscapeHatch may advance an intermediate application/account page only through a typed Progression Plan whose live gate proves that the destination action is non-terminal, expected for the recognized page archetype, and the current page has no unresolved blocking mismatch. Preparation stops at final review. Certification, attestation, CAPTCHA, MFA/verification secrets, and ambiguous progression remain manual.**
 
 The canonical write pipeline becomes:
 
@@ -91,9 +91,9 @@ Anything else is **REVIEW_REQUIRED** and stops automated progression with a prec
 
 ### Final-submit boundary remains hard
 
-The following stay manual-only:
+For a reviewed managed Lever application, the operator may explicitly authorize the final click. EscapeHatch captures existing reusable answers privately, checks the live résumé against the approved digest before each attempt, and clicks once on the exact bound tab. A verified rejection must precede re-arming for retry. Provider confirmation starts receipt reconciliation and tracker sync.
 
-- final Apply / Submit Application / Finish / Send / certification action;
+The following stay manual-only:
 - truth/accuracy attestation;
 - legal/compliance certification;
 - CAPTCHA and bot challenges;

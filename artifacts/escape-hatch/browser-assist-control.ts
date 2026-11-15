@@ -435,6 +435,31 @@ const LEVER_RESUME_ERRORS: Record<Exclude<LeverResumeEvidence, 'VERIFIED'>, stri
   CHANGED: 'resume_attachment_changed',
 };
 
+async function attachManagedLeverResume(page: Page, liveUrl: string, key: string, sha256: string,
+  readFile: () => ReturnType<OpportunityDocumentStore['file']>, receipts: LeverAttemptReceipts) {
+  const save = (evidence: LeverResumeEvidence, code: string) => receipts.record(key, 'ATTACH', evidence, code, sha256)!;
+  if (receipts.pending(key) || await leverChallengeVisible(page)) {
+    return { staged: false, attemptReceipt: save('UNCHECKED', 'application_attempt_pending') };
+  }
+  let evidence = await verifyLeverResume(page, sha256).catch(() => 'UNCHECKED' as const);
+  let attached = false;
+  if (evidence === 'MISSING' || evidence === 'INVALID' || evidence === 'DIGEST_MISMATCH') {
+    const file = await readFile();
+    if (file && page.url() === liveUrl) {
+      save(evidence, 'resume_attachment_requested');
+      await preserveLeverPrefilledAnswers(page);
+      if (page.url() !== liveUrl) {
+        return { staged: false, attemptReceipt: save('CHANGED', 'reviewed_application_tab_mismatch') };
+      }
+      const outcome = await attachPdfs(page, file, null);
+      attached = outcome.resume === 'attached_to_input_review_required';
+      evidence = page.url() === liveUrl ? await verifyLeverResume(page, sha256).catch(() => 'UNCHECKED' as const) : 'CHANGED';
+    }
+  }
+  const code = evidence === 'VERIFIED' ? (attached ? 'resume_attached_verified' : 'resume_already_verified') : LEVER_RESUME_ERRORS[evidence];
+  return { staged: evidence === 'VERIFIED' || attached && evidence === 'PARSING', attemptReceipt: save(evidence, code) };
+}
+
 async function preferPlatformSelectedResume(
   resumeSelectionStore: ResumeSelectionStore,
   packageFiles: { resume: { name: string; mimeType: 'application/pdf'; buffer: Buffer } | null; cover: { name: string; mimeType: 'application/pdf'; buffer: Buffer } | null; reviewPolicy: string },
@@ -1024,6 +1049,22 @@ export function createManagedBrowserAssistPlugin(): Plugin {
                 opportunityId, applicationUrl, requestedKinds, uploadPolicy),
               applicationUrl,
             );
+            const attachPreparedDocuments = async (files: typeof packageFiles) => {
+              const liveUrl = page!.url();
+              const key = leverApplicationKey(liveUrl);
+              if (!key) return attachPdfs(page!, files.resume, files.cover);
+              if (!isExactManagedLeverTab(context, page!, applicationUrl, liveUrl)) throw new Error('reviewed_application_tab_mismatch');
+              const resume = (await documentStore.read(opportunityId, applicationUrl)).documents.resume;
+              if (!resume?.reviewedAt || !files.resume || (payload.resumeSha256 !== undefined && payload.resumeSha256 !== resume.sha256)) {
+                leverReceipts.record(key, 'ATTACH', 'UNREVIEWED', 'approved_resume_digest_required', resume?.sha256 ?? null);
+                return { resume: 'manual_required' };
+              }
+              const result = await attachManagedLeverResume(page!, liveUrl, key, resume.sha256,
+                () => documentStore.file(opportunityId, applicationUrl, 'resume', resume.sha256), leverReceipts);
+              if (!result.staged) return { resume: 'manual_required' };
+              const outcome = page!.url() === liveUrl ? await attachPdfs(page!, null, files.cover) : {};
+              return { ...outcome, resume: 'attached_to_input_review_required' };
+            };
             const contact = reviewedContactFields(payload.profile);
             const now = new Date().toISOString();
             const ids: Record<string, string> = { linkedin_url: 'linkedin', region: 'region' };
@@ -1045,7 +1086,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               const fallback = await prepareWithoutTrustedNavigation({
                 fill: () => fillSavedPreferences(page!, approvedPreferences,
                   typeof payload.employerName === 'string' ? payload.employerName.slice(0, 160) : ''),
-                attach: () => attachPdfs(page!, packageFiles.resume, packageFiles.cover),
+                attach: () => attachPreparedDocuments(packageFiles),
                 expectedUploads: requiredKinds.filter(kind => Boolean(packageFiles[kind])),
               });
               // A missing reviewed résumé does not appear in expectedUploads;
@@ -1063,7 +1104,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               });
             }
             const registry = parseTrustedAdapterRegistry(payload.adapterRegistry);
-            await attachPdfs(page, packageFiles.resume, packageFiles.cover);
+            await attachPreparedDocuments(packageFiles);
             const maxSteps = typeof payload.maxSteps === 'number' && Number.isInteger(payload.maxSteps)
               ? payload.maxSteps
               : 10;
@@ -1079,7 +1120,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
                     opportunityId, applicationUrl, requestedKinds, (await readPreferences()).require_document_review !== false),
                   applicationUrl,
                 );
-                await attachPdfs(page!, current.resume, current.cover);
+                await attachPreparedDocuments(current);
               },
               verifyAttachments: async () => {
                 // Only an adapter's explicit document receipt is sufficient for automated progression.
@@ -1170,35 +1211,15 @@ export function createManagedBrowserAssistPlugin(): Plugin {
                   attemptReceipt: await recordUnboundLeverAction('reviewed_application_tab_mismatch') });
               }
               const resume = (await documentStore.read(opportunityId, applicationUrl)).documents.resume;
-              const saveAttachment = (evidence: LeverResumeEvidence, code: string) =>
-                leverReceipts.record(leverKey, 'ATTACH', evidence, code, resume?.sha256 ?? null);
               if (!resume?.reviewedAt || payload.resumeSha256 !== resume.sha256) {
-                return respond(res, 409, { ok: false, error: 'approved_resume_digest_required',
-                  attemptReceipt: saveAttachment('UNREVIEWED', 'approved_resume_digest_required') });
+                const code = 'approved_resume_digest_required';
+                return respond(res, 409, { ok: false, error: code,
+                  attemptReceipt: leverReceipts.record(leverKey, 'ATTACH', 'UNREVIEWED', code, resume?.sha256 ?? null) });
               }
-              if (leverReceipts.pending(leverKey) || await leverChallengeVisible(page)) {
-                return respond(res, 409, { ok: false, error: 'application_attempt_pending',
-                  attemptReceipt: saveAttachment('UNCHECKED', 'application_attempt_pending') });
-              }
-              let evidence = await verifyLeverResume(page, resume.sha256).catch(() => 'UNCHECKED' as const);
-              let attached = false;
-              if (evidence === 'MISSING' || evidence === 'INVALID' || evidence === 'DIGEST_MISMATCH') {
-                const file = await documentStore.file(opportunityId, applicationUrl, 'resume', resume.sha256);
-                if (file && page.url() === liveUrl) {
-                  saveAttachment(evidence, 'resume_attachment_requested');
-                  await preserveLeverPrefilledAnswers(page);
-                  if (page.url() !== liveUrl) return respond(res, 409, { ok: false, error: 'reviewed_application_tab_mismatch',
-                    attemptReceipt: saveAttachment('CHANGED', 'reviewed_application_tab_mismatch') });
-                  const outcome = await attachPdfs(page, file, null);
-                  attached = outcome.resume === 'attached_to_input_review_required';
-                  evidence = page.url() === liveUrl ? await verifyLeverResume(page, resume.sha256).catch(() => 'UNCHECKED' as const) : 'CHANGED';
-                }
-              }
-              const code = evidence === 'VERIFIED' ? (attached ? 'resume_attached_verified' : 'resume_already_verified') :
-                LEVER_RESUME_ERRORS[evidence];
-              const attemptReceipt = saveAttachment(evidence, code);
-              const acceptedForReview = evidence === 'VERIFIED' || attached && evidence === 'PARSING';
-              if (!acceptedForReview) return respond(res, 409, { ok: false, error: code, attemptReceipt });
+              const result = await attachManagedLeverResume(page, liveUrl, leverKey, resume.sha256,
+                () => documentStore.file(opportunityId, applicationUrl, 'resume', resume.sha256), leverReceipts);
+              const { attemptReceipt } = result;
+              if (!result.staged) return respond(res, 409, { ok: false, error: attemptReceipt.code, attemptReceipt });
               const attachments = { resume: 'attached_to_input_review_required' };
               state = attachmentProgressState(attachments);
               return respond(res, 200, { ok: true, state, attachments, attemptReceipt, evidenceSummary: evidenceDescription(state) });

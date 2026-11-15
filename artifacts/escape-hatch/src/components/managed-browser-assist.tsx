@@ -503,6 +503,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         if (!opportunity) throw new Error('Select an active saved opportunity before preparing this application.');
         body = {
           profile, careerProfile: assistProfile, targetRole: opportunity.role, employerName: opportunity.company, opportunityId: opportunity.id, url,
+          resumeSha256: documents.data?.package.documents.resume?.sha256,
           authorization: {
             sessionId: 'cockpit-' + opportunity.id,
             opportunityId: opportunity.id,

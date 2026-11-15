@@ -219,7 +219,12 @@ test('reviewed Lever flow preserves the exact tab and checks the résumé again 
     assert.deepEqual(syncedAttempts, []);
     assert.equal((await request({ ...payload, recordAnswers: true })).code, 200);
     assert.equal((await submit()).body.attemptReceipt?.resumeBefore, 'MISSING');
-    assert.equal((await attach()).body.attemptReceipt?.resumeBefore, 'VERIFIED');
+    const prepared = await request({ ...payload, resumeSha256: sha256, authorization: {
+      sessionId: 'synthetic-prepare', opportunityId: job.id, navigationEnabled: true,
+      allowedEffectClasses: ['LOCAL_STEP_ONLY'], allowedDataCategories: [],
+    } }, undefined, '/prepare');
+    assert.equal(prepared.code, 200, JSON.stringify(prepared.body));
+    assert.equal((await history()).body.receipts[0].code, 'resume_attached_verified');
     assert.equal((await submit()).body.finalActionActivated, true);
     await target.waitForURL('**/thanks');
     const observed = await listeners.refresh();

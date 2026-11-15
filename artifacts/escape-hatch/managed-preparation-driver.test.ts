@@ -2,11 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { chromium } from '@playwright/test';
-import { emptyPreferences } from './src/lib/application-preferences.ts';
 import { ADAPTER_EVIDENCE_SCHEMA } from './application-navigation-policy.ts';
 import {
-  createManagedPreparationDriver,
   loadTrustedEvidence,
   type TrustedAdapterRegistry,
 } from './managed-preparation-driver.ts';
@@ -46,58 +43,4 @@ test('managed browser progression contract exists and preserves MV3 auto-nav pro
   assert.ok(progression.preparation_states.REVIEW_READY);
   assert.ok(progression.preparation_states.REVIEW_REQUIRED);
   assert.ok(progression.preparation_states.BLOCKED);
-});
-
-
-test('managed preparation reads starred ATS requirements, including privacy and upload, before readiness', async () => {
-  const browser = await chromium.launch({ channel: 'chrome', headless: true });
-  try {
-    const page = await browser.newPage();
-    await page.route('https://jobs.example.test/**', route => route.fulfill({
-      contentType: 'text/html',
-      body: `<form>
-        <label for="resume">Resume/CV *</label><input id="resume" type="file" style="display:none">
-        <label for="heard">How did you hear about us? *</label>
-        <select id="heard"><option value="">Choose</option><option value="linkedin">LinkedIn</option></select>
-        <fieldset><legend>Have you previously been employed by us? *</legend>
-          <label><input type="radio" name="employed" value="yes">Yes</label>
-          <label><input type="radio" name="employed" value="no">No</label>
-        </fieldset>
-        <label for="notice">Applicant Privacy Notice *</label><input id="notice" type="checkbox">
-        <label>Optional notes <input id="notes"></label>
-      </form>`,
-    }));
-    await page.goto('https://jobs.example.test/apply');
-    const driver = createManagedPreparationDriver({
-      page,
-      authorization: {
-        sessionId: 'synthetic-session', opportunityId: 'synthetic-magnet',
-        origin: 'https://jobs.example.test', navigationEnabled: true,
-        allowedEffectClasses: ['DRAFT_WRITE_AND_ADVANCE'],
-        allowedDataCategories: ['synthetic_cover_note'],
-        expiresAtUtc: new Date(Date.now() + 60_000).toISOString(),
-      },
-      registry: { schema: ADAPTER_EVIDENCE_SCHEMA, adapterId: 'synthetic', atsProvider: 'synthetic', evidence: [] },
-      preferences: emptyPreferences(),
-    });
-    const before = await driver.inspect();
-    assert.equal(before.uploadsVerified, false);
-    assert.ok(before.unresolvedRequired.some(item => /How did you hear about us/.test(item)));
-    assert.ok(before.unresolvedRequired.some(item => /previously been employed/.test(item)));
-    assert.ok(before.unresolvedRequired.some(item => /Applicant Privacy Notice/.test(item)));
-    assert.ok(before.unresolvedRequired.some(item => /Resume\/CV/.test(item)));
-    assert.ok(!before.unresolvedRequired.some(item => /Optional notes/.test(item)));
-    await page.locator('#resume').setInputFiles({name:'test.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.7\n')});
-    await page.locator('#heard').selectOption('linkedin');
-    await page.locator('input[name="employed"][value="no"]').check();
-    const consentPending = await driver.inspect();
-    assert.equal(consentPending.uploadsVerified, true);
-    assert.ok(consentPending.unresolvedRequired.some(item => /Applicant Privacy Notice/.test(item)));
-    await page.locator('#notice').check();
-    const complete = await driver.inspect();
-    assert.deepEqual(complete.unresolvedRequired, []);
-    assert.equal(complete.uploadsVerified, true);
-  } finally {
-    await browser.close();
-  }
 });

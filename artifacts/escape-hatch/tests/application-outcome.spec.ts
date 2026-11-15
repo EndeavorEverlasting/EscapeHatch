@@ -15,7 +15,7 @@ for (const variant of ['pending', 'captured', 'wrong-id', 'wrong-url', 'closed',
     await page.route('**/__escapehatch/tracker/**', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, connection: 'NOT_CONNECTED', localGoogleAuthPresent: false, snapshot: null }) }));
     await page.route('**/__escapehatch/managed-assist/**', route => {
       const action = new URL(route.request().url()).pathname.split('/').at(-1)!;
-      if (route.request().method() !== 'GET') mutations.push(action);
+      if (route.request().method() !== 'GET' && action !== 'requirements') mutations.push(action);
       const body = action === 'status' ? { ok: true, state: 'submission_tracking_armed_existing_tab', browserOpen: true,
         currentPage: { opportunityId: variant === 'wrong-id' ? 'other-job' : job.id, applicationUrl: variant === 'wrong-url' ? job.url + '-other' : job.url,
           pageUrl: 'https://synthetic.hiringplatform.com/questionnaires/456/people/example' },

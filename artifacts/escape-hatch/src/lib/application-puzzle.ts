@@ -33,6 +33,7 @@ export function projectApplicationPuzzle(inspection: FormInspection | null, oppo
   const required = pieces.filter(piece => piece.requirement === 'required');
   const verifiedRequired = required.filter(piece => piece.populated).length;
   const unknownCount = pieces.filter(piece => piece.requirement === 'unknown').length;
+  const filledCount = pieces.filter(piece => piece.populated).length;
   const covers = pieces.filter(piece => piece.kind === 'cover');
   const coverLetter = !covers.length ? 'NOT_OBSERVED' as const :
     covers.some(piece => piece.requirement === 'required') ? 'REQUIRED' as const :
@@ -41,8 +42,9 @@ export function projectApplicationPuzzle(inspection: FormInspection | null, oppo
   // control contributes no term. An observed required cover file contributes
   // exactly one input to the required denominator, whether or not a PDF exists
   // in private storage. Unknown controls and unseen pages cannot be called done.
-  const percent = current && required.length > 0 && unknownCount === 0
-    ? Math.round(100 * verifiedRequired / required.length) : null;
+  const percentage = (filled: number, total: number) => total && current
+    ? (filled === total ? 100 : Math.min(99, Math.round(100 * filled / total))) : null;
+  const percent = unknownCount === 0 ? percentage(verifiedRequired, required.length) : null;
   return {
     current, pieces,
     requiredCount: required.length,
@@ -54,6 +56,9 @@ export function projectApplicationPuzzle(inspection: FormInspection | null, oppo
       excludedOptional: pieces.filter(piece => piece.requirement === 'optional').length,
       coverLetter, requiredCoverInputs: required.filter(piece => piece.kind === 'cover').length,
       percent,
+      observedFilled: filledCount,
+      observedTotal: pieces.length,
+      observedPercent: percentage(filledCount, pieces.length),
       wholeApplicationPercent: null as null,
     },
     // Neither DOM validity nor local files prove complete requirements, vacancy availability or submission.

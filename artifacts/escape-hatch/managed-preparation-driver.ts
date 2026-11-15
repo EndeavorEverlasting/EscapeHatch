@@ -6,6 +6,7 @@
  * permitted only through prepareToFinalReview after fingerprint rebind.
  */
 import type { Page } from '@playwright/test';
+import { observeApplicationFields, unresolvedCurrentPageRequirements } from './application-requirements.ts';
 import {
   ADAPTER_EVIDENCE_SCHEMA,
   type AdapterEvidence,
@@ -42,7 +43,7 @@ export type ManagedPreparationDriverOptions = {
   /** When false, missing file inputs do not block progression (default true). */
   requireUploadsVerified?: boolean;
   prepareAttachments?: () => Promise<void>;
-  verifyAttachments?: () => Promise<boolean>;
+  verifyAttachments?: (kinds: readonly ('resume' | 'cover')[]) => Promise<boolean>;
 };
 
 function hasText(value: unknown): value is string {
@@ -111,43 +112,6 @@ async function collectValidationErrors(page: Page): Promise<string[]> {
   return count > 0 ? ['live_validation_error'] : [];
 }
 
-async function collectUnresolvedRequired(page: Page): Promise<string[]> {
-  return await page.locator('input[required], textarea[required], select[required], [aria-required="true"]').evaluateAll(elements =>
-    elements.flatMap((element, index) => {
-      const control = element as HTMLElement;
-      const style = getComputedStyle(control);
-      if (!control.getClientRects().length || style.visibility === 'hidden' || style.visibility === 'collapse' ||
-          control.matches(':disabled') || control.getAttribute('aria-disabled') === 'true') return [];
-      const native = control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement || control instanceof HTMLSelectElement;
-      if (native && !control.willValidate) return [];
-      let resolved = false;
-      if (native) {
-        resolved = control.validity.valid;
-        // aria-required alone does not participate in native constraint validation.
-        if (control.getAttribute('aria-required') === 'true' && !control.required) {
-          if (control instanceof HTMLInputElement && control.type === 'checkbox') resolved = control.checked;
-          else if (control instanceof HTMLInputElement && control.type === 'radio') {
-            resolved = control.checked || Boolean(control.name && Array.from(document.getElementsByName(control.name))
-              .some(item => item instanceof HTMLInputElement && item.type === 'radio' && item.checked &&
-                item.form === control.form && item.getRootNode() === control.getRootNode()));
-          } else resolved = resolved && Boolean(control.value.trim());
-        }
-      } else {
-        // An unfamiliar custom widget must expose a selected value; its prompt
-        // text alone cannot prove that the applicant supplied an answer.
-        resolved = control.getAttribute('aria-checked') === 'true' || Boolean(control.getAttribute('aria-valuetext')?.trim());
-      }
-      return resolved ? [] : ['required_control_' + index];
-    }),
-  );
-}
-
-async function uploadsVerified(page: Page, requireUploads: boolean): Promise<boolean> {
-  if (!requireUploads) return true;
-  const required = await page.locator('input[type="file"][required]').count();
-  return required === 0;
-}
-
 export function createManagedPreparationDriver(
   options: ManagedPreparationDriverOptions,
 ): PreparationDriver {
@@ -159,16 +123,23 @@ export function createManagedPreparationDriver(
       const origin = new URL(page.url()).origin;
       const fingerprint = await pageFingerprint(page);
       const control = await observePrimaryControl(page);
+      const requirements = origin === authorization.origin ? await observeApplicationFields(page).catch(() => null) : null;
+      const unresolvedRequired = requirements ? unresolvedCurrentPageRequirements({ requirements }) : ['required_field_inventory_unverified'];
+      const requiredUploads = requirements?.filter(field => field.kind !== 'question' && field.requirement === 'required');
+      const knownKinds = requiredUploads?.flatMap(field => field.kind === 'resume' || field.kind === 'cover' ? [field.kind] : []);
+      const uploadsVerified = requiredUploads !== undefined && (!requireUploads || requiredUploads.length === 0 ||
+        Boolean(options.verifyAttachments && knownKinds?.length === requiredUploads.length &&
+          new Set(knownKinds).size === requiredUploads.length && await options.verifyAttachments(knownKinds)));
       if (!fingerprint || origin !== authorization.origin) {
         return {
           pageFingerprint: fingerprint || 'unverified',
           origin,
           control: null,
           trustedEvidence: null,
-          unresolvedRequired: await collectUnresolvedRequired(page),
+          unresolvedRequired,
           validationErrors: [],
           manualGates: origin !== authorization.origin ? ['application_origin_changed'] : ['page_fingerprint_missing'],
-          uploadsVerified: await uploadsVerified(page, requireUploads) && (!options.verifyAttachments || await options.verifyAttachments()),
+          uploadsVerified,
         };
       }
       const trustedEvidence = control
@@ -179,10 +150,10 @@ export function createManagedPreparationDriver(
         origin,
         control,
         trustedEvidence,
-        unresolvedRequired: await collectUnresolvedRequired(page),
+        unresolvedRequired,
         validationErrors: await collectValidationErrors(page),
         manualGates: control ? [] : ['no_unique_fingerprinted_control'],
-        uploadsVerified: await uploadsVerified(page, requireUploads) && (!options.verifyAttachments || await options.verifyAttachments()),
+        uploadsVerified,
       };
     },
 

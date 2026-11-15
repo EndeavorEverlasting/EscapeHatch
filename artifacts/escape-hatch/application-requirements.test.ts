@@ -2,8 +2,43 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from '@playwright/test';
 import { inspectApplicationRequirements, unresolvedCurrentPageRequirements, assertSubmitFormComplete } from './application-requirements.ts';
+import { fillSavedPreferences } from './managed-form.ts';
+import { emptyPreferences } from './src/lib/application-preferences.ts';
 
 const applicationUrl = 'https://example.test/apply';
+
+test('profile fill measures live fields and exposes a missing résumé and newly revealed answer', async () => {
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  try {
+    const page = await browser.newPage();
+    await page.route(applicationUrl, route => route.fulfill({ contentType: 'text/html; charset=utf-8', body: `
+      <form>
+        <label>First Name<input name="user.first_name" required oninput="document.getElementById('next').hidden = !this.value"></label>
+        <label>Résumé<input type="file" required></label>
+        <label>Optional notes<textarea>Synthetic private answer</textarea></label>
+        <div id="next" hidden><label>Work samples<input required></label></div>
+      </form>
+      <div id="widget"></div>
+      <script>document.getElementById('widget').attachShadow({mode:'open'}).innerHTML = '<label>Portfolio<input type="url" value="invalid"></label>';</script>` }));
+    await page.goto(applicationUrl);
+    const inspect = () => inspectApplicationRequirements(page, 'synthetic', applicationUrl);
+    const before = await inspect();
+    assert.equal(before.requirements.length, 4);
+    assert.equal(before.requirements.filter(item => item.populated).length, 1);
+    const profile = emptyPreferences();
+    profile.preferences['identity.first_name'] = { value: 'Synthetic candidate', source: 'user', scope: 'profile_preference', updated_at: profile.exported_at };
+    await fillSavedPreferences(page, profile);
+    const after = await inspect();
+    assert.equal(after.requirements.length, 5);
+    assert.equal(after.requirements.filter(item => item.populated).length, 2);
+    assert.equal(after.requirements.find(item => item.kind === 'resume')?.populated, false);
+    assert.deepEqual(unresolvedCurrentPageRequirements(after), ['required_field_unresolved:Résumé', 'required_field_unresolved:Work samples']);
+    assert.doesNotMatch(JSON.stringify(after), /Synthetic candidate|Synthetic private answer/);
+    await page.locator('input[type="file"]').setInputFiles({ name: 'synthetic.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.7') });
+    await page.getByLabel('Work samples').fill('Synthetic work');
+    assert.deepEqual(unresolvedCurrentPageRequirements(await inspect()), []);
+  } finally { await browser.close(); }
+});
 
 test('starred Lever-style controls and private required consent are never silently optional', async () => {
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
@@ -37,7 +72,7 @@ test('starred Lever-style controls and private required consent are never silent
     assert.equal(resume?.populated, false);
     assert.equal(source?.requirement, 'required');
     assert.equal(source?.populated, false);
-    assert.equal(previous.length, 2);
+    assert.equal(previous.length, 1);
     assert.ok(previous.every(item => item.requirement === 'required' && !item.populated));
     assert.equal(country?.requirement, 'required');
     assert.equal(consent?.requirement, 'required');
@@ -83,8 +118,6 @@ test('dynamic starred fields are re-inventoried after conditional controls appea
 
 test('required-field blocker projection never counts a separate checkbox as consent', () => {
   const blockers = unresolvedCurrentPageRequirements({
-    opportunityId: 'synthetic', applicationUrl, pageUrl: applicationUrl,
-    capturedAt: '2026-10-27T00:00:00Z', scope: 'current_page_only',
     requirements: [
       { id: 'resume', label: 'Resume/CV *', kind: 'resume', requirement: 'required', populated: false },
       { id: 'consent', label: 'Applicant Privacy Notice *', kind: 'question', requirement: 'required', populated: false },

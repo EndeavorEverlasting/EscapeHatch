@@ -99,9 +99,7 @@
       "path": "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md",
       "mode": "outline",
       "authority": 3,
-      "triggers": [
-        "application"
-      ],
+      "triggers": [],
       "owner": "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md"
     },
     "application_handoff": {
@@ -127,9 +125,7 @@
       "path": "scripts/windows/EscapeHatch-Runtime.ps1",
       "mode": "outline",
       "authority": 4,
-      "triggers": [
-        "runtime"
-      ],
+      "triggers": [],
       "owner": "scripts/windows/EscapeHatch-Runtime.ps1"
     },
     "application_mapping": {

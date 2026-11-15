@@ -106,7 +106,7 @@ class EscalationTests(unittest.TestCase):
         try:
             path.symlink_to(external)
             with self.assertRaisesRegex(ValueError, "CONTEXT_SOURCE_ESCAPES_REPOSITORY"):
-                router.select(self.root, "runtime", "runtime")
+                router.select(self.root, "runtime", "runtime", require_full=("runtime_manager",))
         finally:
             external.unlink(missing_ok=True)
 

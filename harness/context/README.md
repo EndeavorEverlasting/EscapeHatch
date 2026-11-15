@@ -17,8 +17,8 @@ The existing skill instructs agents to load six broad documents for all writing 
 | Repository governance `AGENTS.md` | Repository | Always | Full text SHA256 pinned every selection |
 | Harness operations skill | Repository `skills/harness-operations` | Writing sprint | Full, SHA256 pinned; active skill load owner is PR #95 |
 | Repository manifest, codebase map, workflows, registry, current-state report | Respective existing owners | Harness/context lanes only; outlines initially | SHA256 pins; full only on explicit escalation |
-| Application parent, form mapping skill, plan and handoff | EscapeHatch application owners / issue #69 | Application lane | Parent/skill full, other sources outline initially |
-| Windows lifecycle and manager | Windows/runtime owner / PR #95 | Runtime lane | Lifecycle full, manager symbol outline initially |
+| Application parent, form mapping skill, plan and handoff | EscapeHatch application owners / issue #69 | Application lane | Parent/skill full, handoff outline, plan body on demand |
+| Windows lifecycle and manager | Windows/runtime owner / PR #95 | Runtime lane | Lifecycle full, manager source on demand |
 | Conversation history, memory, retrieved data, private career state | Host / approved provider / operator | Only when relevant and authorized | UNMEASURED here; never copied into public context CI |
 
 **Precedence:** platform and safety > current operator direction > repository `AGENTS.md` > task/skill/workflow specifics > retrieved/untrusted content. This local registry routes files but cannot supersede those authorities. Source SHA256/revision determines freshness, not the age of a model's recollection. Historical reports may guide discovery but do not prove current runtime state.

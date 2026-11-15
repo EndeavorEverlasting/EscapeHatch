@@ -14,6 +14,7 @@ import {
 } from './application-navigation-policy.ts';
 import type { PageInspection, PreparationDriver, PreparationReceipt } from './application-autopilot-executor.ts';
 import { fillSavedPreferences } from './managed-form.ts';
+import { inspectApplicationRequirements, unresolvedCurrentPageRequirements } from './application-requirements.ts';
 import type { Preferences } from './src/lib/application-preferences.ts';
 
 export type AdapterEvidenceEntry = Pick<
@@ -111,41 +112,31 @@ async function collectValidationErrors(page: Page): Promise<string[]> {
   return count > 0 ? ['live_validation_error'] : [];
 }
 
+// Use the same employer-facing inventory as the final submit-readiness gate.
+// Native [required] alone misses Lever-style asterisks, hidden labelled uploads,
+// required ARIA groups and applicant privacy acknowledgement controls.
+async function inspectManagedRequirements(page: Page) {
+  return inspectApplicationRequirements(page, 'managed-current-page', page.url());
+}
+
 async function collectUnresolvedRequired(page: Page): Promise<string[]> {
-  return await page.locator('input[required], textarea[required], select[required], [aria-required="true"]').evaluateAll(elements =>
-    elements.flatMap((element, index) => {
-      const control = element as HTMLElement;
-      const style = getComputedStyle(control);
-      if (!control.getClientRects().length || style.visibility === 'hidden' || style.visibility === 'collapse' ||
-          control.matches(':disabled') || control.getAttribute('aria-disabled') === 'true') return [];
-      const native = control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement || control instanceof HTMLSelectElement;
-      if (native && !control.willValidate) return [];
-      let resolved = false;
-      if (native) {
-        resolved = control.validity.valid;
-        // aria-required alone does not participate in native constraint validation.
-        if (control.getAttribute('aria-required') === 'true' && !control.required) {
-          if (control instanceof HTMLInputElement && control.type === 'checkbox') resolved = control.checked;
-          else if (control instanceof HTMLInputElement && control.type === 'radio') {
-            resolved = control.checked || Boolean(control.name && Array.from(document.getElementsByName(control.name))
-              .some(item => item instanceof HTMLInputElement && item.type === 'radio' && item.checked &&
-                item.form === control.form && item.getRootNode() === control.getRootNode()));
-          } else resolved = resolved && Boolean(control.value.trim());
-        }
-      } else {
-        // An unfamiliar custom widget must expose a selected value; its prompt
-        // text alone cannot prove that the applicant supplied an answer.
-        resolved = control.getAttribute('aria-checked') === 'true' || Boolean(control.getAttribute('aria-valuetext')?.trim());
-      }
-      return resolved ? [] : ['required_control_' + index];
-    }),
-  );
+  try {
+    return unresolvedCurrentPageRequirements(await inspectManagedRequirements(page));
+  } catch {
+    return ['required_field_inventory_unverified'];
+  }
 }
 
 async function uploadsVerified(page: Page, requireUploads: boolean): Promise<boolean> {
   if (!requireUploads) return true;
-  const required = await page.locator('input[type="file"][required]').count();
-  return required === 0;
+  try {
+    const inspection = await inspectManagedRequirements(page);
+    return inspection.requirements
+      .filter(field => field.kind !== 'question' && field.requirement === 'required')
+      .every(field => field.populated);
+  } catch {
+    return false;
+  }
 }
 
 export function createManagedPreparationDriver(

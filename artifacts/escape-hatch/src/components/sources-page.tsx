@@ -112,7 +112,7 @@ export function SourcesPage(props: SourceStateProps & {
     <p className="my-3">Start with a résumé. Drop it below, review its claims, then save the facts you want to reuse. You can choose an opportunity later. Managed startup saves approved details on this computer.</p>
     <CareerSourceStatus />
     <button disabled={busy} onClick={() => void readSavedResume()}>Review saved résumé</button>
-    <p className="my-3">Google connection is unavailable in this build. Existing Google credentials are never copied into this page. Locally synced files can be selected below.</p>
+    <p className="my-3">Choose a local or synced résumé below. A registered Drive PDF can also be staged for a saved opportunity by your local agent.</p>
     <ArtifactDropzone label="Résumé source (.txt or .pdf)" hint="Drop one career source here, or choose a file. Text or text-based PDF, up to 20 MB. Review comes next; dropping never approves claims." accept=".txt,.pdf" disabled={busy} onFile={choose} />
     <label className="block my-4">Opportunity
       <select aria-label="Opportunity" className="block mt-2 border rounded p-2 bg-card" value={opportunityId} onChange={(event) => setOpportunityId(event.target.value)}>

@@ -74,6 +74,11 @@ This workflow does not authorize scraping, automatic navigation, submission, or 
 
 ## Career Source Directory
 
+When an application needs a registered Drive PDF, use the host `drive-status`
+and `drive-verify` commands in [Career Source Directory](../docs/CAREER_SOURCE_DIRECTORY.md)
+before diagnosing access. The installed workspace and exact saved opportunity own
+staging. Use an authorized connected-agent export or local file if appropriate.
+
 For P04 user-selected local/cloud résumé folders and application tracker sources, read `docs/CAREER_SOURCE_DIRECTORY.md` and use `scripts/career_source_directory.py` to register a source privately, with synthetic verification in `tests/test_career_source_directory.py`. Reuse TokenCorridor's existing Google auth and any authorized provider or synced local folder before considering operator reauthorization. Never request a new Cloud project/client as a default. A registered Google folder is **not** an authenticated document read. P08 requires actual Windows-host résumé text retrieval, reviewed candidate profile import, tracker linkage and local running product evidence.
 
 ## Application Companion

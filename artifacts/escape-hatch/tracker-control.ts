@@ -1,16 +1,15 @@
 /**
  * Loopback-only tracker snapshot reader for the managed EscapeHatch runtime.
- * Reads %LOCALAPPDATA%\EscapeHatch\tracker-snapshot.v1.json and reports whether
- * TokenCorridor google.json exists. Never logs snapshot contents or tokens.
+ * Reads the private tracker snapshot and reports whether a local credential
+ * is available to attempt refresh. Never logs snapshot contents or tokens.
  */
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { homedir } from 'node:os';
 import type { Plugin } from 'vite';
 import { isLoopbackAddress, readManagedRuntime } from './runtime-control.ts';
 import { parseTrackerSnapshot } from './src/lib/tracker-bridge.ts';
-import { readRememberedSources, readTrackerRefreshAvailability, refreshTrackerSnapshot } from './tracker-refresh.ts';
+import { acquireToken, readRememberedSources, readTrackerRefreshAvailability, refreshTrackerSnapshot } from './tracker-refresh.ts';
 import { userDataRoot } from './user-data.ts';
 
 const PREFIX = '/__escapehatch/tracker';
@@ -24,21 +23,15 @@ function respond(res: ServerResponse, code: number, value: object) {
 }
 
 export function trackerPaths(env: NodeJS.ProcessEnv = process.env) {
-  const local = env.LOCALAPPDATA || path.join(homedir(), 'AppData', 'Local');
   return {
     snapshot: env.ESCAPEHATCH_TRACKER_SNAPSHOT || path.join(userDataRoot(env), 'tracker-snapshot.v1.json'),
-    googleAuth: path.join(local, 'TokenCorridor', 'connectors', 'google.json'),
     sources: path.join(userDataRoot(env), 'career-sources.v1.json'),
   };
 }
 
 export async function readTrackerStatus(env: NodeJS.ProcessEnv = process.env) {
   const paths = trackerPaths(env);
-  let localGoogleAuthPresent = false;
-  try {
-    await fs.access(paths.googleAuth);
-    localGoogleAuthPresent = true;
-  } catch { /* absent */ }
+  const localGoogleAuthPresent = Boolean(await acquireToken(env));
 
   try {
     const raw = JSON.parse(await fs.readFile(paths.snapshot, 'utf8')) as unknown;
@@ -57,11 +50,11 @@ export async function readTrackerStatus(env: NodeJS.ProcessEnv = process.env) {
       ok: true as const,
       refreshed: false as const,
       connection: 'CONNECTED' as const,
-      reason: snapshot.authPath,
-      localGoogleAuthPresent: localGoogleAuthPresent || snapshot.localGoogleAuthPresent,
+      reason: 'Saved tracker snapshot available locally.',
+      localGoogleAuthPresent,
       snapshot: {
         ...snapshot,
-        localGoogleAuthPresent: localGoogleAuthPresent || snapshot.localGoogleAuthPresent,
+        localGoogleAuthPresent,
       },
     };
   } catch {
@@ -70,8 +63,8 @@ export async function readTrackerStatus(env: NodeJS.ProcessEnv = process.env) {
       refreshed: false as const,
       connection: 'NOT_CONNECTED' as const,
       reason: localGoogleAuthPresent
-        ? 'Google auth file present but no EscapeHatch tracker snapshot yet.'
-        : 'NOT CONNECTED — TokenCorridor google.json absent and no private tracker snapshot.',
+        ? 'An existing local Google credential is available. Bind a career tracker to refresh it.'
+        : 'Select a career tracker or import an existing snapshot.',
       localGoogleAuthPresent,
       snapshot: null,
     };
@@ -105,7 +98,8 @@ export function createTrackerControlPlugin(): Plugin {
         }
         if (url.pathname === PREFIX + '/sources' && req.method === 'GET') {
           const result = await readRememberedSources(trackerPaths().sources);
-          return respond(res, result.ok ? 200 : 422, { ...result, ...await readTrackerRefreshAvailability(trackerPaths().snapshot) });
+          return respond(res, result.ok ? 200 : 422, { ...result, sources: result.sources.map(({ kind, label, locator }) => ({ kind, label, locator })),
+            ...await readTrackerRefreshAvailability(trackerPaths().snapshot) });
         }
         if (url.pathname === PREFIX + '/refresh' && req.method === 'POST') {
           if (!trackerRefreshRequestAllowed(req, 'http://127.0.0.1:' + port)) {

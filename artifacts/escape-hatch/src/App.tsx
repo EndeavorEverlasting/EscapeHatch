@@ -731,7 +731,7 @@ function HomePage({ profile, answers, assistProfile, applications, setApplicatio
     </section>}
     <div className="mt-10 flex flex-col gap-5 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
       <div><p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-muted-foreground">quiet reminder</p><p className="mt-2 font-display text-2xl">You do not have to finish the whole search today.</p></div>
-      <p className="max-w-xs text-sm leading-6 text-muted-foreground sm:text-right">EscapeHatch never submits anything for you. It just keeps the repeatable parts close at hand.</p>
+      <p className="max-w-xs text-sm leading-6 text-muted-foreground sm:text-right">Review your application and authorize Submit. EscapeHatch can make the approved click on supported managed Lever forms.</p>
     </div>
   </div>;
 }

@@ -590,7 +590,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           result.preparation.pagesPrepared + '; intermediate steps: ' + result.preparation.intermediateSteps +
           (result.filled?.length ? '. Filled approved fields: ' + result.filled.join(', ') : '') +
           (result.attachments ? '. Document staging: ' + Object.entries(result.attachments).map(([kind, status]) => kind + '=' + status.replaceAll('_', ' ')).join(', ') : '') +
-          '. Final submission remains operator-only.'
+          '. Final Submit requires your explicit approval.'
         );
       }
     } catch (error) {
@@ -722,7 +722,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
             <p className="text-sm font-semibold">{needsOpportunityConfirmation
               ? 'Is this the same job you selected before signing in?'
               : 'Application form recognized. Continue where you left off.'}</p>
-            <p className="text-xs text-muted-foreground">The form was observed twice in the same browser session. No final Submit is automated.</p>
+            <p className="text-xs text-muted-foreground">The form was observed twice in the same browser session. Final Submit requires your explicit approval.</p>
             {needsOpportunityConfirmation && <p className="text-xs text-muted-foreground">The employer returned to a different page path. Confirm this is the same selected opportunity before any automated field changes. Do not confirm another job.</p>}
             <button className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" type="button"
               data-testid="button-auth-resume" disabled={busy || (needsOpportunityConfirmation && !selectedOpportunityId)} onClick={() => void run('resume')}>

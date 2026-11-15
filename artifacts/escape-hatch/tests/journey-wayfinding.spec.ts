@@ -29,7 +29,7 @@ test('mobile journey is reachable, keyboard operable and never marks application
   await expect(page.getByTestId('journey-atlas')).toBeVisible();
   await page.getByTestId('journey-step-5').focus();
   await page.keyboard.press('Enter');
-  await expect(page.getByTestId('journey-selected-step')).toContainText('Review and submit yourself');
+  await expect(page.getByTestId('journey-selected-step')).toContainText('Review and authorize Submit');
   await expect(page.getByTestId('journey-step-5')).toContainText('You decide');
   await expect(page.getByTestId('journey-atlas')).toContainText(/final Submit stay in your control/i);
   await expect(page.getByTestId('journey-open-stage')).toHaveAttribute('href','/assist');

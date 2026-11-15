@@ -202,3 +202,39 @@ test('production driver preserves populated required answers and ignores hidden 
   expect(after.spaAdvances.length).toBe(before.spaAdvances.length + 1);
   expect(after.terminalCommits.length).toBe(before.terminalCommits.length);
 });
+
+test('managed preparation inventory protects starred ATS fields and privacy while verifying required upload', async ({ page }) => {
+  await page.goto(ats.origin + '/spa/step/1');
+  await page.setContent(`<form>
+    <label for="resume">Resume/CV *</label><input id="resume" type="file" style="display:none">
+    <label for="heard">How did you hear about us? *</label>
+    <select id="heard"><option value="">Choose</option><option value="linkedin">LinkedIn</option></select>
+    <fieldset><legend>Have you previously been employed by us? *</legend>
+      <label><input type="radio" name="employed" value="yes">Yes</label>
+      <label><input type="radio" name="employed" value="no">No</label>
+    </fieldset>
+    <label for="notice">Applicant Privacy Notice *</label><input id="notice" type="checkbox">
+    <label>Optional notes <input id="notes"></label>
+  </form>`);
+  const driver = createManagedPreparationDriver({
+    page, authorization: permission(), registry: contract as TrustedAdapterRegistry,
+    preferences: emptyPreferences(),
+  });
+  const before = await driver.inspect();
+  expect(before.uploadsVerified).toBe(false);
+  expect(before.unresolvedRequired.some(item => /How did you hear about us/.test(item))).toBe(true);
+  expect(before.unresolvedRequired.some(item => /previously been employed/.test(item))).toBe(true);
+  expect(before.unresolvedRequired.some(item => /Applicant Privacy Notice/.test(item))).toBe(true);
+  expect(before.unresolvedRequired.some(item => /Resume\\/CV/.test(item))).toBe(true);
+  expect(before.unresolvedRequired.some(item => /Optional notes/.test(item))).toBe(false);
+  await page.locator('#resume').setInputFiles({ name:'test.pdf', mimeType:'application/pdf', buffer:Buffer.from('%PDF-1.7\\n') });
+  await page.locator('#heard').selectOption('linkedin');
+  await page.locator('input[name="employed"][value="no"]').check();
+  const pending = await driver.inspect();
+  expect(pending.uploadsVerified).toBe(true);
+  expect(pending.unresolvedRequired.some(item => /Applicant Privacy Notice/.test(item))).toBe(true);
+  await page.locator('#notice').check();
+  const complete = await driver.inspect();
+  expect(complete.unresolvedRequired).toEqual([]);
+  expect(complete.uploadsVerified).toBe(true);
+});

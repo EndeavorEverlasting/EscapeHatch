@@ -93,6 +93,8 @@ Anything else is **REVIEW_REQUIRED** and stops automated progression with a prec
 
 For a reviewed managed Lever application, the operator may explicitly authorize the final click. EscapeHatch captures existing reusable answers privately, checks the live résumé against the approved digest before each attempt, and clicks once on the exact bound tab. A verified rejection must precede re-arming for retry. Provider confirmation starts receipt reconciliation and tracker sync.
 
+For the selected saved Lever opportunity, **Lever attachment and submit receipts** in Assist shows the recent local history. The guarded `GET /__escapehatch/managed-assist/lever-attempt-receipts?opportunityId=…&url=…` returns the same records for a local agent. Use the approved opportunity résumé SHA-256 in the managed Attach or Submit request. Check the receipt for the live file before Submit, whether the click was observed, the provider response, and the file-input state after that response. A missing file after a verification error does not identify the cause of the error. A pending reservation survives a restart and blocks duplicate attempts while the outcome is unresolved. An older or unmanaged attempt may have no receipt. These records stay in the private local workspace and contain no answer text, filenames, or raw provider page content. Only the existing employer-confirmation receipt triggers tracker writeback.
+
 The following stay manual-only:
 - truth/accuracy attestation;
 - legal/compliance certification;

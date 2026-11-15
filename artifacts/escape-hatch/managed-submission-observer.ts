@@ -24,6 +24,12 @@ export type SubmissionSnapshot = {
   reason: string;
   receipt: SubmissionReceipt | null;
 };
+export type LeverAttemptObservation = {
+  response: 'LEVER_VERIFICATION_ERROR' | 'VALIDATION_FAILED' | 'CONFIRMED';
+  resumeAfter: 'NOT_OBSERVED' | 'EMPTY' | 'PRESENT';
+};
+export type LeverAttemptEvent = { attemptId: string } & ({ state: 'CLICK_OBSERVED' } |
+  { state: 'RESPONSE_OBSERVED'; observation: LeverAttemptObservation });
 export type SubmissionObserverOptions = {
   opportunityId: string;
   sessionId: string;
@@ -42,6 +48,7 @@ export type SubmissionObserverOptions = {
   /** Exact-job descendants only; never use '/' or a broad careers prefix. */
   continuationPathPrefixes?: string[];
   onChange?: (snapshot: SubmissionSnapshot) => void;
+  onLeverAttempt?: (event: LeverAttemptEvent) => void;
 };
 
 type Observation = {
@@ -49,6 +56,8 @@ type Observation = {
   /** Ephemeral structural evidence only, no field values, labels, or page text. */
   stageKey?: string; hasQuestions?: boolean; processing?: boolean;
   success: boolean; invalid: boolean; nonce?: string;
+  leverVerificationError?: boolean;
+  leverResume?: LeverAttemptObservation['resumeAfter'];
 };
 
 /** Pure policy, shared by the browser installer and fixture tests. No button text is proof of completion. */
@@ -143,7 +152,8 @@ export async function installManagedSubmissionObserver(page: Page, options: Subm
       attemptId = randomUUID();
       attemptStageKey = event.documentId + ':' + (event.stageKey || '');
     }
-    publish(reduceSubmissionObservation(current, event, {
+    const previous = current;
+    const next = reduceSubmissionObservation(current, event, {
       origin: application.origin, applicationPath: application.pathname,
       confirmationPaths: paths, continuationPathPrefixes: continuations, attemptStageKey,
       receipt: { opportunityId: options.opportunityId, sessionId: options.sessionId, attemptId,
@@ -151,7 +161,15 @@ export async function installManagedSubmissionObserver(page: Page, options: Subm
         ...(opportunity.pathname !== application.pathname ? { opportunityPath: opportunity.pathname } : {}),
         observedAt: new Date().toISOString(), source: 'same_session_page_confirmation',
         evidenceCode: 'APPLICATION_RECEIVED_AFTER_USER_SUBMIT' },
-    }));
+    });
+    if (event.kind === 'attempt' && next.state === 'PENDING') options.onLeverAttempt?.({ state: 'CLICK_OBSERVED', attemptId });
+    if (previous.state !== next.state && (next.state === 'VALIDATION_FAILED' || next.state === 'CONFIRMED')) {
+      options.onLeverAttempt?.({ state: 'RESPONSE_OBSERVED', attemptId, observation: {
+        response: next.state === 'CONFIRMED' ? 'CONFIRMED' : event.leverVerificationError ? 'LEVER_VERIFICATION_ERROR' : 'VALIDATION_FAILED',
+        resumeAfter: event.leverResume === 'EMPTY' || event.leverResume === 'PRESENT' ? event.leverResume : 'NOT_OBSERVED',
+      } });
+    }
+    publish(next);
   });
   const config = { name, nonce, submitSelector: options.submitSelector, successSelector: options.successSelector,
     expectedSubmitText: options.expectedSubmitText ?? 'Submit Application', acceptAnySubmitLabel: options.acceptAnySubmitLabel === true };
@@ -183,6 +201,11 @@ export async function installManagedSubmissionObserver(page: Page, options: Subm
       if (!ids.has(element)) ids.set(element, nextId++);
       return ids.get(element);
     }).join('-');
+    const isLever = location.origin === 'https://jobs.lever.co';
+    const verificationError = (element: Element) =>
+      /^[✱*]?\s*there was an error verifying your application[.!]?(?:\s*please try again[.!]?)?$/.test(
+        normalize(element.textContent || ''));
+    let priorLeverErrors = new Set<Element>();
 
     const scan = async (kind: Observation['kind'] = 'scan') => {
       const controls = terminals();
@@ -197,12 +220,21 @@ export async function installManagedSubmissionObserver(page: Page, options: Subm
       const hasQuestions = questionControls().length > 0;
       const success = controls.length === 0 && !hasQuestions && distinct.length === 1;
       const rejected = Array.from(document.querySelectorAll('#root div')).some(element => visible(element) && /^we couldn.t submit your application\b/i.test(normalize((element as HTMLElement).innerText)));
-      const leverVerificationError = location.origin === 'https://jobs.lever.co' &&
-        Array.from(document.querySelectorAll('h1, h2, [role="alert"], .error-message')).some(element =>
-          visible(element) && /^there was an error verifying your application[.!]?$/.test(normalize((element as HTMLElement).innerText)));
-      const invalid = rejected || leverVerificationError || Array.from(document.querySelectorAll('[role="alert"], [aria-invalid="true"], .ashby-application-form-error, .application-error, .application-errors, #application-form-error, .application-form-error')).some(element => visible(element) && (element.getAttribute('aria-invalid') === 'true' || /required|invalid|error|failed|could not|couldn.t|unable|try again|possible spam|flagged|captcha/i.test((element as HTMLElement).innerText)));
+      const errors = Array.from(document.querySelectorAll('[role="alert"], [aria-invalid="true"], .ashby-application-form-error, .application-error, .application-errors, #application-form-error, .application-form-error'))
+        .filter(element => visible(element) && (element.getAttribute('aria-invalid') === 'true' || /required|invalid|error|failed|could not|couldn.t|unable|try again|possible spam|flagged|captcha/i.test((element as HTMLElement).innerText)));
+      const verification = isLever ? Array.from(document.querySelectorAll('h1, h2, p, div, [role="alert"], .error-message'))
+        .filter(element => visible(element) && verificationError(element) &&
+          !Array.from(element.children).some(child => visible(child) && verificationError(child))) : [];
+      if (isLever && kind === 'attempt') priorLeverErrors = new Set([...errors, ...verification]);
+      const visibleErrors = new Set([...errors, ...verification]);
+      for (const element of priorLeverErrors) if (!visibleErrors.has(element)) priorLeverErrors.delete(element);
+      const leverVerificationError = verification.some(element => !priorLeverErrors.has(element));
+      const invalid = rejected || leverVerificationError || errors.some(element => !priorLeverErrors.has(element) && (!isLever || !verificationError(element)));
+      const resumeInputs = isLever ? Array.from(document.querySelectorAll<HTMLInputElement>('form#application-form input[type="file"][name="resume"], form#application-form #resume-upload-input'))
+        .filter(input => input.type === 'file') : [];
+      const leverResume = resumeInputs.length === 1 ? (resumeInputs[0].files?.length ? 'PRESENT' : 'EMPTY') : 'NOT_OBSERVED';
       await report({ kind, url: location.href, documentId, stageKey: stageKey(), hasQuestions, success,
-        processing: processing && controls.length === 0 && !hasQuestions, invalid, nonce });
+        processing: processing && controls.length === 0 && !hasQuestions, invalid, leverVerificationError, leverResume, nonce });
       return { success, invalid, receiptText, terminalCount: controls.length, terminalEnabled: controls.length === 1 && !controls[0].matches(':disabled, [aria-disabled="true"]') };
 
     };

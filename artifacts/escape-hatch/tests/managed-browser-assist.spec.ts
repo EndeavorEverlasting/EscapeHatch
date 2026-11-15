@@ -18,6 +18,19 @@ test('existing-tab tracking and external sync status stay explicit without launc
       expect(route.request().postDataJSON()).toMatchObject({ opportunityId: job.id, url: job.url, livePageUrl: job.url + '/apply' });
       armed = true;
     }
+    if (action === 'lever-attempt-receipts') {
+      const scope = new URL(route.request().url()).searchParams;
+      expect(scope.get('opportunityId')).toBe(job.id);
+      expect(scope.get('url')).toBe(job.url);
+      await route.fulfill({ json: { ok: true, receipts: [{
+        id: 'attempt-2', createdAt: '2026-11-15T11:00:00Z', action: 'SUBMIT', resumeBefore: 'VERIFIED',
+        dispatch: 'CLICK_OBSERVED', response: 'LEVER_VERIFICATION_ERROR', resumeAfter: 'EMPTY', code: 'DISPATCH_RESERVED',
+      }, {
+        id: 'attempt-1', createdAt: '2026-11-15T10:55:00Z', action: 'SUBMIT', resumeBefore: 'MISSING',
+        dispatch: 'NOT_ATTEMPTED', response: 'NOT_EXPECTED', resumeAfter: 'NOT_OBSERVED', code: 'resume_missing_or_invalid',
+      }] } });
+      return;
+    }
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, browserOpen: true, state: 'application_form_open_review_required',
       currentPage: { opportunityId: job.id, applicationUrl: job.url, pageUrl: job.url + '/apply' },
       listeners: { recordingAnswers: false, savedAnswers: 0, opportunityId: job.id, error: '', receipts: [], submission: { state: armed ? 'ARMED' : 'DISARMED', reason: armed ? 'Listening for user submit on this application.' : 'Listener is off.' } },
@@ -31,6 +44,13 @@ test('existing-tab tracking and external sync status stay explicit without launc
   await expect(page.getByTestId('submission-listener-status')).toContainText('Listening for user submit');
   await expect(page.getByTestId('submission-listener-state')).toContainText('ARMED — observing form transitions for this job');
   await expect(page.getByText(/Tracker synchronization: AUTH_REQUIRED/)).toBeVisible();
+  await page.getByText('Lever attachment and submit receipts', { exact: true }).click();
+  const receiptHistory = page.getByTestId('lever-attempt-receipts');
+  await expect(receiptHistory).toContainText('Résumé before Submit: missing.');
+  await expect(receiptHistory).toContainText('Dispatch: no click.');
+  await expect(receiptHistory).toContainText('Résumé before Submit: matches the approved PDF.');
+  await expect(receiptHistory).toContainText('Lever reported a verification error; cause unspecified');
+  await expect(receiptHistory).toContainText('Résumé field after response: empty.');
   await page.getByRole('button', { name: 'Retry tracker synchronization' }).click();
   expect(actions).toContain('retry');
   expect(actions).not.toContain('launch');

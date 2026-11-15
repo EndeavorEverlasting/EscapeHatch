@@ -669,13 +669,12 @@ export function createManagedBrowserAssistPlugin(): Plugin {
           const payload = await readJson(req);
           const leverAction = url.pathname === PREFIX + '/attach' ? 'ATTACH' :
             url.pathname === PREFIX + '/submit-authorized' ? 'SUBMIT' : null;
+          const requestedLeverJob = leverAction && typeof payload.url === 'string' ? savedLeverApplicationKey(payload.url) : null;
           const recordUnboundLeverAction = async (code: string) => {
-            if (!leverAction || typeof payload.url !== 'string' || typeof payload.opportunityId !== 'string') return null;
-            const key = savedLeverApplicationKey(payload.url);
-            if (!key) return null;
+            if (!leverAction || !requestedLeverJob || typeof payload.opportunityId !== 'string') return null;
             const applications = (await readWorkspace())?.workspace.values[APPLICATIONS_KEY];
             if (!Array.isArray(applications) || !applications.some(item => item.id === payload.opportunityId && item.url === payload.url)) return null;
-            return leverReceipts.record(key, leverAction, 'UNCHECKED', code);
+            return leverReceipts.record(requestedLeverJob, leverAction, 'UNCHECKED', code);
           };
           if (url.pathname === PREFIX + '/submission-sync/retry') return respond(res, 200, { ok: true, trackerSync: await retrySubmissionSync() });
           if (url.pathname === PREFIX + '/talent-community/cognizant/reuse-resume') {
@@ -956,6 +955,12 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             attemptReceipt: await recordUnboundLeverAction('managed_application_tab_unavailable') });
           if (new URL(page.url()).origin !== applicationOrigin) return respond(res, 409, { ok: false, error: 'application_origin_changed_review_required',
             attemptReceipt: await recordUnboundLeverAction('application_origin_changed_review_required') });
+          // Do not fall through to generic attachment or submit when the saved
+          // Lever job has navigated away from its application form.
+          if (requestedLeverJob && leverApplicationKey(page.url()) !== requestedLeverJob) {
+            return respond(res, 409, { ok: false, error: 'reviewed_application_tab_mismatch',
+              attemptReceipt: await recordUnboundLeverAction('reviewed_application_tab_mismatch') });
+          }
           if (url.pathname === PREFIX + '/requirements') {
             assertInspectionScope(payload.opportunityId, payload.url, opportunityId, applicationUrl, page.url());
             return respond(res, 200, { ok: true, inspection: await inspectApplicationRequirements(page, opportunityId, applicationUrl) });

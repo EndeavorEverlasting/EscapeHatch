@@ -163,6 +163,13 @@ test('reviewed Lever flow preserves the exact tab and checks the résumé again 
     assert.equal((await submit()).body.error, 'answer_and_submission_listeners_required');
     assert.equal((await request({ ...payload, recordAnswers: true })).body.listeners.recordingAnswers, true);
     assert.equal((await submit({ livePageUrl: unrelated.url() })).body.error, 'reviewed_application_tab_mismatch');
+    await target.evaluate(() => history.replaceState({}, '', location.pathname + '/other'));
+    const wrongStep = (await attach()).body.attemptReceipt;
+    assert.equal(wrongStep.action, 'ATTACH');
+    assert.equal(wrongStep.code, 'reviewed_application_tab_mismatch');
+    assert.equal(wrongStep.resumeBefore, 'UNCHECKED');
+    await target.evaluate(() => history.replaceState({}, '', location.pathname.replace(/\/other$/, '')));
+    assert.equal((await request({ ...payload, recordAnswers: true })).code, 200);
     assert.equal((await submit({ resumeSha256: '0'.repeat(64) })).body.error, 'approved_resume_digest_required');
     const restartedJournal = new LeverAttemptReceipts(root);
     const reserved = restartedJournal.record(job.url + '/apply', 'SUBMIT', 'VERIFIED', 'DISPATCH_RESERVED', sha256)!;

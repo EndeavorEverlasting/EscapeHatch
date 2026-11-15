@@ -45,31 +45,7 @@ if (-not $OperatorInitiated) {
 }
 # A community is account-scoped, not one role's application. A job link is optional.
 # Do not force reentry of an existing submitted opportunity merely to open community access.
-if ($SourceOpportunityId -and $SourceOpportunityId -notmatch '^[A-Za-z0-9:_-]{1,160}
-if ($listenerState -in @('ARMED', 'PENDING', 'PROCESSING')) {
-    throw 'ACTIVE_SUBMISSION_LISTENER: preserve current browser session and reconcile it first.'
-}
-$payload = @{
-    opportunityId = $communityId
-    url = $communityUrl
-    employerName = 'micro1 Certified Talent Community'
-} | ConvertTo-Json -Compress
-$launch = Invoke-RestMethod -Uri ($api + '/launch') -Method Post -Headers $headers -ContentType 'application/json' -Body $payload -TimeoutSec 40
-if ($launch.ok -ne $true) { throw 'MICRO1_PORTAL_LAUNCH_UNVERIFIED' }
-[pscustomobject]@{
-    schema = 'escapehatch/micro1-community-preparation/v1'
-    ok = $true
-    sourceOpportunityId = $SourceOpportunityId
-    jobLedgerWriteAttempted = $false
-    communityScope = $communityId
-    browserState = [string]$launch.state
-    inviteResolved = $false
-    membership = 'NOT_VERIFIED'
-    authenticated = 'NOT_OBSERVED'
-    submitIssued = $false
-    next = 'Use the authenticated Talent Platform Join Discord CTA; require consent and fresh guild membership proof.'
-} | ConvertTo-Json -Depth 5
-) {
+if ($SourceOpportunityId -and $SourceOpportunityId -notmatch '^[A-Za-z0-9:_-]{1,160}$') {
     throw 'INVALID_OPTIONAL_OPPORTUNITY_ID'
 }
 if ($listenerState -in @('ARMED', 'PENDING', 'PROCESSING')) {

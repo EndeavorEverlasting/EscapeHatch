@@ -30,6 +30,9 @@ jobs:
         with: { python-version: '3.13' }
       - run: python scripts/validate_replit_transfer.py
       - run: python scripts/validate_puzzle_atlas.py
+      - name: Install Linux desktop launch validator
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends python3-gi desktop-file-utils
+      - run: /usr/bin/python3 tests/test_container_desktop_entry.py
       - run: npm ci --prefix artifacts/escape-hatch --ignore-scripts
       - run: npm --prefix artifacts/escape-hatch run typecheck
       - run: npm --prefix artifacts/escape-hatch run test:unit

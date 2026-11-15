@@ -75,7 +75,7 @@ function Open-EscapeHatch {
         if ((Get-LaunchContainer) -ne "$owner|true") { throw 'EscapeHatch stopped during startup. Click again after checking Docker.' }
         Start-Sleep -Seconds 1
     }
-    if ($launchUrl -cnotmatch '^http://escapehatch\.localhost:21030/__launch/[a-f0-9]{64}$') {
+    if ($launchUrl -cnotmatch '^http://localhost:21030/__launch/[a-f0-9]{64}$') {
         throw 'The workspace did not become ready. Check docker logs escapehatch-desktop.'
     }
     if ($NoBrowser) { Write-Output $launchUrl; return }

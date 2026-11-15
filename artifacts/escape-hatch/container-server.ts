@@ -7,7 +7,7 @@ import { createWorkspaceControlPlugin } from './workspace-control.ts';
 
 const port = Number(process.env.PORT ?? 21030);
 if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('Choose a valid unprivileged EscapeHatch port.');
-const browserHost = `escapehatch.localhost:${port}`;
+const browserHost = `localhost:${port}`;
 const origin = `http://${browserHost}`;
 const workspaceHost = `127.0.0.1:${port}`;
 const launchFile = process.env.ESCAPEHATCH_LAUNCH_FILE ?? '/tmp/escapehatch-launch-url';

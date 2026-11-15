@@ -6,11 +6,11 @@ const fixture = 'ContainerFixture';
 let launchUrl = '';
 for await (const chunk of process.stdin.setEncoding('utf8')) launchUrl += chunk;
 const url = new URL(launchUrl.trim());
-assert.equal(url.hostname, 'escapehatch.localhost');
+assert.equal(url.hostname, 'localhost');
 
 const browser = await chromium.launch({
   executablePath: process.env.ESCAPEHATCH_TEST_CHROMIUM,
-  args: ['--host-resolver-rules=MAP escapehatch.localhost 127.0.0.1, MAP fonts.googleapis.com ~NOTFOUND, MAP fonts.gstatic.com ~NOTFOUND'],
+  args: ['--host-resolver-rules=MAP fonts.googleapis.com ~NOTFOUND, MAP fonts.gstatic.com ~NOTFOUND'],
 });
 try {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });

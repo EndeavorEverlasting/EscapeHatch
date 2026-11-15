@@ -15,9 +15,9 @@ read_launch_url() {
   "$launcher" --no-browser | tail -n 1
 }
 fetch_local() {
-  curl --silent --show-error --max-time 10 --noproxy '*' --resolve escapehatch.localhost:21030:127.0.0.1 "$@"
+  curl --silent --show-error --max-time 10 --noproxy '*' --resolve localhost:21030:127.0.0.1 "$@"
 }
-origin=http://escapehatch.localhost:21030
+origin=http://localhost:21030
 url=$(read_launch_url)
 [[ "$url" == "$origin"/__launch/* ]]
 [[ "$(read_launch_url)" == "$url" ]]

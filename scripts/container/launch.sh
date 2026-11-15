@@ -62,7 +62,7 @@ for ((attempt=0; attempt<60; attempt++)); do
   [[ "$(inspect || true)" == "$owner|true" ]] || fail 'EscapeHatch stopped during startup. Click again after checking Docker.'
   sleep 1
 done
-[[ "$launch_url" =~ ^http://escapehatch\.localhost:21030/__launch/[a-f0-9]{64}$ ]] || fail 'The workspace did not become ready. Check docker logs escapehatch-desktop.'
+[[ "$launch_url" =~ ^http://localhost:21030/__launch/[a-f0-9]{64}$ ]] || fail 'The workspace did not become ready. Check docker logs escapehatch-desktop.'
 if [[ "$no_browser" == true ]]; then
   printf '%s\n' "$launch_url"
 elif [[ "$(uname -s)" == Darwin ]] && open "$launch_url"; then

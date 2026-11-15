@@ -14,7 +14,7 @@ With Docker running in Linux-container mode, [download and extract EscapeHatch](
 
 The first launch builds the app and opens the **Journey** tutorial in your default browser. Follow the chick to import a résumé, restore an exported workspace from Profile, or start with an opportunity. On macOS, if the extracted command is not executable, run `chmod +x "Hey, press me, click me.command"` once. On Linux, your desktop may ask you to trust the launcher. If your file manager opens it as text, run `bash scripts/container/launch.sh` from the extracted folder.
 
-The app listens on this computer at `escapehatch.localhost:21030`. The container uses a dedicated Docker volume for your data. To close it, run `bash scripts/container/launch.sh stop` on macOS or Linux, or run `"Hey, press me, click me.cmd" stop` in Windows Command Prompt. Close and reopen EscapeHatch after updating the source to pick up the new build.
+The app listens on this computer at `localhost:21030`. The container uses a dedicated Docker volume for your data. To close it, run `bash scripts/container/launch.sh stop` on macOS or Linux, or run `"Hey, press me, click me.cmd" stop` in Windows Command Prompt. Close and reopen EscapeHatch after updating the source to pick up the new build.
 
 This Docker launcher supports the local cockpit, tutorial, and workspace. Use the native Windows route below for managed employer Chrome, host Google access, and native extension integration. Mobile companion installation is separate.
 

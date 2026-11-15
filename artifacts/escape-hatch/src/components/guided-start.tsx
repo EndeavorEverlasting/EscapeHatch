@@ -8,6 +8,8 @@ import { ProfilePieceBoard } from './profile-piece-board';
 import type { ProfilePuzzleInput } from '@/lib/profile-puzzle-projection';
 import type { Profile, Application } from '@/lib/storage';
 
+const containerWorkspace = import.meta.env.VITE_ESCAPEHATCH_CONTAINER === '1';
+
 /** A quiet, user-triggered original two-note chirp; never an automatic notification. */
 function playChirp() {
   if (typeof window === 'undefined' || typeof window.AudioContext !== 'function') return;
@@ -41,7 +43,7 @@ export function GuidedStart({ profile, recovery, applications, focusOpportunity 
   const steps = [
     { ...getJourneyStop('sources'), icon: FolderInput },
     { ...getJourneyStop('applications'), icon: Layers },
-    { ...getJourneyStop('assist'), icon: ListChecks },
+    { ...getJourneyStop('assist', containerWorkspace), icon: ListChecks },
   ];
   return <Dialog open={tutorialOpen} onOpenChange={setTutorialOpen}><section className="guided-start mb-7" aria-label="Start here">
     <div className="max-w-2xl"><h2 className="font-display text-3xl sm:text-4xl">{guidance.essentialMissing.length ? 'Start with what you already have.' : focusOpportunity ? 'Make your next move tangible.' : 'Your next application starts here.'}</h2>
@@ -53,7 +55,7 @@ export function GuidedStart({ profile, recovery, applications, focusOpportunity 
         <p className="mt-1 text-sm font-semibold leading-6" data-testid="mascot-chirp-message">{guidance.message}</p>
         <p className="mt-1 text-xs text-muted-foreground" data-testid="mascot-profile-progress">{guidance.profileCount} of {guidance.profileTotal} reusable profile details saved locally. Employer requirements are checked separately.</p>
         <div className="mt-3 flex flex-wrap items-center gap-3">
-          <Link href={guidance.href} className="inline-flex min-h-11 items-center rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground" data-testid="mascot-next-action">{guidance.action}</Link>
+          <Link href={guidance.href} className="inline-flex min-h-11 items-center rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground" data-testid="mascot-next-action">{containerWorkspace && guidance.href.startsWith('/assist') ? 'Prepare this application' : guidance.action}</Link>
           <Link href="/journey" className="inline-flex min-h-11 items-center text-sm font-bold text-primary underline underline-offset-4">Explore your journey</Link>
           <DialogTrigger asChild><button type="button" className="inline-flex min-h-11 items-center text-sm font-bold text-primary underline underline-offset-4" data-testid="button-mascot-puzzle">See the puzzle pieces</button></DialogTrigger>
           <button type="button" onClick={playChirp} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-muted-foreground hover:text-foreground" aria-label="Play optional chick chirp" title="Play a chirp (off by default)" data-testid="button-mascot-chirp"><Volume2 size={15} aria-hidden="true" /> Hear chirp</button>
@@ -70,7 +72,7 @@ export function GuidedStart({ profile, recovery, applications, focusOpportunity 
       <Link href={step.route} className="mt-4 inline-flex min-h-11 items-center font-bold text-primary underline underline-offset-4">{index === guidance.nextStep ? 'Start this step' : 'Open step'}</Link>
     </li>)}</ol>
     </details>
-    <details className="mt-4 text-sm"><summary className="min-h-11 cursor-pointer py-3 font-bold">How does EscapeHatch work?</summary><p className="max-w-2xl leading-6 text-muted-foreground">You can add career sources before saving a job. Nothing from a dropped file is approved until you review it. In Application Assist, choose a saved opportunity and inspect its current form to see what it asks for. Save and review the exact documents for that job, then prepare the form. Sign-in, sensitive declarations, and final Submit stay with you. Revisit this guide from Today at any time.</p></details>
+    <details className="mt-4 text-sm"><summary className="min-h-11 cursor-pointer py-3 font-bold">How does EscapeHatch work?</summary><p className="max-w-2xl leading-6 text-muted-foreground">{containerWorkspace ? 'Add career sources and review the details you want to reuse. Save the job in Applications, then open its posting to complete the employer form in your browser.' : 'You can add career sources before saving a job. Nothing from a dropped file is approved until you review it. In Application Assist, choose a saved opportunity and inspect its current form to see what it asks for. Save and review the exact documents for that job, then prepare the form. Sign-in, sensitive declarations, and final Submit stay with you. Revisit this guide from Today at any time.'}</p></details>
     <DialogContent aria-describedby="mascot-tutorial-description" className="max-w-xl" data-testid="mascot-tutorial-overlay">
         <div className="flex items-center gap-4 pr-6">
           <img src="/escapehatch-mascot.webp" alt="" aria-hidden="true" decoding="async" width={72} height={72} className="h-16 w-16 shrink-0 object-contain" data-testid="mascot-overlay-avatar" />

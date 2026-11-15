@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import registry from '../../../../contracts/application-journey-scenes.v1.json' with { type: 'json' };
-import { JOURNEY_DESTINATIONS, PUBLIC_ROUTES, getJourneyBranches, journeyAtlasHref, journeyOpportunityHref, projectJourneyWayfinding } from './journey-wayfinding.ts';
+import { JOURNEY_DESTINATIONS, PUBLIC_ROUTES, getJourneyStop, getJourneyBranches, journeyAtlasHref, journeyOpportunityHref, projectJourneyWayfinding } from './journey-wayfinding.ts';
 
 test('all canonical scenes have a visible route and direct action', () => {
   const items = projectJourneyWayfinding();
@@ -89,4 +89,15 @@ test('guide URLs carry navigation context only', () => {
   const url = new URL(journeyOpportunityHref('/assist', id), 'https://example.invalid');
   assert.deepEqual([...url.searchParams], [['opportunityId', id]]);
   assert.equal(journeyOpportunityHref('/materials'), '/materials');
+});
+
+
+test('Docker tutorial projects only reachable workspace scenes and hands final review to Applications', () => {
+  assert.deepEqual(projectJourneyWayfinding(true).map(scene => scene.id),
+    ['HOME_READY', 'OPPORTUNITY_INTAKE', 'PREREQUISITES']);
+  assert.deepEqual(getJourneyBranches('AUTH_HANDOFF', true), []);
+  assert.deepEqual(getJourneyBranches('OPPORTUNITY_INTAKE', true).map(edge => edge.to), ['PREREQUISITES']);
+  assert.equal(getJourneyStop('review', true).route, '/applications');
+  assert.equal(getJourneyStop('review', true).host_scene, null);
+  assert.equal(getJourneyStop('review').host_scene, 'FINAL_REVIEW');
 });

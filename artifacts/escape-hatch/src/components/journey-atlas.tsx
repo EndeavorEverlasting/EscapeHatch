@@ -1,21 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearch } from 'wouter';
 import { ArrowLeft, ArrowRight, CheckCircle2, Map, Puzzle, ShieldCheck } from 'lucide-react';
-import { JOURNEY_DESTINATIONS, getJourneyStop, getJourneyBranches, journeyAtlasHref, journeyOpportunityHref, projectJourneyWayfinding } from '@/lib/journey-wayfinding';
+import { JOURNEY_DESTINATIONS, getJourneyStop, getJourneyBranches, containerAssistLabel, journeyAtlasHref, journeyOpportunityHref, projectJourneyWayfinding } from '@/lib/journey-wayfinding';
 import type { Application } from '@/lib/storage';
 
 const containerWorkspace = import.meta.env.VITE_ESCAPEHATCH_CONTAINER === '1';
-const tour = JOURNEY_DESTINATIONS.filter(stop => stop.id !== 'materials');
-const canonicalScenes = projectJourneyWayfinding();
+const tour = JOURNEY_DESTINATIONS.filter(stop => stop.id !== 'materials').map(stop => getJourneyStop(stop.id, containerWorkspace));
+const canonicalScenes = projectJourneyWayfinding(containerWorkspace);
 const materials = getJourneyStop('materials');
 export function JourneyAtlas({ applications }: { applications: Application[] }) {
   const [selected, setSelected] = useState(0);
   const stage = tour[selected];
-  const stageDetail = containerWorkspace && stage.id === 'assist'
-    ? 'Gather reviewed answers and documents. Open the employer’s site in your browser when you’re ready.'
-    : containerWorkspace && stage.id === 'review'
-      ? 'Review the fields and uploads on the employer site before you submit.'
-      : stage.detail;
   const query = new URLSearchParams(useSearch());
   const sceneId = query.get('scene');
   const requestedId = query.get('opportunityId');
@@ -26,7 +21,7 @@ export function JourneyAtlas({ applications }: { applications: Application[] }) 
   useEffect(() => {
     previewHeading.current?.focus();
   }, [preview]);
-  const branches = preview ? getJourneyBranches(preview.id) : [];
+  const branches = preview ? getJourneyBranches(preview.id, containerWorkspace) : [];
   const destination = (route: string) => route === '/assist' || route === '/materials'
     ? journeyOpportunityHref(route, opportunityId)
     : route;
@@ -50,13 +45,13 @@ export function JourneyAtlas({ applications }: { applications: Application[] }) 
           <h2 id="journey-preview-title" ref={previewHeading} tabIndex={-1} className="mt-1 font-display text-2xl">{preview.title}</h2>
         </div>
       </div>
-      <h3 className="mt-5 text-sm font-bold">Where you can go from here</h3>
+      {branches.length > 0 && <><h3 className="mt-5 text-sm font-bold">Where you can go from here</h3>
       <ul className="mt-2 grid gap-2 sm:grid-cols-2">
         {branches.map(edge => <li key={edge.to} className="rounded-lg border border-border bg-background/70 px-3 py-2">
           <p className="text-xs leading-5 text-muted-foreground">{edge.when}</p>
           <Link href={journeyAtlasHref(edge.to, opportunityId)} className="inline-flex min-h-10 items-center gap-1 text-sm font-bold text-primary underline underline-offset-4">{edge.title} <ArrowRight size={14} aria-hidden="true" /></Link>
         </li>)}
-      </ul>
+      </ul></>}
       <div className="mt-3 flex flex-wrap gap-3">
         {preview.location === 'Setup' ? <a href="#setup" className="inline-flex min-h-11 items-center text-sm font-bold text-primary underline">Open setup guide</a> : <Link href={destination(preview.route)} className="inline-flex min-h-11 items-center text-sm font-bold text-primary underline">{preview.action}</Link>}
         {preview.id === materials.host_scene && <Link href={destination(materials.route)} className="inline-flex min-h-11 items-center text-sm font-bold text-primary underline">{materials.title}</Link>}
@@ -80,7 +75,7 @@ export function JourneyAtlas({ applications }: { applications: Application[] }) 
       <div id="journey-scene-inspection" className="journey-atlas-inspection mt-5 rounded-2xl border border-primary/20 bg-primary/5 p-5" data-testid="journey-selected-step">
         <div aria-live="polite" aria-atomic="true">
         <h3 className="mt-2 font-display text-3xl">{stage.title}</h3>
-        <p className="mt-3 text-sm leading-6 text-muted-foreground">{stageDetail}</p>
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">{stage.detail}</p>
         </div>
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <Link href={destination(stage.route)} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground" data-testid="journey-open-stage">Open this scene <ArrowRight size={16} /></Link>
@@ -122,8 +117,8 @@ export function JourneyAtlas({ applications }: { applications: Application[] }) 
         { route: '/answers', name: 'Answer library', detail: 'Reusable approved answers' },
         { route: '/applications', name: 'Applications', detail: 'Your tracked opportunities' },
         { route: '/materials', name: 'Materials', detail: 'Review role-specific documents before use' },
-        { route: '/assist', name: 'Browser assist', detail: 'Employer-form puzzle and checkpoints' },
-      ].map(item => <Link key={item.route} href={destination(item.route)}
+        { route: '/assist', name: containerWorkspace ? containerAssistLabel : 'Browser assist', detail: containerWorkspace ? 'Review saved answers and career details' : 'Employer-form puzzle and checkpoints' },
+      ].filter(item => !containerWorkspace || item.route !== '/materials').map(item => <Link key={item.route} href={destination(item.route)}
         className="flex min-h-24 flex-col justify-between rounded-xl border border-border bg-card p-4 hover:border-primary focus-visible:outline-2 focus-visible:outline-primary"
         data-testid={'journey-destination-' + item.name.toLowerCase().replaceAll(' ', '-')}>
         <span className="flex items-center justify-between text-sm font-bold">{item.name}<ArrowRight size={17} className="text-primary" /></span>
@@ -131,9 +126,9 @@ export function JourneyAtlas({ applications }: { applications: Application[] }) 
       </Link>)}
     </section>
 
-    <section className="rounded-2xl border border-border bg-card p-5 sm:p-7" aria-label="Installation, sign-in and recovery">
-      <div className="flex items-center gap-2"><Map size={20} aria-hidden="true" className="text-primary" /><h2 className="font-display text-2xl">Installation, sign-in and recovery</h2></div>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">Find the next place to continue, including setup, employer sign-in and recovery. Some actions happen in the installer or employer browser; the links below help you reach their instructions.</p>
+    <section className="rounded-2xl border border-border bg-card p-5 sm:p-7" aria-label={containerWorkspace ? 'Workspace scenes' : 'Installation, sign-in and recovery'}>
+      <div className="flex items-center gap-2"><Map size={20} aria-hidden="true" className="text-primary" /><h2 className="font-display text-2xl">{containerWorkspace ? 'Workspace scenes' : 'Installation, sign-in and recovery'}</h2></div>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">{containerWorkspace ? 'Review the steps you can take in this workspace before opening the employer’s site.' : 'Find the next place to continue, including setup, employer sign-in and recovery. Some actions happen in the installer or employer browser; the links below help you reach their instructions.'}</p>
       <ol className="mt-5 grid gap-2 md:grid-cols-2">
         {canonicalScenes.map(scene => <li key={scene.id} className="rounded-xl border border-border p-3" data-testid={'journey-canonical-' + scene.id.toLowerCase()}>
           <p className="text-xs text-muted-foreground">{scene.location}</p>
@@ -148,7 +143,7 @@ export function JourneyAtlas({ applications }: { applications: Application[] }) 
     </section>
     <footer className="flex items-start gap-3 rounded-xl border border-border p-4 text-sm text-muted-foreground">
       <ShieldCheck size={19} className="mt-0.5 shrink-0 text-primary" />
-      <p>Autofill uses reviewed facts through a user-invoked preparation step. Employer sign-in, sensitive choices and final Submit stay in your control. <CheckCircle2 size={14} className="inline text-primary" /> Saved answers are not employer acceptance.</p>
+      {containerWorkspace ? <p>Use your browser to complete the employer form. Check the actual fields and attachments before submitting.</p> : <p>Autofill uses reviewed facts through a user-invoked preparation step. Employer sign-in, sensitive choices and final Submit stay in your control. <CheckCircle2 size={14} className="inline text-primary" /> Saved answers are not employer acceptance.</p>}
     </footer>
   </div>;
 }

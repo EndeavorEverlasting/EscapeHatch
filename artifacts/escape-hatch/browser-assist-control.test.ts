@@ -4,6 +4,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { chromium } from '@playwright/test';
+import { LeverAttemptReceipts } from './lever-attempt-receipts.ts';
 import { readPreferences } from './preference-file.ts';
 import { normalizeQuestion } from './src/lib/application-preferences.ts';
 import { ADAPTER_EVIDENCE_SCHEMA } from './application-navigation-policy.ts';
@@ -78,10 +79,11 @@ test('reviewed Lever flow preserves the exact tab and checks the résumé again 
   try {
     Object.assign(process.env, { ESCAPEHATCH_DATA_HOME: root, ESCAPEHATCH_REPO_FINGERPRINT: 'a'.repeat(64), ESCAPEHATCH_SHUTDOWN_TOKEN: 'synthetic-only', ESCAPEHATCH_STARTED_AT_UTC: new Date().toISOString(), PORT: '21041', ESCAPEHATCH_INSTANCE_ID: instanceId });
     await saveWorkspace({ schema: WORKSPACE_SCHEMA, values: { [APPLICATIONS_KEY]: [job] } }, null);
-    await context.route('https://jobs.lever.co/**', route => route.fulfill({ contentType: 'text/html', body: `
+    await context.route('https://jobs.lever.co/**', route => route.fulfill({ contentType: 'text/html; charset=utf-8', body: `
       <div class="content"><h1>Engineer</h1><form id="application-form">
         <label>Website<input type="url" value="https://example.com"></label>
         <label>Additional notes<input id="notes" value="operator entry"></label>
+        <label>Full name<input name="name" value="Reviewed applicant"></label>
         <div class="application-question">
           <div class="application-label">Which tools have you used?<span class="required">✱</span></div>
           <div class="application-field required-field">
@@ -98,11 +100,18 @@ test('reviewed Lever flow preserves the exact tab and checks the résumé again 
       </form></div>
       <script>
         window.attemptCount = 0;
+        const nameField = document.querySelector('input[name="name"]');
+        const upload = document.querySelector('input[type="file"]');
+        let prefilledEdit = false;
+        nameField.addEventListener('change', () => { prefilledEdit = true; });
+        upload.addEventListener('change', () => {
+          if (upload.files[0]?.size === 25 && !prefilledEdit) nameField.value = 'parser replacement';
+        });
         document.querySelector('#btn-submit').onclick = () => {
           window.attemptCount++;
           if (window.attemptCount === 1) {
             document.querySelector('input[type="file"]').value = '';
-            document.querySelector('form').insertAdjacentHTML('beforeend', '<p class="application-form-error">There was an error verifying your application</p>');
+            document.querySelector('form').insertAdjacentHTML('beforebegin', '<div class="posting-warning">✱ There was an error verifying your application. Please try again.</div>');
           } else {
             history.pushState({}, '', location.pathname.replace('/apply','/thanks'));
             document.querySelector('.content').innerHTML = '<section class="application-confirmation"><h1>Application submitted!</h1></section>';
@@ -115,9 +124,9 @@ test('reviewed Lever flow preserves the exact tab and checks the résumé again 
     let middleware: Function = () => {};
     const plugin = createManagedBrowserAssistPlugin();
     (plugin.configureServer as Function)({ config: { server: { port: 21041 } }, middlewares: { use: (handler: Function) => { middleware = handler; } } });
-    const request = async (payload: object, origin = 'http://127.0.0.1:21041', endpoint = '/listeners/bind-existing') => {
+    const request = async (payload: object | null, origin = 'http://127.0.0.1:21041', endpoint = '/listeners/bind-existing') => {
       let code = 0, body = '';
-      await middleware({ url: '/__escapehatch/managed-assist' + endpoint, method: 'POST', headers: { host: '127.0.0.1:21041', origin, 'content-type': 'application/json', 'x-escapehatch-operator-action': 'confirmed' }, socket: { remoteAddress: '127.0.0.1' }, async *[Symbol.asyncIterator]() { yield Buffer.from(JSON.stringify(payload)); } }, { set statusCode(value: number) { code = value; }, setHeader() {}, end(value: string) { body = value; } }, () => assert.fail('bind route missed'));
+      await middleware({ url: '/__escapehatch/managed-assist' + endpoint, method: payload ? 'POST' : 'GET', headers: { host: '127.0.0.1:21041', origin, 'content-type': 'application/json', 'x-escapehatch-operator-action': 'confirmed' }, socket: { remoteAddress: '127.0.0.1' }, async *[Symbol.asyncIterator]() { yield Buffer.from(JSON.stringify(payload)); } }, { set statusCode(value: number) { code = value; }, setHeader() {}, end(value: string) { body = value; } }, () => assert.fail('bind route missed'));
       return { code, body: JSON.parse(body) };
     };
     // An ordinary Launch on a restored tab must not reload the user's edits or
@@ -145,17 +154,35 @@ test('reviewed Lever flow preserves the exact tab and checks the résumé again 
     const staged = await store.stage(job.id, job.url, 'resume', resume);
     const sha256 = staged.documents.resume!.sha256;
     await store.review(job.id, job.url, 'resume', sha256);
+    const history = () => request(null, undefined, '/lever-attempt-receipts?' + new URLSearchParams({ opportunityId: job.id, url: job.url }));
+    const attach = () => request({ ...payload, resumeSha256: sha256 }, undefined, '/attach');
+    const otherHistory = '/lever-attempt-receipts?' + new URLSearchParams({ opportunityId: job.id, url: unrelated.url() });
+    assert.equal((await request(null, undefined, otherHistory)).code, 404);
     const submit = (change: object = {}) => request({ ...payload, resumeSha256: sha256, confirmedSubmit: true, ...change }, undefined, '/submit-authorized');
     assert.equal((await submit({ confirmedSubmit: false })).code, 422);
     assert.equal((await submit()).body.error, 'answer_and_submission_listeners_required');
     assert.equal((await request({ ...payload, recordAnswers: true })).body.listeners.recordingAnswers, true);
     assert.equal((await submit({ livePageUrl: unrelated.url() })).body.error, 'reviewed_application_tab_mismatch');
     assert.equal((await submit({ resumeSha256: '0'.repeat(64) })).body.error, 'approved_resume_digest_required');
-    assert.match((await submit()).body.error, /^(?:resume_missing_or_invalid|submit_blocked_incomplete_form)$/);
+    const restartedJournal = new LeverAttemptReceipts(root);
+    const reserved = restartedJournal.record(job.url + '/apply', 'SUBMIT', 'VERIFIED', 'DISPATCH_RESERVED', sha256)!;
+    assert.equal((await submit()).body.attemptReceipt?.code, 'submission_attempt_already_observed');
+    assert.equal((await request({ ...payload, recordAnswers: true })).code, 409);
+    assert.equal(await target.evaluate(() => Reflect.get(window, 'attemptCount')), 0);
+    restartedJournal.recordResponse(job.url + '/apply', reserved.id, 'VALIDATION_FAILED', 'NOT_OBSERVED');
+    const missing = (await submit()).body.attemptReceipt;
+    assert.equal(missing.code, 'resume_missing_or_invalid');
+    assert.equal(missing.resumeBefore, 'MISSING');
+    assert.equal(missing.dispatch, 'NOT_ATTEMPTED');
+    assert.equal(missing.response, 'NOT_EXPECTED');
     const upload = target.locator('input[type="file"]');
     await upload.setInputFiles({ ...resume, buffer: Buffer.from('%PDF-1.4\nwrong bytes, same name') });
     assert.equal((await submit()).body.error, 'resume_attachment_digest_mismatch');
-    await upload.setInputFiles(resume);
+    const attached = (await attach()).body;
+    assert.equal(attached.attemptReceipt?.code, 'resume_attached_verified', JSON.stringify(attached));
+    assert.equal((await attach()).body.attemptReceipt?.code, 'resume_already_verified');
+    assert.equal(await target.locator('#notes').inputValue(), 'operator entry');
+    assert.equal(await target.getByLabel('Full name').inputValue(), 'Reviewed applicant');
     await target.getByLabel('Service Desk').uncheck();
     await target.getByLabel('Workflow Studio').uncheck();
     assert.match((await submit()).body.blockers.join(), /Which tools have you used/);
@@ -175,16 +202,27 @@ test('reviewed Lever flow preserves the exact tab and checks the résumé again 
     assert.equal(await target.evaluate(() => Reflect.get(window, 'attemptCount')), 0);
     assert.equal((await submit()).body.finalActionActivated, true);
     assert.equal((await listeners.refresh()).submission?.state, 'VALIDATION_FAILED');
-    assert.equal((await submit()).body.error, 'submission_attempt_already_observed');
+    const rejected = (await history()).body.receipts[0];
+    assert.equal(rejected.resumeBefore, 'VERIFIED');
+    assert.equal(rejected.resumeSha256, sha256);
+    assert.equal(rejected.dispatch, 'CLICK_OBSERVED');
+    assert.equal(rejected.response, 'LEVER_VERIFICATION_ERROR');
+    assert.equal(rejected.resumeAfter, 'EMPTY');
+    assert.equal((await submit()).body.error, 'answer_and_submission_listeners_required');
     assert.deepEqual(syncedAttempts, []);
     assert.equal((await request({ ...payload, recordAnswers: true })).code, 200);
-    assert.match((await submit()).body.error, /^(?:resume_missing_or_invalid|submit_blocked_incomplete_form)$/);
-    await upload.setInputFiles(resume);
+    assert.equal((await submit()).body.attemptReceipt?.resumeBefore, 'MISSING');
+    assert.equal((await attach()).body.attemptReceipt?.resumeBefore, 'VERIFIED');
     assert.equal((await submit()).body.finalActionActivated, true);
     await target.waitForURL('**/thanks');
     const observed = await listeners.refresh();
     assert.equal(observed.submission?.state, 'CONFIRMED');
     assert.equal(observed.receipts.length, 1);
+    const persisted = new LeverAttemptReceipts(root).recent(job.url + '/apply');
+    assert.equal(persisted[0].response, 'CONFIRMED');
+    assert.equal(persisted[0].observerAttemptId, observed.receipts[0].attemptId);
+    assert.ok(persisted.some(item => item.id === rejected.id && item.response === 'LEVER_VERIFICATION_ERROR'));
+    assert.ok(!JSON.stringify(persisted).includes('operator entry'));
     assert.deepEqual(syncedAttempts, [observed.receipts[0].attemptId]);
     assert.equal(await target.evaluate(() => Reflect.get(window, 'attemptCount')), 2);
     const preferences = await readPreferences(preferencesPath);

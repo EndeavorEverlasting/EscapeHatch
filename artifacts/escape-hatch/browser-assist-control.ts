@@ -11,6 +11,7 @@ import {
   indeedSlotIdForUrl,
 } from './resume-selection-store.ts';
 import { ManagedListeners } from './managed-listeners.ts';
+import { LeverAttemptReceipts, type LeverResumeEvidence } from './lever-attempt-receipts.ts';
 import { isLeverApplicationForm, leverApplicationKey } from './src/lib/application-puzzle.ts';
 import { enqueueSubmissionSync, retrySubmissionSync, readSubmissionSyncStatus, startSubmissionSync } from './tracker-writeback.ts';
 import { APPLICATIONS_KEY } from './src/lib/storage.ts';
@@ -363,31 +364,76 @@ export async function attachPdfs(page: Page, resume: ReturnType<typeof parsePriv
   return outcome;
 }
 
-async function verifyLeverResume(page: Page, expectedSha256: string) {
+async function verifyLeverResume(page: Page, expectedSha256: string): Promise<LeverResumeEvidence> {
   return page.evaluate(async expected => {
     const form = document.querySelector('#btn-submit')?.closest('form#application-form');
     const inputs = Array.from(form?.querySelectorAll<HTMLInputElement>('input[type="file"]:enabled') || []);
     const matches = inputs.filter(input => /\b(?:resume|résumé|cv)\b/i.test([
       input.name, input.id, input.getAttribute('aria-label'), ...Array.from(input.labels || [], label => label.textContent),
     ].join(' ').replace(/[-_]/g, ' ')));
-    if (matches.length !== 1) return 'resume_input_unverified';
+    if (matches.length !== 1) return 'INPUT_UNVERIFIED';
     const input = matches[0];
     const wrapper = input.closest('.application-question.resume');
-    if (Array.from(wrapper?.querySelectorAll('.resume-upload-working, .resume-upload-oversize') || [])
-      .some(element => element.getClientRects().length && getComputedStyle(element).visibility === 'visible')) return 'resume_upload_pending_or_rejected';
+    const shown = (selector: string) => Array.from(wrapper?.querySelectorAll(selector) || [])
+      .some(element => element.getClientRects().length && getComputedStyle(element).visibility === 'visible');
+    if (shown('.resume-upload-oversize')) return 'UPLOAD_REJECTED';
+    if (shown('.resume-upload-working')) return 'PARSING';
     const file = input.files?.[0];
-    if (input.files?.length !== 1 || !file || !file.size || file.size > 5 * 1024 * 1024) return 'resume_missing_or_invalid';
+    if (!file) return 'MISSING';
+    if (input.files?.length !== 1 || !file.size || file.size > 5 * 1024 * 1024) return 'INVALID';
     const bytes = new Uint8Array(await crypto.subtle.digest('SHA-256', await file.arrayBuffer()));
     const actual = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
-    if (!input.isConnected || input.files?.[0] !== file) return 'resume_attachment_changed';
-    return actual === expected ? null : 'resume_attachment_digest_mismatch';
+    if (!input.isConnected || input.files?.[0] !== file) return 'CHANGED';
+    return actual === expected ? 'VERIFIED' : 'DIGEST_MISMATCH';
   }, expectedSha256);
+}
+
+async function preserveLeverPrefilledAnswers(page: Page) {
+  // Lever's résumé parser updates fields it considers untouched. Its change
+  // listener records existing inputs as user-edited without setting any value.
+  await page.evaluate(() => {
+    const form = document.querySelector('form#application-form');
+    const parserFields = 'input[name="org"], input[name="phone"], input[name="name"], input[name="email"], input[name="location"], ' +
+      'input[name^="urls["], input[name^="residentialLocation["]';
+    for (const input of form?.querySelectorAll<HTMLInputElement>(parserFields) || []) {
+      if (input.value && input.getClientRects().length && !input.matches(':disabled, [readonly]')) {
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+  });
 }
 
 async function leverChallengeVisible(page: Page) {
   return page.locator('iframe[title*="challenge" i], [role="dialog"]:has(iframe[src*="hcaptcha.com"])')
     .filter({ visible: true }).first().isVisible();
 }
+
+function savedLeverApplicationKey(value: string) {
+  try {
+    const url = new URL(value);
+    if (url.origin !== 'https://jobs.lever.co') return null;
+    if (!isLeverApplicationForm(url.href)) url.pathname = url.pathname.replace(/\/$/, '') + '/apply';
+    return leverApplicationKey(url.href);
+  } catch { return null; }
+}
+
+function isExactManagedLeverTab(context: BrowserContext | null, page: Page, job: string, liveUrl: string) {
+  if (!context || savedLeverApplicationKey(job) !== leverApplicationKey(liveUrl)) return false;
+  try { return selectExistingApplicationPage(context, job, liveUrl) === page; }
+  catch { return false; }
+}
+
+const LEVER_RESUME_ERRORS: Record<Exclude<LeverResumeEvidence, 'VERIFIED'>, string> = {
+  UNCHECKED: 'resume_attachment_unverified',
+  UNREVIEWED: 'approved_resume_digest_required',
+  INPUT_UNVERIFIED: 'resume_input_unverified',
+  MISSING: 'resume_missing_or_invalid',
+  INVALID: 'resume_missing_or_invalid',
+  PARSING: 'resume_parse_pending',
+  UPLOAD_REJECTED: 'resume_upload_rejected',
+  DIGEST_MISMATCH: 'resume_attachment_digest_mismatch',
+  CHANGED: 'resume_attachment_changed',
+};
 
 async function preferPlatformSelectedResume(
   resumeSelectionStore: ResumeSelectionStore,
@@ -419,7 +465,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
   // and listener handles rather than orphaning the operator's application.
   type SessionCache = { context: BrowserContext | null; page: Page | null; state: string;
     applicationOrigin: string; applicationUrl: string; opportunityId: string;
-    preparation: PreparationResult | null; networkDiagnosis: NavigationDiagnosis | null; authCheckpoint: AuthCheckpoint; trustedReturnPath: string | null; listeners: ManagedListeners; busy: boolean; taleoHostArmed?: boolean; leverAttempts?: Set<string> };
+    preparation: PreparationResult | null; networkDiagnosis: NavigationDiagnosis | null; authCheckpoint: AuthCheckpoint; trustedReturnPath: string | null; listeners: ManagedListeners; busy: boolean; taleoHostArmed?: boolean };
   const cacheHost = globalThis as typeof globalThis & { [key: symbol]: SessionCache };
   const cacheKey = Symbol.for('escapehatch.managed-browser.' + (managed?.identity.instanceId || 'unmanaged'));
   const cache = cacheHost[cacheKey] ||= { context: null, page: null, state: 'idle', applicationOrigin: '', applicationUrl: '',
@@ -430,6 +476,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
   let applicationOrigin = cache.applicationOrigin;
   let applicationUrl = cache.applicationUrl;
   const documentStore = new OpportunityDocumentStore();
+  const leverReceipts = new LeverAttemptReceipts();
   const resumeSelectionStore = new ResumeSelectionStore();
   let opportunityId = cache.opportunityId;
   let preparation = cache.preparation;
@@ -439,7 +486,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
   // An installed upgrade may retain an old listener object in Vite's cache.
   // Replace observation handles only; never close or navigate employer tabs.
   const previousListeners = cache.listeners;
-  const listeners = previousListeners.implementationVersion === 5 ? previousListeners : new ManagedListeners(undefined, undefined, enqueueSubmissionSync);
+  const listeners = previousListeners.implementationVersion === 6 ? previousListeners : new ManagedListeners(undefined, undefined, enqueueSubmissionSync);
   // Older cached listeners and synthetic middleware fixtures may predate dispose().
   // Preserve the employer tab; replace obsolete handles without invoking an absent method.
   // A new listener starts unarmed and requires exact-application binding before Submit.
@@ -501,6 +548,18 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             listeners: listenerState,
             trackerSync: await readSubmissionSyncStatus(),
           });
+        }
+        if (url.pathname === PREFIX + '/lever-attempt-receipts' && req.method === 'GET') {
+          if (req.headers.origin && req.headers.origin !== expectedOrigin || req.headers['sec-fetch-site'] === 'cross-site') return respond(res, 403, { ok: false, error: 'operator_origin_required' });
+          try {
+            const job = url.searchParams.get('url') || '';
+            const key = savedLeverApplicationKey(job);
+            const applications = (await readWorkspace())?.workspace.values[APPLICATIONS_KEY];
+            if (!key || !Array.isArray(applications) || !applications.some(item => item.id === url.searchParams.get('opportunityId') && item.url === job)) {
+              return respond(res, 404, { ok: false, error: 'saved_lever_application_required' });
+            }
+            return respond(res, 200, { ok: true, receipts: leverReceipts.recent(key) });
+          } catch { return respond(res, 422, { ok: false, error: 'lever_attempt_receipts_unavailable' }); }
         }
         if (url.pathname === PREFIX + '/preferences' && req.method === 'GET') {
           if (req.headers.origin && req.headers.origin !== expectedOrigin || req.headers['sec-fetch-site'] === 'cross-site') return respond(res, 403, { ok: false, error: 'operator_origin_required' });
@@ -608,6 +667,16 @@ export function createManagedBrowserAssistPlugin(): Plugin {
         cache.busy = true;
         try {
           const payload = await readJson(req);
+          const leverAction = url.pathname === PREFIX + '/attach' ? 'ATTACH' :
+            url.pathname === PREFIX + '/submit-authorized' ? 'SUBMIT' : null;
+          const recordUnboundLeverAction = async (code: string) => {
+            if (!leverAction || typeof payload.url !== 'string' || typeof payload.opportunityId !== 'string') return null;
+            const key = savedLeverApplicationKey(payload.url);
+            if (!key) return null;
+            const applications = (await readWorkspace())?.workspace.values[APPLICATIONS_KEY];
+            if (!Array.isArray(applications) || !applications.some(item => item.id === payload.opportunityId && item.url === payload.url)) return null;
+            return leverReceipts.record(key, leverAction, 'UNCHECKED', code);
+          };
           if (url.pathname === PREFIX + '/submission-sync/retry') return respond(res, 200, { ok: true, trackerSync: await retrySubmissionSync() });
           if (url.pathname === PREFIX + '/talent-community/cognizant/reuse-resume') {
             // A private materials transfer, not a new application or an employer upload.
@@ -652,12 +721,8 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               (payload.livePageUrl === saved.url || payload.livePageUrl === page.url());
             const selected = confirmedReturn ? page! : selectExistingApplicationPage(context, saved.url, payload.livePageUrl);
             const leverKey = leverApplicationKey(selected.url());
-            if (leverKey && cache.leverAttempts?.has(leverKey)) {
-              const previous = await listeners.status();
-              if (!listeners.isBoundTo(selected, saved.id) || previous.submission?.state !== 'VALIDATION_FAILED' ||
-                  await leverChallengeVisible(selected)) {
-                return respond(res, 409, { ok: false, error: 'submission_attempt_already_observed', listeners: previous });
-              }
+            if (leverKey && (leverReceipts.pending(leverKey) || await leverChallengeVisible(selected))) {
+              return respond(res, 409, { ok: false, error: 'submission_attempt_already_observed', listeners: await listeners.status() });
             }
             if (!listeners.isBoundTo(selected, saved.id)) {
               await listeners.attach(selected, { opportunityId: saved.id, applicationUrl: selected.url(), opportunityUrl: saved.url, employerName: saved.company }, payload.recordAnswers === true);
@@ -666,7 +731,6 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             }
             const status = await listeners.arm();
             if (status.submission?.state !== 'ARMED') return respond(res, 409, { ok: false, error: status.error || 'submission_tracking_not_armed', listeners: status });
-            if (leverKey) cache.leverAttempts?.delete(leverKey);
             page = selected;
             applicationUrl = saved.url;
             applicationOrigin = new URL(saved.url).origin;
@@ -888,8 +952,10 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             } catch { authCheckpoint = INITIAL_CHECKPOINT; }
             return respond(res, 200, { ok: true, state, authCheckpoint, networkDiagnosis, requiresOperatorSubmission: true });
           }
-          if (!page || page.isClosed()) return respond(res, 409, { ok: false, error: 'launch_browser_first' });
-          if (new URL(page.url()).origin !== applicationOrigin) return respond(res, 409, { ok: false, error: 'application_origin_changed_review_required' });
+          if (!page || page.isClosed()) return respond(res, 409, { ok: false, error: 'launch_browser_first',
+            attemptReceipt: await recordUnboundLeverAction('managed_application_tab_unavailable') });
+          if (new URL(page.url()).origin !== applicationOrigin) return respond(res, 409, { ok: false, error: 'application_origin_changed_review_required',
+            attemptReceipt: await recordUnboundLeverAction('application_origin_changed_review_required') });
           if (url.pathname === PREFIX + '/requirements') {
             assertInspectionScope(payload.opportunityId, payload.url, opportunityId, applicationUrl, page.url());
             return respond(res, 200, { ok: true, inspection: await inspectApplicationRequirements(page, opportunityId, applicationUrl) });
@@ -1090,6 +1156,48 @@ export function createManagedBrowserAssistPlugin(): Plugin {
           if (url.pathname === PREFIX + '/attach') {
             await selectInstalledHostWorkspace();
             if (payload.resume || payload.cover) throw new Error('Save the selected documents to this opportunity before attaching.');
+            const liveUrl = page.url();
+            const leverKey = leverApplicationKey(liveUrl);
+            if (leverKey) {
+              const scopeMatches = payload.opportunityId === opportunityId && payload.url === applicationUrl;
+              if (!scopeMatches || !isExactManagedLeverTab(context, page, applicationUrl, liveUrl)) {
+                return respond(res, 409, { ok: false, error: 'reviewed_application_tab_mismatch',
+                  attemptReceipt: await recordUnboundLeverAction('reviewed_application_tab_mismatch') });
+              }
+              const resume = (await documentStore.read(opportunityId, applicationUrl)).documents.resume;
+              const saveAttachment = (evidence: LeverResumeEvidence, code: string) =>
+                leverReceipts.record(leverKey, 'ATTACH', evidence, code, resume?.sha256 ?? null);
+              if (!resume?.reviewedAt || payload.resumeSha256 !== resume.sha256) {
+                return respond(res, 409, { ok: false, error: 'approved_resume_digest_required',
+                  attemptReceipt: saveAttachment('UNREVIEWED', 'approved_resume_digest_required') });
+              }
+              if (leverReceipts.pending(leverKey) || await leverChallengeVisible(page)) {
+                return respond(res, 409, { ok: false, error: 'application_attempt_pending',
+                  attemptReceipt: saveAttachment('UNCHECKED', 'application_attempt_pending') });
+              }
+              let evidence = await verifyLeverResume(page, resume.sha256).catch(() => 'UNCHECKED' as const);
+              let attached = false;
+              if (evidence === 'MISSING' || evidence === 'INVALID' || evidence === 'DIGEST_MISMATCH') {
+                const file = await documentStore.file(opportunityId, applicationUrl, 'resume', resume.sha256);
+                if (file && page.url() === liveUrl) {
+                  saveAttachment(evidence, 'resume_attachment_requested');
+                  await preserveLeverPrefilledAnswers(page);
+                  if (page.url() !== liveUrl) return respond(res, 409, { ok: false, error: 'reviewed_application_tab_mismatch',
+                    attemptReceipt: saveAttachment('CHANGED', 'reviewed_application_tab_mismatch') });
+                  const outcome = await attachPdfs(page, file, null);
+                  attached = outcome.resume === 'attached_to_input_review_required';
+                  evidence = page.url() === liveUrl ? await verifyLeverResume(page, resume.sha256).catch(() => 'UNCHECKED' as const) : 'CHANGED';
+                }
+              }
+              const code = evidence === 'VERIFIED' ? (attached ? 'resume_attached_verified' : 'resume_already_verified') :
+                LEVER_RESUME_ERRORS[evidence];
+              const attemptReceipt = saveAttachment(evidence, code);
+              const acceptedForReview = evidence === 'VERIFIED' || attached && evidence === 'PARSING';
+              if (!acceptedForReview) return respond(res, 409, { ok: false, error: code, attemptReceipt });
+              const attachments = { resume: 'attached_to_input_review_required' };
+              state = attachmentProgressState(attachments);
+              return respond(res, 200, { ok: true, state, attachments, attemptReceipt, evidenceSummary: evidenceDescription(state) });
+            }
             const packageFiles = await preferPlatformSelectedResume(
               resumeSelectionStore,
               await documentStore.forUpload(opportunityId, applicationUrl, (await readPreferences()).require_document_review !== false),
@@ -1311,61 +1419,84 @@ export function createManagedBrowserAssistPlugin(): Plugin {
           if (url.pathname === PREFIX + '/submit-authorized') {
             // Operator-authorized terminal Submit for the bound opportunity. Listener must already be ARMED.
             if (!opportunityId || payload.opportunityId !== opportunityId) {
-              return respond(res, 409, { ok: false, error: 'opportunity_binding_mismatch' });
+              return respond(res, 409, { ok: false, error: 'opportunity_binding_mismatch',
+                attemptReceipt: await recordUnboundLeverAction('opportunity_binding_mismatch') });
             }
             if (payload.confirmedSubmit !== true) {
-              return respond(res, 422, { ok: false, error: 'confirmedSubmit_required' });
+              return respond(res, 422, { ok: false, error: 'confirmedSubmit_required',
+                attemptReceipt: await recordUnboundLeverAction('confirmedSubmit_required') });
             }
             const beforeUrl = page.url();
             if (isLeverApplicationForm(beforeUrl)) {
-              assertInspectionScope(payload.opportunityId, payload.url, opportunityId, applicationUrl, beforeUrl);
-              if (payload.livePageUrl !== beforeUrl || !context ||
-                  selectExistingApplicationPage(context, applicationUrl, beforeUrl) !== page ||
+              if (payload.url !== applicationUrl || payload.livePageUrl !== beforeUrl ||
+                  !isExactManagedLeverTab(context, page, applicationUrl, beforeUrl) ||
                   !listeners.isBoundTo(page, opportunityId)) {
-                return respond(res, 409, { ok: false, error: 'reviewed_application_tab_mismatch' });
+                return respond(res, 409, { ok: false, error: 'reviewed_application_tab_mismatch',
+                  attemptReceipt: await recordUnboundLeverAction('reviewed_application_tab_mismatch') });
               }
+              assertInspectionScope(payload.opportunityId, payload.url, opportunityId, applicationUrl, beforeUrl);
               const before = await listeners.status();
               const attemptKey = leverApplicationKey(beforeUrl)!;
-              const attempts = cache.leverAttempts ??= new Set();
-              if (attempts.has(attemptKey) || before.receipts.some(receipt =>
+              let expectedSha256: string | null = null;
+              let resumeEvidence: LeverResumeEvidence = 'UNCHECKED';
+              const blocked = (code: string, details = {}) => respond(res, 409, {
+                ok: false, error: code, ...details, attemptReceipt: leverReceipts.record(attemptKey, 'SUBMIT', resumeEvidence, code, expectedSha256),
+              });
+              if (leverReceipts.pending(attemptKey) || before.receipts.some(receipt =>
                 receipt.opportunityId === opportunityId || receipt.applicationOrigin + receipt.applicationPath.replace(/\/$/, '') === attemptKey)) {
-                return respond(res, 409, { ok: false, error: 'submission_attempt_already_observed', listeners: before });
+                return blocked('submission_attempt_already_observed', { listeners: before });
               }
               const workspace = await readWorkspace();
               const applications = workspace?.workspace.values[APPLICATIONS_KEY];
               if (!Array.isArray(applications) || !applications.some(item => item.id === opportunityId && item.url === applicationUrl &&
                   !['applied', 'follow_up', 'closed'].includes(item.status))) {
-                return respond(res, 409, { ok: false, error: 'saved_application_no_longer_actionable' });
+                return blocked('saved_application_no_longer_actionable');
               }
               if (before.submission?.state !== 'ARMED' || !before.recordingAnswers || before.error) {
-                return respond(res, 409, { ok: false, error: 'answer_and_submission_listeners_required', listeners: before });
+                return blocked('answer_and_submission_listeners_required', { listeners: before });
               }
-              if (await leverChallengeVisible(page)) return respond(res, 409, { ok: false, error: 'employer_verification_required' });
+              if (await leverChallengeVisible(page)) return blocked('employer_verification_required');
               const resume = (await documentStore.read(opportunityId, applicationUrl)).documents.resume;
               if (!resume?.reviewedAt || resume.sha256 !== payload.resumeSha256) {
-                return respond(res, 409, { ok: false, error: 'approved_resume_digest_required' });
+                resumeEvidence = 'UNREVIEWED';
+                return blocked('approved_resume_digest_required');
               }
+              expectedSha256 = resume.sha256;
               const terminal = page.locator('form#application-form #btn-submit').and(page.getByRole('button', { name: /^submit application$/i }));
               if (await terminal.count() !== 1 || !await terminal.isEnabled()) {
-                return respond(res, 409, { ok: false, error: 'submit_control_missing_or_disabled' });
+                return blocked('submit_control_missing_or_disabled');
               }
-              await terminal.click({ trial: true, timeout: 5000 });
+              if (!await terminal.click({ trial: true, timeout: 5000 }).then(() => true, () => false)) return blocked('submit_control_not_actionable');
+              resumeEvidence = await verifyLeverResume(page, resume.sha256).catch(() => 'UNCHECKED' as const);
+              if (resumeEvidence !== 'VERIFIED') return blocked(LEVER_RESUME_ERRORS[resumeEvidence]);
               const blockers = await inspectRequiredFieldBlockers(page, opportunityId, applicationUrl);
-              if (blockers.length) return respond(res, 409, { ok: false, error: 'submit_blocked_incomplete_form', blockers });
-              await listeners.captureReviewedAnswers(page, opportunityId);
-              const resumeError = await verifyLeverResume(page, resume.sha256);
-              if (resumeError) return respond(res, 409, { ok: false, error: resumeError });
+              if (blockers.length) return blocked('submit_blocked_incomplete_form', { blockers });
+              if (!await listeners.captureReviewedAnswers(page, opportunityId).then(() => true, () => false)) return blocked('reviewed_answer_capture_unverified');
+              resumeEvidence = await verifyLeverResume(page, resume.sha256).catch(() => 'UNCHECKED' as const);
+              if (resumeEvidence !== 'VERIFIED') return blocked(LEVER_RESUME_ERRORS[resumeEvidence]);
               if (page.url() !== beforeUrl || await leverChallengeVisible(page)) {
-                return respond(res, 409, { ok: false, error: 'application_changed_or_employer_verification_required' });
+                return blocked('application_changed_or_employer_verification_required');
               }
-              // Record the dispatch before attempting the click. A transport error
-              // can occur after dispatch, so only observed employer rejection clears it.
-              attempts.add(attemptKey);
+              const attempt = leverReceipts.record(attemptKey, 'SUBMIT', resumeEvidence, 'DISPATCH_RESERVED', expectedSha256);
+              if (!attempt) return blocked('submission_attempt_already_observed', { listeners: before });
+              let observerAttemptId: string | undefined;
+              listeners.trackLeverAttempt(event => {
+                if (event.state === 'CLICK_OBSERVED' && !observerAttemptId) {
+                  observerAttemptId = event.attemptId;
+                  leverReceipts.recordClick(attemptKey, attempt.id, 'CLICK_OBSERVED', event.attemptId);
+                }
+                if (event.state === 'RESPONSE_OBSERVED' && observerAttemptId === event.attemptId) {
+                  const { response, resumeAfter } = event.observation;
+                  leverReceipts.recordResponse(attemptKey, attempt.id, response, resumeAfter);
+                }
+              });
               const activated = await terminal.click({ timeout: 5000 }).then(() => true, () => false);
+              leverReceipts.recordClick(attemptKey, attempt.id, activated ? 'CLICK_RETURNED' : 'CLICK_UNCERTAIN');
               const status = await listeners.status();
               return respond(res, 200, {
                 ok: true, state: status.submission?.state === 'ARMED' ? 'PENDING' : status.submission?.state,
                 finalActionActivated: activated, listeners: status, trackerSync: await readSubmissionSyncStatus(),
+                attemptReceipt: leverReceipts.recent(attemptKey).find(item => item.id === attempt.id),
               });
             }
             const beforeHost = new URL(beforeUrl).hostname.replace(/^www\./i, '').toLowerCase();

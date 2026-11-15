@@ -5,7 +5,7 @@ import { DatabaseSync } from 'node:sqlite';
 import type { Page } from '@playwright/test';
 import { updatePreferences } from './preference-file.ts';
 import { installAnswerMemory, mergeCapturedAnswer, mergeQuestionCatalog, readReviewedAnswers, scanQuestionCatalog } from './managed-answer-memory.ts';
-import { installManagedSubmissionObserver, type ManagedSubmissionReceipt } from './managed-submission-observer.ts';
+import { installManagedSubmissionObserver, type LeverAttemptEvent, type ManagedSubmissionReceipt } from './managed-submission-observer.ts';
 import { parseSubmissionEvidence } from './src/lib/submission-reconciliation.ts';
 import { userDataRoot, legacyPrivateRoots } from './user-data.ts';
 
@@ -85,7 +85,8 @@ export function submissionAdapter(applicationUrl: string) {
 }
 
 export class ManagedListeners {
-  readonly implementationVersion = 5;
+  readonly implementationVersion = 6;
+  private leverAttempt: ((event: LeverAttemptEvent) => void) | null = null;
   private page: Page | null = null;
   private stopMemory: (() => Promise<void>) | null = null;
   private observer: Awaited<ReturnType<typeof installManagedSubmissionObserver>> | null = null;
@@ -127,6 +128,11 @@ export class ManagedListeners {
       applicationUrl: scope.applicationUrl,
       opportunityUrl: scope.opportunityUrl,
       ...submissionAdapter(scope.applicationUrl),
+      onLeverAttempt: event => {
+        if (generation !== this.generation || !this.leverAttempt) return;
+        try { this.leverAttempt(event); }
+        catch { this.error = 'Could not save the application attempt update. Check the existing employer tab before retrying.'; }
+      },
       onChange: snapshot => {
         if (!snapshot.receipt || generation !== this.generation) return;
         const receipt = snapshot.receipt;
@@ -180,6 +186,9 @@ export class ManagedListeners {
     return this.status();
   }
   async setRecording(enabled: boolean) { this.recording = enabled; return this.status(); }
+  trackLeverAttempt(onEvent: (event: LeverAttemptEvent) => void) {
+    this.leverAttempt = onEvent;
+  }
   isBoundTo(page: Page, opportunityId: string) {
     return this.page === page && this.scope?.opportunityId === opportunityId;
   }
@@ -223,5 +232,6 @@ export class ManagedListeners {
     this.observer = null;
     this.scope = null;
     this.page = null;
+    this.leverAttempt = null;
   }
 }

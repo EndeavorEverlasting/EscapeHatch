@@ -3,6 +3,7 @@ import { ApplicationPuzzle } from './application-puzzle';
 import { ApplicationOutcome } from './application-outcome';
 import type { CurrentApplicationPage } from '@/lib/application-puzzle';
 import { isLeverApplicationForm } from '@/lib/application-puzzle';
+import type { LeverReceipt } from '../../lever-attempt-receipts';
 import { parseSubmissionEvidence, reconcileSubmissionReceipts, submissionMatchesApplication } from '@/lib/submission-reconciliation';
 import type { AssistProfile } from '@/lib/assist-contract';
 import { CareerRecords } from './career-records';
@@ -51,6 +52,8 @@ type ServerResponse = {
   attachments?: Record<string, string>;
   requiresOperatorSubmission?: boolean;
   finalActionActivated?: boolean;
+  attemptReceipt?: LeverReceipt;
+  receipts?: LeverReceipt[];
   preparation?: PreparationResult;
   preparationState?: PreparationResult['state'] | null;
   preparationCode?: string | null;
@@ -93,6 +96,35 @@ const titles: Record<string, string> = {
   BLOCKED: 'BLOCKED — fail closed; re-inspect before retry',
 };
 
+const resumeEvidenceLabels: Record<LeverReceipt['resumeBefore'], string> = {
+  UNCHECKED: 'not checked',
+  UNREVIEWED: 'approved version not confirmed',
+  INPUT_UNVERIFIED: 'input not identified',
+  MISSING: 'missing',
+  INVALID: 'invalid',
+  PARSING: 'Lever is reading the file',
+  UPLOAD_REJECTED: 'Lever rejected the upload',
+  DIGEST_MISMATCH: 'different from the approved PDF',
+  CHANGED: 'attachment changed during the check',
+  VERIFIED: 'matches the approved PDF',
+};
+
+const dispatchLabels: Record<LeverReceipt['dispatch'], string> = {
+  NOT_ATTEMPTED: 'no click',
+  ATTEMPTING: 'attempt reserved; click unverified',
+  CLICK_RETURNED: 'click returned',
+  CLICK_UNCERTAIN: 'click unverified',
+  CLICK_OBSERVED: 'click observed',
+};
+
+const responseLabels: Record<LeverReceipt['response'], string> = {
+  NOT_EXPECTED: 'no response expected',
+  PENDING: 'awaiting employer response',
+  LEVER_VERIFICATION_ERROR: 'Lever reported a verification error; cause unspecified',
+  VALIDATION_FAILED: 'validation failed',
+  CONFIRMED: 'employer confirmation observed',
+};
+
 export function ManagedBrowserAssist({ profile, setProfile, applications, setApplications, assistProfile, setAssistProfile }: { assistProfile: AssistProfile; setAssistProfile: Dispatch<SetStateAction<AssistProfile>>; profile: Profile; setProfile: Dispatch<SetStateAction<Profile>>; applications: Application[]; setApplications: Dispatch<SetStateAction<Application[]>> }) {
   // Never silently reuse an earlier/submitted employer as the next application.
   const [url, setUrl] = useState('');
@@ -125,6 +157,9 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const [preparation, setPreparation] = useState<PreparationResult | null>(null);
   const [formObservation, setFormObservation] = useState<{ opportunityId: string; url: string; revision: number } | null>(null);
   const [listenerStatus, setListenerStatus] = useState<ServerResponse['listeners']>();
+  const [attemptHistory, setAttemptHistory] = useState<{ key: string; receipts: LeverReceipt[] | null } | null>(null);
+  const historyKey = JSON.stringify([selectedOpportunityId, url]);
+  const leverHistory = /^https:\/\/jobs\.lever\.co\//i.test(url) && !!selectedOpportunityId;
   const [trackerSync, setTrackerSync] = useState<ServerResponse['trackerSync']>();
   // A historical ARMED snapshot is not proof of a current listener connection.
   const [listenerConnected, setListenerConnected] = useState(false);
@@ -132,6 +167,21 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const submissionState = !listenerConnected ? 'DISCONNECTED' : !browserOpen ? 'BROWSER_CLOSED' :
     !selectedOpportunityId || listenerStatus?.opportunityId !== selectedOpportunityId ? 'NOT_BOUND' :
     listenerStatus?.submission?.state || 'DISARMED';
+  useEffect(() => {
+    if (!leverHistory || !runtimeChecked) return;
+    let active = true;
+    let timer: ReturnType<typeof setTimeout>;
+    const query = new URLSearchParams({ opportunityId: selectedOpportunityId, url });
+    const refresh = async () => {
+      try {
+        const result = await request('/lever-attempt-receipts?' + query);
+        if (active) setAttemptHistory({ key: historyKey, receipts: result.receipts || [] });
+      } catch { if (active) setAttemptHistory({ key: historyKey, receipts: null }); }
+      if (active) timer = setTimeout(refresh, 2000);
+    };
+    void refresh();
+    return () => { active = false; clearTimeout(timer); };
+  }, [historyKey, leverHistory, runtimeChecked, selectedOpportunityId, url]);
   const rememberOpportunity = (opportunity?: Application) => {
     // An unsaved URL or blank view selection cannot erase the last saved journey.
     if (!opportunity) return;
@@ -442,7 +492,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       }
       else if (action === 'attach') {
         if (!documents.canUpload) throw new Error('Save opportunity documents and complete required review before uploading.');
-        body = { opportunityId: selectedOpportunityId, url };
+        body = { opportunityId: selectedOpportunityId, url, resumeSha256: documents.data?.package.documents.resume?.sha256 };
       }
       else {
         // Prepare uses a trusted adapter registry supplied by the operator/runtime host.
@@ -519,7 +569,10 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         (result.skipped?.length ? 'Skipped: ' + result.skipped.join(', ') + '. ' : '') +
         (result.evidenceSummary || 'Review before continuing on the employer website.')
       );
-      if (action === 'attach') setMessage(
+      if (action === 'attach' && result.attemptReceipt) setMessage(
+        'Résumé ' + resumeEvidenceLabels[result.attemptReceipt.resumeBefore] + '. Receipt ' + result.attemptReceipt.id + '.'
+      );
+      else if (action === 'attach') setMessage(
         Object.entries(result.attachments || {}).map(([kind, state]) => kind + ': ' + state.replaceAll('_', ' ')).join(' · ') +
         '. ' + (result.evidenceSummary || 'Confirm the employer form accepted each document.')
       );
@@ -747,6 +800,22 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           <p className="mt-2" role="status" data-testid="submission-listener-status">{listenerStatus?.error || listenerStatus?.submission?.reason || 'Launch an application to connect tracking and review it before authorizing Submit.'}</p>
           {listenerStatus?.submission?.state === 'CONFIRMED' && listenerStatus.receipts?.some(receipt => !!receipt && typeof receipt === 'object' && 'opportunityId' in receipt && receipt.opportunityId === selectedOpportunityId) && <p className="mt-2 font-semibold">Employer confirmation received. This application is marked Applied in your local queue.</p>}
           <p className="mt-2 text-xs text-muted-foreground">A Submit or Next button can lead to more questions. EscapeHatch stays connected through verified same-job pages. Neither a click nor a processing message marks Applied; only an explicit employer receipt does. Receipt and tracker synchronization are independently verified.</p>
+          {leverHistory && attemptHistory?.key === historyKey && (
+            <details className="mt-3" data-testid="lever-attempt-receipts">
+              <summary className="cursor-pointer font-semibold">Lever attachment and submit receipts</summary>
+              {attemptHistory.receipts === null ? <p>Receipts are unavailable from the installed runtime.</p>
+                : attemptHistory.receipts.length === 0 ? <p>No recorded attachment or submit attempts for this job.</p>
+                : <ol className="mt-2 space-y-2">
+                  {attemptHistory.receipts.map(receipt => <li key={receipt.id} className="rounded border border-border p-2">
+                    <p><time dateTime={receipt.createdAt}>{new Date(receipt.createdAt).toLocaleString()}</time> · {receipt.action === 'ATTACH' ? 'Résumé check' : 'Submit'}</p>
+                    <p>{receipt.action === 'ATTACH' ? 'Résumé: ' : 'Résumé before Submit: '}{resumeEvidenceLabels[receipt.resumeBefore]}.</p>
+                    {receipt.action === 'SUBMIT' && <p>Dispatch: {dispatchLabels[receipt.dispatch]}. Response: {responseLabels[receipt.response]}.</p>}
+                    {receipt.resumeAfter !== 'NOT_OBSERVED' && <p>Résumé field after response: {receipt.resumeAfter.toLowerCase()}.</p>}
+                    <p className="break-all font-mono text-xs">{receipt.id} · {receipt.code.toLowerCase()}</p>
+                  </li>)}
+                </ol>}
+            </details>
+          )}
           <p className="mt-2 text-sm" role="status">{trackerSync ? `Tracker synchronization: ${trackerSync.state}. Saved receipts: ${trackerSync.synced} synced, ${trackerSync.pending} pending, ${trackerSync.authRequired} need Google authorization, ${trackerSync.conflicts} have conflicts, ${trackerSync.retryRequired} need retry.` : 'External tracker synchronization has not been verified.'}</p>
           <button type="button" className={secondary} disabled={busy} onClick={() => { setBusy(true); void request('/submission-sync/retry', {}).then(result => { setRecordingMessage(''); if (result.trackerSync) setTrackerSync(result.trackerSync); }).catch(() => setRecordingMessage('Tracker sync did not complete. The saved receipt is preserved for retry.')).finally(() => setBusy(false)); }}>Retry tracker synchronization</button>
         </section>

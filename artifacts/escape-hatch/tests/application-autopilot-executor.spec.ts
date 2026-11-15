@@ -225,9 +225,9 @@ test('managed preparation inventory protects starred ATS fields and privacy whil
   expect(before.unresolvedRequired.some(item => /How did you hear about us/.test(item))).toBe(true);
   expect(before.unresolvedRequired.some(item => /previously been employed/.test(item))).toBe(true);
   expect(before.unresolvedRequired.some(item => /Applicant Privacy Notice/.test(item))).toBe(true);
-  expect(before.unresolvedRequired.some(item => /Resume\\/CV/.test(item))).toBe(true);
+  expect(before.unresolvedRequired.some(item => /Resume\/CV/.test(item))).toBe(true);
   expect(before.unresolvedRequired.some(item => /Optional notes/.test(item))).toBe(false);
-  await page.locator('#resume').setInputFiles({ name:'test.pdf', mimeType:'application/pdf', buffer:Buffer.from('%PDF-1.7\\n') });
+  await page.locator('#resume').setInputFiles({ name:'test.pdf', mimeType:'application/pdf', buffer:Buffer.from('%PDF-1.7\n') });
   await page.locator('#heard').selectOption('linkedin');
   await page.locator('input[name="employed"][value="no"]').check();
   const pending = await driver.inspect();

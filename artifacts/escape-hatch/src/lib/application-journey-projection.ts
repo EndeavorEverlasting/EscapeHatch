@@ -34,6 +34,7 @@ export type JourneyInput = {
   formCanResume?: boolean;
   needsOpportunityConfirmation?: boolean;
   preparationState?: string | null;
+  preparationCode?: string | null;
 };
 export type JourneyProjection = {
   current: Scene;
@@ -95,9 +96,19 @@ export function projectApplicationJourney(input: JourneyInput): JourneyProjectio
     blockers: ['Review the employer form and authorize Submit for this application.'],
     mayAutoSubmit: false,
   };
+  if (input.preparationState === 'BLOCKED') return {
+    current: scene('RECOVERY'), next: scene('AUTH_RECHECK'),
+    blockers: ['Check the same employer tab and resolve the reported blocker before retrying.'],
+    mayAutoSubmit: false,
+  };
+  if (input.preparationState === 'REVIEW_REQUIRED' && input.preparationCode === 'manual_gate_before_intermediate_navigation') return {
+    current: scene('MANUAL_DECISION'), next: scene('FORM_PREPARATION'),
+    blockers: ['Resolve the pending decision in the employer browser, then resume preparation.'],
+    mayAutoSubmit: false,
+  };
   return {
     current: scene('FORM_PREPARATION'), next: scene('FINAL_REVIEW'),
-    blockers: input.preparationState === 'BLOCKED' ? ['Resolve the current blocked form state before continuing.'] : [],
+    blockers: [],
     mayAutoSubmit: false,
   };
 }

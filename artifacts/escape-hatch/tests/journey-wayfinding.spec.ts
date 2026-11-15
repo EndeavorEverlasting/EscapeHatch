@@ -85,3 +85,71 @@ test('journey material scenes fit narrow and zoomed layouts', async ({ page }, t
   expect(await atlas.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
   await expect(page.getByTestId('journey-open-stage')).toBeVisible();
 });
+
+test('mascot connects sources, profile, answers and applications without claiming progress', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Explore your journey' }).click();
+  await page.getByTestId('journey-open-stage').click();
+  await expect(page).toHaveURL(/\/sources$/);
+  const guide = page.getByTestId('workspace-journey-guide');
+  await guide.getByRole('link', { name: 'Review your profile' }).click();
+  await expect(page).toHaveURL(/\/profile$/);
+  await guide.getByRole('link', { name: 'Open Answer library' }).click();
+  await expect(page).toHaveURL(/\/answers$/);
+  await guide.getByRole('link', { name: 'Choose an opportunity' }).click();
+  await expect(page).toHaveURL(/\/applications$/);
+  await expect(guide.getByRole('link', { name: 'Open Browser assist' })).toBeVisible();
+});
+
+test('atlas previews sign-in, signed-in and retry branches without running application actions', async ({ page }) => {
+  const writes: string[] = [];
+  page.on('request', request => {
+    if (request.method() === 'POST' && request.url().includes('/managed-assist/')) writes.push(request.url());
+  });
+  await page.goto('/journey?scene=APPLICATION_ENTRY');
+  const preview = page.getByTestId('journey-branch-preview');
+  await expect(preview).toContainText('The same employer form opens without a sign-in prompt.');
+  await preview.getByRole('link', { name: /Sign in in the employer window/ }).click();
+  await expect(preview.getByRole('heading', { level: 2 })).toBeFocused();
+  await expect(preview).toContainText('You decide');
+  await preview.getByRole('link', { name: 'Check again or continue when ready' }).click();
+  await expect(preview).toContainText('The employer still requires sign-in.');
+  await preview.getByRole('link', { name: 'Show the failed step and how to recover' }).click();
+  await expect(preview).toContainText('The same employer tab can be checked again.');
+  await expect(preview.getByRole('link', { name: 'Check again or continue when ready' })).toBeVisible();
+  await page.goBack();
+  await expect(preview).toContainText('The employer still requires sign-in.');
+  await page.goto('/journey?scene=unknown');
+  await expect(preview).toHaveCount(0);
+  await expect(page.getByTestId('journey-atlas')).toBeVisible();
+  expect(writes).toEqual([]);
+});
+
+test('materials detour and return keep the requested job, with no fallback to another job', async ({ page }) => {
+  const secondId = 'role + two & launch=1';
+  const fixture = ['role-one', secondId].map((id, index) => ({
+    id, company: 'Fixture ' + index, role: 'Engineer', url: 'https://jobs.example.com/apply/' + index,
+    status: 'saved', priority: 'normal', notes: '', nextAction: '', updatedAt: '2026-01-01T00:00:00Z',
+  }));
+  await page.goto('/');
+  await page.evaluate(applications => localStorage.setItem('escape-hatch-applications', JSON.stringify(applications)), fixture);
+  const writes: string[] = [];
+  page.on('request', request => {
+    if (request.method() === 'POST' && request.url().includes('/managed-assist/')) writes.push(request.url());
+  });
+  const context = new URLSearchParams({ opportunityId: secondId });
+  await page.goto('/assist?' + context);
+  const coach = page.getByTestId('application-journey-coach');
+  await coach.getByRole('link', { name: 'Review this job’s materials' }).click();
+  await expect(page.getByTestId('materials-opportunity-select')).toHaveValue(secondId);
+  await page.getByRole('link', { name: 'Return to Browser assist' }).click();
+  await expect(page.getByTestId('managed-job-url')).toHaveValue(fixture[1].url);
+  await coach.getByRole('link', { name: 'Explore this step' }).click();
+  await expect(page.getByTestId('journey-branch-preview')).toBeVisible();
+  expect(new URL(page.url()).searchParams.get('opportunityId')).toBe(secondId);
+  await page.goto('/materials?opportunityId=gone');
+  await expect(page.getByTestId('materials-opportunity-select')).toHaveValue('');
+  await expect(page.getByText('This opportunity is unavailable.', { exact: false })).toBeVisible();
+  await expect(page.getByTestId('materials-open-assist')).toHaveCount(0);
+  expect(writes).toEqual([]);
+});

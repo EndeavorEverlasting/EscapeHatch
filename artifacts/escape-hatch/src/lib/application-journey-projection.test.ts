@@ -70,3 +70,17 @@ test('resume selection rejects nonpublic URL forms and cannot grant scene author
   assert.equal(projected.current.id, 'APPLICATION_ENTRY');
   assert.equal(projected.mayAutoSubmit, false);
 });
+
+test('only evidenced operator decisions and blocked preparation change the live guide', () => {
+  const manual = projectApplicationJourney({
+    ...base, preparationState: 'REVIEW_REQUIRED', preparationCode: 'manual_gate_before_intermediate_navigation',
+  });
+  assert.deepEqual([manual.current.id, manual.next.id, manual.mayAutoSubmit],
+    ['MANUAL_DECISION', 'FORM_PREPARATION', false]);
+  assert.equal(projectApplicationJourney({
+    ...base, preparationState: 'REVIEW_REQUIRED', preparationCode: 'required_preparation_unverified',
+  }).current.id, 'FORM_PREPARATION');
+  const blocked = projectApplicationJourney({ ...base, preparationState: 'BLOCKED' });
+  assert.deepEqual([blocked.current.id, blocked.next.id, blocked.mayAutoSubmit],
+    ['RECOVERY', 'AUTH_RECHECK', false]);
+});

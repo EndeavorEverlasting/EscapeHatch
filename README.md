@@ -2,6 +2,22 @@
 
 A private, locally managed career workspace for preparing job applications, keeping opportunity-specific documents together, and resuming employer forms after sign-in. **Final submission always belongs to the user.**
 
+## Hey, press me, click me.
+
+With Docker running in Linux-container mode, [download and extract EscapeHatch](https://github.com/EndeavorEverlasting/EscapeHatch/archive/refs/heads/main.zip) or open your checkout. Double-click the file for your computer.
+
+| Computer | Open this file |
+| --- | --- |
+| Windows | `Hey, press me, click me.cmd` |
+| macOS (Apple Silicon or Intel) | `Hey, press me, click me.command` |
+| Linux desktop | `Hey, press me, click me.desktop` |
+
+The first launch builds the app and opens the **Journey** tutorial in your default browser. Follow the chick to import a résumé, restore an exported workspace from Profile, or start with an opportunity. On macOS, if the extracted command is not executable, run `chmod +x "Hey, press me, click me.command"` once. On Linux, your desktop may ask you to trust the launcher. If your file manager opens it as text, run `bash scripts/container/launch.sh` from the extracted folder.
+
+The app listens on this computer at `localhost:21030`. The container uses a dedicated Docker volume for your data. To close it, run `bash scripts/container/launch.sh stop` on macOS or Linux, or run `"Hey, press me, click me.cmd" stop` in Windows Command Prompt. Close and reopen EscapeHatch after updating the source to pick up the new build.
+
+This Docker launcher supports the local cockpit, tutorial, and workspace. Use the native Windows route below for managed employer Chrome, host Google access, and native extension integration. Mobile companion installation is separate.
+
 ## Windows: download, install, and open
 
 **[Download the guided developer-preview setup](https://raw.githubusercontent.com/EndeavorEverlasting/EscapeHatch/main/Get-EscapeHatch.cmd)** — save `Get-EscapeHatch.cmd`, then double-click it. Windows may warn before running a downloaded command script; review the source first and approve only if you trust it. This is an unsigned Windows command script. The signed consumer installer remains a release gate under [Issue #69](https://github.com/EndeavorEverlasting/EscapeHatch/issues/69).

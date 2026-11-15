@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import type { Plugin } from 'vite';
+import type { Plugin, PreviewServer, ViteDevServer } from 'vite';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { userDataRoot } from './user-data.ts';
@@ -25,7 +25,7 @@ export function authorizedWorkspaceRequest(req: IncomingMessage, port: number) {
 export async function bootstrapWorkspace(): Promise<BootstrapResponse> {
   try {
     const saved = await readWorkspace();
-    if (saved) return { managed: true, ...saved, state: hasContext(saved.workspace.values) ? 'READY' : 'NEEDS_CONTEXT', message: 'Private workspace recovered from this Windows account.' };
+    if (saved) return { managed: true, ...saved, state: hasContext(saved.workspace.values) ? 'READY' : 'NEEDS_CONTEXT', message: 'Your private workspace is saved on this device.' };
     const profile = profileFromPreferences((await readPreferences()).preferences);
     const workspace: SavedWorkspace = { schema: WORKSPACE_SCHEMA, values: { [PROFILE_KEY]: profile } };
     return { managed: true, revision: null, workspace, state: hasContext(workspace.values) ? 'READY' : 'NEEDS_CONTEXT',
@@ -34,17 +34,12 @@ export async function bootstrapWorkspace(): Promise<BootstrapResponse> {
     return { managed: true, revision: null, workspace: null, state: 'RECOVERY_REQUIRED', message: 'Saved context could not be read. Existing files are preserved; restore a valid backup before continuing.' };
   }
 }
-export function createWorkspaceControlPlugin(): Plugin {
+export function createWorkspaceControlPlugin({ servePreview = false } = {}): Plugin {
   const managed = readManagedRuntime();
-  return { name: 'escapehatch-workspace-control',
-    transformIndexHtml(_html, context) {
-      return [{ tag: 'meta', attrs: { name: 'escapehatch-runtime', content: context.server && managed ? 'managed' : 'standalone' }, injectTo: 'head' }];
-    },
-    configureServer(server) {
+  function installWorkspaceRoutes(server: ViteDevServer | PreviewServer, port: number) {
     server.middlewares.use(async (req, res, next) => {
       const route = (req.url || '').split('?')[0];
       if (!['/__escapehatch/workspace', '/__escapehatch/workspace/status', '/__escapehatch/workspace/resume', '/__escapehatch/workspace/owner'].includes(route)) return next();
-      const port = Number(process.env.PORT || server.config.server.port || 5173);
       if (!managed) return respond(res, 200, { managed: false });
       if (!authorizedWorkspaceRequest(req, port)) return respond(res, 403, { error: 'same_origin_loopback_required' });
       if (route === '/__escapehatch/workspace/owner') {
@@ -106,5 +101,21 @@ export function createWorkspaceControlPlugin(): Plugin {
         return respond(res, conflict ? 409 : 422, { error: conflict ? 'workspace_changed_elsewhere' : 'workspace_not_saved_existing_data_preserved' });
       }
     });
-  } };
+  }
+  return {
+    name: 'escapehatch-workspace-control',
+    transformIndexHtml(_html, context) {
+      const content = process.env.VITE_ESCAPEHATCH_CONTAINER === '1'
+        ? 'container' : context.server && managed ? 'managed' : 'standalone';
+      return [{ tag: 'meta', attrs: { name: 'escapehatch-runtime', content }, injectTo: 'head' }];
+    },
+    configureServer(server) {
+      installWorkspaceRoutes(server, Number(process.env.PORT || server.config.server.port || 5173));
+    },
+    ...(servePreview ? {
+      configurePreviewServer(server: PreviewServer) {
+        installWorkspaceRoutes(server, Number(process.env.PORT));
+      },
+    } : {}),
+  };
 }

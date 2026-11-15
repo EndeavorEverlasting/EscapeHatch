@@ -110,7 +110,7 @@ export function SourcesPage(props: SourceStateProps & {
   return <div>
     <h1 className="font-display text-4xl">Sources &amp; identity</h1>
     <p className="my-3">Start with a résumé. Drop it below, review its claims, then save the facts you want to reuse. You can choose an opportunity later. Managed startup saves approved details on this computer.</p>
-    <CareerSourceStatus />
+    {import.meta.env.VITE_ESCAPEHATCH_CONTAINER !== '1' && <CareerSourceStatus />}
     <button disabled={busy} onClick={() => void readSavedResume()}>Review saved résumé</button>
     <p className="my-3">Choose a local or synced résumé below. A registered Drive PDF can also be staged for a saved opportunity by your local agent.</p>
     <ArtifactDropzone label="Résumé source (.txt or .pdf)" hint="Drop one career source here, or choose a file. Text or text-based PDF, up to 20 MB. Review comes next; dropping never approves claims." accept=".txt,.pdf" disabled={busy} onFile={choose} />

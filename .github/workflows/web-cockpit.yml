@@ -8,6 +8,10 @@ on:
     branches: [main]
     paths:
       - 'artifacts/escape-hatch/**'
+      - 'scripts/container/**'
+      - 'Hey, press me, click me.*'
+      - 'Dockerfile'
+      - '.dockerignore'
       - 'docs/plans/**'
       - 'scripts/replit-plan-sync/**'
       - 'scripts/validate_replit_transfer.py'
@@ -26,20 +30,39 @@ jobs:
         with: { python-version: '3.13' }
       - run: python scripts/validate_replit_transfer.py
       - run: python scripts/validate_puzzle_atlas.py
-      - run: npm install --prefix artifacts/escape-hatch --ignore-scripts
+      - run: npm ci --prefix artifacts/escape-hatch --ignore-scripts
       - run: npm --prefix artifacts/escape-hatch run typecheck
       - run: npm --prefix artifacts/escape-hatch run test:unit
       - run: npm --prefix artifacts/escape-hatch run build
       - run: npx --prefix artifacts/escape-hatch tsx scripts/replit-plan-sync/task-plan-sync.test.ts
       - run: npx --prefix artifacts/escape-hatch tsx scripts/replit-plan-sync/task-plan-sync.ts --input docs/plans/recovered-task-export.v1.json --output docs/plans --preview
       - run: git diff --check
+  container-cockpit:
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            platform: linux/amd64
+          - runner: ubuntu-24.04-arm
+            platform: linux/arm64
+    name: Container cockpit (${{ matrix.platform }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22.22.3' }
+      - run: npm ci --prefix artifacts/escape-hatch --ignore-scripts
+      - run: npx --prefix artifacts/escape-hatch playwright install --with-deps chromium
+      - run: bash scripts/container/smoke.sh
   web-cockpit-browser:
+    needs: [container-cockpit]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
-      - run: npm install --prefix artifacts/escape-hatch --ignore-scripts
+      - run: npm ci --prefix artifacts/escape-hatch --ignore-scripts
       - run: npx --prefix artifacts/escape-hatch playwright install --with-deps chromium
       - run: xvfb-run --auto-servernum --server-args='-screen 0 1280x720x24' npm --prefix artifacts/escape-hatch run test:browser
       - run: xvfb-run --auto-servernum --server-args='-screen 0 1280x720x24' npm --prefix artifacts/escape-hatch run test:bootstrap:browser

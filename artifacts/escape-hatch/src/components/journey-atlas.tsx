@@ -4,12 +4,18 @@ import { ArrowLeft, ArrowRight, CheckCircle2, Map, Puzzle, ShieldCheck } from 'l
 import { JOURNEY_DESTINATIONS, getJourneyStop, getJourneyBranches, journeyAtlasHref, journeyOpportunityHref, projectJourneyWayfinding } from '@/lib/journey-wayfinding';
 import type { Application } from '@/lib/storage';
 
+const containerWorkspace = import.meta.env.VITE_ESCAPEHATCH_CONTAINER === '1';
 const tour = JOURNEY_DESTINATIONS.filter(stop => stop.id !== 'materials');
 const canonicalScenes = projectJourneyWayfinding();
 const materials = getJourneyStop('materials');
 export function JourneyAtlas({ applications }: { applications: Application[] }) {
   const [selected, setSelected] = useState(0);
   const stage = tour[selected];
+  const stageDetail = containerWorkspace && stage.id === 'assist'
+    ? 'Gather reviewed answers and documents. Open the employer’s site in your browser when you’re ready.'
+    : containerWorkspace && stage.id === 'review'
+      ? 'Review the fields and uploads on the employer site before you submit.'
+      : stage.detail;
   const query = new URLSearchParams(useSearch());
   const sceneId = query.get('scene');
   const requestedId = query.get('opportunityId');
@@ -28,8 +34,8 @@ export function JourneyAtlas({ applications }: { applications: Application[] }) 
   return <div className="journey-atlas space-y-8" data-testid="journey-atlas">
     <header className="journey-atlas-header relative overflow-hidden rounded-3xl border border-primary/25 bg-primary/5 p-6 sm:p-9">
       <div className="relative z-10 max-w-2xl">
-        <p className="text-xs font-semibold text-primary">Your application journey</p>
-        <h1 className="mt-3 font-display text-4xl leading-tight sm:text-5xl">See every piece of the application.</h1>
+        <p className="text-xs font-semibold text-primary">{containerWorkspace ? "You made it through the hatch." : "Your application journey"}</p>
+        <h1 className="mt-3 font-display text-4xl leading-tight sm:text-5xl">{containerWorkspace ? "Welcome to EscapeHatch." : "See every piece of the application."}</h1>
         <p className="mt-4 text-sm leading-7 text-muted-foreground">Explore your sources, saved answers and role materials, then choose a job to prepare. Open any scene to find your next action. Each employer form still needs its own verification.</p>
         <p className="mt-3 text-xs text-muted-foreground">{applications.length} locally tracked {applications.length === 1 ? 'opportunity' : 'opportunities'}. Employer submission requires separate confirmation.</p>
       </div>
@@ -74,7 +80,7 @@ export function JourneyAtlas({ applications }: { applications: Application[] }) 
       <div id="journey-scene-inspection" className="journey-atlas-inspection mt-5 rounded-2xl border border-primary/20 bg-primary/5 p-5" data-testid="journey-selected-step">
         <div aria-live="polite" aria-atomic="true">
         <h3 className="mt-2 font-display text-3xl">{stage.title}</h3>
-        <p className="mt-3 text-sm leading-6 text-muted-foreground">{stage.detail}</p>
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">{stageDetail}</p>
         </div>
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <Link href={destination(stage.route)} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground" data-testid="journey-open-stage">Open this scene <ArrowRight size={16} /></Link>
@@ -85,7 +91,14 @@ export function JourneyAtlas({ applications }: { applications: Application[] }) 
       </div>
     </section>
 
-    <section id="setup" aria-label="Install and open EscapeHatch" className="rounded-2xl border border-border bg-card p-5 sm:p-7" data-testid="journey-setup">
+    {containerWorkspace ? <section id="setup" aria-label="Your container workspace" className="rounded-2xl border border-border bg-card p-5 sm:p-7">
+      <h2 className="font-display text-2xl">Bring your work with you.</h2>
+      <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Start with a résumé in Sources or restore an exported workspace from Profile. Docker keeps this workspace between launches. Use your browser for employer forms. Managed Chrome and connected account features require a supported native install.</p>
+      <div className="mt-4 flex flex-wrap gap-4 text-sm font-bold text-primary">
+        <Link href="/sources" className="underline underline-offset-4">Open Sources</Link>
+        <Link href="/profile" className="underline underline-offset-4">Restore a workspace</Link>
+      </div>
+    </section> : <section id="setup" aria-label="Install and open EscapeHatch" className="rounded-2xl border border-border bg-card p-5 sm:p-7" data-testid="journey-setup">
       <p className="font-mono-app text-[11px] font-bold uppercase tracking-[.16em] text-primary">From download to first puzzle</p>
       <h2 className="mt-2 font-display text-3xl">Set up once. Return to your work.</h2>
       <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">The Windows developer-preview setup checks dependencies, offers supported recovery when tools are missing, preserves existing installations and starts the local cockpit. Build artifacts may include a bundled Node/npm runtime. Setup and build artifacts are unsigned previews; review their source and provenance before running. Employer sign-in stays with you.</p>
@@ -99,7 +112,7 @@ export function JourneyAtlas({ applications }: { applications: Application[] }) 
         <a href="https://github.com/EndeavorEverlasting/EscapeHatch/actions/workflows/windows-preview-package.yml" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1 font-bold text-primary underline underline-offset-4" data-testid="journey-bundled-package">Inspect preview build artifacts <ArrowRight size={15} /></a>
       </div>
       <p className="mt-3 text-xs text-muted-foreground">Open each step to check your setup and sign-in status. Your saved workspace stays on this computer. Use the optional extension only when you need its companion workflow.</p>
-    </section>
+    </section>}
 
     <section aria-label="Website destinations" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {[

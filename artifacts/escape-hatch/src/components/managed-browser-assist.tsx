@@ -2,6 +2,7 @@ import { useOpportunityDocuments } from './opportunity-documents';
 import { ApplicationPuzzle } from './application-puzzle';
 import { ApplicationOutcome } from './application-outcome';
 import type { CurrentApplicationPage } from '@/lib/application-puzzle';
+import { isLeverApplicationForm } from '@/lib/application-puzzle';
 import { parseSubmissionEvidence, reconcileSubmissionReceipts, submissionMatchesApplication } from '@/lib/submission-reconciliation';
 import type { AssistProfile } from '@/lib/assist-contract';
 import { CareerRecords } from './career-records';
@@ -49,6 +50,7 @@ type ServerResponse = {
   skipped?: string[];
   attachments?: Record<string, string>;
   requiresOperatorSubmission?: boolean;
+  finalActionActivated?: boolean;
   preparation?: PreparationResult;
   preparationState?: PreparationResult['state'] | null;
   preparationCode?: string | null;
@@ -86,7 +88,7 @@ const titles: Record<string, string> = {
   attachments_partially_staged_review_required: 'Some file controls populated — review needed',
   attachments_unverified_review_required: 'No file controls verified — review needed',
   browser_closed: 'Managed browser closed',
-  REVIEW_READY: 'REVIEW_READY — final Submit is operator-only',
+  REVIEW_READY: 'REVIEW_READY — ready for your submission decision',
   REVIEW_REQUIRED: 'REVIEW_REQUIRED — resolve gates before continuing',
   BLOCKED: 'BLOCKED — fail closed; re-inspect before retry',
 };
@@ -306,9 +308,10 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   async function trackExistingTab() {
     setBusy(true);
     try {
-      const live = new URL(url);
+      const live = new URL(currentPage?.applicationUrl === url && currentPage.opportunityId === selectedOpportunityId ? currentPage.pageUrl : url);
       if (live.hostname === 'jobs.lever.co' && /^\/[^/]+\/[^/]+\/?$/.test(live.pathname)) live.pathname = live.pathname.replace(/\/$/, '') + '/apply';
-      const result = await request('/listeners/bind-existing', { opportunityId: selectedOpportunityId, url, livePageUrl: live.href, employerName: applications.find(item => item.id === selectedOpportunityId)?.company || '' });
+      const result = await request('/listeners/bind-existing', { opportunityId: selectedOpportunityId, url, livePageUrl: live.href,
+        recordAnswers: isLeverApplicationForm(live.href) });
       setListenerStatus(result.listeners);
       setListenerConnected(true);
       // The binding response is server-scoped to the exact employer tab. Keep the
@@ -318,6 +321,30 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       setRecordingMessage(result.listeners?.submission?.reason || 'Check the submission listener status before submitting.');
     } catch (error) { setListenerStatus(undefined); setRecordingMessage(error instanceof Error ? error.message : 'Could not track the existing tab. No submission is assumed.'); }
     finally { setBusy(false); }
+  }
+
+  async function submitReviewedApplication() {
+    const resume = documents.data?.package.documents.resume;
+    if (!currentPage || !resume?.reviewedAt || !isLeverApplicationForm(currentPage.pageUrl)) return;
+    setBusy(true);
+    try {
+      const result = await request('/submit-authorized', {
+        opportunityId: selectedOpportunityId, url, livePageUrl: currentPage.pageUrl,
+        resumeSha256: resume.sha256, confirmedSubmit: true,
+      });
+      setListenerStatus(result.listeners);
+      if (result.trackerSync) setTrackerSync(result.trackerSync);
+      setRecordingMessage(result.listeners?.submission?.state === 'CONFIRMED' ? 'Employer confirmation received.' :
+        'Check the same Chrome tab for employer verification or confirmation before trying again.');
+    } catch (error) {
+      const code = error instanceof Error ? error.message : '';
+      setRecordingMessage(code.startsWith('resume_') || code === 'approved_resume_digest_required'
+        ? 'Attach the approved résumé to this tab before submitting.'
+        : code === 'submit_blocked_incomplete_form' ? 'Resolve the incomplete fields in the same Chrome tab.'
+        : code === 'employer_verification_required' ? 'Complete employer verification in the same Chrome tab.'
+        : code === 'answer_and_submission_listeners_required' ? 'Track the existing application tab to start answer and submission recording.'
+        : 'Check the same Chrome tab before trying again. ' + code);
+    } finally { setBusy(false); }
   }
 
   useEffect(() => {
@@ -555,7 +582,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           </p>
         </div>
         <div className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground">
-          <ShieldCheck size={15} /> Manual final Submit
+          <ShieldCheck size={15} /> You authorize Submit
         </div>
       </div>
 
@@ -698,6 +725,11 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           <p className="mt-1 text-xs text-muted-foreground">Recognized answers are saved locally. New questions appear in reusable answers for review. Passwords, files, agreements and certifications are excluded.</p>
           <p className="mb-2 text-xs text-muted-foreground">Select the saved job and start listening in its existing Chrome tab. Your employer form will not reload.</p>
           <button type="button" className={secondary} disabled={busy || !browserOpen || !selectedOpportunityId || !url} onClick={() => void trackExistingTab()}>Track existing application tab</button>
+          {currentPage?.opportunityId === selectedOpportunityId && currentPage.applicationUrl === url && isLeverApplicationForm(currentPage.pageUrl) && (
+            <button type="button" className={button} disabled={busy || documents.loading || documents.intakePending ||
+              submissionState !== 'ARMED' || !listenerStatus?.recordingAnswers || !documents.data?.package.documents.resume?.reviewedAt}
+              onClick={() => void submitReviewedApplication()}>Submit reviewed application</button>
+          )}
           <p role="status" aria-live="polite" data-testid="submission-listener-state" data-listener-state={submissionState}
              className="mt-3 rounded-lg border border-border bg-background px-3 py-2 text-sm font-semibold">
              Submission listener: {submissionState}{submissionState === 'ARMED' ? ' — observing form transitions for this job' :
@@ -712,7 +744,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           </p>
           <label className="mt-3 flex items-start gap-2"><input type="checkbox" checked={listenerConnected && listenerStatus?.opportunityId === selectedOpportunityId && !!listenerStatus?.submission && !['DISARMED', 'BLOCKED'].includes(listenerStatus.submission.state)}
             disabled={!browserOpen || busy || listenerStatus?.opportunityId !== selectedOpportunityId || listenerStatus?.submission?.state === 'CONFIRMED'} onChange={event => void updateListeners({ trackSubmission: event.target.checked })} />Track my application through its pages and final confirmation in Chrome</label>
-          <p className="mt-2" role="status" data-testid="submission-listener-status">{listenerStatus?.error || listenerStatus?.submission?.reason || 'Launch an application to connect tracking. Final submission stays yours.'}</p>
+          <p className="mt-2" role="status" data-testid="submission-listener-status">{listenerStatus?.error || listenerStatus?.submission?.reason || 'Launch an application to connect tracking and review it before authorizing Submit.'}</p>
           {listenerStatus?.submission?.state === 'CONFIRMED' && listenerStatus.receipts?.some(receipt => !!receipt && typeof receipt === 'object' && 'opportunityId' in receipt && receipt.opportunityId === selectedOpportunityId) && <p className="mt-2 font-semibold">Employer confirmation received. This application is marked Applied in your local queue.</p>}
           <p className="mt-2 text-xs text-muted-foreground">A Submit or Next button can lead to more questions. EscapeHatch stays connected through verified same-job pages. Neither a click nor a processing message marks Applied; only an explicit employer receipt does. Receipt and tracker synchronization are independently verified.</p>
           <p className="mt-2 text-sm" role="status">{trackerSync ? `Tracker synchronization: ${trackerSync.state}. Saved receipts: ${trackerSync.synced} synced, ${trackerSync.pending} pending, ${trackerSync.authRequired} need Google authorization, ${trackerSync.conflicts} have conflicts, ${trackerSync.retryRequired} need retry.` : 'External tracker synchronization has not been verified.'}</p>

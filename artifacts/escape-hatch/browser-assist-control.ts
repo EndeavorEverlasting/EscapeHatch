@@ -11,6 +11,7 @@ import {
   indeedSlotIdForUrl,
 } from './resume-selection-store.ts';
 import { ManagedListeners } from './managed-listeners.ts';
+import { isLeverApplicationForm, leverApplicationKey } from './src/lib/application-puzzle.ts';
 import { enqueueSubmissionSync, retrySubmissionSync, readSubmissionSyncStatus, startSubmissionSync } from './tracker-writeback.ts';
 import { APPLICATIONS_KEY } from './src/lib/storage.ts';
 import { withCareerPreferences } from './career-preferences.ts';
@@ -99,7 +100,8 @@ export function selectRestoredLaunchPage(context: BrowserContext, jobUrl: string
     if (candidate.isClosed()) return false;
     try {
       const live = new URL(candidate.url());
-      return live.origin === target.origin && live.pathname === target.pathname && live.search === target.search;
+      return live.origin === target.origin && live.search === target.search &&
+        (live.pathname === target.pathname || (isLeverApplicationForm(live.href) && live.pathname.replace(/\/apply\/?$/, '') === target.pathname.replace(/\/$/, '')));
     } catch { return false; }
   });
   if (matches.length > 1) throw new Error('More than one exact application tab is open; bind the intended tab explicitly.');
@@ -361,6 +363,32 @@ export async function attachPdfs(page: Page, resume: ReturnType<typeof parsePriv
   return outcome;
 }
 
+async function verifyLeverResume(page: Page, expectedSha256: string) {
+  return page.evaluate(async expected => {
+    const form = document.querySelector('#btn-submit')?.closest('form#application-form');
+    const inputs = Array.from(form?.querySelectorAll<HTMLInputElement>('input[type="file"]:enabled') || []);
+    const matches = inputs.filter(input => /\b(?:resume|résumé|cv)\b/i.test([
+      input.name, input.id, input.getAttribute('aria-label'), ...Array.from(input.labels || [], label => label.textContent),
+    ].join(' ').replace(/[-_]/g, ' ')));
+    if (matches.length !== 1) return 'resume_input_unverified';
+    const input = matches[0];
+    const wrapper = input.closest('.application-question.resume');
+    if (Array.from(wrapper?.querySelectorAll('.resume-upload-working, .resume-upload-oversize') || [])
+      .some(element => element.getClientRects().length && getComputedStyle(element).visibility === 'visible')) return 'resume_upload_pending_or_rejected';
+    const file = input.files?.[0];
+    if (input.files?.length !== 1 || !file || !file.size || file.size > 5 * 1024 * 1024) return 'resume_missing_or_invalid';
+    const bytes = new Uint8Array(await crypto.subtle.digest('SHA-256', await file.arrayBuffer()));
+    const actual = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+    if (!input.isConnected || input.files?.[0] !== file) return 'resume_attachment_changed';
+    return actual === expected ? null : 'resume_attachment_digest_mismatch';
+  }, expectedSha256);
+}
+
+async function leverChallengeVisible(page: Page) {
+  return page.locator('iframe[title*="challenge" i], [role="dialog"]:has(iframe[src*="hcaptcha.com"])')
+    .filter({ visible: true }).first().isVisible();
+}
+
 async function preferPlatformSelectedResume(
   resumeSelectionStore: ResumeSelectionStore,
   packageFiles: { resume: { name: string; mimeType: 'application/pdf'; buffer: Buffer } | null; cover: { name: string; mimeType: 'application/pdf'; buffer: Buffer } | null; reviewPolicy: string },
@@ -391,7 +419,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
   // and listener handles rather than orphaning the operator's application.
   type SessionCache = { context: BrowserContext | null; page: Page | null; state: string;
     applicationOrigin: string; applicationUrl: string; opportunityId: string;
-    preparation: PreparationResult | null; networkDiagnosis: NavigationDiagnosis | null; authCheckpoint: AuthCheckpoint; trustedReturnPath: string | null; listeners: ManagedListeners; busy: boolean; taleoHostArmed?: boolean };
+    preparation: PreparationResult | null; networkDiagnosis: NavigationDiagnosis | null; authCheckpoint: AuthCheckpoint; trustedReturnPath: string | null; listeners: ManagedListeners; busy: boolean; taleoHostArmed?: boolean; leverAttempts?: Set<string> };
   const cacheHost = globalThis as typeof globalThis & { [key: symbol]: SessionCache };
   const cacheKey = Symbol.for('escapehatch.managed-browser.' + (managed?.identity.instanceId || 'unmanaged'));
   const cache = cacheHost[cacheKey] ||= { context: null, page: null, state: 'idle', applicationOrigin: '', applicationUrl: '',
@@ -411,7 +439,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
   // An installed upgrade may retain an old listener object in Vite's cache.
   // Replace observation handles only; never close or navigate employer tabs.
   const previousListeners = cache.listeners;
-  const listeners = previousListeners.implementationVersion === 4 ? previousListeners : new ManagedListeners(undefined, undefined, enqueueSubmissionSync);
+  const listeners = previousListeners.implementationVersion === 5 ? previousListeners : new ManagedListeners(undefined, undefined, enqueueSubmissionSync);
   // Older cached listeners and synthetic middleware fixtures may predate dispose().
   // Preserve the employer tab; replace obsolete handles without invoking an absent method.
   // A new listener starts unarmed and requires exact-application binding before Submit.
@@ -623,9 +651,22 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               new URL(page.url()).pathname === trustedReturnPath &&
               (payload.livePageUrl === saved.url || payload.livePageUrl === page.url());
             const selected = confirmedReturn ? page! : selectExistingApplicationPage(context, saved.url, payload.livePageUrl);
-            await listeners.attach(selected, { opportunityId: saved.id, applicationUrl: selected.url(), opportunityUrl: saved.url, employerName: saved.company }, false);
+            const leverKey = leverApplicationKey(selected.url());
+            if (leverKey && cache.leverAttempts?.has(leverKey)) {
+              const previous = await listeners.status();
+              if (!listeners.isBoundTo(selected, saved.id) || previous.submission?.state !== 'VALIDATION_FAILED' ||
+                  await leverChallengeVisible(selected)) {
+                return respond(res, 409, { ok: false, error: 'submission_attempt_already_observed', listeners: previous });
+              }
+            }
+            if (!listeners.isBoundTo(selected, saved.id)) {
+              await listeners.attach(selected, { opportunityId: saved.id, applicationUrl: selected.url(), opportunityUrl: saved.url, employerName: saved.company }, payload.recordAnswers === true);
+            } else if (payload.recordAnswers === true) {
+              await listeners.setRecording(true);
+            }
             const status = await listeners.arm();
             if (status.submission?.state !== 'ARMED') return respond(res, 409, { ok: false, error: status.error || 'submission_tracking_not_armed', listeners: status });
+            if (leverKey) cache.leverAttempts?.delete(leverKey);
             page = selected;
             applicationUrl = saved.url;
             applicationOrigin = new URL(saved.url).origin;
@@ -1276,6 +1317,57 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               return respond(res, 422, { ok: false, error: 'confirmedSubmit_required' });
             }
             const beforeUrl = page.url();
+            if (isLeverApplicationForm(beforeUrl)) {
+              assertInspectionScope(payload.opportunityId, payload.url, opportunityId, applicationUrl, beforeUrl);
+              if (payload.livePageUrl !== beforeUrl || !context ||
+                  selectExistingApplicationPage(context, applicationUrl, beforeUrl) !== page ||
+                  !listeners.isBoundTo(page, opportunityId)) {
+                return respond(res, 409, { ok: false, error: 'reviewed_application_tab_mismatch' });
+              }
+              const before = await listeners.status();
+              const attemptKey = leverApplicationKey(beforeUrl)!;
+              const attempts = cache.leverAttempts ??= new Set();
+              if (attempts.has(attemptKey) || before.receipts.some(receipt =>
+                receipt.opportunityId === opportunityId || receipt.applicationOrigin + receipt.applicationPath.replace(/\/$/, '') === attemptKey)) {
+                return respond(res, 409, { ok: false, error: 'submission_attempt_already_observed', listeners: before });
+              }
+              const workspace = await readWorkspace();
+              const applications = workspace?.workspace.values[APPLICATIONS_KEY];
+              if (!Array.isArray(applications) || !applications.some(item => item.id === opportunityId && item.url === applicationUrl &&
+                  !['applied', 'follow_up', 'closed'].includes(item.status))) {
+                return respond(res, 409, { ok: false, error: 'saved_application_no_longer_actionable' });
+              }
+              if (before.submission?.state !== 'ARMED' || !before.recordingAnswers || before.error) {
+                return respond(res, 409, { ok: false, error: 'answer_and_submission_listeners_required', listeners: before });
+              }
+              if (await leverChallengeVisible(page)) return respond(res, 409, { ok: false, error: 'employer_verification_required' });
+              const resume = (await documentStore.read(opportunityId, applicationUrl)).documents.resume;
+              if (!resume?.reviewedAt || resume.sha256 !== payload.resumeSha256) {
+                return respond(res, 409, { ok: false, error: 'approved_resume_digest_required' });
+              }
+              const terminal = page.locator('form#application-form #btn-submit').and(page.getByRole('button', { name: /^submit application$/i }));
+              if (await terminal.count() !== 1 || !await terminal.isEnabled()) {
+                return respond(res, 409, { ok: false, error: 'submit_control_missing_or_disabled' });
+              }
+              await terminal.click({ trial: true, timeout: 5000 });
+              const blockers = await inspectRequiredFieldBlockers(page, opportunityId, applicationUrl);
+              if (blockers.length) return respond(res, 409, { ok: false, error: 'submit_blocked_incomplete_form', blockers });
+              await listeners.captureReviewedAnswers(page, opportunityId);
+              const resumeError = await verifyLeverResume(page, resume.sha256);
+              if (resumeError) return respond(res, 409, { ok: false, error: resumeError });
+              if (page.url() !== beforeUrl || await leverChallengeVisible(page)) {
+                return respond(res, 409, { ok: false, error: 'application_changed_or_employer_verification_required' });
+              }
+              // Record the dispatch before attempting the click. A transport error
+              // can occur after dispatch, so only observed employer rejection clears it.
+              attempts.add(attemptKey);
+              const activated = await terminal.click({ timeout: 5000 }).then(() => true, () => false);
+              const status = await listeners.status();
+              return respond(res, 200, {
+                ok: true, state: status.submission?.state === 'ARMED' ? 'PENDING' : status.submission?.state,
+                finalActionActivated: activated, listeners: status, trackerSync: await readSubmissionSyncStatus(),
+              });
+            }
             const beforeHost = new URL(beforeUrl).hostname.replace(/^www\./i, '').toLowerCase();
             const isBroadcastwell = beforeHost === 'broadcastwell.com'
               && new URL(beforeUrl).pathname === '/careers/ai-automation-engineer';

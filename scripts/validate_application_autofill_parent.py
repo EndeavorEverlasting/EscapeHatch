@@ -20,7 +20,7 @@ GATES = (
     "MERGED_AND_LIVE_OBSERVED",
 )
 OPERATOR_ONLY = {
-    "final_submit", "truth_certification", "legal_or_eeo_attestation",
+    "authorize_final_submit", "truth_certification", "legal_or_eeo_attestation",
     "captcha_or_mfa", "ambiguous_controls",
 }
 FALSE_CLOSE = {

@@ -72,7 +72,7 @@ def validate(contract: dict, root: Path = ROOT) -> None:
         raise SceneContractError("stable login return readback missing")
     if "never final Submit" not in auth.get("on_complete",""):
         raise SceneContractError("resume authority must exclude final submit")
-    if contract.get("final_submission") != "operator_only":
+    if contract.get("final_submission") != "operator_authorization_required":
         raise SceneContractError("terminal boundary regressed")
     if "password" not in contract.get("user_prompts",{}).get("never_request",[]):
         raise SceneContractError("credential prompt boundary missing")

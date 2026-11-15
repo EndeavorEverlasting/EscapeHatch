@@ -45,7 +45,7 @@ class ParentOutcomeTests(unittest.TestCase):
         self.assert_invalid(lambda d: d["required_gates"].pop(7))
 
     def test_removing_final_submit_authority_fails(self):
-        self.assert_invalid(lambda d: d["operator_only"].remove("final_submit"))
+        self.assert_invalid(lambda d: d["operator_only"].remove("authorize_final_submit"))
 
     def test_credential_creation_cannot_replace_subtask_reuse(self):
         self.assert_invalid(lambda d: d["downstream_dependencies"].clear())

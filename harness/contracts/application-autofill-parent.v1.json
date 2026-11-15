@@ -107,7 +107,7 @@
     }
   ],
   "operator_only": [
-    "final_submit",
+    "authorize_final_submit",
     "truth_certification",
     "legal_or_eeo_attestation",
     "captcha_or_mfa",

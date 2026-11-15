@@ -4,6 +4,8 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { chromium } from '@playwright/test';
+import { readPreferences } from './preference-file.ts';
+import { normalizeQuestion } from './src/lib/application-preferences.ts';
 import { ADAPTER_EVIDENCE_SCHEMA } from './application-navigation-policy.ts';
 import { ManagedListeners } from './managed-listeners.ts';
 import { OpportunityDocumentStore } from './opportunity-documents.ts';
@@ -60,19 +62,53 @@ test('existing-tab selection is exact, unique and performs no navigation or form
   } finally { await browser.close(); }
 });
 
-test('bind-existing endpoint recovers exact saved Lever tab, preserves entries and arms observation only', async () => {
+test('reviewed Lever flow preserves the exact tab and checks the résumé again after rejection', async () => {
   const root = await fs.mkdtemp(path.join(tmpdir(), 'eh-bind-existing-'));
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
   const context = await browser.newContext();
   const before = { ...process.env };
   const instanceId = 'existing-tab-' + Date.now();
   const symbol = Symbol.for('escapehatch.managed-browser.' + instanceId);
-  const listeners = new ManagedListeners(path.join(root, 'receipts.json'), path.join(root, 'preferences.json'));
+  const preferencesPath = path.join(root, 'preferences.json');
+  const syncedAttempts: string[] = [];
+  const listeners = new ManagedListeners(path.join(root, 'receipts.json'), preferencesPath, async receipt => {
+    syncedAttempts.push(receipt.attemptId);
+  });
   const job = { id: 'synthetic-lever', company: 'Synthetic', role: 'Engineer', url: 'https://jobs.lever.co/synthetic/11111111-1111-4111-8111-111111111111', status: 'preparing' as const, priority: 'normal' as const, notes: '', nextAction: 'Review', updatedAt: new Date().toISOString() };
   try {
     Object.assign(process.env, { ESCAPEHATCH_DATA_HOME: root, ESCAPEHATCH_REPO_FINGERPRINT: 'a'.repeat(64), ESCAPEHATCH_SHUTDOWN_TOKEN: 'synthetic-only', ESCAPEHATCH_STARTED_AT_UTC: new Date().toISOString(), PORT: '21041', ESCAPEHATCH_INSTANCE_ID: instanceId });
     await saveWorkspace({ schema: WORKSPACE_SCHEMA, values: { [APPLICATIONS_KEY]: [job] } }, null);
-    await context.route('https://jobs.lever.co/**', route => route.fulfill({ contentType: 'text/html', body: '<div class="content"><input value="operator entry"><button id="btn-submit">Submit Application</button></div>' }));
+    await context.route('https://jobs.lever.co/**', route => route.fulfill({ contentType: 'text/html', body: `
+      <div class="content"><h1>Engineer</h1><form id="application-form">
+        <label>Website<input type="url" value="https://example.com"></label>
+        <label>Additional notes<input id="notes" value="operator entry"></label>
+        <div class="application-question">
+          <div class="application-label">Which tools have you used?<span class="required">✱</span></div>
+          <div class="application-field required-field">
+            <label><input name="tools" type="checkbox" checked>Service Desk</label>
+            <label><input name="tools" type="checkbox" checked>Workflow Studio</label>
+            <label><input name="tools" type="checkbox">Unused tool</label>
+          </div>
+        </div>
+        <fieldset><legend>Privacy acknowledgement</legend><label><input type="checkbox" required checked>I agree</label></fieldset>
+        <div class="application-question resume"><label><span class="application-label">Résumé / CV <span class="required">✱</span></span>
+          <input type="file" name="resume" accept=".pdf" style="display:none">
+        </label></div>
+        <button type="button" id="btn-submit">Submit Application</button>
+      </form></div>
+      <script>
+        window.attemptCount = 0;
+        document.querySelector('#btn-submit').onclick = () => {
+          window.attemptCount++;
+          if (window.attemptCount === 1) {
+            document.querySelector('input[type="file"]').value = '';
+            document.querySelector('form').insertAdjacentHTML('beforeend', '<p class="application-form-error">There was an error verifying your application</p>');
+          } else {
+            history.pushState({}, '', location.pathname.replace('/apply','/thanks'));
+            document.querySelector('.content').innerHTML = '<section class="application-confirmation"><h1>Application submitted!</h1></section>';
+          }
+        };
+      </script>` }));
     const unrelated = await context.newPage(); await unrelated.goto(job.url.replace('11111111-', '22222222-') + '/apply');
     const target = await context.newPage(); await target.goto(job.url + '/apply');
     (globalThis as Record<symbol, unknown>)[symbol] = { context, page: unrelated, state: 'browser_open', applicationOrigin: new URL(unrelated.url()).origin, applicationUrl: unrelated.url(), opportunityId: 'unrelated', preparation: null, networkDiagnosis: null, authCheckpoint: null, trustedReturnPath: null, listeners, busy: false };
@@ -86,10 +122,10 @@ test('bind-existing endpoint recovers exact saved Lever tab, preserves entries a
     };
     // An ordinary Launch on a restored tab must not reload the user's edits or
     // navigate the separate employer window. Re-arming remains a separate act.
-    const restored = await request({ opportunityId: job.id, url: target.url() }, undefined, '/launch');
+    const restored = await request({ opportunityId: job.id, url: job.url }, undefined, '/launch');
     assert.equal(restored.code, 200, JSON.stringify(restored.body));
     assert.equal(restored.body.state, 'application_restored_review_required');
-    assert.equal(await target.locator('input').inputValue(), 'operator entry');
+    assert.equal(await target.locator('#notes').inputValue(), 'operator entry');
     assert.equal(unrelated.url(), job.url.replace('11111111-', '22222222-') + '/apply');
     assert.equal((await listeners.status()).submission, null, 'restore must not auto-arm observation');
     const payload = { opportunityId: job.id, url: job.url, livePageUrl: target.url() };
@@ -99,9 +135,63 @@ test('bind-existing endpoint recovers exact saved Lever tab, preserves entries a
     assert.equal(result.code, 200, JSON.stringify(result.body));
     assert.equal(result.body.listeners.submission.state, 'ARMED');
     assert.equal(result.body.listeners.recordingAnswers, false);
-    assert.equal(await target.locator('input').inputValue(), 'operator entry');
+    assert.equal(await target.locator('#notes').inputValue(), 'operator entry');
     assert.equal(unrelated.url(), job.url.replace('11111111-', '22222222-') + '/apply');
     assert.deepEqual(await fs.readdir(root).then(files => files.filter(file => file === 'receipts.json')), []);
+    assert.equal(context.pages().length, 2);
+
+    const store = new OpportunityDocumentStore();
+    const resume = { name: 'reviewed.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\nreviewed fixture') };
+    const staged = await store.stage(job.id, job.url, 'resume', resume);
+    const sha256 = staged.documents.resume!.sha256;
+    await store.review(job.id, job.url, 'resume', sha256);
+    const submit = (change: object = {}) => request({ ...payload, resumeSha256: sha256, confirmedSubmit: true, ...change }, undefined, '/submit-authorized');
+    assert.equal((await submit({ confirmedSubmit: false })).code, 422);
+    assert.equal((await submit()).body.error, 'answer_and_submission_listeners_required');
+    assert.equal((await request({ ...payload, recordAnswers: true })).body.listeners.recordingAnswers, true);
+    assert.equal((await submit({ livePageUrl: unrelated.url() })).body.error, 'reviewed_application_tab_mismatch');
+    assert.equal((await submit({ resumeSha256: '0'.repeat(64) })).body.error, 'approved_resume_digest_required');
+    assert.match((await submit()).body.error, /^(?:resume_missing_or_invalid|submit_blocked_incomplete_form)$/);
+    const upload = target.locator('input[type="file"]');
+    await upload.setInputFiles({ ...resume, buffer: Buffer.from('%PDF-1.4\nwrong bytes, same name') });
+    assert.equal((await submit()).body.error, 'resume_attachment_digest_mismatch');
+    await upload.setInputFiles(resume);
+    await target.getByLabel('Service Desk').uncheck();
+    await target.getByLabel('Workflow Studio').uncheck();
+    assert.match((await submit()).body.blockers.join(), /Which tools have you used/);
+    await target.getByLabel('Service Desk').check();
+    await target.getByLabel('Workflow Studio').check();
+    await target.getByLabel('I agree').uncheck();
+    assert.equal((await submit()).body.error, 'submit_blocked_incomplete_form');
+    await target.getByLabel('I agree').check();
+    const challenge = await target.evaluateHandle(() => {
+      const iframe = document.createElement('iframe');
+      iframe.title = 'hCaptcha challenge';
+      document.body.append(iframe);
+      return iframe;
+    });
+    assert.equal((await submit()).body.error, 'employer_verification_required');
+    await challenge.evaluate(frame => frame.remove());
+    assert.equal(await target.evaluate(() => Reflect.get(window, 'attemptCount')), 0);
+    assert.equal((await submit()).body.finalActionActivated, true);
+    assert.equal((await listeners.refresh()).submission?.state, 'VALIDATION_FAILED');
+    assert.equal((await submit()).body.error, 'submission_attempt_already_observed');
+    assert.deepEqual(syncedAttempts, []);
+    assert.equal((await request({ ...payload, recordAnswers: true })).code, 200);
+    assert.match((await submit()).body.error, /^(?:resume_missing_or_invalid|submit_blocked_incomplete_form)$/);
+    await upload.setInputFiles(resume);
+    assert.equal((await submit()).body.finalActionActivated, true);
+    await target.waitForURL('**/thanks');
+    const observed = await listeners.refresh();
+    assert.equal(observed.submission?.state, 'CONFIRMED');
+    assert.equal(observed.receipts.length, 1);
+    assert.deepEqual(syncedAttempts, [observed.receipts[0].attemptId]);
+    assert.equal(await target.evaluate(() => Reflect.get(window, 'attemptCount')), 2);
+    const preferences = await readPreferences(preferencesPath);
+    assert.equal(preferences.preferences['identity.website']?.value, 'https://example.com');
+    assert.equal(preferences.discovered_answers?.[normalizeQuestion('Which tools have you used?')]?.value, 'Service Desk\nWorkflow Studio');
+    assert.equal(preferences.discovered_answers?.[normalizeQuestion('Additional notes')]?.value, 'operator entry');
+    assert.equal(preferences.discovered_answers?.[normalizeQuestion('Privacy acknowledgement')], undefined);
   } finally {
     await listeners.dispose(); await browser.close();
     delete (globalThis as Record<symbol, unknown>)[symbol];

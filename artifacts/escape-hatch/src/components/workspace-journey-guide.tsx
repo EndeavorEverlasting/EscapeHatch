@@ -2,12 +2,15 @@ import { Link } from 'wouter';
 import { ArrowRight } from 'lucide-react';
 import { getJourneyStop, getWorkspaceGuide, journeyAtlasHref } from '@/lib/journey-wayfinding';
 
+const containerWorkspace = import.meta.env.VITE_ESCAPEHATCH_CONTAINER === '1';
+
 /** Guidance for the standalone workspace pages. Assist uses its live coach. */
 export function WorkspaceJourneyGuide({ route }: { route: string }) {
   if (route === '/assist' || route === '/materials') return null;
-  const stop = getWorkspaceGuide(route);
-  if (!stop) return null;
-  const next = getJourneyStop(stop.next);
+  const current = getWorkspaceGuide(route);
+  if (!current) return null;
+  const stop = getJourneyStop(current.id, containerWorkspace);
+  const next = getJourneyStop(stop.next, containerWorkspace);
 
   return <section aria-label="EscapeHatch guide" className="mascot-guidance mb-6 flex flex-wrap items-start gap-3 rounded-xl border border-primary/25 bg-primary/5 p-3 sm:items-center" data-testid="workspace-journey-guide">
     <img src="/escapehatch-mascot.webp" alt="" width={40} height={40} className="h-10 w-10 shrink-0" />

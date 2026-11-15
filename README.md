@@ -16,7 +16,7 @@ The first launch builds the app and opens the **Journey** tutorial in your defau
 
 The app listens on this computer at `localhost:21030`. The container uses a dedicated Docker volume for your data. To close it, run `bash scripts/container/launch.sh stop` on macOS or Linux, or run `"Hey, press me, click me.cmd" stop` in Windows Command Prompt. Close and reopen EscapeHatch after updating the source to pick up the new build.
 
-This Docker launcher supports the local cockpit, tutorial, and workspace. Use the native Windows route below for managed employer Chrome, host Google access, and native extension integration. Mobile companion installation is separate.
+The Docker launcher supports the local cockpit, tutorial, and workspace. From **Applications**, open a saved posting to complete the employer form and attach files in your browser. Use the native Windows route below for managed employer Chrome, host Google access, and native extension integration. Mobile companion installation is separate.
 
 ## Windows: download, install, and open
 

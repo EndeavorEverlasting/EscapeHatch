@@ -218,6 +218,7 @@ test('real DOM inspection distinguishes form inputs and performs no writes or na
   expect(page.url()).toBe(baseURL + '/');
   await page.setContent('<form><label>Yes<input name="eligibility" type="radio" required checked></label><label>No<input name="eligibility" type="radio" required></label></form>');
   const radio = await inspectApplicationRequirements(page, 'synthetic', page.url());
+  expect(radio.requirements).toHaveLength(1);
   expect(radio.requirements.every(item => item.populated)).toBe(true);
   await page.setContent('<form><div style="display:none"><label>Future résumé<input type="file" required></label></div><label>Current résumé<input style="display:none" type="file" required></label></form>');
   const uploads = await inspectApplicationRequirements(page, 'synthetic', page.url());
@@ -226,7 +227,7 @@ test('real DOM inspection distinguishes form inputs and performs no writes or na
 
 test('puzzle scopes artifacts without launching and refreshes after explicit form actions', async ({ page }, testInfo) => {
   const actions: string[] = [];
-  let launched = true, currentJob = 'one', livePath = '/apply';
+  let launched = true, currentJob = 'one', livePath = '/apply', conditional = false;
   const jobs = ['one', 'two'].map(id => ({ id, company: `Synthetic ${id}`, role: 'Engineer', url: `https://example.invalid/jobs/${id}`, status: 'saved', priority: 'normal', notes: '', nextAction: '', updatedAt: new Date().toISOString() }));
   const packages = new Map<string, { opportunityId: string; url: string; documents: Record<string, { name: string; sha256: string; size: number; reviewedAt?: string }> }>();
   await page.route('**/__escapehatch/managed-assist/**', async route => {
@@ -246,6 +247,7 @@ test('puzzle scopes artifacts without launching and refreshes after explicit for
     if (action === 'requirements') result = { ok: true, inspection: { opportunityId: body.opportunityId, applicationUrl: body.url, pageUrl: body.url + livePath, capturedAt: new Date().toISOString(), scope: 'current_page_only', requirements: livePath === '/later' ? [{ id: 'later', label: 'Later-page question', kind: 'question', requirement: 'required', populated: false }] : [
       { id: 'resume', label: 'Role résumé', kind: 'resume', requirement: 'required', populated: false },
       { id: 'fit', label: 'Why this employer?', kind: 'question', requirement: 'required', populated: actions.includes('fill') },
+      ...(conditional ? [{ id: 'detail', label: 'Follow-up details', kind: 'question', requirement: 'optional', populated: false }] : []),
     ] } };
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify(result) });
   });
@@ -257,6 +259,10 @@ test('puzzle scopes artifacts without launching and refreshes after explicit for
   await puzzle.getByRole('button', { name: 'Inspect current form' }).click();
   await expect(puzzle).toContainText('Why this employer?');
   await expect(puzzle).toContainText('2 required inputs');
+  await expect(puzzle.getByTestId('application-observed-percent')).toHaveText('Fields filled on this page: 0/2 (0%)');
+  conditional = true;
+  await expect(puzzle.getByTestId('application-observed-percent')).toHaveText('Fields filled on this page: 0/3 (0%)');
+  conditional = false;
   livePath = '/later';
   await expect(puzzle).not.toContainText('Why this employer?');
   await puzzle.getByRole('button', { name: 'Inspect current form' }).click();
@@ -301,6 +307,7 @@ test('puzzle scopes artifacts without launching and refreshes after explicit for
   await expect(puzzle).toContainText('Why this employer?');
   await page.getByTestId('button-managed-fill').click();
   await expect(puzzle).toContainText('1 still empty or invalid');
+  await expect(puzzle.getByTestId('application-observed-percent')).toHaveText('Fields filled on this page: 1/2 (50%)');
   expect(actions).not.toContain('submit');
 });
 

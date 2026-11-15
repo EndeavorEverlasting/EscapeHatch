@@ -73,6 +73,9 @@ test('conditional cover-letter upload changes only the observed required denomin
   assert.equal(result(optional).excludedOptional, 1);
   assert.equal(result(optional).totalRequired, 2);
   assert.equal(result(optional).percent, 100);
+  assert.equal(result(optional).observedFilled, 2);
+  assert.equal(result(optional).observedTotal, 3);
+  assert.equal(result(optional).observedPercent, 67);
 
   const required: FormInspection = { ...optional, requirements: optional.requirements.map(p =>
     p.id === 'cover' ? { ...p, requirement: 'required' as const } : p) };
@@ -107,4 +110,15 @@ test('progress disappears on stale, foreign or unverified page inventories', () 
   const switched = projectApplicationPuzzle(inspection, 'two', inspection.applicationUrl, now, currentPage);
   assert.equal(switched.checkpoint.percent, null);
   assert.equal(switched.checkpoint.totalRequired, 0);
+});
+
+test('one blank field in a large form never rounds up to 100 percent', () => {
+  const requirements = Array.from({ length: 250 }, (_, index) => ({
+    id: String(index), label: 'Field ' + index, kind: 'question' as const, requirement: 'required' as const, populated: index !== 249,
+  }));
+  const { checkpoint } = projectApplicationPuzzle({ ...inspection, requirements }, 'one', inspection.applicationUrl, now, currentPage);
+  assert.equal(checkpoint.observedFilled, 249);
+  assert.equal(checkpoint.observedTotal, 250);
+  assert.equal(checkpoint.observedPercent, 99);
+  assert.equal(checkpoint.percent, 99);
 });

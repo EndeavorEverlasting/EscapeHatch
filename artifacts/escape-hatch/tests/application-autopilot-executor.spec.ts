@@ -175,7 +175,7 @@ test('production driver stops SPA progression for unresolved required controls',
     const result = await prepareToFinalReview(driver, auth, { maxSteps: 3 });
     expect(result.state).toBe('REVIEW_REQUIRED');
     expect(result.code).toBe('required_preparation_unverified');
-    expect(result.pendingManual).toContain('required_control_0');
+    expect(result.pendingManual).toContainEqual(expect.stringMatching(/^required_(field_unresolved|operator_action):/));
     expect(result.intermediateSteps).toBe(0);
     const after = await journal();
     expect(after.spaAdvances.length).toBe(before.spaAdvances.length);

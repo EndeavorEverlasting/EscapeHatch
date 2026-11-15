@@ -689,6 +689,20 @@ export function createManagedBrowserAssistPlugin(): Plugin {
           return respond(res, 403, { ok: false, error: 'operator_origin_required' });
         }
         if (cache.busy) return respond(res, 409, { ok: false, error: 'action_in_progress' });
+        if (url.pathname === PREFIX + '/requirements') {
+          try {
+            const payload = await readJson(req);
+            if (cache.busy) return respond(res, 409, { ok: false, error: 'action_in_progress' });
+            const current = page;
+            if (!current || current.isClosed()) return respond(res, 409, { ok: false, error: 'launch_browser_first' });
+            assertInspectionScope(payload.opportunityId, payload.url, opportunityId, applicationUrl, current.url());
+            const inspection = await inspectApplicationRequirements(current, opportunityId, applicationUrl);
+            if (cache.busy || current !== page || inspection.opportunityId !== opportunityId || inspection.applicationUrl !== applicationUrl) {
+              return respond(res, 409, { ok: false, error: 'action_in_progress' });
+            }
+            return respond(res, 200, { ok: true, inspection });
+          } catch { return respond(res, 409, { ok: false, error: 'Application changed. Inspect the selected employer form again.' }); }
+        }
         cache.busy = true;
         try {
           const payload = await readJson(req);
@@ -986,10 +1000,6 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             return respond(res, 409, { ok: false, error: 'reviewed_application_tab_mismatch',
               attemptReceipt: await recordUnboundLeverAction('reviewed_application_tab_mismatch') });
           }
-          if (url.pathname === PREFIX + '/requirements') {
-            assertInspectionScope(payload.opportunityId, payload.url, opportunityId, applicationUrl, page.url());
-            return respond(res, 200, { ok: true, inspection: await inspectApplicationRequirements(page, opportunityId, applicationUrl) });
-          }
           await page.bringToFront();
           if (url.pathname === PREFIX + '/resume/bind') {
             // Only the operator may affirm that a same-origin redirect still shows the selected job.
@@ -1114,18 +1124,26 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               registry,
               preferences: approvedPreferences,
               prepareAttachments: async () => {
+                const observed = await inspectApplicationRequirements(page!, opportunityId, applicationUrl);
+                const currentKinds = (['resume', 'cover'] as const).filter(kind =>
+                  observed.requirements.some(field => field.kind === kind));
                 const current = await preferPlatformSelectedResume(
                   resumeSelectionStore,
                   await documentStore.forCurrentEmployerForm(
-                    opportunityId, applicationUrl, requestedKinds, (await readPreferences()).require_document_review !== false),
+                    opportunityId, applicationUrl, currentKinds, (await readPreferences()).require_document_review !== false),
                   applicationUrl,
                 );
                 await attachPreparedDocuments(current);
               },
-              verifyAttachments: async () => {
+              verifyAttachments: async (kinds) => {
                 // Only an adapter's explicit document receipt is sufficient for automated progression.
-                for (const kind of requiredKinds) {
-                  const file = packageFiles[kind]; if (!file) continue;
+                const current = await preferPlatformSelectedResume(
+                  resumeSelectionStore,
+                  await documentStore.forCurrentEmployerForm(opportunityId, applicationUrl, [...kinds], uploadPolicy),
+                  applicationUrl,
+                );
+                for (const kind of kinds) {
+                  const file = current[kind]; if (!file) return false;
                   const receipt = page!.locator('[data-document-kind="' + kind + '"][data-upload-status="accepted"]');
                   if (await receipt.count() !== 1 || await receipt.getAttribute('data-filename') !== file.name) return false;
                 }

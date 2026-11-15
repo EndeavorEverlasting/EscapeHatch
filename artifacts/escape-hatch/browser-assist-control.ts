@@ -701,7 +701,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               return respond(res, 409, { ok: false, error: 'action_in_progress' });
             }
             return respond(res, 200, { ok: true, inspection });
-          } catch { return respond(res, 409, { ok: false, error: 'Application changed. Inspect the selected employer form again.' }); }
+          } catch { return respond(res, 422, { ok: false, error: 'Application changed. Inspect the selected employer form again.' }); }
         }
         cache.busy = true;
         try {

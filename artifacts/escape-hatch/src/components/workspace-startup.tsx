@@ -4,6 +4,7 @@ import { PROFILE_KEY, ANSWERS_KEY, APPLICATIONS_KEY, emptyProfile, parseWorkspac
 import { applyBrowserWorkspace, hasContext, mergeConfirmedReceiptWorkspace, parseSavedWorkspace, rawBrowserWorkspace, readBrowserWorkspace, reconcileWorkspace, WORKSPACE_SCHEMA, type BootstrapResponse, type SavedWorkspace } from '../lib/workspace-bootstrap.ts';
 
 const ENDPOINT = '/__escapehatch/workspace';
+const containerWorkspace = import.meta.env.VITE_ESCAPEHATCH_CONTAINER === '1';
 const REQUEST_HEADERS = { 'content-type': 'application/json', 'x-escapehatch-workspace': '1' };
 const syntheticWorkspace = import.meta.env.VITE_ESCAPEHATCH_SYNTHETIC_TEST_WORKSPACE === '1';
 
@@ -96,6 +97,11 @@ export function WorkspaceStartup({ children }: { children: ReactNode }) {
         return;
       }
       if (!hasContext(merged.workspace.values)) {
+        if (containerWorkspace) {
+          setMessage('Welcome! Your private workspace is ready for its first puzzle.');
+          setReady(true);
+          return;
+        }
         setCandidate(merged.workspace);
         setNeedsContext(true); setMessage(result.message); return;
       }
@@ -164,7 +170,7 @@ export function WorkspaceStartup({ children }: { children: ReactNode }) {
   const syntheticNotice = syntheticWorkspace ? <aside role="note" data-testid="synthetic-workspace-warning" className="border-b border-amber-600 bg-amber-50 px-6 py-3 font-bold text-amber-950">
     Synthetic test workspace — disposable sample data. Do not use this window for real job applications. Open the normal EscapeHatch launcher for your saved work.
   </aside> : null;
-  if (ready) return <>{syntheticNotice}{managed && <><aside className="fixed bottom-3 left-3 z-50 max-w-[min(24rem,calc(100vw-1.5rem))] rounded-lg border border-border bg-card/95 px-3 py-2 text-xs shadow-lg backdrop-blur-md lg:left-[260px]" role={blocked.current ? 'alert' : 'status'}>{message}</aside><ExtensionWorkspaceStatus /></>}{children}</>;
+  if (ready) return <>{syntheticNotice}{managed && <><aside className="fixed bottom-3 left-3 z-50 max-w-[min(24rem,calc(100vw-1.5rem))] rounded-lg border border-border bg-card/95 px-3 py-2 text-xs shadow-lg backdrop-blur-md lg:left-[260px]" role={blocked.current ? 'alert' : 'status'}>{message}</aside>{!containerWorkspace && <ExtensionWorkspaceStatus />}</>}{children}</>;
   return <>{syntheticNotice}<main className="mx-auto max-w-2xl px-6 py-16">
     <p className="text-primary">EscapeHatch · Your private workspace</p>
     <h1 className="my-5 font-display text-4xl">{needsContext ? 'Bring your work with you.' : conflicts ? 'Review your saved copies.' : 'Recover your workspace.'}</h1>

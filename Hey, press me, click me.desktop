@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Hey, press me, click me.
+Comment=Open your private EscapeHatch workspace and tutorial
+Exec=/bin/bash -c "cd -- \"\$(dirname -- \"\$1\")\" && ./scripts/container/launch.sh; result=\$?; if [ \"\$result\" -ne 0 ]; then read -r -p 'Press Enter to close this window...'; fi; exit \"\$result\"" EscapeHatch %k
+Icon=web-browser
+Terminal=true
+Categories=Office;

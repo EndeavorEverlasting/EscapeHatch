@@ -111,7 +111,7 @@
     "version_authority": "VERSION (SemVer) + contracts/product-release.v1.json mirrors + CHANGELOG.md heading",
     "dependency_locks": [
       "browser/application-assist/manifest.json#version mirror",
-      "no npm lock in this repo; if added, lock identity would be pinned"
+      "artifacts/escape-hatch/package-lock.json (pinned by candidate head; Docker image uses npm ci)"
     ],
     "artifact_identity": "commit SHA is primary; build artifacts later bind to SHA + run ID + checksum",
     "pin_before_promotion": true,

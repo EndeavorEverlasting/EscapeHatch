@@ -18,7 +18,7 @@ The [Windows preview package workflow](.github/workflows/windows-preview-package
 2. EscapeHatch shows current readiness and required missing profile, question, and role-document inputs; answer only what you can confirm.
 3. Open the opportunity in its owned managed Chrome window. If the employer requests sign-in or SSO, complete it **in Chrome**, not in EscapeHatch.
 4. The cockpit observes when the actual application form returns and becomes stable. It may resume a previously authorized contact fill; an always-available **I've signed in — check again** control and a clear **Resume filling this application** control remain available.
-5. Approve the exact résumé/cover-letter files and question answers, review verified effects, and perform final Submit yourself.
+5. Approve the exact résumé/cover-letter files and question answers, review verified effects, and authorize the final click. [EscapeHatch can execute that click on a supported managed Lever application](docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md#approved-submit-on-managed-lever).
 
 No completed application is inferred from a URL change, login success, field fill call, document-picker interaction, or button click.
 

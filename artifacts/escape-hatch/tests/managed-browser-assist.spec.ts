@@ -498,7 +498,7 @@ test('one Launch reuses previously reviewed exact PDFs and stops at review when 
   await page.getByTestId('button-managed-launch').click();
   await expect.poll(() => actions.filter(name => ['launch', 'fill', 'prepare'].includes(name))).toEqual(['launch', 'fill', 'prepare']);
   await expect(page.getByTestId('managed-preparation-state')).toHaveAttribute('data-preparation-state', 'REVIEW_REQUIRED');
-  await expect(page.getByTestId('managed-browser-feedback')).toContainText('Final submission remains operator-only');
+  await expect(page.getByTestId('managed-browser-feedback')).toContainText('Final Submit requires your explicit approval');
   expect(actions).not.toContain('submit');
   expect(actions).not.toContain('next');
 });

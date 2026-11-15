@@ -1,6 +1,6 @@
 # P04 — Private application-answer persistence and cross-session synchronization
 
-**Parent:** [EscapeHatch Issue #69](https://github.com/EndeavorEverlasting/EscapeHatch/issues/69) — deterministic real ATS preparation, final Submit operator-only.
+**Parent:** [EscapeHatch Issue #69](https://github.com/EndeavorEverlasting/EscapeHatch/issues/69) — deterministic real ATS preparation. The [managed Lever procedure](../APPLICATION_ASSIST_AUTOPILOT_PLAN.md#approved-submit-on-managed-lever) owns explicitly authorized Submit.
 **Operator correction:** 2026-10-27. **Disposition:** P04 plan/distribution, not a claim that live synchronization exists.
 **Canonical implementation owners:** `harness/contracts/application-preference-cache.v1.json`; `artifacts/escape-hatch/preference-file.ts`; `artifacts/escape-hatch/src/lib/application-preferences.ts`; `artifacts/escape-hatch/managed-answer-memory.ts`; `artifacts/escape-hatch/src/lib/answer-recovery.ts`; existing career state and managed browser. This plan does **not** create a competing answer store.
 
@@ -57,7 +57,7 @@ D. **Conflict/recovery:** conflicting edits or deletions on devices A/B do not v
 
 E. **Scope:** second employer inherits reusable facts but **not** Magnet salary amount, prior employment or recruitment source. User corrections supersede stale candidates; answer data carries `approved/proposed/manual_only` authority.
 
-F. **Browser consumer:** actual ATS application reads resolved values and verifies DOM/radio/multiselect/file state; operator-only consent and final Submit remain untouched.
+F. **Browser consumer:** actual ATS application reads resolved values and verifies DOM/radio/multiselect/file state; leave consent and final Submit outside the answer-sync action.
 
 G. **Lifecycle:** app restart/update/uninstall preserves selected private source and local answers; deletion requires explicit user control. Synced != submitted. Last-sync timestamp and `SYNCED / UNSYNCED / OFFLINE / CONFLICT / AUTH_REQUIRED` statuses reflect observed provider state.
 

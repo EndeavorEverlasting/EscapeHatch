@@ -92,7 +92,7 @@ export function projectApplicationJourney(input: JourneyInput): JourneyProjectio
   // cannot force a PREREQUISITES scene or suppress a valid REVIEW_READY receipt.
   if (input.preparationState === 'REVIEW_READY') return {
     current: scene('FINAL_REVIEW'), next: scene('FINAL_REVIEW'),
-    blockers: ['Final Submit is always yours. Review the employer form personally.'],
+    blockers: ['Review the employer form and authorize Submit for this application.'],
     mayAutoSubmit: false,
   };
   return {

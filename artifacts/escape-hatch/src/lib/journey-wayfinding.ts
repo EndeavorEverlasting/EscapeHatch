@@ -52,5 +52,5 @@ export const JOURNEY_DESTINATIONS: { route: PublicRoute; title: string; detail: 
   { route: '/answers', title: 'Prepare reusable answers', detail: 'Save truthful responses before applications interrupt you.', badge: 'Prepare' },
   { route: '/applications', title: 'Select an opportunity', detail: 'Choose the exact employer and save its job-specific context.', badge: 'Apply' },
   { route: '/assist', title: 'Assemble the employer puzzle', detail: 'Open Chrome, inspect required fields, and resume your checkpoint.', badge: 'Apply' },
-  { route: '/assist', title: 'Review and submit yourself', detail: 'Review verified fields, documents and the employer’s final action.', badge: 'You decide' },
+  { route: '/assist', title: 'Review and authorize Submit', detail: 'Review verified fields, documents and the employer’s final action.', badge: 'You decide' },
 ];

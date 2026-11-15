@@ -61,7 +61,7 @@ export function ApplicationPuzzle({ opportunity, url, documents, disabled, onByp
       <button type="button" disabled={disabled || busy || documents.intakePending || !opportunity || opportunity.url !== url || ['applied', 'closed'].includes(opportunity.status)} onClick={() => void inspect()}
         className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-primary px-4 py-2 text-sm font-bold text-primary disabled:opacity-50"><RefreshCw size={16} aria-hidden="true" />{busy ? 'Inspecting…' : 'Inspect current form'}</button>
     </div>
-    <p className="mt-4 rounded-lg bg-secondary p-3 text-sm leading-6">Start with career sources, select this job, and launch its form above. Inspection reads the current page without filling it. Later pages and posting availability still need verification. Final Submit is yours.</p>
+    <p className="mt-4 rounded-lg bg-secondary p-3 text-sm leading-6">Start with career sources, select this job, and launch its form above. Inspection reads the current page without filling it. Later pages and posting availability still need verification. You authorize the final Submit after review.</p>
     <p role="status" className="my-3 text-sm">{message}</p>
     {projection.current ? <>
       <p className="my-3 text-sm font-bold">Current page: {projection.requiredCount} required inputs · {projection.unresolvedCount} still empty or invalid · {projection.unknownCount} with unknown requiredness</p>

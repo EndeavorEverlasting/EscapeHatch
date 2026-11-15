@@ -181,6 +181,6 @@ export function WorkspaceStartup({ children }: { children: ReactNode }) {
         <button className="rounded-lg border px-4 py-3" onClick={() => candidate && void useWorkspace(candidate)}>Keep this browser’s details</button></>}
       {needsContext && <button className="rounded-lg border px-4 py-3" onClick={() => void useWorkspace({ schema: WORKSPACE_SCHEMA, values: { ...candidate?.values, [PROFILE_KEY]: candidate?.values[PROFILE_KEY] || { ...emptyProfile } } })}>Create a new workspace</button>}
     </div>
-    <p className="mt-8 text-sm text-muted-foreground">Your local files and Google Drive sources stay in place. Existing accounts and source permissions are reused when available; this app never submits applications for you.</p>
+    <p className="mt-8 text-sm text-muted-foreground">Your local files and Google Drive sources stay in place. Existing accounts and source permissions are reused when available. You approve any final submission.</p>
   </main></>;
 }

@@ -1,0 +1,243 @@
+{
+  "artifact_kind": "p04_dispatch_plan_provisional",
+  "version": 1,
+  "created_on": "2026-11-14",
+  "parent": "EscapeHatch issue #69 — real ATS preparation, final submission operator-only",
+  "current_proof_ceiling": "Provider/Drive provenance and repository plan; no current local browser observation or CLI manifest validation",
+  "validation_state": "NOT_VALIDATED_CANONICAL_SCHEMA_ABSENT_ON_MOONWAKE_MAIN",
+  "source_context": [
+    {
+      "evidence_type": "prior_review",
+      "source_owner": "private Career Answer Bank",
+      "sanitized_ref": "opaque:magnet/approved-master-pdf",
+      "revision_or_freshness": "2026-10-27",
+      "visibility": "PROTECTED_EXTERNAL",
+      "proof_ceiling": "Applicant approved master PDF"
+    },
+    {
+      "evidence_type": "prior_upload",
+      "source_owner": "private local ATS receipt",
+      "sanitized_ref": "opaque:magnet/lever-upload-success",
+      "revision_or_freshness": "2026-10-27",
+      "visibility": "PROTECTED_EXTERNAL",
+      "proof_ceiling": "Observed uploaded then; attachment persistence now unknown"
+    },
+    {
+      "evidence_type": "later_derivative",
+      "source_owner": "private Drive career assets",
+      "sanitized_ref": "opaque:magnet/2026-10-28-tailored-pdf",
+      "revision_or_freshness": "2026-10-28",
+      "visibility": "PROTECTED_EXTERNAL",
+      "proof_ceiling": "Exists, NOT approved by applicant"
+    },
+    {
+      "evidence_type": "tracker",
+      "source_owner": "private Google Sheets",
+      "sanitized_ref": "opaque:career/canonical-tracker-magnet-row",
+      "revision_or_freshness": "2026-11-14",
+      "visibility": "PROTECTED_EXTERNAL",
+      "proof_ceiling": "Provider readback: In Progress — Applicant; submitted unchecked"
+    }
+  ],
+  "lanes": [
+    {
+      "lane_id": "S0",
+      "mission": "Recover existing correct applicant workspace and existing real Magnet Lever tab; inventory prior work without restarting Chrome or creating application",
+      "depends_on": [],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        {
+          "provider_family": "local_browser",
+          "operation": "read_existing_tab",
+          "authority_state": "AVAILABLE_UNVERIFIED",
+          "mutation_authority": false
+        }
+      ],
+      "required_capabilities": [
+        "managed_browser_session_discovery",
+        "read_only_dom_snapshot"
+      ],
+      "evidence_inputs": [
+        "opaque:magnet/lever-upload-success",
+        "opaque:magnet/approved-master-pdf"
+      ],
+      "owned_surfaces": [
+        "private local session inventory/receipts"
+      ],
+      "forbidden_surfaces": [
+        "new application",
+        "browser restart",
+        "third-party submission",
+        "public personal data"
+      ],
+      "adapter_ladder": "local-agent existing managed browser; probe before asserting",
+      "launch_action": "DISCOVER_LOCAL: inspect installed EscapeHatch runtime/Chrome attachment commands then attach existing session, preserving current tab and values",
+      "return_contract": "private session fingerprint, exact employer role, current form stage, existing filename and present values",
+      "validation": "actual ATS page readback with no user field mutation",
+      "convergence_owner": "local EscapeHatch sprint owner",
+      "status": "READY_LOCAL_EXECUTION"
+    },
+    {
+      "lane_id": "S1A",
+      "mission": "Reconcile 33-field private answer bank against live DOM; preserve user choices; complete only safe blanks and verify existing approved master PDF attachment",
+      "depends_on": [
+        "S0"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        {
+          "provider_family": "local_browser",
+          "operation": "read_write_safe_fields",
+          "authority_state": "AVAILABLE_UNVERIFIED",
+          "mutation_authority": true
+        },
+        {
+          "provider_family": "private_career_sources",
+          "operation": "read",
+          "authority_state": "AVAILABLE_UNVERIFIED",
+          "mutation_authority": false
+        }
+      ],
+      "required_capabilities": [
+        "resume_attachment_readback",
+        "conditional_field_inventory",
+        "safe_fill_policy"
+      ],
+      "evidence_inputs": [
+        "opaque:magnet/approved-master-pdf",
+        "opaque:magnet/private-answer-bank"
+      ],
+      "owned_surfaces": [
+        "only existing ATS nonprotected safe fields",
+        "private local field proof"
+      ],
+      "forbidden_surfaces": [
+        "privacy consent",
+        "legal signature",
+        "final Submit",
+        "replacement with unapproved tailored PDF"
+      ],
+      "adapter_ladder": "existing managed browser writer only, one mutation owner",
+      "launch_action": "LOCAL_AGENT: continue previously found actual ATS tab, hydrate private answer bank and verify field-by-field",
+      "return_contract": "private REQUIRED_VERIFIED/MISSING/OPERATOR_ACTION inventory + filename readback",
+      "validation": "full-page required-field pass after dynamic changes",
+      "convergence_owner": "local EscapeHatch sprint owner",
+      "status": "WAITING_S0"
+    },
+    {
+      "lane_id": "S1B",
+      "mission": "Check existing required-field detection and resumption contracts for regressions without taking browser control",
+      "depends_on": [
+        "S0"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        {
+          "provider_family": "local_repository",
+          "operation": "read_and_test",
+          "authority_state": "AVAILABLE_UNVERIFIED",
+          "mutation_authority": false
+        }
+      ],
+      "required_capabilities": [
+        "local_shell",
+        "repository_tests"
+      ],
+      "evidence_inputs": [
+        "opaque:magnet/prior-required-field-regression"
+      ],
+      "owned_surfaces": [
+        "test receipts only; isolated fix branch only if real defect"
+      ],
+      "forbidden_surfaces": [
+        "live browser field writes",
+        "real applicant fixtures",
+        "parallel branch collisions"
+      ],
+      "adapter_ladder": "local shell/process runner, independent of browser writer",
+      "launch_action": "python scripts/validate_application_autofill_parent.py && python scripts/validate_application_journey.py",
+      "return_contract": "actual exit codes and discovered regressions; scoped PR only if necessary",
+      "validation": "both commands and any relevant managed-assist test suite",
+      "convergence_owner": "local EscapeHatch sprint owner",
+      "status": "WAITING_S0"
+    },
+    {
+      "lane_id": "S2",
+      "mission": "Present true residual protected questions and final submission to operator without inventing approval",
+      "depends_on": [
+        "S1A"
+      ],
+      "execution_environment": "OPERATOR_OR_PHYSICAL_RUNTIME",
+      "provider_access": [
+        {
+          "provider_family": "local_browser",
+          "operation": "operator_only_consent_and_final_submit",
+          "authority_state": "AVAILABLE_UNVERIFIED",
+          "mutation_authority": true
+        }
+      ],
+      "required_capabilities": [
+        "operator_decision",
+        "browser_operator_action"
+      ],
+      "evidence_inputs": [
+        "opaque:magnet/private-full-form-proof"
+      ],
+      "owned_surfaces": [
+        "operator privacy/legal review and final submit only"
+      ],
+      "forbidden_surfaces": [
+        "agent clicking attestations or final Submit"
+      ],
+      "adapter_ladder": "real operator action on retained existing browser session",
+      "launch_action": "OPERATOR: review listed protected gates and perform final Submit only when satisfied",
+      "return_contract": "independent employer confirmation or explicit not-submitted state",
+      "validation": "employer acknowledgment distinct from upload Success",
+      "convergence_owner": "operator",
+      "status": "WAITING_S1A"
+    },
+    {
+      "lane_id": "S3",
+      "mission": "Update original canonical private tracker using employer confirmation, not guessed status",
+      "depends_on": [
+        "S2"
+      ],
+      "execution_environment": "CURRENT_CHAT_RUNTIME",
+      "provider_access": [
+        {
+          "provider_family": "Google_Sheets",
+          "operation": "original_cell_update_and_readback",
+          "authority_state": "VERIFIED",
+          "mutation_authority": true
+        }
+      ],
+      "required_capabilities": [
+        "authenticated_spreadsheet_write",
+        "provider_readback"
+      ],
+      "evidence_inputs": [
+        "opaque:career/canonical-tracker-magnet-row"
+      ],
+      "owned_surfaces": [
+        "original matched private tracker row only"
+      ],
+      "forbidden_surfaces": [
+        "duplicate sheet",
+        "unverified Submitted",
+        "public evidence upload"
+      ],
+      "adapter_ladder": "connected Google Sheets provider if available to executing runtime; otherwise authorized local adapter",
+      "launch_action": "WRITE_ONLY_AFTER_EMPLOYER_CONFIRMATION: original row Applied/Status/Date Applied/Submission Proof and readback",
+      "return_contract": "actual original provider URL and changed cells, or explicit pending",
+      "validation": "provider row readback and independent employer receipt",
+      "convergence_owner": "career tracker owner",
+      "status": "WAITING_EMPLOYER_SUBMISSION"
+    }
+  ],
+  "graph_width_after_S0": 2,
+  "collision_ownership": "S1A exclusively owns ATS browser; S1B owns read-only tests; S2 operator only; S3 authenticated Sheets original owner",
+  "parallel_execution_proof": "UNPROVEN: no current local runtime launches from this ChatGPT tool context",
+  "canonical_manifest_requirement": "At local runtime, resolve Moonwake's P04 contract and find prompt-parallel-dispatch schema and CLI. On observed 2026-11-14 main these were absent, so this document is a typed provisional plan, NOT a validated executable native manifest.",
+  "convergence": "S0 -> (S1A || S1B) -> S2 -> S3; test lane is not a prerequisite for ready ATS work unless it identifies a real safety defect",
+  "no_repeat_guard": "Previously approved master PDF and prior successful upload must be checked first; only request delta approval if replacing with separately generated 2026-10-28 tailored derivative."
+}

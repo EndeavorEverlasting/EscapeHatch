@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import registry from '../../../../contracts/application-journey-scenes.v1.json' with { type: 'json' };
-import { JOURNEY_DESTINATIONS, PUBLIC_ROUTES, projectJourneyWayfinding } from './journey-wayfinding.ts';
+import { JOURNEY_DESTINATIONS, PUBLIC_ROUTES, getJourneyBranches, journeyAtlasHref, journeyOpportunityHref, projectJourneyWayfinding } from './journey-wayfinding.ts';
 
 test('all canonical scenes have a visible route and direct action', () => {
   const items = projectJourneyWayfinding();
@@ -31,12 +31,14 @@ test('submission, legal decisions, login and install consent stay operator-owned
 });
 test('prepare-before-apply destinations remain visible, not gated by agent invocation', () => {
   const stages = JOURNEY_DESTINATIONS.map(s => s.route);
-  assert.equal(stages.length, 6);
+  assert.equal(stages.length, 7);
   assert.deepEqual(stages.slice(0,3), ['/sources','/profile','/answers']);
   assert.ok(stages.includes('/applications') && stages.includes('/assist'));
 });
 
-test('materials is a real website route without inventing a seventh sequential stage', () => {
+test('materials is a round-trip branch from Browser assist', () => {
+  assert.equal(JOURNEY_DESTINATIONS.find(stop => stop.id === 'assist')?.next, 'materials');
+  assert.equal(JOURNEY_DESTINATIONS.find(stop => stop.id === 'materials')?.next, 'assist');
   assert.ok(PUBLIC_ROUTES.includes('/materials'));
   assert.equal(new Set(PUBLIC_ROUTES).size, PUBLIC_ROUTES.length);
   assert.deepEqual(PUBLIC_ROUTES, ['/', '/profile', '/sources', '/answers', '/applications', '/assist', '/materials', '/journey']);
@@ -66,6 +68,25 @@ test('navigation projection carries no completion counts, runtime readiness or a
     assert.doesNotMatch(scene.action, /review.ready|100%|complete application|submitted successfully/i);
   }
   for (const stage of JOURNEY_DESTINATIONS) {
-    assert.deepEqual(Object.keys(stage).sort(), ['badge', 'detail', 'route', 'title']);
+    assert.deepEqual(Object.keys(stage).sort(), ['action', 'badge', 'detail', 'host_scene', 'id', 'next', 'route', 'title']);
   }
+});
+
+
+test('every canonical transition exposes one readable branch and unknown scenes expose none', () => {
+  const items = registry.scenes.flatMap(scene =>
+    getJourneyBranches(scene.id).map(edge => [scene.id, edge.to, edge.when]));
+  assert.deepEqual(items, registry.scenes.flatMap(scene => registry.transitions
+    .filter(edge => edge.from === scene.id).map(edge => [scene.id, edge.to, edge.guide_when])));
+  assert.ok(items.every(([, , condition]) => condition.length >= 10));
+  assert.deepEqual(getJourneyBranches('unknown'), []);
+  assert.deepEqual(getJourneyBranches('AUTH_RECHECK').map(edge => edge.to), ['FORM_PREPARATION', 'AUTH_HANDOFF', 'RECOVERY']);
+});
+
+test('guide URLs carry navigation context only', () => {
+  assert.equal(journeyAtlasHref('AUTH_HANDOFF'), '/journey?scene=AUTH_HANDOFF');
+  const id = 'job + one & launch=1';
+  const url = new URL(journeyOpportunityHref('/assist', id), 'https://example.invalid');
+  assert.deepEqual([...url.searchParams], [['opportunityId', id]]);
+  assert.equal(journeyOpportunityHref('/materials'), '/materials');
 });

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'wouter';
 import { FolderInput, Layers, ListChecks, Volume2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { getJourneyStop } from '@/lib/journey-wayfinding';
 import { projectMascotGuidance } from '@/lib/mascot-guidance';
 import { ProfilePieceBoard } from './profile-piece-board';
 import type { ProfilePuzzleInput } from '@/lib/profile-puzzle-projection';
@@ -38,9 +39,9 @@ export function GuidedStart({ profile, recovery, applications, focusOpportunity 
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const guidance = projectMascotGuidance(profile, applications, focusOpportunity);
   const steps = [
-    { title: 'Bring your career sources', description: 'Drop a résumé into Sources. Review the facts you want to reuse.', href: '/sources', icon: FolderInput },
-    { title: 'Choose an opportunity', description: 'Save the employer and application link you want to work on.', href: '/applications', icon: Layers },
-    { title: 'Assemble this application', description: 'Inspect the employer’s form, add its documents, and resolve its questions.', href: '/assist', icon: ListChecks },
+    { ...getJourneyStop('sources'), icon: FolderInput },
+    { ...getJourneyStop('applications'), icon: Layers },
+    { ...getJourneyStop('assist'), icon: ListChecks },
   ];
   return <Dialog open={tutorialOpen} onOpenChange={setTutorialOpen}><section className="guided-start mb-7" aria-label="Start here">
     <div className="max-w-2xl"><h2 className="font-display text-3xl sm:text-4xl">{guidance.essentialMissing.length ? 'Start with what you already have.' : focusOpportunity ? 'Make your next move tangible.' : 'Your next application starts here.'}</h2>
@@ -53,6 +54,7 @@ export function GuidedStart({ profile, recovery, applications, focusOpportunity 
         <p className="mt-1 text-xs text-muted-foreground" data-testid="mascot-profile-progress">{guidance.profileCount} of {guidance.profileTotal} reusable profile details saved locally. Employer requirements are checked separately.</p>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <Link href={guidance.href} className="inline-flex min-h-11 items-center rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground" data-testid="mascot-next-action">{guidance.action}</Link>
+          <Link href="/journey" className="inline-flex min-h-11 items-center text-sm font-bold text-primary underline underline-offset-4">Explore your journey</Link>
           <DialogTrigger asChild><button type="button" className="inline-flex min-h-11 items-center text-sm font-bold text-primary underline underline-offset-4" data-testid="button-mascot-puzzle">See the puzzle pieces</button></DialogTrigger>
           <button type="button" onClick={playChirp} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-muted-foreground hover:text-foreground" aria-label="Play optional chick chirp" title="Play a chirp (off by default)" data-testid="button-mascot-chirp"><Volume2 size={15} aria-hidden="true" /> Hear chirp</button>
         </div>
@@ -61,11 +63,11 @@ export function GuidedStart({ profile, recovery, applications, focusOpportunity 
     <ProfilePieceBoard profile={profile} recovery={recovery} />
     <details className="guided-journey mt-5" open={!focusOpportunity}>
       <summary className="min-h-11 cursor-pointer rounded-lg border border-border bg-card/70 px-4 py-3 text-sm font-bold text-primary">Explore your application path · sources, opportunities, and application assembly</summary>
-    <ol className="mt-4 grid gap-4 md:grid-cols-3" aria-label="Application journey">{steps.map((step, index) => <li key={step.href} className={index === guidance.nextStep ? 'guide-step guide-step-current' : 'guide-step'}>
+    <ol className="mt-4 grid gap-4 md:grid-cols-3" aria-label="Application journey">{steps.map((step, index) => <li key={step.route} className={index === guidance.nextStep ? 'guide-step guide-step-current' : 'guide-step'}>
       <step.icon size={24} aria-hidden="true" className="text-primary" />
       <p className="mt-4 text-xs font-bold text-muted-foreground">Step {index + 1}{index === guidance.nextStep ? ' · Next action' : index < guidance.nextStep ? ' · Revisit anytime' : ' · Available'}</p>
-      <h3 className="mt-2 text-base font-bold">{step.title}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{step.description}</p>
-      <Link href={step.href} className="mt-4 inline-flex min-h-11 items-center font-bold text-primary underline underline-offset-4">{index === guidance.nextStep ? 'Start this step' : 'Open step'}</Link>
+      <h3 className="mt-2 text-base font-bold">{step.title}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{step.detail}</p>
+      <Link href={step.route} className="mt-4 inline-flex min-h-11 items-center font-bold text-primary underline underline-offset-4">{index === guidance.nextStep ? 'Start this step' : 'Open step'}</Link>
     </li>)}</ol>
     </details>
     <details className="mt-4 text-sm"><summary className="min-h-11 cursor-pointer py-3 font-bold">How does EscapeHatch work?</summary><p className="max-w-2xl leading-6 text-muted-foreground">You can add career sources before saving a job. Nothing from a dropped file is approved until you review it. In Application Assist, choose a saved opportunity and inspect its current form to see what it asks for. Save and review the exact documents for that job, then prepare the form. Sign-in, sensitive declarations, and final Submit stay with you. Revisit this guide from Today at any time.</p></details>

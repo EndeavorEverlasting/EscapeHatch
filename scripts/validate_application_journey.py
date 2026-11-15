@@ -13,6 +13,8 @@ REQUIRED = (
     "AUTH_HANDOFF", "AUTH_RECHECK", "FORM_PREPARATION", "MANUAL_DECISION",
     "FINAL_REVIEW", "RECOVERY",
 )
+PUBLIC_ROUTES = {"/", "/journey", "/sources", "/profile", "/answers", "/applications", "/materials", "/assist"}
+OPERATOR_SCENES = {"INSTALL_APPROVAL", "AUTH_HANDOFF", "MANUAL_DECISION", "FINAL_REVIEW"}
 PARENT = "https://github.com/EndeavorEverlasting/EscapeHatch/issues/69"
 class SceneContractError(ValueError):
     pass
@@ -51,8 +53,14 @@ def validate(contract: dict, root: Path = ROOT) -> None:
             raise SceneContractError("scene missing owned evidence/UX action: " + scene.get("id", "?"))
         if scene.get("terminal_submit_automated") is not False:
             raise SceneContractError("automated terminal submit forbidden")
+    validate_wayfinding(scenes, contract.get("guide_stops", []), ids)
     transitions = contract.get("transitions", [])
+    if any(not isinstance(edge.get("guide_when"), str) or not edge["guide_when"].strip()
+           for edge in transitions):
+        raise SceneContractError("transition missing user-visible condition")
     arcs = {(x.get("from"), x.get("to")) for x in transitions}
+    if len(arcs) != len(transitions):
+        raise SceneContractError("duplicate scene transition")
     if any(a not in ids or b not in ids for a,b in arcs):
         raise SceneContractError("dangling scene transition")
     mandatory = {
@@ -117,6 +125,30 @@ def validate(contract: dict, root: Path = ROOT) -> None:
     for marker in ("button-auth-resume", "button-auth-check-again", "coach-approved-email"):
         if marker not in ux:
             raise SceneContractError("missing visible coached auth/prerequisite control "+marker)
+
+def validate_wayfinding(scenes: list[dict], stops: list[dict], ids: list[str]) -> None:
+    for scene in scenes:
+        wayfinding = scene.get("wayfinding", {})
+        scene_id = scene["id"]
+        if wayfinding.get("route") not in PUBLIC_ROUTES or any(
+            not isinstance(wayfinding.get(key), str) or not wayfinding[key].strip()
+            for key in ("action", "location")
+        ):
+            raise SceneContractError("scene missing a visible wayfinding destination: " + scene_id)
+        if wayfinding.get("operator_only") is not (scene_id in OPERATOR_SCENES):
+            raise SceneContractError("scene operator boundary drift: " + scene_id)
+
+    stop_ids = {stop.get("id") for stop in stops}
+    if len(stop_ids) != len(stops) or {stop.get("route") for stop in stops} != PUBLIC_ROUTES - {"/", "/journey"}:
+        raise SceneContractError("workspace guides must cover each page")
+    for stop in stops:
+        if stop.get("next") not in stop_ids or (
+            stop.get("host_scene") is not None and stop["host_scene"] not in ids
+        ):
+            raise SceneContractError("workspace guide has an unknown destination")
+        if any(not isinstance(stop.get(key), str) or not stop[key].strip()
+               for key in ("id", "title", "detail", "action", "badge")):
+            raise SceneContractError("workspace guide missing reader-facing text")
 
 def main() -> int:
     try:

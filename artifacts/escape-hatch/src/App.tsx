@@ -86,6 +86,7 @@ import { ManagedBrowserAssist } from '@/components/managed-browser-assist';
 import { RecoveredAnswers, useRecoveredAnswers } from '@/components/recovered-answers';
 import { GuidedStart } from '@/components/guided-start';
 import { JourneyAtlas } from '@/components/journey-atlas';
+import { WorkspaceJourneyGuide } from '@/components/workspace-journey-guide';
 import { BirdsongControl } from '@/components/birdsong-control';
 import { refreshBoundTrackerOnStartup, type TrackerStatusEnvelope } from '@/lib/tracker-refresh-client';
 import { stageManagedLaunchIntent } from '@/lib/managed-launch-intent';
@@ -555,7 +556,7 @@ function AppShell({ children, profile }: { children: ReactNode; profile: Profile
       </aside>
       <BirdsongControl />
       <main className="lg:pl-[244px]">
-        <div className="mx-auto w-full max-w-[1230px] px-5 py-8 sm:px-8 lg:px-12 lg:py-12">{children}</div>
+        <div className="mx-auto w-full max-w-[1230px] px-5 py-8 sm:px-8 lg:px-12 lg:py-12"><WorkspaceJourneyGuide route={location} />{children}</div>
       </main>
     </div>
   );

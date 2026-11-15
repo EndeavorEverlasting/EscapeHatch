@@ -8,6 +8,8 @@ import { parseSubmissionEvidence, reconcileSubmissionReceipts, submissionMatches
 import type { AssistProfile } from '@/lib/assist-contract';
 import { CareerRecords } from './career-records';
 import { useEffect, useRef, useState, type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
+import { Link } from 'wouter';
+import { journeyAtlasHref, journeyOpportunityHref } from '@/lib/journey-wayfinding';
 import { ArrowUpRight, CheckCircle2, FileUp, LoaderCircle, ShieldCheck } from 'lucide-react';
 import { getLocalStorage, readStoredValue, writeStoredValue, type Application, type Profile } from '@/lib/storage';
 import { ApplicationPreferences } from './application-preferences';
@@ -204,6 +206,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     formCanResume: Boolean(authCheckpoint?.canResume),
     needsOpportunityConfirmation,
     preparationState: preparation?.state,
+    preparationCode: preparation?.code,
   });
 
   useEffect(() => {
@@ -678,7 +681,10 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
 
       <section aria-label="Application guidance" data-testid="application-journey-coach"
         className="mt-4 rounded-xl border border-primary/25 bg-primary/5 p-4" aria-live="polite">
-        <p className="text-xs font-bold uppercase tracking-wide text-primary">Your next step</p>
+        <div className="flex items-center gap-3">
+          <img src="/escapehatch-mascot.webp" alt="" width={40} height={40} className="h-10 w-10 shrink-0" />
+          <p className="text-sm font-bold text-primary">Your next step</p>
+        </div>
         <dl className="mt-2 grid gap-2 rounded-lg border border-border bg-card p-3 text-xs sm:grid-cols-2" data-testid="journey-scene-status">
           <div><dt className="font-semibold text-muted-foreground">Current</dt>
             <dd className="mt-1 font-semibold" data-testid="journey-current">{journey.current.coach_prompt}</dd></div>
@@ -689,6 +695,10 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           <p className="text-xs font-semibold">What's missing now</p>
           {journey.blockers.map((item, index) => <p key={index} className="text-xs text-muted-foreground">{item}</p>)}
         </div>}
+        <div className="flex flex-wrap gap-x-4">
+          <Link href={journeyAtlasHref(journey.current.id, selectedOpportunityId)} className="inline-flex min-h-11 items-center text-sm font-semibold text-primary underline underline-offset-4">Explore this step</Link>
+          {selectedOpportunityId && <Link href={journeyOpportunityHref('/materials', selectedOpportunityId)} className="inline-flex min-h-11 items-center text-sm font-semibold text-primary underline underline-offset-4">Review this job’s materials</Link>}
+        </div>
         {!profile.email?.trim() ? (
           <form className="mt-2 space-y-2" onSubmit={event => {
             event.preventDefault();

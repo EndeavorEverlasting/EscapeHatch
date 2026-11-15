@@ -33,6 +33,28 @@ class SceneContractTests(unittest.TestCase):
         data=copy.deepcopy(self.original)
         data["transitions"]=[x for x in data["transitions"] if not(x["from"]=="AUTH_RECHECK" and x["to"]=="FORM_PREPARATION")]
         with self.assertRaises(SceneContractError):validate(data)
+    def test_wayfinding_disallows_unknown_routes_and_missing_conditions(self):
+        data = copy.deepcopy(self.original)
+        data["scenes"][0]["wayfinding"]["route"] = "https://example.invalid/"
+        with self.assertRaises(SceneContractError):
+            validate(data)
+        data = copy.deepcopy(self.original)
+        data["transitions"][0]["guide_when"] = ""
+
+        with self.assertRaises(SceneContractError):
+            validate(data)
+
+    def test_wayfinding_disallows_dangling_stops_and_operator_drift(self):
+        data = copy.deepcopy(self.original)
+        data["guide_stops"][0]["next"] = "missing"
+        with self.assertRaises(SceneContractError):
+            validate(data)
+        data = copy.deepcopy(self.original)
+        data["scenes"][-2]["wayfinding"]["operator_only"] = False
+
+        with self.assertRaises(SceneContractError):
+            validate(data)
+
     def test_automated_submission_forbidden(self):
         data=copy.deepcopy(self.original);data["scenes"][-2]["terminal_submit_automated"]=True
         with self.assertRaises(SceneContractError):validate(data)

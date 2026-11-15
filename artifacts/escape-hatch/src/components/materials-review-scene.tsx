@@ -1,15 +1,20 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'wouter';
+import { Link, useSearch } from 'wouter';
 import { ArrowRight, BadgeCheck, FileCheck2, Stamp } from 'lucide-react';
 import type { Application } from '@/lib/storage';
 import { OpportunityDocuments, useOpportunityDocuments } from './opportunity-documents';
 import { projectMaterialsReviewStatus } from '@/lib/materials-review-status';
+import { getJourneyStop, journeyAtlasHref, journeyOpportunityHref } from '@/lib/journey-wayfinding';
+
+const guide = getJourneyStop('materials');
 
 /** Visible home for deterministic document-review evidence (FORM_PREPARATION.document_review). */
 export function MaterialsReviewScene({ applications }: { applications: Application[] }) {
-  const open = applications.filter(item => !['applied', 'closed'].includes(item.status));
-  const [selectedId, setSelectedId] = useState(() => open[0]?.id || '');
-  const selected = open.find(item => item.id === selectedId) || open[0];
+  const open = applications.filter(item => item.url && !['applied', 'closed'].includes(item.status));
+  const requestedId = new URLSearchParams(useSearch()).get('opportunityId');
+  const [choice, setChoice] = useState<{ from: string | null; id: string }>();
+  const selectedId = choice?.from === requestedId ? choice.id : requestedId ?? open[0]?.id;
+  const selected = open.find(item => item.id === selectedId);
   const opportunityId = selected?.id || '';
   const url = selected?.url || '';
   const documents = useOpportunityDocuments(opportunityId, url);
@@ -41,26 +46,34 @@ export function MaterialsReviewScene({ applications }: { applications: Applicati
             <h2 className="font-display text-2xl">Opportunity materials</h2>
             <p className="mt-2 text-sm text-muted-foreground">One opportunity at a time. Review is per file version, not per company name.</p>
           </div>
-          <Link href={selected ? `/assist?opportunityId=${encodeURIComponent(selected.id)}` : '/assist'}
+          {selected && <Link href={journeyOpportunityHref('/assist', selected.id)}
             className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
             data-testid="materials-open-assist">
-            Continue to browser assist <ArrowRight size={16} />
-          </Link>
+            {guide.action} <ArrowRight size={16} />
+          </Link>}
         </div>
         <label className="mt-5 block text-sm font-semibold">
           Saved opportunity
           <select
             className="mt-2 block w-full rounded-xl border border-input bg-background p-3"
             value={selected?.id || ''}
-            onChange={event => setSelectedId(event.target.value)}
+            onChange={event => setChoice({ from: requestedId, id: event.target.value })}
             data-testid="materials-opportunity-select"
             aria-label="Saved opportunity for materials review"
           >
-            {!open.length && <option value="">No open opportunities</option>}
+            {!selected && <option value="">{open.length ? 'Choose an opportunity' : 'No open opportunities'}</option>}
             {open.map(item => <option key={item.id} value={item.id}>{item.company} · {item.role}</option>)}
           </select>
         </label>
 
+        <div className="mascot-guidance mt-5 flex items-center gap-3 rounded-xl border border-primary/25 bg-primary/5 p-3">
+          <img src="/escapehatch-mascot.webp" alt="" width={40} height={40} className="h-10 w-10 shrink-0" />
+          <div>
+            <p className="text-sm leading-6 text-muted-foreground">{guide.detail}</p>
+            {guide.host_scene && <Link href={journeyAtlasHref(guide.host_scene, opportunityId)} className="inline-flex min-h-11 items-center text-xs font-semibold text-primary underline underline-offset-4">Your journey</Link>}
+          </div>
+        </div>
+        {requestedId && !selected && <p role="status" className="mt-3 text-sm">This opportunity is unavailable. Choose an open opportunity to review its materials.</p>}
         <ol className="mt-6 grid gap-3 sm:grid-cols-2" aria-label="Document seal status">
           {status.slots.map(slot => {
             const sealed = slot.present && slot.reviewed;

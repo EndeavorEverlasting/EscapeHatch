@@ -15,7 +15,13 @@
       "primary_action": "GET_EH",
       "completion": "specific_observed_evidence_only",
       "resume_key": "opportunity_id_and_application_url",
-      "terminal_submit_automated": false
+      "terminal_submit_automated": false,
+      "wayfinding": {
+        "route": "/journey",
+        "action": "Read installation and setup guide",
+        "location": "Setup",
+        "operator_only": false
+      }
     },
     {
       "id": "INSTALL_PREFLIGHT",
@@ -29,7 +35,13 @@
       "primary_action": "INSTALL_DIAGNOSE",
       "completion": "specific_observed_evidence_only",
       "resume_key": "opportunity_id_and_application_url",
-      "terminal_submit_automated": false
+      "terminal_submit_automated": false,
+      "wayfinding": {
+        "route": "/journey",
+        "action": "See setup requirements",
+        "location": "Setup",
+        "operator_only": false
+      }
     },
     {
       "id": "INSTALL_APPROVAL",
@@ -42,7 +54,13 @@
       "primary_action": "INSTALL_REVIEW",
       "completion": "specific_observed_evidence_only",
       "resume_key": "opportunity_id_and_application_url",
-      "terminal_submit_automated": false
+      "terminal_submit_automated": false,
+      "wayfinding": {
+        "route": "/journey",
+        "action": "Review installation choices",
+        "location": "Setup",
+        "operator_only": true
+      }
     },
     {
       "id": "INSTALL_VERIFY",
@@ -55,7 +73,13 @@
       "primary_action": "INSTALL_STATUS",
       "completion": "specific_observed_evidence_only",
       "resume_key": "opportunity_id_and_application_url",
-      "terminal_submit_automated": false
+      "terminal_submit_automated": false,
+      "wayfinding": {
+        "route": "/journey",
+        "action": "Check the setup checklist",
+        "location": "Setup",
+        "operator_only": false
+      }
     },
     {
       "id": "HOME_READY",
@@ -67,7 +91,13 @@
       "primary_action": "NAVIGATE_INTAKE",
       "completion": "specific_observed_evidence_only",
       "resume_key": "opportunity_id_and_application_url",
-      "terminal_submit_automated": false
+      "terminal_submit_automated": false,
+      "wayfinding": {
+        "route": "/",
+        "action": "Open Today",
+        "location": "Workspace",
+        "operator_only": false
+      }
     },
     {
       "id": "OPPORTUNITY_INTAKE",
@@ -81,7 +111,13 @@
       "primary_action": "INSPECT_JOB",
       "completion": "specific_observed_evidence_only",
       "resume_key": "opportunity_id_and_application_url",
-      "terminal_submit_automated": false
+      "terminal_submit_automated": false,
+      "wayfinding": {
+        "route": "/applications",
+        "action": "Find or add an opportunity",
+        "location": "Workspace",
+        "operator_only": false
+      }
     },
     {
       "id": "PREREQUISITES",
@@ -95,7 +131,13 @@
       "primary_action": "COLLECT_MISSING",
       "completion": "specific_observed_evidence_only",
       "resume_key": "opportunity_id_and_application_url",
-      "terminal_submit_automated": false
+      "terminal_submit_automated": false,
+      "wayfinding": {
+        "route": "/profile",
+        "action": "Review reusable identity details",
+        "location": "Workspace",
+        "operator_only": false
+      }
     },
     {
       "id": "APPLICATION_ENTRY",
@@ -108,7 +150,13 @@
       "primary_action": "OPEN_APPLICATION",
       "completion": "specific_observed_evidence_only",
       "resume_key": "opportunity_id_and_application_url",
-      "terminal_submit_automated": false
+      "terminal_submit_automated": false,
+      "wayfinding": {
+        "route": "/assist",
+        "action": "Open browser assist",
+        "location": "Workspace and employer browser",
+        "operator_only": false
+      }
     },
     {
       "id": "AUTH_HANDOFF",
@@ -120,7 +168,13 @@
       "primary_action": "AUTH_WATCH",
       "completion": "specific_observed_evidence_only",
       "resume_key": "opportunity_id_and_application_url",
-      "terminal_submit_automated": false
+      "terminal_submit_automated": false,
+      "wayfinding": {
+        "route": "/assist",
+        "action": "See employer sign-in instructions",
+        "location": "Employer browser",
+        "operator_only": true
+      }
     },
     {
       "id": "AUTH_RECHECK",
@@ -134,7 +188,13 @@
       "primary_action": "AUTH_VERIFY",
       "completion": "specific_observed_evidence_only",
       "resume_key": "opportunity_id_and_application_url",
-      "terminal_submit_automated": false
+      "terminal_submit_automated": false,
+      "wayfinding": {
+        "route": "/assist",
+        "action": "Check whether the same form returned",
+        "location": "Workspace and employer browser",
+        "operator_only": false
+      }
     },
     {
       "id": "FORM_PREPARATION",
@@ -147,7 +207,13 @@
       "primary_action": "PREPARE_REVIEW",
       "completion": "specific_observed_evidence_only",
       "resume_key": "opportunity_id_and_application_url",
-      "terminal_submit_automated": false
+      "terminal_submit_automated": false,
+      "wayfinding": {
+        "route": "/assist",
+        "action": "Inspect and prepare the form",
+        "location": "Workspace and employer browser",
+        "operator_only": false
+      }
     },
     {
       "id": "MANUAL_DECISION",
@@ -159,7 +225,13 @@
       "primary_action": "ANSWER_REQUIRED",
       "completion": "specific_observed_evidence_only",
       "resume_key": "opportunity_id_and_application_url",
-      "terminal_submit_automated": false
+      "terminal_submit_automated": false,
+      "wayfinding": {
+        "route": "/assist",
+        "action": "Review the pending decision",
+        "location": "Employer browser",
+        "operator_only": true
+      }
     },
     {
       "id": "FINAL_REVIEW",
@@ -173,7 +245,13 @@
       "primary_action": "REVIEW_AND_AUTHORIZE_SUBMIT",
       "completion": "specific_observed_evidence_only",
       "resume_key": "opportunity_id_and_application_url",
-      "terminal_submit_automated": false
+      "terminal_submit_automated": false,
+      "wayfinding": {
+        "route": "/assist",
+        "action": "Review before your own Submit",
+        "location": "Employer browser",
+        "operator_only": true
+      }
     },
     {
       "id": "RECOVERY",
@@ -186,174 +264,213 @@
       "primary_action": "RECOVER",
       "completion": "specific_observed_evidence_only",
       "resume_key": "opportunity_id_and_application_url",
-      "terminal_submit_automated": false
+      "terminal_submit_automated": false,
+      "wayfinding": {
+        "route": "/assist",
+        "action": "See checkpoint and recovery",
+        "location": "Workspace and employer browser",
+        "operator_only": false
+      }
     }
   ],
   "transitions": [
     {
       "from": "INSTALL_ACQUIRE",
       "to": "INSTALL_PREFLIGHT",
-      "requires": "verified_transition_and_opportunity_binding"
+      "requires": "verified_transition_and_opportunity_binding",
+      "guide_when": "The setup script is ready to run."
     },
     {
       "from": "INSTALL_PREFLIGHT",
       "to": "INSTALL_APPROVAL",
-      "requires": "verified_transition_and_opportunity_binding"
+      "requires": "verified_transition_and_opportunity_binding",
+      "guide_when": "Setup detects a missing component or needs your approval."
     },
     {
       "from": "INSTALL_PREFLIGHT",
       "to": "INSTALL_VERIFY",
-      "requires": "verified_transition_and_opportunity_binding"
+      "requires": "verified_transition_and_opportunity_binding",
+      "guide_when": "All prerequisites are available."
     },
     {
       "from": "INSTALL_APPROVAL",
       "to": "INSTALL_VERIFY",
-      "requires": "verified_transition_and_opportunity_binding"
+      "requires": "verified_transition_and_opportunity_binding",
+      "guide_when": "You approve the choices and setup completes."
     },
     {
       "from": "INSTALL_VERIFY",
       "to": "HOME_READY",
-      "requires": "verified_transition_and_opportunity_binding"
+      "requires": "verified_transition_and_opportunity_binding",
+      "guide_when": "The local workspace opens successfully."
     },
     {
       "from": "HOME_READY",
       "to": "OPPORTUNITY_INTAKE",
-      "requires": "verified_transition_and_opportunity_binding"
+      "requires": "verified_transition_and_opportunity_binding",
+      "guide_when": "You choose a saved job or add its employer link."
     },
     {
       "from": "OPPORTUNITY_INTAKE",
       "to": "PREREQUISITES",
-      "requires": "verified_transition_and_opportunity_binding"
+      "requires": "verified_transition_and_opportunity_binding",
+      "guide_when": "The opportunity is identified and its inputs can be reviewed."
     },
     {
       "from": "PREREQUISITES",
       "to": "APPLICATION_ENTRY",
-      "requires": "verified_transition_and_opportunity_binding"
+      "requires": "verified_transition_and_opportunity_binding",
+      "guide_when": "The required identity details are available."
     },
     {
       "from": "APPLICATION_ENTRY",
       "to": "AUTH_HANDOFF",
-      "requires": "verified_transition_and_opportunity_binding"
+      "requires": "verified_transition_and_opportunity_binding",
+      "guide_when": "The employer asks you to sign in."
     },
     {
       "from": "APPLICATION_ENTRY",
       "to": "FORM_PREPARATION",
-      "requires": "verified_transition_and_opportunity_binding"
+      "requires": "verified_transition_and_opportunity_binding",
+      "guide_when": "The same employer form opens without a sign-in prompt."
     },
     {
       "from": "AUTH_HANDOFF",
       "to": "AUTH_RECHECK",
-      "requires": "verified_transition_and_opportunity_binding"
+      "requires": "verified_transition_and_opportunity_binding",
+      "guide_when": "You return from the employer sign-in page."
     },
     {
       "from": "AUTH_RECHECK",
       "to": "FORM_PREPARATION",
-      "requires": "verified_transition_and_opportunity_binding"
+      "requires": "verified_transition_and_opportunity_binding",
+      "guide_when": "The same opportunity and form are confirmed."
     },
     {
       "from": "AUTH_RECHECK",
       "to": "AUTH_HANDOFF",
-      "requires": "verified_transition_and_opportunity_binding"
+      "requires": "verified_transition_and_opportunity_binding",
+      "guide_when": "The employer still requires sign-in."
     },
     {
       "from": "FORM_PREPARATION",
       "to": "MANUAL_DECISION",
-      "requires": "verified_transition_and_opportunity_binding"
+      "requires": "verified_transition_and_opportunity_binding",
+      "guide_when": "The employer requires a decision only you can make."
     },
     {
       "from": "MANUAL_DECISION",
       "to": "FORM_PREPARATION",
-      "requires": "verified_transition_and_opportunity_binding"
+      "requires": "verified_transition_and_opportunity_binding",
+      "guide_when": "You resolve the decision on the employer form."
     },
     {
       "from": "FORM_PREPARATION",
       "to": "FINAL_REVIEW",
-      "requires": "verified_transition_and_opportunity_binding"
+      "requires": "verified_transition_and_opportunity_binding",
+      "guide_when": "The form and requested documents are ready for your review."
     },
     {
       "from": "RECOVERY",
       "to": "AUTH_RECHECK",
-      "requires": "verified_transition_and_opportunity_binding"
+      "requires": "verified_transition_and_opportunity_binding",
+      "guide_when": "The same employer tab can be checked again."
     },
     {
       "from": "RECOVERY",
       "to": "INSTALL_PREFLIGHT",
-      "requires": "verified_transition_and_opportunity_binding"
+      "requires": "verified_transition_and_opportunity_binding",
+      "guide_when": "An installation prerequisite can be checked again."
     },
     {
       "from": "RECOVERY",
       "to": "PREREQUISITES",
-      "requires": "verified_transition_and_opportunity_binding"
+      "requires": "verified_transition_and_opportunity_binding",
+      "guide_when": "An approved profile detail, answer, or document needs attention."
     },
     {
       "from": "RECOVERY",
       "to": "APPLICATION_ENTRY",
-      "requires": "verified_transition_and_opportunity_binding"
+      "requires": "verified_transition_and_opportunity_binding",
+      "guide_when": "A valid saved opportunity can be reopened."
     },
     {
       "from": "INSTALL_ACQUIRE",
       "to": "RECOVERY",
-      "requires": "recorded_blocker_or_error"
+      "requires": "recorded_blocker_or_error",
+      "guide_when": "A blocker interrupts this step."
     },
     {
       "from": "INSTALL_PREFLIGHT",
       "to": "RECOVERY",
-      "requires": "recorded_blocker_or_error"
+      "requires": "recorded_blocker_or_error",
+      "guide_when": "A blocker interrupts this step."
     },
     {
       "from": "INSTALL_APPROVAL",
       "to": "RECOVERY",
-      "requires": "recorded_blocker_or_error"
+      "requires": "recorded_blocker_or_error",
+      "guide_when": "A blocker interrupts this step."
     },
     {
       "from": "INSTALL_VERIFY",
       "to": "RECOVERY",
-      "requires": "recorded_blocker_or_error"
+      "requires": "recorded_blocker_or_error",
+      "guide_when": "A blocker interrupts this step."
     },
     {
       "from": "HOME_READY",
       "to": "RECOVERY",
-      "requires": "recorded_blocker_or_error"
+      "requires": "recorded_blocker_or_error",
+      "guide_when": "A blocker interrupts this step."
     },
     {
       "from": "OPPORTUNITY_INTAKE",
       "to": "RECOVERY",
-      "requires": "recorded_blocker_or_error"
+      "requires": "recorded_blocker_or_error",
+      "guide_when": "A blocker interrupts this step."
     },
     {
       "from": "PREREQUISITES",
       "to": "RECOVERY",
-      "requires": "recorded_blocker_or_error"
+      "requires": "recorded_blocker_or_error",
+      "guide_when": "A blocker interrupts this step."
     },
     {
       "from": "APPLICATION_ENTRY",
       "to": "RECOVERY",
-      "requires": "recorded_blocker_or_error"
+      "requires": "recorded_blocker_or_error",
+      "guide_when": "A blocker interrupts this step."
     },
     {
       "from": "AUTH_HANDOFF",
       "to": "RECOVERY",
-      "requires": "recorded_blocker_or_error"
+      "requires": "recorded_blocker_or_error",
+      "guide_when": "A blocker interrupts this step."
     },
     {
       "from": "AUTH_RECHECK",
       "to": "RECOVERY",
-      "requires": "recorded_blocker_or_error"
+      "requires": "recorded_blocker_or_error",
+      "guide_when": "A blocker interrupts this step."
     },
     {
       "from": "FORM_PREPARATION",
       "to": "RECOVERY",
-      "requires": "recorded_blocker_or_error"
+      "requires": "recorded_blocker_or_error",
+      "guide_when": "A blocker interrupts this step."
     },
     {
       "from": "MANUAL_DECISION",
       "to": "RECOVERY",
-      "requires": "recorded_blocker_or_error"
+      "requires": "recorded_blocker_or_error",
+      "guide_when": "A blocker interrupts this step."
     },
     {
       "from": "FINAL_REVIEW",
       "to": "RECOVERY",
-      "requires": "recorded_blocker_or_error"
+      "requires": "recorded_blocker_or_error",
+      "guide_when": "A blocker interrupts this step."
     }
   ],
   "state_authority": {
@@ -457,6 +574,78 @@
     "unknown_required_prerequisites_block_review_ready",
     "terminal_action_never_automated",
     "runtime_browser_proof_separate_from_synthetic_tests"
+  ],
+  "guide_stops": [
+    {
+      "id": "sources",
+      "route": "/sources",
+      "title": "Bring your career sources",
+      "detail": "Import a résumé or other career document and approve the facts you want to reuse.",
+      "action": "Review your profile",
+      "next": "profile",
+      "badge": "Prepare",
+      "host_scene": null
+    },
+    {
+      "id": "profile",
+      "route": "/profile",
+      "title": "Build your reusable profile",
+      "detail": "Review names, contact details and location once. Browser assist can reuse the details you save.",
+      "action": "Open Answer library",
+      "next": "answers",
+      "badge": "Prepare",
+      "host_scene": "PREREQUISITES"
+    },
+    {
+      "id": "answers",
+      "route": "/answers",
+      "title": "Prepare reusable answers",
+      "detail": "Save answers you can reuse when an employer asks the same question. You can add more as you go.",
+      "action": "Choose an opportunity",
+      "next": "applications",
+      "badge": "Prepare",
+      "host_scene": null
+    },
+    {
+      "id": "applications",
+      "route": "/applications",
+      "title": "Select an opportunity",
+      "detail": "Save the exact employer and application link. The job keeps its own documents and application history.",
+      "action": "Open Browser assist",
+      "next": "assist",
+      "badge": "Apply",
+      "host_scene": "OPPORTUNITY_INTAKE"
+    },
+    {
+      "id": "assist",
+      "route": "/assist",
+      "title": "Assemble the employer puzzle",
+      "detail": "Inspect the employer form to see what it asks for. If you’re asked to sign in, do it in the employer window and return here.",
+      "action": "Review role documents",
+      "next": "materials",
+      "badge": "Apply",
+      "host_scene": "APPLICATION_ENTRY"
+    },
+    {
+      "id": "materials",
+      "route": "/materials",
+      "title": "Review role documents",
+      "detail": "Review the exact PDFs for this job. Return to Browser assist when you’re ready to continue with the same opportunity.",
+      "action": "Return to Browser assist",
+      "next": "assist",
+      "badge": "Apply",
+      "host_scene": "FORM_PREPARATION"
+    },
+    {
+      "id": "review",
+      "route": "/assist",
+      "title": "Review and authorize Submit",
+      "detail": "Check the employer form, answers, and accepted documents before you decide whether to Submit.",
+      "action": "Open Browser assist",
+      "next": "assist",
+      "badge": "You decide",
+      "host_scene": "FINAL_REVIEW"
+    }
   ],
   "resume_persistence": {
     "storage_key": "escape-hatch-journey-resume",

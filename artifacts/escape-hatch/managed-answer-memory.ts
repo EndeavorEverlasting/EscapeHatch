@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Page } from '@playwright/test';
-import { matchQuestion, normalizeQuestion, questions, safeDiscoveredQuestion, parsePreferences, type Preferences } from './src/lib/application-preferences.ts';
+import { matchQuestion, normalizeQuestion, questions, safeDiscoveredQuestion, parsePreferences, roleQuestionKey, MAX_ROLE_ANSWER_LENGTH, type Preferences } from './src/lib/application-preferences.ts';
 
 export type QuestionDescriptor = { question: string; normalized_question: string; question_id: string | null };
 export type CapturedAnswer = { question: string; normalized_question: string; question_id: string | null; value: string; source: 'user'; captured_at: string; employer_name?: string };
@@ -43,7 +43,7 @@ export async function readReviewedAnswers(page: Page, employerName: string): Pro
 }
 
 export function mergeCapturedAnswer(data: Preferences, event: CapturedAnswer): Preferences {
-  if (event.source !== 'user' || typeof event.value !== 'string' || !event.value.trim() || event.value.length > 512 || !Number.isFinite(Date.parse(event.captured_at))) return data;
+  if (roleQuestionKey(event.question) || event.source !== 'user' || typeof event.value !== 'string' || !event.value.trim() || event.value.length > 512 || !Number.isFinite(Date.parse(event.captured_at))) return data;
   const matched = matchQuestion(event.question);
   const relationship = /^employment\.(?:(?:current|previous)_employee|prior_employer_relationship)$/.test(matched || event.question_id || '');
   const id = relationship ? null : matched;
@@ -143,11 +143,39 @@ export async function scanQuestionCatalog(page: Page): Promise<QuestionDescripto
 export function mergeQuestionCatalog(data: Preferences, catalog: QuestionDescriptor[]): Preferences {
   let candidate = data;
   for (const item of catalog.slice(0, 100)) {
-    if (!safeDiscoveredQuestion(item.question)) continue;
+    if (!safeDiscoveredQuestion(item.question) || roleQuestionKey(item.question)) continue;
     const key = normalizeQuestion(item.question);
     if (candidate.discovered_answers?.[key]) continue;
     const next: Preferences = { ...candidate, discovered_answers: { ...candidate.discovered_answers, [key]: { question: item.question, value: '', source: 'observed_question', updated_at: new Date().toISOString(), accepted: false } } };
     candidate = parsePreferences(next) || candidate;
   }
   return candidate;
+}
+
+export async function readReviewedRoleAnswers(page: Page) {
+  const fields = await page.locator('textarea').evaluateAll(elements => elements.flatMap(element => {
+    const field = element as HTMLTextAreaElement;
+    if (!field.form || field.matches(':disabled, [readonly]') || field.closest('[hidden], [aria-hidden="true"]') ||
+        !field.getClientRects().length || getComputedStyle(field).visibility !== 'visible' ||
+        /^(eeo|consent)\[/i.test(field.name)) return [];
+    const labelledBy = (field.getAttribute('aria-labelledby') || '').split(/\s+/)
+      .map(id => document.getElementById(id)?.textContent?.trim() || '').join(' ').trim();
+    const explicit = field.getAttribute('aria-label') || labelledBy;
+    const labels = [...(field.labels || [])].map(label => {
+      const copy = label.cloneNode(true) as Element;
+      copy.querySelectorAll('input,select,textarea,button').forEach(control => control.remove());
+      return copy.textContent?.trim() || '';
+    });
+    const groupLabel = field.closest('.application-question')?.querySelector('.application-label')?.textContent?.trim();
+    const legend = field.closest('fieldset')?.querySelector('legend')?.textContent?.trim();
+    const question = explicit || labels.find(Boolean) || groupLabel || legend;
+    return question ? [{ question, value: field.value }] : [];
+  }));
+  const keys = fields.map(field => roleQuestionKey(field.question));
+  const supported = fields.filter((field, index) => {
+    const key = keys[index];
+    return key && keys.indexOf(key) === keys.lastIndexOf(key) && field.value.trim();
+  });
+  if (supported.some(field => field.value.length > MAX_ROLE_ANSWER_LENGTH)) throw new Error('REVIEWED_ROLE_ANSWER_TOO_LONG');
+  return supported;
 }

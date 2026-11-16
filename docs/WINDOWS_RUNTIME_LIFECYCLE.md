@@ -55,6 +55,24 @@ npm --prefix artifacts/escape-hatch run import:context -- workspace '<private-wo
 ```
 
 The importer refuses to replace a conflicting populated private workspace; reconcile in the app instead.
+
+To recover a reviewed role response from a private answer bank, use the existing local context importer:
+
+```powershell
+npm --prefix artifacts/escape-hatch run import:context -- role-answer '<private-role-answer.json>'
+```
+
+The JSON carries the saved job `url`, verbatim `question` and `value`, and
+the approval timestamp `approvedAt` in ISO 8601. Include `opportunityId`
+when needed to disambiguate saved entries. The importer verifies the installed
+workspace and one actionable saved job, preserves a newer local approval, and
+prints `ROLE_ANSWER_SAVED_AND_READ_BACK` only after verifying the exact text.
+From an existing managed form, **Save reviewed role answers for this job**
+records the supported role questions on the bound tab without reloading it.
+Fill and Prepare restore reviewed text to empty matching fields for that job.
+Keep answer exports private. A workspace conflict still requires review of
+the two saved copies.
+
 This workspace is the cockpit projection, not a replacement for the canonical career-state graph or
 provider records. Document bytes remain owned by the existing opportunity document store at the stable user-data root. Requested legacy packages are copied only after scope/hash verification; divergent packages require review, and originals are preserved.
 

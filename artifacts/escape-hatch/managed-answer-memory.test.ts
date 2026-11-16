@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from '@playwright/test';
 import { emptyPreferences, matchQuestion, acceptDiscoveredAnswer, discoveredValue, parsePreferences, isRoutineApplicantPrivacyAcknowledgement } from './src/lib/application-preferences.ts';
-import { installAnswerMemory, mergeCapturedAnswer, mergeQuestionCatalog, scanQuestionCatalog, type CapturedAnswer } from './managed-answer-memory.ts';
+import { installAnswerMemory, mergeCapturedAnswer, mergeQuestionCatalog, readReviewedRoleAnswers, scanQuestionCatalog, type CapturedAnswer } from './managed-answer-memory.ts';
 import { fillSavedPreferences } from './managed-form.ts';
 
 test('recapturing an identical discovered answer preserves approval; changed or unapproved answers require review', () => {
@@ -241,4 +241,39 @@ test('saved applicant privacy opt-in checks only routine notice, persists, and r
   } finally {
     await browser.close();
   }
+});
+
+test('a reviewed long role narrative recalls in a fresh browser only for the exact opportunity', async () => {
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  try {
+    const source = await browser.newPage();
+    const label = 'What excites you about this role? 1–4 sentences';
+    const form = `<form><div class="application-question"><div class="application-label">${label}</div>
+      <div class="application-field"><textarea id="role-answer"></textarea></div></div>
+      <label>Privacy consent<textarea>Preserve</textarea></label></form>`;
+    const value = ['Fixture experience. '.repeat(20).trim(), 'Fixture review. '.repeat(24).trim()].join('\n\n');
+    await source.setContent(form);
+    await source.locator('#role-answer').fill(value);
+    const rows = await readReviewedRoleAnswers(source);
+    assert.deepEqual(rows, [{ question: label, value }]);
+    const page = await browser.newPage();
+    await page.setContent(form);
+    const scope = { opportunityId: 'fixture-role', url: 'https://example.test/jobs/a', pageUrl: page.url() };
+    const data = emptyPreferences();
+    data.reviewed_role_answers = rows.map(row => ({ ...row, opportunityId: scope.opportunityId,
+      url: scope.url, approvedAt: data.exported_at }));
+    const textarea = page.locator('#role-answer');
+    await fillSavedPreferences(page, data, '', { ...scope, url: 'https://example.test/jobs/b' });
+    assert.equal(await textarea.inputValue(), '');
+    await fillSavedPreferences(page, data, '', scope);
+    assert.equal(await textarea.inputValue(), value);
+    await textarea.fill('Current user edit');
+    await fillSavedPreferences(page, data, '', scope);
+    assert.equal(await textarea.inputValue(), 'Current user edit');
+    assert.equal(await page.getByLabel('Privacy consent').inputValue(), 'Preserve');
+    await textarea.fill('');
+    await textarea.evaluate(element => element.setAttribute('maxlength', '20'));
+    await fillSavedPreferences(page, data, '', scope);
+    assert.equal(await textarea.inputValue(), '');
+  } finally { await browser.close(); }
 });

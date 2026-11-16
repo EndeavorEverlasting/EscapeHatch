@@ -3,8 +3,8 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import type { Page } from '@playwright/test';
-import { updatePreferences } from './preference-file.ts';
-import { installAnswerMemory, mergeCapturedAnswer, mergeQuestionCatalog, readReviewedAnswers, scanQuestionCatalog } from './managed-answer-memory.ts';
+import { saveReviewedRoleAnswers, updatePreferences } from './preference-file.ts';
+import { installAnswerMemory, mergeCapturedAnswer, mergeQuestionCatalog, readReviewedAnswers, readReviewedRoleAnswers, scanQuestionCatalog } from './managed-answer-memory.ts';
 import { installManagedSubmissionObserver, type LeverAttemptEvent, type ManagedSubmissionReceipt } from './managed-submission-observer.ts';
 import { parseSubmissionEvidence } from './src/lib/submission-reconciliation.ts';
 import { userDataRoot, legacyPrivateRoots } from './user-data.ts';
@@ -85,7 +85,7 @@ export function submissionAdapter(applicationUrl: string) {
 }
 
 export class ManagedListeners {
-  readonly implementationVersion = 6;
+  readonly implementationVersion = 7;
   private leverAttempt: ((event: LeverAttemptEvent) => void) | null = null;
   private page: Page | null = null;
   private stopMemory: (() => Promise<void>) | null = null;
@@ -118,8 +118,13 @@ export class ManagedListeners {
     this.stopMemory = await installAnswerMemory(page, event => {
       if (!this.recording || generation !== this.generation) return;
       this.serial = this.serial.then(async () => {
-        await updatePreferences(current => mergeCapturedAnswer(current, event), this.preferencesPath);
-        this.savedAnswers++;
+        let saved = false;
+        await updatePreferences(current => {
+          const next = mergeCapturedAnswer(current, event);
+          saved = next !== current;
+          return next;
+        }, this.preferencesPath);
+        if (saved) this.savedAnswers++;
       }).catch(() => { this.error = 'Could not save an answer. Existing saved answers were preserved.'; });
     }, scope.employerName);
     this.observer = await installManagedSubmissionObserver(page, {
@@ -199,6 +204,8 @@ export class ManagedListeners {
       throw new Error('Start answer recording and arm the submission listener on the existing application.');
     }
     const answers = await readReviewedAnswers(page, this.scope.employerName);
+    const roleAnswers = await readReviewedRoleAnswers(page);
+    const approvedAt = new Date().toISOString();
     if (page.url() !== this.scope.applicationUrl) throw new Error('Application changed during answer capture.');
     let saved = 0;
     await updatePreferences(current => answers.reduce((data, event) => {
@@ -206,7 +213,10 @@ export class ManagedListeners {
       if (next !== data) saved++;
       return next;
     }, current), this.preferencesPath);
-    this.savedAnswers += saved;
+    const verified = await saveReviewedRoleAnswers(roleAnswers.map(answer => ({
+      ...answer, opportunityId, url: this.scope!.opportunityUrl || this.scope!.applicationUrl, approvedAt,
+    })), this.preferencesPath);
+    this.savedAnswers += saved + verified.verified;
   }
   async catalog(page: Page) {
     const catalog = await scanQuestionCatalog(page);

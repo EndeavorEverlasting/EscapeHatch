@@ -5,11 +5,15 @@ import { createHash, randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { driveResumeAvailability, driveResumeErrorCode, stageDriveResume, verifyDriveResume } from './drive-resume-source.ts';
 import { createTrackerSnapshotFromValues, readBoundedFile } from './tracker-refresh.ts';
+import { preferenceFile, saveReviewedRoleAnswers } from './preference-file.ts';
+import { leverApplicationKey } from './src/lib/application-puzzle.ts';
+import { parseReviewedRoleAnswer } from './src/lib/application-preferences.ts';
+import { selectInstalledHostWorkspace } from './workspace-owner-file.ts';
 import { userDataRoot } from './user-data.ts';
 import { saveWorkspace, readWorkspace } from './workspace-file.ts';
 import { parseSavedWorkspace } from './src/lib/workspace-bootstrap.ts';
 import { parseWorkspaceExport } from './src/lib/storage.ts';
-import { PROFILE_KEY, ANSWERS_KEY, APPLICATIONS_KEY } from './src/lib/storage.ts';
+import { PROFILE_KEY, ANSWERS_KEY, APPLICATIONS_KEY, parseApplicationsStorage } from './src/lib/storage.ts';
 import { OpportunityDocumentStore, documentScope, parseDocumentSource } from './opportunity-documents.ts';
 
 async function atomicPrivateCopy(file: string, value: unknown) {
@@ -22,6 +26,25 @@ async function atomicPrivateCopy(file: string, value: unknown) {
   } finally { await fs.rm(temporary, { force: true }); }
 }
 export async function importContext(kind: string, input: unknown, destination = userDataRoot()) {
+  if (kind === 'role-answer') {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('INVALID_REVIEWED_ROLE_ANSWER');
+    const raw = input as Record<string, unknown>;
+    if (typeof raw.url !== 'string') throw new Error('INVALID_REVIEWED_ROLE_ANSWER');
+    const workspace = await readWorkspace(path.join(destination, 'workspace.v1.json'));
+    const leverKey = (value: string) => leverApplicationKey(value) || leverApplicationKey(value.replace(/\/$/, '') + '/apply');
+    const key = leverKey(raw.url);
+    const matches = parseApplicationsStorage(workspace?.workspace.values[APPLICATIONS_KEY])?.filter(job =>
+      (raw.opportunityId === undefined || job.id === raw.opportunityId) &&
+      (job.url === raw.url || (key !== null && leverKey(job.url) === key)) &&
+      !['applied', 'closed', 'follow_up'].includes(job.status));
+    if (matches?.length !== 1) throw new Error('REVIEWED_ROLE_ANSWER_JOB_NOT_VERIFIED');
+    const answer = parseReviewedRoleAnswer({ ...raw, opportunityId: matches[0].id, url: matches[0].url });
+    if (!answer) throw new Error('INVALID_REVIEWED_ROLE_ANSWER');
+    await selectInstalledHostWorkspace(destination);
+    await saveReviewedRoleAnswers([answer], destination === userDataRoot()
+      ? preferenceFile() : path.join(destination, 'application-question-preferences.json'));
+    return 'ROLE_ANSWER_SAVED_AND_READ_BACK';
+  }
   if (kind === 'document') {
     const item = input as Record<string, unknown>;
     if (!item || typeof item !== 'object' || Array.isArray(item) ||
@@ -80,7 +103,7 @@ export async function importContext(kind: string, input: unknown, destination = 
     await atomicPrivateCopy(file, snapshot);
     return 'TRACKER_IMPORTED';
   }
-  throw new Error('Use workspace, tracker or document with an explicit validated local artifact.');
+  throw new Error('Use workspace, tracker, document or role-answer with an explicit validated local artifact.');
 }
 async function main() {
   const [kind, inputFile] = process.argv.slice(2);
@@ -106,7 +129,7 @@ async function main() {
     }
     return;
   }
-  if (!inputFile) throw new Error('Usage: npm run import:context -- workspace|tracker|document <private-export.json>');
+  if (!inputFile) throw new Error('Usage: npm run import:context -- workspace|tracker|document|role-answer <private-export.json>');
   if ((await fs.stat(inputFile)).size > 2 * 1024 * 1024) throw new Error('INPUT_TOO_LARGE');
   const result = await importContext(kind, JSON.parse((await fs.readFile(inputFile, 'utf8')).replace(/^\uFEFF/, '')));
   console.log(result + '; private contents omitted');

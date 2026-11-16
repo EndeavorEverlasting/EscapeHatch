@@ -80,3 +80,13 @@ export function leverApplicationKey(value: string): string | null {
   const url = new URL(value);
   return url.origin + url.pathname.replace(/\/$/, '');
 }
+
+/** Canonical matching key for saved Lever listings and their exact application forms. */
+export function savedLeverApplicationKey(value: string): string | null {
+  try {
+    const url = new URL(value);
+    if (url.origin !== 'https://jobs.lever.co' || url.username || url.password) return null;
+    if (!isLeverApplicationForm(url.href)) url.pathname = url.pathname.replace(/\/$/, '') + '/apply';
+    return leverApplicationKey(url.href);
+  } catch { return null; }
+}

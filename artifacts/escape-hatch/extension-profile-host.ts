@@ -8,12 +8,14 @@ import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { userDataRoot } from './user-data.ts';
-import { selectHostWorkspace } from './workspace-owner-file.ts';
+import { readHostWorkspaceOwner, selectHostWorkspace } from './workspace-owner-file.ts';
 import { parsePairing, PAIRING_SCHEMA, SAFE_ANSWER_IDS, type Pairing } from './src/lib/extension-pairing.ts';
 export { PAIRING_SCHEMA, SAFE_ANSWER_IDS } from './src/lib/extension-pairing.ts';
 import { readWorkspace } from './workspace-file.ts';
-import { readPreferences, updatePreferences } from './preference-file.ts';
-import { PROFILE_KEY, parseProfileStorage, type Profile } from './src/lib/storage.ts';
+import { preferenceStoreLocator, readPreferences, updatePreferences } from './preference-file.ts';
+import { APPLICATIONS_KEY, PROFILE_KEY, parseApplicationsStorage, parseProfileStorage, type Profile } from './src/lib/storage.ts';
+import { leverApplicationKey, savedLeverApplicationKey } from './src/lib/application-puzzle.ts';
+import { syncReviewedApplicationAnswers } from './reviewed-application-answers.ts';
 import { emptyPreferences, questions, reusableValue, type Preferences } from './src/lib/application-preferences.ts';
 import { OWNER_BINDING_SCHEMA, AGENT_CONTEXT_SCHEMA, parseWorkspaceOwnerBinding, authorizeAgentContext, type WorkspaceOwnerBinding } from './src/lib/workspace-owner-binding.ts';
 import { EXTENSION_PROFILE_FIELDS, admitExtensionProfileProjection, type ApprovedExtensionProfile } from './src/lib/extension-profile-admission.ts';
@@ -27,10 +29,11 @@ const digest = (v: unknown) => createHash('sha256').update(JSON.stringify(v)).di
 const fail = (reason: string) => ({ ok: false as const, reason });
 export type ReviewItem = { id: string; label: string; value: string };
 export type HostRequest = {
-  protocol: 1; action: 'status' | 'confirm' | 'project' | 'privacy-preference-read' | 'privacy-preference-write'; browserProfileId: string;
+  protocol: 1; action: 'status' | 'confirm' | 'project' | 'sync-reviewed-answers' | 'privacy-preference-read' | 'privacy-preference-write'; browserProfileId: string;
   privacyConsentEnabled?: boolean; expectedPrivacyRevision?: string;
   expectedWorkspaceRevision?: string; expectedPreferenceRevision?: string;
   approvedFields?: string[]; approvedAnswerIds?: string[];
+  applicationUrl?: string; reviewedFields?: unknown;
   existingProfile?: unknown; existingAnswers?: Record<string, string>;
 };
 export type HostOptions = { dataRoot?: string };
@@ -124,7 +127,7 @@ async function snapshot(root: string) {
     return [{ id, label: id.replaceAll('_', ' '), value: value.trim() }];
   });
   return { workspaceRevision: saved.revision, profileRevision: profileDigest,
-    preferenceRevision: preferenceDigest, profile, answers, availableFields,
+    preferenceRevision: preferenceDigest, profile, applications: saved.workspace.values[APPLICATIONS_KEY], answers, availableFields,
     privacyConsentEnabled: preferences.application_privacy_acknowledgement_enabled === true };
 }
 function normalizeExisting(input: unknown): ApprovedExtensionProfile | null {
@@ -139,10 +142,13 @@ function normalizeExisting(input: unknown): ApprovedExtensionProfile | null {
   return Object.keys(existing).length > 1 ? existing : null;
 }
 function parseRequest(input: unknown): HostRequest | null {
-  if (!object(input) || Object.keys(input).some(k => !['protocol','action','browserProfileId','expectedWorkspaceRevision','expectedPreferenceRevision','approvedFields','approvedAnswerIds','existingProfile','existingAnswers','privacyConsentEnabled','expectedPrivacyRevision'].includes(k)) ||
-    input.protocol !== 1 || typeof input.action !== 'string' || !['status','confirm','project','privacy-preference-read','privacy-preference-write'].includes(input.action) || typeof input.browserProfileId !== 'string' || !uuid.test(input.browserProfileId)) return null;
+  if (!object(input) || Object.keys(input).some(k => !['protocol','action','browserProfileId','expectedWorkspaceRevision','expectedPreferenceRevision','approvedFields','approvedAnswerIds','existingProfile','existingAnswers','applicationUrl','reviewedFields','privacyConsentEnabled','expectedPrivacyRevision'].includes(k)) ||
+    input.protocol !== 1 || typeof input.action !== 'string' || !['status','confirm','project','sync-reviewed-answers','privacy-preference-read','privacy-preference-write'].includes(input.action) || typeof input.browserProfileId !== 'string' || !uuid.test(input.browserProfileId)) return null;
   if (input.expectedWorkspaceRevision !== undefined && (typeof input.expectedWorkspaceRevision !== 'string' || !sha.test(input.expectedWorkspaceRevision))) return null;
   if (input.expectedPreferenceRevision !== undefined && (typeof input.expectedPreferenceRevision !== 'string' || !sha.test(input.expectedPreferenceRevision))) return null;
+  if (input.action === 'sync-reviewed-answers') {
+    if (typeof input.applicationUrl !== 'string' || input.applicationUrl.length > 2048 || !Array.isArray(input.reviewedFields)) return null;
+  } else if (input.applicationUrl !== undefined || input.reviewedFields !== undefined) return null;
   if (input.action === 'privacy-preference-write' &&
     (typeof input.privacyConsentEnabled !== 'boolean' || typeof input.expectedPrivacyRevision !== 'string' || !sha.test(input.expectedPrivacyRevision))) return null;
   if (input.action !== 'privacy-preference-write' && (input.privacyConsentEnabled !== undefined || input.expectedPrivacyRevision !== undefined)) return null;
@@ -198,6 +204,30 @@ export async function handleNativeProfileRequest(input: unknown, callerOrigin: u
     const metadata = { workspaceRevision: source.workspaceRevision, preferenceRevision: source.preferenceRevision, profileRevision: source.profileRevision,
       ...(pairing ? { ownerId: pairing.binding.ownerId, workspaceId: pairing.binding.workspaceId, installationId: pairing.binding.installationId } : {}) };
     const changed = pairing && (pairing.profileDigest !== source.profileRevision || pairing.preferenceDigest !== source.preferenceRevision);
+    if (request.action === 'sync-reviewed-answers') {
+      if (!pairing) return fail('OWNER_UNBOUND');
+      const owner = await readHostWorkspaceOwner(root);
+      if (!owner || !(['ownerId', 'workspaceId', 'installationId'] as const).every(key => owner[key] === pairing.binding[key])) {
+        return fail('OWNER_BINDING_MISMATCH');
+      }
+      const key = leverApplicationKey(request.applicationUrl!);
+      const matches = key ? parseApplicationsStorage(source.applications)?.filter(job =>
+        savedLeverApplicationKey(job.url) === key && ['saved', 'preparing'].includes(job.status)) : null;
+      if (matches?.length !== 1) return fail('SAVED_LEVER_APPLICATION_REQUIRED');
+      const [job] = matches;
+      const preferencePath = options.dataRoot ? path.join(root, 'application-question-preferences.json') : preferenceStoreLocator().preferenceStore;
+      for (const suffix of ['', '.lock.sqlite', '.lock.sqlite-journal', '.lock.sqlite-wal', '.lock.sqlite-shm']) {
+        await noLinks(preferencePath + suffix);
+      }
+      const receipt = await syncReviewedApplicationAnswers(request.reviewedFields,
+        { opportunityId: job.id, url: job.url, employerName: job.company }, preferencePath, async () => {
+          const latest = await readWorkspace(path.join(root, 'workspace.v1.json'));
+          if (latest?.revision !== source.workspaceRevision || digest(await readPairing(file)) !== digest(pairing)) {
+            throw new Error('SOURCE_REVISION_CHANGED');
+          }
+        });
+      return { ok: true as const, ...pairing.binding, ...receipt };
+    }
     if (request.action === 'privacy-preference-read' || request.action === 'privacy-preference-write') {
       if (!pairing) return fail('OWNER_UNBOUND');
       if (changed) return fail('REAPPROVAL_REQUIRED');
@@ -251,6 +281,6 @@ export async function handleNativeProfileRequest(input: unknown, callerOrigin: u
       privacyConsentEnabled: source.privacyConsentEnabled, profile: result.profile, answers };
   } catch (error) {
     const message = (error as Error).message;
-    return fail(['WORKSPACE_REQUIRED','PROFILE_REQUIRED','PAIRING_RECOVERY_REQUIRED','PRIVATE_PATH_LINK_FORBIDDEN','INVALID_EXISTING_PROFILE'].includes(message) ? message : 'PRIVATE_SOURCE_UNAVAILABLE');
+    return fail(['WORKSPACE_REQUIRED','PROFILE_REQUIRED','PAIRING_RECOVERY_REQUIRED','PRIVATE_PATH_LINK_FORBIDDEN','INVALID_EXISTING_PROFILE','SOURCE_REVISION_CHANGED','INVALID_REVIEWED_FORM','REVIEWED_ROLE_ANSWER_TOO_LONG','NEWER_ROLE_ANSWER_PRESERVED','REVIEWED_PROFILE_CAPACITY_OR_VALIDATION_FAILED','REVIEWED_ANSWER_READBACK_UNVERIFIED'].includes(message) ? message : 'PRIVATE_SOURCE_UNAVAILABLE');
   }
 }

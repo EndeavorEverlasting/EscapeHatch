@@ -178,6 +178,14 @@ test('reviewed Lever flow preserves the exact tab and checks the résumé again 
     assert.equal((await submit()).body.error, 'answer_and_submission_listeners_required');
     assert.equal((await request({ ...payload, recordAnswers: true })).body.listeners.recordingAnswers, true);
     assert.equal((await submit({ livePageUrl: unrelated.url() })).body.error, 'reviewed_application_tab_mismatch');
+    const saveAnswers = (extra: object = {}) => request({ ...payload, approved: true, ...extra }, undefined, '/reviewed-answers/save');
+    assert.equal((await saveAnswers({ approved: false })).code, 409);
+    assert.equal((await saveAnswers({ livePageUrl: unrelated.url() })).code, 409);
+    const synced = await saveAnswers();
+    assert.equal(synced.code, 200);
+    assert.equal(synced.body.answerSync.status, 'REVIEWED_ANSWERS_SAVED_AND_READ_BACK');
+    assert.equal((await saveAnswers()).body.answerSync.updated, 0);
+    assert.equal(await target.evaluate(() => Reflect.get(window, 'attemptCount')), 0);
     await target.evaluate(() => history.replaceState({}, '', location.pathname + '/other'));
     const wrongStep = (await attach()).body.attemptReceipt;
     assert.equal(wrongStep.action, 'ATTACH');

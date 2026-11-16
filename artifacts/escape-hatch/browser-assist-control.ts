@@ -13,7 +13,7 @@ import {
 import { readReviewedRoleAnswers } from './managed-answer-memory.ts';
 import { ManagedListeners } from './managed-listeners.ts';
 import { LeverAttemptReceipts, type LeverResumeEvidence } from './lever-attempt-receipts.ts';
-import { isLeverApplicationForm, leverApplicationKey } from './src/lib/application-puzzle.ts';
+import { isLeverApplicationForm, leverApplicationKey, savedLeverApplicationKey } from './src/lib/application-puzzle.ts';
 import { enqueueSubmissionSync, retrySubmissionSync, readSubmissionSyncStatus, startSubmissionSync } from './tracker-writeback.ts';
 import { APPLICATIONS_KEY, parseApplicationsStorage } from './src/lib/storage.ts';
 import { withCareerPreferences } from './career-preferences.ts';
@@ -409,15 +409,6 @@ async function leverChallengeVisible(page: Page) {
     .filter({ visible: true }).first().isVisible();
 }
 
-function savedLeverApplicationKey(value: string) {
-  try {
-    const url = new URL(value);
-    if (url.origin !== 'https://jobs.lever.co') return null;
-    if (!isLeverApplicationForm(url.href)) url.pathname = url.pathname.replace(/\/$/, '') + '/apply';
-    return leverApplicationKey(url.href);
-  } catch { return null; }
-}
-
 function isExactManagedLeverTab(context: BrowserContext | null, page: Page, job: string, liveUrl: string) {
   if (!context || savedLeverApplicationKey(job) !== leverApplicationKey(liveUrl)) return false;
   try { return selectExistingApplicationPage(context, job, liveUrl) === page; }
@@ -512,7 +503,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
   // An installed upgrade may retain an old listener object in Vite's cache.
   // Replace observation handles only; never close or navigate employer tabs.
   const previousListeners = cache.listeners;
-  const listeners = previousListeners.implementationVersion === 7 ? previousListeners : new ManagedListeners(undefined, undefined, enqueueSubmissionSync);
+  const listeners = previousListeners.implementationVersion === 8 ? previousListeners : new ManagedListeners(undefined, undefined, enqueueSubmissionSync);
   // Older cached listeners and synthetic middleware fixtures may predate dispose().
   // Preserve the employer tab; replace obsolete handles without invoking an absent method.
   // A new listener starts unarmed and requires exact-application binding before Submit.
@@ -760,8 +751,11 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               (payload.livePageUrl === saved.url || payload.livePageUrl === page.url());
             const selected = confirmedReturn ? page! : selectExistingApplicationPage(context, saved.url, payload.livePageUrl);
             const leverKey = leverApplicationKey(selected.url());
-            if (leverKey && (leverReceipts.pending(leverKey) || await leverChallengeVisible(selected))) {
+            if (leverKey && leverReceipts.pending(leverKey)) {
               return respond(res, 409, { ok: false, error: 'submission_attempt_already_observed', listeners: await listeners.status() });
+            }
+            if (leverKey && await leverChallengeVisible(selected)) {
+              return respond(res, 409, { ok: false, error: 'employer_verification_required' });
             }
             if (!listeners.isBoundTo(selected, saved.id)) {
               await listeners.attach(selected, { opportunityId: saved.id, applicationUrl: selected.url(), opportunityUrl: saved.url, employerName: saved.company }, payload.recordAnswers === true);
@@ -1024,6 +1018,15 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             } catch { return undefined; }
             return { opportunityId, url: applicationUrl, pageUrl };
           };
+          if (url.pathname === PREFIX + '/reviewed-answers/save') {
+            const scope = await roleScopeForPage(page);
+            if (payload.approved !== true || payload.opportunityId !== opportunityId || payload.url !== applicationUrl ||
+                !scope || scope.pageUrl !== payload.livePageUrl || !isLeverApplicationForm(scope.pageUrl)) {
+              return respond(res, 409, { ok: false, error: 'reviewed_application_tab_mismatch' });
+            }
+            const answerSync = await listeners.captureReviewedAnswers(page, opportunityId);
+            return respond(res, 200, { ok: true, answerSync });
+          }
           if (url.pathname === PREFIX + '/role-answers/save') {
             if (payload.opportunityId !== opportunityId || payload.url !== applicationUrl || payload.approved !== true) {
               return respond(res, 409, { ok: false, error: 'Confirm the role answers for this exact application.' });
@@ -1105,7 +1108,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             const contact = reviewedContactFields(payload.profile);
             const now = new Date().toISOString();
             const ids: Record<string, string> = { linkedin_url: 'linkedin', region: 'region' };
-            const merged = { ...emptyPreferences(), reviewed_role_answers: preferences.reviewed_role_answers, preferences: { ...preferences.preferences } };
+            const merged = { ...emptyPreferences(), reviewed_role_answers: preferences.reviewed_role_answers, discovered_answers: preferences.discovered_answers, preferences: { ...preferences.preferences } };
             for (const [key, value] of Object.entries(contact)) {
               const id = 'identity.' + (ids[key] || key);
               if (!merged.preferences[id]) {
@@ -1234,7 +1237,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             const contact = reviewedContactFields(payload.profile);
             const now = new Date().toISOString();
             const ids: Record<string, string> = { linkedin_url: 'linkedin', region: 'region' };
-            const merged = { ...emptyPreferences(), reviewed_role_answers: preferences.reviewed_role_answers, preferences: { ...preferences.preferences } };
+            const merged = { ...emptyPreferences(), reviewed_role_answers: preferences.reviewed_role_answers, discovered_answers: preferences.discovered_answers, preferences: { ...preferences.preferences } };
             for (const [key, value] of Object.entries(contact)) {
               const id = 'identity.' + (ids[key] || key);
               if (!merged.preferences[id]) merged.preferences[id] = { scope: 'profile_preference', source: 'user', value, updated_at: now };
@@ -1544,7 +1547,8 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               if (resumeEvidence !== 'VERIFIED') return blocked(LEVER_RESUME_ERRORS[resumeEvidence]);
               const blockers = await inspectRequiredFieldBlockers(page, opportunityId, applicationUrl);
               if (blockers.length) return blocked('submit_blocked_incomplete_form', { blockers });
-              if (!await listeners.captureReviewedAnswers(page, opportunityId).then(() => true, () => false)) return blocked('reviewed_answer_capture_unverified');
+              const answerSync = await listeners.captureReviewedAnswers(page, opportunityId).catch(() => null);
+              if (!answerSync) return blocked('reviewed_answer_capture_unverified');
               resumeEvidence = await verifyLeverResume(page, resume.sha256).catch(() => 'UNCHECKED' as const);
               if (resumeEvidence !== 'VERIFIED') return blocked(LEVER_RESUME_ERRORS[resumeEvidence]);
               if (page.url() !== beforeUrl || await leverChallengeVisible(page)) {
@@ -1568,7 +1572,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               const status = await listeners.status();
               return respond(res, 200, {
                 ok: true, state: status.submission?.state === 'ARMED' ? 'PENDING' : status.submission?.state,
-                finalActionActivated: activated, listeners: status, trackerSync: await readSubmissionSyncStatus(),
+                finalActionActivated: activated, answerSync, listeners: status, trackerSync: await readSubmissionSyncStatus(),
                 attemptReceipt: leverReceipts.recent(attemptKey).find(item => item.id === attempt.id),
               });
             }

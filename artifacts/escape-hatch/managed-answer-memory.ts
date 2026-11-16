@@ -1,45 +1,17 @@
+import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
 import type { Page } from '@playwright/test';
 import { matchQuestion, normalizeQuestion, questions, safeDiscoveredQuestion, parsePreferences, roleQuestionKey, MAX_ROLE_ANSWER_LENGTH, type Preferences } from './src/lib/application-preferences.ts';
 
 export type QuestionDescriptor = { question: string; normalized_question: string; question_id: string | null };
 export type CapturedAnswer = { question: string; normalized_question: string; question_id: string | null; value: string; source: 'user'; captured_at: string; employer_name?: string };
-export async function readReviewedAnswers(page: Page, employerName: string): Promise<CapturedAnswer[]> {
-  const answers = await page.evaluate(() => {
-    const labelText = (label: Element) => {
-      const copy = label.cloneNode(true) as Element;
-      copy.querySelectorAll('input,select,textarea,button').forEach(control => control.remove());
-      return copy.textContent?.trim() || '';
-    };
-    const form = document.querySelector('#btn-submit')?.closest('form#application-form');
-    const fields = Array.from(form?.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea') || []);
-    const answers = new Map<string, string[]>();
-    for (const field of fields) {
-      if (/^(eeo|consent)\[/i.test(field.name) || field.matches(':disabled, [readonly]') || field.closest('[hidden], [aria-hidden="true"]') ||
-          !field.getClientRects().length || getComputedStyle(field).visibility !== 'visible' ||
-          !['text', 'email', 'tel', 'url', 'number', 'textarea', 'select-one', 'select-multiple', 'radio', 'checkbox'].includes(field.type)) continue;
-      const group = field.closest('fieldset, [role="group"], [role="radiogroup"], .application-question');
-      const groupLabel = group?.getAttribute('aria-label') || group?.querySelector('legend, .application-label')?.textContent?.trim() || '';
-      const labels = Array.from(field.labels || []).map(labelText).filter(Boolean);
-      const labelledBy = (field.getAttribute('aria-labelledby') || '').split(/\s+/).map(id => document.getElementById(id)?.textContent?.trim() || '').join(' ').trim();
-      const choice = field.type === 'radio' || field.type === 'checkbox';
-      const question = choice ? groupLabel : field.getAttribute('aria-label') || labelledBy || groupLabel || labels[0];
-      if (!question) continue;
-      const values = field instanceof HTMLSelectElement ? Array.from(field.selectedOptions).filter(option => option.value && !option.disabled).map(option => option.text.trim()) :
-        field instanceof HTMLInputElement && choice ? (field.checked && labels[0] ? [labels[0]] : []) : [field.value.trim()];
-      if (!values.some(Boolean)) continue;
-      answers.set(question, [...new Set([...(answers.get(question) || []), ...values])]);
-    }
-    return Array.from(answers, ([question, values]) => ({ question, value: values.join('\n') }));
-  });
-  const capturedAt = new Date().toISOString();
-  return answers.flatMap(({ question, value }) => {
-    const label = normalizeQuestion(question);
-    const id = matchQuestion(question, employerName);
-    if (/\b(?:privacy|disclosure|terms|acknowledg\w*|attest\w*|certif\w*|signature|sign|agree\w*|consent\w*|date|voluntary)\b/.test(label) ||
-        (id && /^(eeo|accommodation|military|veteran)\./.test(id))) return [];
-    return [{ question, normalized_question: label, question_id: id, value, source: 'user' as const, captured_at: capturedAt, employer_name: employerName }];
-  });
+const readReviewedLeverForm = createRequire(import.meta.url)('../../browser/application-assist/reviewed-form.js') as
+  (url: string) => { question: string; kind: string; value: string }[] | null;
+
+export async function readReviewedAnswerSnapshot(page: Page, url: string) {
+  const fields = await page.evaluate(readReviewedLeverForm, url);
+  if (!fields || page.url() !== url) throw new Error('REVIEWED_APPLICATION_CHANGED');
+  return fields;
 }
 
 export function mergeCapturedAnswer(data: Preferences, event: CapturedAnswer): Preferences {

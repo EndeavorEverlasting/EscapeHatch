@@ -135,6 +135,11 @@ async function workspaceCommand(type, payload = {}) {
   const response = await chrome.runtime.sendMessage({ type, ...payload });
   if (!response?.ok) {
     const reason = response?.reason || '';
+    if (reason === 'SAVED_LEVER_APPLICATION_REQUIRED') throw new Error('Save this exact opportunity in EscapeHatch and keep its Lever application open.');
+    if (reason === 'REVIEWED_APPLICATION_CHANGED') throw new Error('The active application changed. Return to the reviewed form and try again.');
+    if (reason === 'REVIEWED_ROLE_ANSWER_TOO_LONG') throw new Error('The reviewed role answer exceeds the local answer limit.');
+    if (reason === 'NEWER_ROLE_ANSWER_PRESERVED') throw new Error('A newer approved answer is already in the workspace. Review the current version before saving.');
+    if (reason === 'REVIEWED_PROFILE_CAPACITY_OR_VALIDATION_FAILED') throw new Error('The current answer set exceeds local profile limits. Saved answers were preserved.');
     if (/NATIVE_HOST|NATIVE_WORKSPACE/.test(reason)) throw new Error('Private workspace connection unavailable. Run EscapeHatch setup, then try again.');
     if (/EXISTING_|LOCAL_PROFILE_CHANGED/.test(reason)) throw new Error('Your saved extension information differs. Both copies are preserved; review them before reconnecting.');
     if (/OWNER|WORKSPACE_MISMATCH|BROWSER|CHROME_PROFILE_MISMATCH|INSTALLATION/.test(reason)) throw new Error('This browser and workspace do not have a matching owner connection. Existing information was preserved.');
@@ -638,6 +643,32 @@ const workspaceStatus = document.getElementById('workspaceStatus');
 const workspaceChoices = document.getElementById('workspaceChoices');
 const confirmWorkspace = document.getElementById('confirmWorkspace');
 let workspaceReview = null;
+const updateLocalProfile = document.getElementById('updateLocalProfile');
+const updateLocalProfileStatus = document.getElementById('updateLocalProfileStatus');
+updateLocalProfile.addEventListener('click', async event => {
+  if (!event.isTrusted) return;
+  updateLocalProfile.disabled = true;
+  try {
+    const tab = await activeTab();
+    const url = new URL(tab.url || '');
+    if (url.origin !== 'https://jobs.lever.co' || !/^\/[^/]+\/[a-f0-9-]{36}\/apply\/?$/i.test(url.pathname)) {
+      throw new Error('Open your reviewed Lever application before updating your profile.');
+    }
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['reviewed-form.js'] });
+    const [capture] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: href => globalThis.EscapeHatchReviewedForm(href),
+      args: [tab.url]
+    });
+    if (!capture?.result?.some(row => row.value)) throw new Error('No completed Lever fields were found on the open application.');
+    const receipt = await workspaceCommand('workspace-sync-reviewed-answers', {
+      tabId: tab.id, applicationUrl: tab.url, reviewedFields: capture.result
+    });
+    updateLocalProfileStatus.textContent = `${receipt.updated} updated, ${receipt.unchanged} already current, ${receipt.skipped} skipped.`;
+  } catch (error) { updateLocalProfileStatus.textContent = error.message; }
+  finally { updateLocalProfile.disabled = false; }
+});
+
 async function renderWorkspace() {
   const state = await workspaceCommand('workspace-view');
   const answers = document.getElementById('knownAnswers');

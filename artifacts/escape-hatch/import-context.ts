@@ -6,7 +6,7 @@ import { pathToFileURL } from 'node:url';
 import { driveResumeAvailability, driveResumeErrorCode, stageDriveResume, verifyDriveResume } from './drive-resume-source.ts';
 import { createTrackerSnapshotFromValues, readBoundedFile } from './tracker-refresh.ts';
 import { preferenceFile, saveReviewedRoleAnswers } from './preference-file.ts';
-import { leverApplicationKey } from './src/lib/application-puzzle.ts';
+import { savedLeverApplicationKey } from './src/lib/application-puzzle.ts';
 import { parseReviewedRoleAnswer } from './src/lib/application-preferences.ts';
 import { selectInstalledHostWorkspace } from './workspace-owner-file.ts';
 import { userDataRoot } from './user-data.ts';
@@ -31,11 +31,10 @@ export async function importContext(kind: string, input: unknown, destination = 
     const raw = input as Record<string, unknown>;
     if (typeof raw.url !== 'string') throw new Error('INVALID_REVIEWED_ROLE_ANSWER');
     const workspace = await readWorkspace(path.join(destination, 'workspace.v1.json'));
-    const leverKey = (value: string) => leverApplicationKey(value) || leverApplicationKey(value.replace(/\/$/, '') + '/apply');
-    const key = leverKey(raw.url);
+    const key = savedLeverApplicationKey(raw.url);
     const matches = parseApplicationsStorage(workspace?.workspace.values[APPLICATIONS_KEY])?.filter(job =>
       (raw.opportunityId === undefined || job.id === raw.opportunityId) &&
-      (job.url === raw.url || (key !== null && leverKey(job.url) === key)) &&
+      (job.url === raw.url || (key !== null && savedLeverApplicationKey(job.url) === key)) &&
       !['applied', 'closed', 'follow_up'].includes(job.status));
     if (matches?.length !== 1) throw new Error('REVIEWED_ROLE_ANSWER_JOB_NOT_VERIFIED');
     const answer = parseReviewedRoleAnswer({ ...raw, opportunityId: matches[0].id, url: matches[0].url });

@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { matchQuestion, normalizeQuestion, discoveredValue, optionMatches, reusableValue, isRoutineApplicantPrivacyAcknowledgement, roleQuestionKey, applicationAnswerValue, type Preferences } from './src/lib/application-preferences.ts';
+import { matchQuestion, normalizeQuestion, discoveredValue, optionMatches, reusableValue, isRoutineApplicantPrivacyAcknowledgement, roleQuestionKey, applicationAnswerValue, employerRelationshipDefault, type Preferences } from './src/lib/application-preferences.ts';
 import { assertEmployerFacingDocumentUrl } from './src/lib/employer-facing-document-url.ts';
 
 export type FillOutcome = { filled: string[]; skipped: string[] };
@@ -215,6 +215,7 @@ export async function fillSavedPreferences(page: Page, preferences: Preferences,
     })) { result.skipped.push(id + ':optional_omitted'); continue; }
     let value = id.startsWith('application:') ? applicationValues.get(id.slice(12)) : id.startsWith('role:') ? roleValues.get(id.slice(5)) :
       id.startsWith('discovered:') ? discoveredValue(id.slice(11), preferences) : reusableValue(id, preferences);
+    value ||= employerRelationshipDefault(id, employerName, preferences);
     if (id === 'identity.phone' && value) value = internationalPhone(value, reusableValue('identity.country', preferences) || '');
     // Conditional detail is applicable only when a clearance is held. Never invent a clearance.
     if (id === 'employment.clearance_details' && reusableValue('employment.current_clearance', preferences) === 'No') value = 'N/A';
@@ -327,7 +328,7 @@ export async function fillSavedPreferences(page: Page, preferences: Preferences,
       result.filled.push(id);
     } catch { result.skipped.push(id + ':not_verified'); }
   }
-  await fillCheckboxGroups(page, preferences, applicationScope, controls, descriptors, result);
+  await fillCheckboxGroups(page, preferences, applicationScope, controls, descriptors, result, employerName);
   await fillEeoSelfIdentificationSignature(page, preferences, result);
   return { filled: [...new Set(result.filled)], skipped: [...new Set(result.skipped)] };
 }
@@ -338,7 +339,7 @@ const PROTECTED_GROUP = /\b(?:privacy|consent|agree|acknowledg\w*|attest\w*|cert
 // Any operator selection already present in a group is preserved untouched.
 async function fillCheckboxGroups(page: Page, preferences: Preferences, scope: { opportunityId: string; url: string } | undefined,
     controls: Awaited<ReturnType<typeof inspectPreferenceFields>>['controls'],
-    descriptors: Awaited<ReturnType<typeof inspectPreferenceFields>>['descriptors'], result: FillOutcome) {
+    descriptors: Awaited<ReturnType<typeof inspectPreferenceFields>>['descriptors'], result: FillOutcome, employerName: string) {
   const groups = new Map<number, number[]>();
   descriptors.forEach((descriptor, index) => {
     if (descriptor.type === 'checkbox' && descriptor.group >= 0 && descriptor.groupPrompt) {
@@ -350,9 +351,11 @@ async function fillCheckboxGroups(page: Page, preferences: Preferences, scope: {
     const key = normalizeQuestion(prompt);
     if (!key || PROTECTED_GROUP.test(key)) continue;
     const scoped = applicationAnswerValue(preferences, scope, prompt);
-    const value = scoped ?? discoveredValue(prompt, preferences);
+    const discovered = scoped ?? discoveredValue(prompt, preferences);
+    const relationship = matchQuestion(prompt, employerName);
+    const value = discovered ?? (relationship ? employerRelationshipDefault(relationship, employerName, preferences) : null);
     if (!value) continue;
-    const id = (scoped !== null ? 'application:' : 'discovered:') + key;
+    const id = scoped !== null ? 'application:' + key : discovered !== null ? 'discovered:' + key : relationship!;
     try {
       const usable = await Promise.all(members.map(async i => await controls[i].isVisible() && await controls[i].isEnabled()));
       if (usable.some(ok => !ok)) { result.skipped.push(id + ':unavailable'); continue; }

@@ -304,6 +304,16 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
         </label>
         <p className="mt-2 text-xs text-muted-foreground">Off until you enable and save it. Applies only after the form shows your saved disability status answer, fills today's date, and keeps any name or date already entered.</p>
       </section>
+      <section className="mt-4 rounded-xl border border-border p-4" aria-label="Former employers">
+        <h3 className="font-display text-xl">Former employers</h3>
+        <label className="mt-3 block text-sm">Companies you have worked for, one per line
+          <textarea data-testid="former-employers" className="mt-1 w-full rounded border border-border p-2" rows={3}
+            key={(data.former_employers || []).join('\n')} defaultValue={(data.former_employers || []).join('\n')}
+            onChange={() => markEdited()}
+            onBlur={event => { const names = [...new Set(event.target.value.split('\n').map(name => name.trim()).filter(Boolean))]; setData(current => ({ ...current, former_employers: names })); }} />
+        </label>
+        <p className="mt-2 text-xs text-muted-foreground">"Have you worked for this employer before?" is answered No unless the employer is listed here or in your saved work history. Listed employers stay for your review. You can correct any answer on the form before Submit.</p>
+      </section>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {questions.filter(q => q.automation_policy === 'fill_if_explicit_preference' && q.confirmation_policy === 'until_changed' && q.id !== 'identity.full_name' && !q.id.startsWith('experience.') && !['education.institution', 'education.credential', 'education.field_of_study', 'education.dates', 'education.details'].includes(q.id)).map(q => {
           const label = preferenceFieldLabel(q.id, q.aliases[0]);

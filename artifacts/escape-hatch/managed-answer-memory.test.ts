@@ -7,7 +7,8 @@ import { fillSavedPreferences } from './managed-form.ts';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { normalizeQuestion } from './src/lib/application-preferences.ts';
+import { normalizeQuestion, employerRelationshipDefault } from './src/lib/application-preferences.ts';
+import { withCareerPreferences } from './career-preferences.ts';
 import { readPreferences, savePreferences } from './preference-file.ts';
 import { syncReviewedApplicationAnswers } from './reviewed-application-answers.ts';
 
@@ -322,14 +323,15 @@ test('reviewed Lever answers wiped by the employer refill deterministically for 
 
     const other = await fillSavedPreferences(page, data, 'Fixture Co', { ...scope, url: scope.url.replace('1111-4111', '2222-4222') });
     assert.deepEqual(other.filled.filter(id => id.startsWith('application:')), []);
-    assert.equal(await page.locator('input[name="cards[prior][field1]"]').isChecked(), false);
+    assert.ok(other.filled.includes('employment.prior_employer_relationship'));
     assert.equal(await page.locator('textarea').inputValue(), '');
 
     await page.selectOption('select[name="eeo[disability]"]', 'no');
     const first = await fillSavedPreferences(page, data, 'Fixture Co', scope);
-    for (const question of [LEVER_PRIOR, LEVER_TOOLS, LEVER_ESSAY, LEVER_LEVEL]) {
+    for (const question of [LEVER_TOOLS, LEVER_ESSAY, LEVER_LEVEL]) {
       assert.ok(first.filled.includes('application:' + normalizeQuestion(question)), question);
     }
+    assert.ok(first.skipped.includes('application:' + normalizeQuestion(LEVER_PRIOR) + ':preserved'));
     assert.deepEqual(await page.locator('[name^="cards[prior]"]').evaluateAll(els => els.map(el => (el as HTMLInputElement).checked)), [false, true]);
     assert.deepEqual(await page.locator('[name^="cards[tools]"]').evaluateAll(els => els.map(el => (el as HTMLInputElement).checked)), [true, false, true]);
     assert.equal(await page.locator('textarea').inputValue(), essay);
@@ -354,6 +356,36 @@ test('reviewed Lever answers wiped by the employer refill deterministically for 
     const mismatch = await fillSavedPreferences(page, optedIn, 'Fixture Co', scope);
     assert.ok(mismatch.skipped.includes('eeo.disability_self_identification_signature:saved_disability_answer_required'));
     assert.equal(await page.locator('[name="eeo[disabilitySignature]"]').inputValue(), '');
+  } finally { await browser.close(); }
+});
+
+test('former-employer questions default to No unless the employer is in the applicant history', async () => {
+  assert.equal(matchQuestion(LEVER_PRIOR, 'Fixture Co'), 'employment.prior_employer_relationship');
+  assert.equal(matchQuestion('Have you previously been employed by Magnet Forensics (or acquired/merged company) in any capacity? (i.e. employee, contractor, co-op, vendor)?', 'Magnet Forensics'), 'employment.prior_employer_relationship');
+  const data = emptyPreferences();
+  assert.equal(employerRelationshipDefault('employment.prior_employer_relationship', 'Fixture Co', data), 'No');
+  assert.equal(employerRelationshipDefault('employment.current_employee', 'Fixture Co', data), 'No');
+  assert.equal(employerRelationshipDefault('identity.email', 'Fixture Co', data), null);
+  assert.equal(employerRelationshipDefault('employment.prior_employer_relationship', '', data), null);
+  assert.equal(employerRelationshipDefault('employment.prior_employer_relationship', 'Fixture Co', { ...data, former_employers: ['Fixture Co Inc'] }), null);
+  assert.equal(employerRelationshipDefault('employment.prior_employer_relationship', 'Fixture', { ...data, former_employers: ['Fixtures Unlimited'] }), 'No');
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  try {
+    const page = await browser.newPage();
+    await page.setContent(leverForm);
+    const prior = page.locator('[name^="cards[prior]"]');
+    const first = await fillSavedPreferences(page, data, 'Fixture Co');
+    assert.ok(first.filled.includes('employment.prior_employer_relationship'));
+    assert.deepEqual(await prior.evaluateAll(els => els.map(el => (el as HTMLInputElement).checked)), [false, true]);
+    await page.setContent(leverForm);
+    const history = withCareerPreferences({ ...data, preferences: { 'experience.company': { scope: 'profile_preference', source: 'user', value: 'Fixture Co', updated_at: data.exported_at } } }, null, '');
+    assert.deepEqual(history.former_employers, ['Fixture Co']);
+    await fillSavedPreferences(page, history, 'Fixture Co');
+    assert.deepEqual(await prior.evaluateAll(els => els.map(el => (el as HTMLInputElement).checked)), [false, false]);
+    const scope = { opportunityId: 'fixture-lever', url: 'https://jobs.lever.co/fixture/11111111-1111-4111-8111-111111111111', pageUrl: page.url() };
+    const corrected = { ...history, application_answers: [{ opportunityId: scope.opportunityId, url: scope.url, question: LEVER_PRIOR, value: 'Yes', approvedAt: data.exported_at }] };
+    await fillSavedPreferences(page, corrected, 'Fixture Co', scope);
+    assert.deepEqual(await prior.evaluateAll(els => els.map(el => (el as HTMLInputElement).checked)), [true, false]);
   } finally { await browser.close(); }
 });
 

@@ -4,7 +4,7 @@ export const PREFERENCE_KEY = 'escapeHatch.applicationQuestionPreferences.v1';
 export const PREFERENCE_SCHEMA = 'escapehatch-application-question-preferences/v1';
 export type Preference = { scope: 'profile_preference'; value: string; source: 'user'; updated_at: string };
 export type DiscoveredAnswer = { question: string; value: string; source: 'user' | 'observed_question'; updated_at: string; accepted: boolean };
-export type Preferences = { schema_version: typeof PREFERENCE_SCHEMA; exported_at: string; preferences: Record<string, Preference>; reviewed_role_answers?: ReviewedRoleAnswer[]; application_answers?: ReviewedApplicationAnswer[]; optional_omissions?: string[]; discovered_answers?: Record<string, DiscoveredAnswer>; job_titles?: string[]; professional_titles?: string[]; require_document_review?: boolean; vpn_recovery_assist_enabled?: boolean; application_privacy_acknowledgement_enabled?: boolean; application_eeo_signature_enabled?: boolean };
+export type Preferences = { schema_version: typeof PREFERENCE_SCHEMA; exported_at: string; preferences: Record<string, Preference>; reviewed_role_answers?: ReviewedRoleAnswer[]; application_answers?: ReviewedApplicationAnswer[]; optional_omissions?: string[]; discovered_answers?: Record<string, DiscoveredAnswer>; job_titles?: string[]; professional_titles?: string[]; former_employers?: string[]; require_document_review?: boolean; vpn_recovery_assist_enabled?: boolean; application_privacy_acknowledgement_enabled?: boolean; application_eeo_signature_enabled?: boolean };
 export const questions = taxonomy.questions;
 export const emptyPreferences = (): Preferences => ({ schema_version: PREFERENCE_SCHEMA, exported_at: new Date().toISOString(), preferences: {}, vpn_recovery_assist_enabled: true, application_privacy_acknowledgement_enabled: false });
 
@@ -37,7 +37,7 @@ export function parsePreferences(input: unknown): Preferences | null {
     if (typeof data.require_document_review !== 'boolean') return null;
     clean.require_document_review = data.require_document_review;
   }
-  for (const key of ['job_titles', 'professional_titles'] as const) {
+  for (const key of ['job_titles', 'professional_titles', 'former_employers'] as const) {
     const titles = data[key];
     if (titles !== undefined) {
       if (!Array.isArray(titles) || titles.length > 100 || titles.some(value => typeof value !== 'string' || !value.trim() || value.length > 160)) return null;
@@ -100,7 +100,7 @@ export function matchQuestion(prompt: string, employerName = ''): string | null 
   // Employer-named former employment questions are a distinct per-application
   // relationship, including subsidiaries or acquired companies.
   if (employer && [
-    'previously employed by ', 'have you previously worked for ',
+    'previously employed by ', 'have you previously worked for ', 'have you previously been employed by ', 'have you been employed by ',
     'have you ever been employed by ', 'have you ever worked for ',
   ].some(prefix => text.startsWith(prefix + employer) &&
     (text.length === (prefix + employer).length ||
@@ -109,6 +109,18 @@ export function matchQuestion(prompt: string, employerName = ''): string | null 
   }
   const matches = questions.filter(q => q.aliases.some(alias => normalizeQuestion(alias) === text));
   return matches.length === 1 ? matches[0].id : null;
+}
+
+// Applicants do not apply to their own former employers: answer No unless the employer
+// appears in the user's employment history or former-employer list, which stays for review.
+export function employerRelationshipDefault(id: string, employerName: string, data: Preferences, history: string[] = []): string | null {
+  if (!/^employment\.(?:prior_employer_relationship|previous_employee|current_employee)$/.test(id)) return null;
+  const employer = normalizeQuestion(employerName);
+  if (employer.length < 2) return null;
+  const known = [...(data.former_employers || []), data.preferences['experience.company']?.value || '', ...history]
+    .map(normalizeQuestion).filter(name => name.length >= 2);
+  const overlaps = (a: string, b: string) => (' ' + a + ' ').includes(' ' + b + ' ');
+  return known.some(name => overlaps(name, employer) || overlaps(employer, name)) ? null : 'No';
 }
 
 // A user-enabled preference is limited to a routine applicant privacy-notice

@@ -199,6 +199,16 @@ test('reviewed Lever flow preserves the exact tab and checks the résumé again 
     assert.equal((await submit()).body.attemptReceipt?.code, 'submission_attempt_already_observed');
     assert.equal((await request({ ...payload, recordAnswers: true })).code, 409);
     assert.equal(await target.evaluate(() => Reflect.get(window, 'attemptCount')), 0);
+    const release = (change: object = {}) => request({ ...payload, attemptId: reserved.id, confirmedRetry: true, ...change }, undefined, '/lever-attempt/release-unconfirmed');
+    assert.equal((await release({ confirmedRetry: false })).body.error, 'reviewed_application_tab_mismatch');
+    assert.equal((await release({ attemptId: 'other' })).body.error, 'pending_attempt_required');
+    assert.equal((await release()).body.error, 'employer_verification_in_progress');
+    assert.equal(restartedJournal.releaseUnconfirmed(job.url + '/apply', reserved.id), false);
+    restartedJournal.recordClick(job.url + '/apply', reserved.id, 'CLICK_OBSERVED', 'observer-fixture');
+    assert.equal(restartedJournal.releaseUnconfirmed(job.url + '/apply', reserved.id), true);
+    assert.equal(restartedJournal.pending(job.url + '/apply'), false);
+    assert.equal(restartedJournal.recent(job.url + '/apply').find(item => item.id === reserved.id)?.response, 'CHALLENGE_UNRESOLVED');
+    assert.equal(restartedJournal.releaseUnconfirmed(job.url + '/apply', reserved.id), false);
     restartedJournal.recordResponse(job.url + '/apply', reserved.id, 'VALIDATION_FAILED', 'NOT_OBSERVED');
     const missing = (await submit()).body.attemptReceipt;
     assert.equal(missing.code, 'resume_missing_or_invalid');

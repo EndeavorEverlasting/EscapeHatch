@@ -1492,6 +1492,34 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             return respond(res, 200, { ok: true, adapter, probe });
           }
 
+          if (url.pathname === PREFIX + '/lever-attempt/release-unconfirmed') {
+            // Operator re-authorization after an employer challenge closed with no employer outcome.
+            const liveUrl = page.url();
+            const key = leverApplicationKey(liveUrl);
+            if (payload.confirmedRetry !== true || !key || payload.opportunityId !== opportunityId || payload.url !== applicationUrl ||
+                payload.livePageUrl !== liveUrl || !isLeverApplicationForm(liveUrl) ||
+                !isExactManagedLeverTab(context, page, applicationUrl, liveUrl) || !listeners.isBoundTo(page, opportunityId)) {
+              return respond(res, 409, { ok: false, error: 'reviewed_application_tab_mismatch' });
+            }
+            const attempt = leverReceipts.recent(key).find(item => item.action === 'SUBMIT' && item.dispatch !== 'NOT_ATTEMPTED');
+            if (!attempt || attempt.id !== payload.attemptId || attempt.response !== 'PENDING') {
+              return respond(res, 409, { ok: false, error: 'pending_attempt_required', attempt: attempt ?? null });
+            }
+            const status = await listeners.status();
+            if (status.submission?.state === 'CONFIRMED' || status.receipts.some(receipt => receipt.opportunityId === opportunityId)) {
+              return respond(res, 409, { ok: false, error: 'employer_confirmation_observed', attempt });
+            }
+            if (Date.now() - Date.parse(attempt.createdAt) < 60000 || await leverChallengeVisible(page)) {
+              return respond(res, 409, { ok: false, error: 'employer_verification_in_progress', attempt });
+            }
+            const terminal = page.locator('form#application-form #btn-submit').and(page.getByRole('button', { name: /^submit application$/i }));
+            if (await terminal.count() !== 1 || !await terminal.isEnabled() || page.url() !== liveUrl) {
+              return respond(res, 409, { ok: false, error: 'application_changed_review_required', attempt });
+            }
+            if (!leverReceipts.releaseUnconfirmed(key, attempt.id)) return respond(res, 409, { ok: false, error: 'pending_attempt_required', attempt });
+            const rearmed = await listeners.arm();
+            return respond(res, 200, { ok: true, released: leverReceipts.recent(key).find(item => item.id === attempt.id), listeners: rearmed });
+          }
           if (url.pathname === PREFIX + '/submit-authorized') {
             // Operator-authorized terminal Submit for the bound opportunity. Listener must already be ARMED.
             if (!opportunityId || payload.opportunityId !== opportunityId) {
@@ -1569,9 +1597,12 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               });
               const activated = await terminal.click({ timeout: 5000 }).then(() => true, () => false);
               leverReceipts.recordClick(attemptKey, attempt.id, activated ? 'CLICK_RETURNED' : 'CLICK_UNCERTAIN');
+              await page.waitForTimeout(3000).catch(() => {});
+              const employerChallenge = await leverChallengeVisible(page).catch(() => false);
               const status = await listeners.status();
               return respond(res, 200, {
                 ok: true, state: status.submission?.state === 'ARMED' ? 'PENDING' : status.submission?.state,
+                employerChallenge,
                 finalActionActivated: activated, answerSync, listeners: status, trackerSync: await readSubmissionSyncStatus(),
                 attemptReceipt: leverReceipts.recent(attemptKey).find(item => item.id === attempt.id),
               });

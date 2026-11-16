@@ -125,6 +125,7 @@ const responseLabels: Record<LeverReceipt['response'], string> = {
   PENDING: 'awaiting employer response',
   LEVER_VERIFICATION_ERROR: 'Lever reported a verification error; cause unspecified',
   VALIDATION_FAILED: 'validation failed',
+  CHALLENGE_UNRESOLVED: 'employer challenge closed without a response; released for an approved retry',
   CONFIRMED: 'employer confirmation observed',
 };
 

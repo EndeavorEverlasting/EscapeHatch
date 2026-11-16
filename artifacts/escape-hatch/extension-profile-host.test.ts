@@ -6,11 +6,11 @@ import os from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { PassThrough, Readable } from 'node:stream';
-import { handleNativeProfileRequest, nativeExtensionOrigin, PAIRING_SCHEMA } from './extension-profile-host.ts';
+import { handleNativeProfileRequest, nativeExtensionOrigin, PAIRING_SCHEMA, type HostRequest } from './extension-profile-host.ts';
 import { MAX_NATIVE_BYTES, encodeNativeMessage, readNativeMessage } from './native-messaging-host.ts';
-import { saveWorkspace } from './workspace-file.ts';
+import { readWorkspace, saveWorkspace } from './workspace-file.ts';
 import { savePreferences, readPreferences } from './preference-file.ts';
-import { PROFILE_KEY, ANSWERS_KEY, emptyProfile } from './src/lib/storage.ts';
+import { PROFILE_KEY, ANSWERS_KEY, APPLICATIONS_KEY, emptyProfile } from './src/lib/storage.ts';
 import { WORKSPACE_SCHEMA } from './src/lib/workspace-bootstrap.ts';
 import { emptyPreferences } from './src/lib/application-preferences.ts';
 
@@ -28,7 +28,7 @@ async function fixture() {
     'employment.work_authorization_proof': preference('Synthetic eligibility'), 'legal.non_compete_blocking': preference('Synthetic legal'), 'compensation.desired_annual_salary': preference('Synthetic salary') } };
   await saveWorkspace(workspace, null, workspaceFile);
   await savePreferences(preferences, preferenceFile);
-  const request = (action: 'status' | 'confirm' | 'project' | 'privacy-preference-read' | 'privacy-preference-write', extra: object = {}, selectedBrowser = browser) => handleNativeProfileRequest({ protocol: 1, action, browserProfileId: selectedBrowser, ...extra }, origin, { dataRoot: root });
+  const request = (action: HostRequest['action'], extra: object = {}, selectedBrowser = browser) => handleNativeProfileRequest({ protocol: 1, action, browserProfileId: selectedBrowser, ...extra }, origin, { dataRoot: root });
   const status = await request('status');
   assert.equal(status.ok, true);
   const confirm = (extra: object = {}) => request('confirm', { expectedWorkspaceRevision: (status as any).workspaceRevision,
@@ -216,5 +216,50 @@ test('real stdio entry emits exactly one framed response and no stdout diagnosti
     assert.equal(child.stdout.length, length + 4);
     const response = JSON.parse(child.stdout.subarray(4).toString());
     assert.equal(response.status, 'REVIEW_REQUIRED');
+  } finally { await f.cleanup(); }
+});
+
+test('explicit reviewed-form sync updates the paired private store for one saved Lever opportunity', async () => {
+  const f = await fixture();
+  try {
+    const url = 'https://jobs.lever.co/fixture/11111111-1111-4111-8111-111111111111';
+    const job = { id: 'fixture-a', url, company: 'Fixture', role: 'Engineer', status: 'preparing', priority: 'normal',
+      notes: '', nextAction: '', updatedAt: new Date().toISOString() };
+    await saveWorkspace({ ...f.workspace, values: { ...f.workspace.values, [APPLICATIONS_KEY]: [job] } },
+      (await readWorkspace(f.workspaceFile))!.revision, f.workspaceFile);
+    const source = await f.request('status') as any;
+    await f.confirm({ expectedWorkspaceRevision: source.workspaceRevision });
+    const question = 'What excites you about this role? 1–4 sentences';
+    const value = '  Fixture role prose.\n\nSecond paragraph.\n';
+    const reviewedFields = [
+      { question: 'Website', kind: 'url', value: 'https://new.example.test' },
+      { question, kind: 'textarea', value },
+      { question: 'Privacy acknowledgement', kind: 'checkbox', value: 'I agree' },
+      { question: 'How did you hear about us?', kind: 'select-one', value: 'Fixture referral' },
+      { question: 'Unmapped fixture tooling', kind: 'checkbox', value: 'Service Desk\nWorkflow Studio' },
+      { question: 'Email', kind: 'text', value: 'fixture@example.test' },
+      { question: 'Email address', kind: 'email', value: '' },
+    ];
+    const request = { applicationUrl: url + '/apply', reviewedFields };
+    const before = await fs.readFile(f.preferenceFile, 'utf8');
+    assert.deepEqual(await f.request('sync-reviewed-answers', request, randomUUID()), { ok: false, reason: 'CHROME_PROFILE_MISMATCH' });
+    assert.deepEqual(await f.request('sync-reviewed-answers', { ...request, applicationUrl: url + '/thanks' }), { ok: false, reason: 'SAVED_LEVER_APPLICATION_REQUIRED' });
+    assert.equal(await fs.readFile(f.preferenceFile, 'utf8'), before);
+    const saved = await f.request('sync-reviewed-answers', request) as any;
+    assert.equal(saved.status, 'REVIEWED_ANSWERS_SAVED_AND_READ_BACK');
+    assert.equal(saved.updated, 3);
+    assert.equal(saved.skipped, 3);
+    assert.equal(JSON.stringify(saved).includes('Fixture role prose'), false);
+    const prefs = await readPreferences(f.preferenceFile);
+    assert.equal(prefs.preferences['identity.website'].value, 'https://new.example.test');
+    assert.equal(prefs.preferences['identity.email'], undefined);
+    assert.equal(prefs.reviewed_role_answers?.[0]?.value, value);
+    assert.equal(prefs.reviewed_role_answers?.[0]?.url, url);
+    assert.equal(prefs.discovered_answers?.['unmapped fixture tooling']?.accepted, false);
+    assert.equal(prefs.application_privacy_acknowledgement_enabled, false);
+    const repeated = await f.request('sync-reviewed-answers', request) as any;
+    assert.equal(repeated.updated, 0);
+    assert.equal(repeated.unchanged, 3);
+    assert.deepEqual(await readPreferences(f.preferenceFile), prefs);
   } finally { await f.cleanup(); }
 });

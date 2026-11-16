@@ -148,27 +148,38 @@ export async function clearPreferences(file = preferenceFile()) {
   await transaction(file, () => fs.rm(file, { force: true }));
 }
 
+export function mergeReviewedRoleAnswers(current: Preferences, answers: ReviewedRoleAnswer[]) {
+  const rows = [...(current.reviewed_role_answers || [])];
+  for (const answer of answers) {
+    const index = rows.findIndex(row => sameRoleAnswerSlot(row, answer));
+    if (index < 0) { rows.push(answer); continue; }
+    const prior = rows[index];
+    if (prior.value !== answer.value && Date.parse(answer.approvedAt) <= Date.parse(prior.approvedAt)) {
+      throw new Error('NEWER_ROLE_ANSWER_PRESERVED');
+    }
+    if (prior.value !== answer.value || Date.parse(answer.approvedAt) > Date.parse(prior.approvedAt)) rows[index] = answer;
+  }
+  return answers.length ? { ...current, reviewed_role_answers: rows } : current;
+}
+
 /** Write and verify under the same lock. Reimports never displace newer approval. */
 export function saveReviewedRoleAnswers(answers: ReviewedRoleAnswer[], file = preferenceFile()) {
   if (!answers.length) return Promise.resolve({ verified: 0 });
+  return updateAndVerifyPreferences(current => mergeReviewedRoleAnswers(current, answers),
+    stored => answers.every(answer => stored.reviewed_role_answers?.some(row =>
+      sameRoleAnswerSlot(row, answer) && row.value === answer.value)), file).then(() => ({ verified: answers.length }));
+}
+
+/** The caller verifies its exact result before the preference transaction releases ownership. */
+export function updateAndVerifyPreferences(
+  update: (current: Preferences) => Preferences | Promise<Preferences>,
+  verify: (stored: Preferences) => boolean,
+  file = preferenceFile(),
+) {
   return transaction(file, async () => {
     const current = await readPreferencesUnlocked(file);
-    const rows = [...(current.reviewed_role_answers || [])];
-    for (const answer of answers) {
-      const index = rows.findIndex(row => sameRoleAnswerSlot(row, answer));
-      if (index < 0) { rows.push(answer); continue; }
-      const prior = rows[index];
-      if (prior.value === answer.value) {
-        if (Date.parse(answer.approvedAt) > Date.parse(prior.approvedAt)) rows[index] = answer;
-        continue;
-      }
-      if (Date.parse(answer.approvedAt) <= Date.parse(prior.approvedAt)) throw new Error('NEWER_ROLE_ANSWER_PRESERVED');
-      rows[index] = answer;
-    }
-    await writePreferences({ ...current, reviewed_role_answers: rows }, file);
-    const verified = await readPreferencesUnlocked(file);
-    if (!answers.every(answer => verified.reviewed_role_answers?.some(row =>
-      sameRoleAnswerSlot(row, answer) && row.value === answer.value))) throw new Error('ROLE_ANSWER_READBACK_UNVERIFIED');
-    return { verified: answers.length };
+    const next = await update(current);
+    if (next !== current) await writePreferences(next, file);
+    if (!verify(await readPreferencesUnlocked(file))) throw new Error('REVIEWED_ANSWER_READBACK_UNVERIFIED');
   });
 }

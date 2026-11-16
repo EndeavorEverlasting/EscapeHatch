@@ -156,6 +156,18 @@
       await storage.set({ [SYNC]: { ...nextBinding, paired: true, paused: false, status: 'READY' } });
       return refresh();
     }
+    async function syncReviewedAnswers(applicationUrl, reviewedFields) {
+      const sync = (await read())[SYNC];
+      if (!sync?.paired || sync.paused) throw new Error('OWNER_UNBOUND');
+      const receipt = await request('sync-reviewed-answers', { applicationUrl, reviewedFields });
+      assertBinding(receipt, sync);
+      const { status, updated, unchanged, skipped } = receipt;
+      if (status !== 'REVIEWED_ANSWERS_SAVED_AND_READ_BACK' ||
+          ![updated, unchanged, skipped].every(value => Number.isInteger(value) && value >= 0)) {
+        throw new Error('INVALID_PROFILE_RECEIPT');
+      }
+      return { status, updated, unchanged, skipped };
+    }
     async function privacy(action, enabled, expectedRevision) {
       await browserId(); // Establish the owner-bound browser identity before the concurrency snapshot.
       const before = await read(), sync = before[SYNC];
@@ -188,7 +200,7 @@
       await storage.set({ [PROFILE]: profile, [PREF]: preferences, [SYNC]: { ...sync, status: 'LOCAL_EDIT' } });
       return view();
     }
-    return { view, review, refresh, confirm, edit, privacy };
+    return { view, review, refresh, confirm, edit, privacy, syncReviewedAnswers };
   }
   root.EscapeHatchNativeProfile = { create, cleanProfile, cleanAnswers, PROFILE, LEGACY, SYNC, ANSWERS, BROWSER, HOST };
   if (typeof module !== 'undefined') module.exports = root.EscapeHatchNativeProfile;

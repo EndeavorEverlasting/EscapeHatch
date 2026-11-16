@@ -3,8 +3,9 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import type { Page } from '@playwright/test';
-import { saveReviewedRoleAnswers, updatePreferences } from './preference-file.ts';
-import { installAnswerMemory, mergeCapturedAnswer, mergeQuestionCatalog, readReviewedAnswers, readReviewedRoleAnswers, scanQuestionCatalog } from './managed-answer-memory.ts';
+import { updatePreferences } from './preference-file.ts';
+import { installAnswerMemory, mergeCapturedAnswer, mergeQuestionCatalog, readReviewedAnswerSnapshot, scanQuestionCatalog } from './managed-answer-memory.ts';
+import { syncReviewedApplicationAnswers } from './reviewed-application-answers.ts';
 import { installManagedSubmissionObserver, type LeverAttemptEvent, type ManagedSubmissionReceipt } from './managed-submission-observer.ts';
 import { parseSubmissionEvidence } from './src/lib/submission-reconciliation.ts';
 import { userDataRoot, legacyPrivateRoots } from './user-data.ts';
@@ -85,7 +86,7 @@ export function submissionAdapter(applicationUrl: string) {
 }
 
 export class ManagedListeners {
-  readonly implementationVersion = 7;
+  readonly implementationVersion = 8;
   private leverAttempt: ((event: LeverAttemptEvent) => void) | null = null;
   private page: Page | null = null;
   private stopMemory: (() => Promise<void>) | null = null;
@@ -203,20 +204,14 @@ export class ManagedListeners {
         !this.scope || !this.isBoundTo(page, opportunityId) || page.url() !== this.scope.applicationUrl) {
       throw new Error('Start answer recording and arm the submission listener on the existing application.');
     }
-    const answers = await readReviewedAnswers(page, this.scope.employerName);
-    const roleAnswers = await readReviewedRoleAnswers(page);
-    const approvedAt = new Date().toISOString();
-    if (page.url() !== this.scope.applicationUrl) throw new Error('Application changed during answer capture.');
-    let saved = 0;
-    await updatePreferences(current => answers.reduce((data, event) => {
-      const next = mergeCapturedAnswer(data, event);
-      if (next !== data) saved++;
-      return next;
-    }, current), this.preferencesPath);
-    const verified = await saveReviewedRoleAnswers(roleAnswers.map(answer => ({
-      ...answer, opportunityId, url: this.scope!.opportunityUrl || this.scope!.applicationUrl, approvedAt,
-    })), this.preferencesPath);
-    this.savedAnswers += saved + verified.verified;
+    const answers = await readReviewedAnswerSnapshot(page, this.scope.applicationUrl);
+    const receipt = await syncReviewedApplicationAnswers(answers, {
+      opportunityId, url: this.scope.opportunityUrl || this.scope.applicationUrl, employerName: this.scope.employerName,
+    }, this.preferencesPath, () => {
+      if (page.url() !== this.scope?.applicationUrl) throw new Error('REVIEWED_APPLICATION_CHANGED');
+    });
+    this.savedAnswers += receipt.updated;
+    return receipt;
   }
   async catalog(page: Page) {
     const catalog = await scanQuestionCatalog(page);

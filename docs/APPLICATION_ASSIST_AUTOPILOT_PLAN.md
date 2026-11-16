@@ -91,6 +91,8 @@ Anything else is **REVIEW_REQUIRED** and stops automated progression with a prec
 
 ### Approved Submit on managed Lever
 
+For an already reviewed application, follow the [local agent handoff](agent/P04_REVIEWED_LEVER_APPLICATION.md). The paired extension’s **Update Local Profile** action and the managed reviewed-answer route share the same private save and readback.
+
 An explicit “submit” instruction for a specific reviewed application authorizes one guarded click by the local agent. Continue through recoverable prerequisites without asking for repeat approval or directing the operator to click. Preparation alone never authorizes Submit. Use the installed managed runtime and perform these steps in order:
 
 1. Recover the saved opportunity ID and URL, exact open Lever form URL, current approval, and approved résumé identity from the private workspace. Open the existing tab without reloading or replacing it. Preserve reviewed form values and opportunity-specific prose exactly. The newest explicit correction wins over cached preferences, earlier drafts, and earlier receipts.

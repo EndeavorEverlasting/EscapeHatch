@@ -1,0 +1,82 @@
+{
+  "schema_version": "prompt-parallel-dispatch/v1",
+  "run_id": "reviewed-lever-application",
+  "repository": "EndeavorEverlasting/EscapeHatch",
+  "parent_issue": "https://github.com/EndeavorEverlasting/EscapeHatch/issues/69",
+  "plan_owner": "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md",
+  "handoff_owner": "docs/agent/P04_REVIEWED_LEVER_APPLICATION.md",
+  "base_ref": {
+    "provider_default_branch": "main",
+    "provider_default_head_at_authorship": "f0f22514c2590654aaa63ebafd860cbb765e3e79"
+  },
+  "graph": {
+    "expression": "{ EH-LIVE || EH-PRODUCT } -> EH-PROOF",
+    "initial_width": 2,
+    "max_width": 2,
+    "parallel_disposition": "INDEPENDENT_PRODUCT_BUILD_AND_INSTALLED_SESSION; LIVE_ADAPTER_REQUIRES_LOCAL_HOST"
+  },
+  "convergence_owner": "EH-PROOF",
+  "lanes": [
+    {
+      "lane_id": "EH-LIVE",
+      "mission": "Use the installed runtime to complete the already reviewed exact Lever application and read back one employer attempt.",
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": ["Lever", "existing tracker adapter"],
+      "required_capabilities": ["Windows installed EscapeHatch", "existing Chrome tab", "existing scoped Submit authorization"],
+      "dependencies": [],
+      "evidence_inputs": [
+        {"type": "runtime", "owner": "installed EscapeHatch", "ref": "Status-EscapeHatch.ps1", "freshness": "read at execution", "proof_ceiling": "runtime identity"},
+        {"type": "browser", "owner": "applicant", "ref": "already-open exact Lever form", "freshness": "bind at execution", "proof_ceiling": "live form and provider outcome"}
+      ],
+      "owned_mutation_surfaces": ["same application tab", "private profile preferences", "same-job attempt and confirmation receipts"],
+      "forbidden_surfaces": ["other tabs and applications", "repeat Submit under the same authorization", "protected attestations and authentication prompts", "public applicant data"],
+      "posture": "one local operator-authorized writer",
+      "launch": {"mode": "argv", "argv": ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ".\\Status-EscapeHatch.ps1"]},
+      "return_artifact": "Private answer, attempt, employer confirmation and tracker readback or exact recoverable state.",
+      "validation": ["Exact tab and résumé digest", "Same-opportunity confirmation or unresolved receipt"],
+      "status": "AWAITING_INSTALLED_LOCAL_AGENT"
+    },
+    {
+      "lane_id": "EH-PRODUCT",
+      "mission": "Implement explicit reviewed form sync through the managed and paired browser entry points and provide a bounded local Submit adapter.",
+      "execution_environment": "CI_OR_REMOTE_RUNNER",
+      "provider_access": ["GitHub"],
+      "required_capabilities": ["Git branch", "Node", "Python", "disposable browser fixture"],
+      "dependencies": [],
+      "evidence_inputs": [
+        {"type": "repository", "owner": "EscapeHatch", "ref": "main at authorship", "freshness": "refresh before integration", "proof_ceiling": "source and repository CI"}
+      ],
+      "posture": "one writer on feat/reviewed-application-profile-sync",
+      "owned_mutation_surfaces": ["reviewed form capture", "preference transaction", "existing extension and managed routes", "local agent caller", "focused tests"],
+      "forbidden_surfaces": ["real employer session", "private applicant data", "active instruction settings", "release and promotion policy"],
+      "launch": {"mode": "argv", "argv": ["npm", "--prefix", "artifacts/escape-hatch", "run", "typecheck"]},
+      "return_artifact": "Validated product diff and PR.",
+      "validation": ["Native-host tests", "Managed browser fixture", "Parent and journey validators", "git diff --check"],
+      "status": "CANDIDATE"
+    },
+    {
+      "lane_id": "EH-PROOF",
+      "mission": "Reconcile provider integration separately from installed runtime, employer acceptance and tracker synchronization.",
+      "execution_environment": "CURRENT_CHAT_RUNTIME",
+      "provider_access": ["GitHub"],
+      "required_capabilities": ["Provider readback"],
+      "dependencies": ["EH-LIVE", "EH-PRODUCT"],
+      "evidence_inputs": [
+        {"type": "receipt", "owner": "EscapeHatch", "ref": "local outcome and exact-head PR evidence", "freshness": "read after execution", "proof_ceiling": "observed outcome only"}
+      ],
+      "posture": "read-only reconciliation",
+      "owned_mutation_surfaces": [],
+      "forbidden_surfaces": ["application and GitHub writes from this lane"],
+      "launch": {"mode": "runtime_tool", "operation": "read_exact_pr_and_sanitized_local_receipt"},
+      "return_artifact": "Independent outcome dimensions.",
+      "validation": ["Exact PR head and main containment", "Scope-matched private outcome metadata"],
+      "status": "AWAITING_EVIDENCE"
+    }
+  ],
+  "receipt_contract": {
+    "canonical_validation_status": "UNAVAILABLE_CANONICAL_SCHEMA_AND_RUNNER",
+    "observed_parallel_agent_dispatch": false,
+    "synthetic_browser_evidence_separate_from_employer_confirmation": true
+  },
+  "first_next_command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\\Status-EscapeHatch.ps1"
+}

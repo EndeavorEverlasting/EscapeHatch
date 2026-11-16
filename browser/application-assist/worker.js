@@ -140,7 +140,7 @@ function profileFailure(error) {
   return { ok: false, status: 'BLOCKED', reason: /^[A-Z0-9_]{1,100}$/.test(error?.message || '') ? error.message : 'WORKSPACE_PROFILE_UNAVAILABLE' };
 }
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
-  if (!message || !['workspace-view','workspace-review','workspace-confirm','workspace-refresh','workspace-edit','workspace-clear','workspace-privacy-read','workspace-privacy-write'].includes(message.type)) return;
+  if (!message || !['workspace-view','workspace-review','workspace-confirm','workspace-refresh','workspace-edit','workspace-sync-reviewed-answers','workspace-clear','workspace-privacy-read','workspace-privacy-write'].includes(message.type)) return;
   const popupUrl = chrome.runtime.getURL('popup.html');
   const popup = sender.id === chrome.runtime.id && sender.url === popupUrl &&
     (!sender.tab || sender.frameId === 0 && sender.tab.url === popupUrl);
@@ -150,6 +150,11 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     if (message.type === 'workspace-review') return nativeProfile.review();
     if (message.type === 'workspace-confirm') return nativeProfile.confirm(message.approval);
     if (message.type === 'workspace-edit') return nativeProfile.edit('save', message.profile);
+    if (message.type === 'workspace-sync-reviewed-answers') {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab?.url !== message.applicationUrl || tab.id !== message.tabId) throw new Error('REVIEWED_APPLICATION_CHANGED');
+      return nativeProfile.syncReviewedAnswers(tab.url, message.reviewedFields);
+    }
     if (message.type === 'workspace-clear') return nativeProfile.edit('clear');
     if (message.type === 'workspace-privacy-read') return nativeProfile.privacy('read');
     if (message.type === 'workspace-privacy-write') return nativeProfile.privacy('write', message.enabled, message.expectedRevision);

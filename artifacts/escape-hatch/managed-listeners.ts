@@ -90,7 +90,7 @@ const ARM_REFUSALS = ['No bound submission observer.', 'Listener disposed.',
   'Preexisting confirmation cannot prove this submission.', 'A unique enabled application form transition control is required before arming.'];
 
 export class ManagedListeners {
-  readonly implementationVersion = 8;
+  readonly implementationVersion = 9;
   private leverAttempt: ((event: LeverAttemptEvent) => void) | null = null;
   private page: Page | null = null;
   private stopMemory: (() => Promise<void>) | null = null;

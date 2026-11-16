@@ -503,7 +503,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
   // An installed upgrade may retain an old listener object in Vite's cache.
   // Replace observation handles only; never close or navigate employer tabs.
   const previousListeners = cache.listeners;
-  const listeners = previousListeners.implementationVersion === 8 ? previousListeners : new ManagedListeners(undefined, undefined, enqueueSubmissionSync);
+  const listeners = previousListeners.implementationVersion === 9 ? previousListeners : new ManagedListeners(undefined, undefined, enqueueSubmissionSync);
   // Older cached listeners and synthetic middleware fixtures may predate dispose().
   // Preserve the employer tab; replace obsolete handles without invoking an absent method.
   // A new listener starts unarmed and requires exact-application binding before Submit.

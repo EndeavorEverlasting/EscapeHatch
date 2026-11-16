@@ -1108,7 +1108,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             const contact = reviewedContactFields(payload.profile);
             const now = new Date().toISOString();
             const ids: Record<string, string> = { linkedin_url: 'linkedin', region: 'region' };
-            const merged = { ...emptyPreferences(), reviewed_role_answers: preferences.reviewed_role_answers, discovered_answers: preferences.discovered_answers, preferences: { ...preferences.preferences } };
+            const merged = { ...emptyPreferences(), ...preferences, preferences: { ...preferences.preferences } };
             for (const [key, value] of Object.entries(contact)) {
               const id = 'identity.' + (ids[key] || key);
               if (!merged.preferences[id]) {
@@ -1118,7 +1118,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             for (const [id, value] of Object.entries(derivedContactPreferenceValues(merged.preferences))) {
               merged.preferences[id] = { scope: 'profile_preference', source: 'user', value, updated_at: now };
             }
-            const roleScope = preferences.reviewed_role_answers?.length ? await roleScopeForPage(page) : undefined;
+            const roleScope = await roleScopeForPage(page);
             const approvedPreferences = withCareerPreferences(merged, payload.careerProfile, payload.targetRole);
             if (!payload.adapterRegistry) {
               // Safe useful work does not require authorizing unknown navigation.
@@ -1237,7 +1237,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             const contact = reviewedContactFields(payload.profile);
             const now = new Date().toISOString();
             const ids: Record<string, string> = { linkedin_url: 'linkedin', region: 'region' };
-            const merged = { ...emptyPreferences(), reviewed_role_answers: preferences.reviewed_role_answers, discovered_answers: preferences.discovered_answers, preferences: { ...preferences.preferences } };
+            const merged = { ...emptyPreferences(), ...preferences, preferences: { ...preferences.preferences } };
             for (const [key, value] of Object.entries(contact)) {
               const id = 'identity.' + (ids[key] || key);
               if (!merged.preferences[id]) merged.preferences[id] = { scope: 'profile_preference', source: 'user', value, updated_at: now };
@@ -1245,7 +1245,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             for (const [id, value] of Object.entries(derivedContactPreferenceValues(merged.preferences))) {
               merged.preferences[id] = { scope: 'profile_preference', source: 'user', value, updated_at: now };
             }
-            const outcome = await fillSavedPreferences(page, withCareerPreferences(merged, payload.careerProfile, payload.targetRole), typeof payload.employerName === 'string' ? payload.employerName.slice(0, 160) : '', preferences.reviewed_role_answers?.length ? await roleScopeForPage(page) : undefined);
+            const outcome = await fillSavedPreferences(page, withCareerPreferences(merged, payload.careerProfile, payload.targetRole), typeof payload.employerName === 'string' ? payload.employerName.slice(0, 160) : '', await roleScopeForPage(page));
             state = fieldProgressState(outcome);
             return respond(res, 200, { ok: true, state, ...outcome, authCheckpoint, evidenceSummary: evidenceDescription(state), requiresOperatorSubmission: true });
           }

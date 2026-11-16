@@ -296,6 +296,13 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
           Reuse my approval for routine applicant privacy notices during job applications
         </label>
         <p className="mt-2 text-xs text-muted-foreground">Off until you enable and save it. EscapeHatch checks only clearly identified application privacy acknowledgements, verifies the result, and leaves optional marketing/data sharing, contracts, certifications, signatures, and final submission for your own review. You can turn this off or clear it at any time.</p>
+        <label className="mt-3 flex items-start gap-2 text-sm">
+          <input type="checkbox" data-testid="eeo-signature-toggle"
+            checked={data.application_eeo_signature_enabled === true}
+            onChange={event => { markEdited(); setData(current => ({ ...current, application_eeo_signature_enabled: event.target.checked })); }} />
+          Complete the disability self-identification name and date with my saved full name
+        </label>
+        <p className="mt-2 text-xs text-muted-foreground">Off until you enable and save it. Applies only after the form shows your saved disability status answer, fills today's date, and keeps any name or date already entered.</p>
       </section>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {questions.filter(q => q.automation_policy === 'fill_if_explicit_preference' && q.confirmation_policy === 'until_changed' && q.id !== 'identity.full_name' && !q.id.startsWith('experience.') && !['education.institution', 'education.credential', 'education.field_of_study', 'education.dates', 'education.details'].includes(q.id)).map(q => {

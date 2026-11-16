@@ -4,7 +4,8 @@ import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { userDataRoot, legacyPrivateRoots } from './user-data.ts';
-import { emptyPreferences, parsePreferences, sameRoleAnswerSlot, type ReviewedRoleAnswer, type Preferences } from './src/lib/application-preferences.ts';
+import { emptyPreferences, parsePreferences, sameRoleAnswerSlot, sameApplicationAnswerSlot, MAX_APPLICATION_ANSWERS,
+  type ReviewedRoleAnswer, type ReviewedApplicationAnswer, type Preferences } from './src/lib/application-preferences.ts';
 
 export function preferenceFile() {
   return process.env.ESCAPEHATCH_PREFERENCES_FILE || path.join(userDataRoot(), 'application-question-preferences.json');
@@ -129,7 +130,8 @@ export function mergePreferenceEdits(current: Preferences, input: unknown, remov
   const incoming = parsePreferences(input);
   if (!incoming || !Array.isArray(removedQuestions) || removedQuestions.some(id => typeof id !== 'string')) throw new Error('Invalid preference edit.');
   const merged: Preferences = { ...incoming, preferences: { ...current.preferences },
-    discovered_answers: { ...current.discovered_answers }, reviewed_role_answers: current.reviewed_role_answers };
+    discovered_answers: { ...current.discovered_answers }, reviewed_role_answers: current.reviewed_role_answers,
+    application_answers: current.application_answers };
   for (const [id, answer] of Object.entries(incoming.preferences)) {
     const prior = current.preferences[id];
     if (!prior || Date.parse(answer.updated_at) >= Date.parse(prior.updated_at)) merged.preferences[id] = answer;
@@ -160,6 +162,17 @@ export function mergeReviewedRoleAnswers(current: Preferences, answers: Reviewed
     if (prior.value !== answer.value || Date.parse(answer.approvedAt) > Date.parse(prior.approvedAt)) rows[index] = answer;
   }
   return answers.length ? { ...current, reviewed_role_answers: rows } : current;
+}
+
+export function mergeApplicationAnswers(current: Preferences, answers: ReviewedApplicationAnswer[]) {
+  const rows = [...(current.application_answers || [])];
+  for (const answer of answers) {
+    const index = rows.findIndex(row => sameApplicationAnswerSlot(row, answer));
+    if (index < 0) { rows.push(answer); continue; }
+    if (Date.parse(answer.approvedAt) >= Date.parse(rows[index].approvedAt)) rows[index] = answer;
+  }
+  if (rows.length > MAX_APPLICATION_ANSWERS) throw new Error('APPLICATION_ANSWER_CAPACITY_REACHED');
+  return answers.length ? { ...current, application_answers: rows } : current;
 }
 
 /** Write and verify under the same lock. Reimports never displace newer approval. */

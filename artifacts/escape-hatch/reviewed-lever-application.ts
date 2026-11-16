@@ -10,6 +10,7 @@ type RequestBody = Record<string, string | boolean>;
 type Reply = { ok?: boolean; error?: string; attemptReceipt?: LeverReceipt; receipts?: LeverReceipt[];
   listeners?: { recordingAnswers?: boolean; submission?: { state?: string }; receipts?: SubmissionEvidence[] };
   answerSync?: { status: string; updated: number; unchanged: number; skipped: number }; blockers?: string[];
+  filled?: string[]; skipped?: string[];
   package?: { documents: { resume?: { reviewedAt?: string; sha256?: string } } };
 };
 type LocalOptions = { livePageUrl: string; port: number; submitReviewedOnce: boolean };
@@ -70,7 +71,17 @@ export async function completeReviewedLeverApplication({ livePageUrl, port, subm
     return { state: 'PROFILE_SYNC_REQUIRED', code: sync.error || 'ANSWER_RECEIPT_UNVERIFIED' };
   }
   const answerSync = sync.answerSync;
-  if (!submitReviewedOnce) return { state: 'ANSWERS_SAVED', answerSync };
+  // Restore approved answers the employer cleared, then save the completed form for this application.
+  const fill = await request('/fill', { ...scope, employerName: job.company });
+  if (!fill.ok) return { state: 'DETERMINISTIC_FILL_REQUIRED', code: fill.error || 'FILL_UNAVAILABLE', answerSync };
+  const restored = { filled: fill.filled?.length ?? 0, skipped: fill.skipped?.length ?? 0 };
+  if (restored.filled) {
+    const resync = await request('/reviewed-answers/save', { ...scope, approved: true });
+    if (!resync.ok || resync.answerSync?.status !== 'REVIEWED_ANSWERS_SAVED_AND_READ_BACK') {
+      return { state: 'PROFILE_SYNC_REQUIRED', code: resync.error || 'ANSWER_RECEIPT_UNVERIFIED', restored };
+    }
+  }
+  if (!submitReviewedOnce) return { state: 'ANSWERS_SAVED', answerSync, restored };
 
   const documents = await request('/documents/status' + query);
   const resume = documents.package?.documents.resume;
@@ -89,7 +100,7 @@ export async function completeReviewedLeverApplication({ livePageUrl, port, subm
   // further action, and never issue another terminal call in this run.
   const sent = await request('/submit-authorized', { ...attachment, confirmedSubmit: true }).catch(() => null);
   if (sent && !sent.ok && sent.attemptReceipt?.dispatch === 'NOT_ATTEMPTED') {
-    return { state: 'SUBMIT_PRECONDITION_REQUIRED', code: sent.error, attempt: sent.attemptReceipt,
+    return { state: 'SUBMIT_PRECONDITION_REQUIRED', code: sent.error, attempt: sent.attemptReceipt, restored,
       blockers: sent.blockers };
   }
   let attempt = sent?.attemptReceipt;

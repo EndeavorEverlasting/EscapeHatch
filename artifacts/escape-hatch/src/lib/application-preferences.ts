@@ -4,7 +4,7 @@ export const PREFERENCE_KEY = 'escapeHatch.applicationQuestionPreferences.v1';
 export const PREFERENCE_SCHEMA = 'escapehatch-application-question-preferences/v1';
 export type Preference = { scope: 'profile_preference'; value: string; source: 'user'; updated_at: string };
 export type DiscoveredAnswer = { question: string; value: string; source: 'user' | 'observed_question'; updated_at: string; accepted: boolean };
-export type Preferences = { schema_version: typeof PREFERENCE_SCHEMA; exported_at: string; preferences: Record<string, Preference>; reviewed_role_answers?: ReviewedRoleAnswer[]; optional_omissions?: string[]; discovered_answers?: Record<string, DiscoveredAnswer>; job_titles?: string[]; professional_titles?: string[]; require_document_review?: boolean; vpn_recovery_assist_enabled?: boolean; application_privacy_acknowledgement_enabled?: boolean };
+export type Preferences = { schema_version: typeof PREFERENCE_SCHEMA; exported_at: string; preferences: Record<string, Preference>; reviewed_role_answers?: ReviewedRoleAnswer[]; application_answers?: ReviewedApplicationAnswer[]; optional_omissions?: string[]; discovered_answers?: Record<string, DiscoveredAnswer>; job_titles?: string[]; professional_titles?: string[]; require_document_review?: boolean; vpn_recovery_assist_enabled?: boolean; application_privacy_acknowledgement_enabled?: boolean; application_eeo_signature_enabled?: boolean };
 export const questions = taxonomy.questions;
 export const emptyPreferences = (): Preferences => ({ schema_version: PREFERENCE_SCHEMA, exported_at: new Date().toISOString(), preferences: {}, vpn_recovery_assist_enabled: true, application_privacy_acknowledgement_enabled: false });
 
@@ -28,6 +28,10 @@ export function parsePreferences(input: unknown): Preferences | null {
   if (data.application_privacy_acknowledgement_enabled !== undefined) {
     if (typeof data.application_privacy_acknowledgement_enabled !== 'boolean') return null;
     clean.application_privacy_acknowledgement_enabled = data.application_privacy_acknowledgement_enabled;
+  }
+  if (data.application_eeo_signature_enabled !== undefined) {
+    if (typeof data.application_eeo_signature_enabled !== 'boolean') return null;
+    clean.application_eeo_signature_enabled = data.application_eeo_signature_enabled;
   }
   if (data.require_document_review !== undefined) {
     if (typeof data.require_document_review !== 'boolean') return null;
@@ -60,6 +64,16 @@ export function parsePreferences(input: unknown): Preferences | null {
       answers.push(answer);
     }
     clean.reviewed_role_answers = answers;
+  }
+  if (data.application_answers !== undefined) {
+    if (!Array.isArray(data.application_answers) || data.application_answers.length > MAX_APPLICATION_ANSWERS) return null;
+    const answers: ReviewedApplicationAnswer[] = [];
+    for (const entry of data.application_answers) {
+      const answer = parseReviewedApplicationAnswer(entry);
+      if (!answer || answers.some(prior => sameApplicationAnswerSlot(prior, answer))) return null;
+      answers.push(answer);
+    }
+    clean.application_answers = answers;
   }
   for (const [id, entry] of Object.entries(data.preferences)) {
     // Unknown but structurally valid taxonomy IDs are retained for future builds;
@@ -222,4 +236,35 @@ export function parseReviewedRoleAnswer(value: unknown): ReviewedRoleAnswer | nu
 
 export function sameRoleAnswerSlot(a: ReviewedRoleAnswer, b: ReviewedRoleAnswer): boolean {
   return a.opportunityId === b.opportunityId && a.url === b.url && roleQuestionKey(a.question) === roleQuestionKey(b.question);
+}
+
+// opportunity_override scope: an answer the operator reviewed on one exact saved application.
+// It refills only that application and never becomes a profile-wide preference.
+export const MAX_APPLICATION_ANSWERS = 150;
+export type ReviewedApplicationAnswer = ReviewedRoleAnswer;
+
+export function parseReviewedApplicationAnswer(value: unknown): ReviewedApplicationAnswer | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const row = value as ReviewedApplicationAnswer;
+  if (typeof row.opportunityId !== 'string' || !row.opportunityId.trim() || row.opportunityId.length > 256 ||
+      typeof row.url !== 'string' || row.url.length > 2048 ||
+      typeof row.question !== 'string' || row.question.length > 512 || normalizeQuestion(row.question).length < 2 ||
+      typeof row.value !== 'string' || !row.value.trim() || row.value.length > MAX_ROLE_ANSWER_LENGTH ||
+      typeof row.approvedAt !== 'string' || !Number.isFinite(Date.parse(row.approvedAt))) return null;
+  try {
+    const url = new URL(row.url);
+    if (url.protocol !== 'https:' || url.username || url.password || url.href !== row.url) return null;
+  } catch { return null; }
+  return { opportunityId: row.opportunityId, url: row.url, question: row.question, value: row.value, approvedAt: row.approvedAt };
+}
+
+export function sameApplicationAnswerSlot(a: ReviewedApplicationAnswer, b: ReviewedApplicationAnswer): boolean {
+  return a.opportunityId === b.opportunityId && a.url === b.url && normalizeQuestion(a.question) === normalizeQuestion(b.question);
+}
+
+export function applicationAnswerValue(data: Preferences, scope: { opportunityId: string; url: string } | undefined, prompt: string): string | null {
+  if (!scope) return null;
+  const key = normalizeQuestion(prompt);
+  return data.application_answers?.find(answer => answer.opportunityId === scope.opportunityId &&
+    answer.url === scope.url && normalizeQuestion(answer.question) === key)?.value ?? null;
 }

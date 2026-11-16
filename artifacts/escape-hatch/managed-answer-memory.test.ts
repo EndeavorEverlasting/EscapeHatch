@@ -4,6 +4,12 @@ import { chromium } from '@playwright/test';
 import { emptyPreferences, matchQuestion, acceptDiscoveredAnswer, discoveredValue, parsePreferences, isRoutineApplicantPrivacyAcknowledgement } from './src/lib/application-preferences.ts';
 import { installAnswerMemory, mergeCapturedAnswer, mergeQuestionCatalog, readReviewedRoleAnswers, scanQuestionCatalog, type CapturedAnswer } from './managed-answer-memory.ts';
 import { fillSavedPreferences } from './managed-form.ts';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { normalizeQuestion } from './src/lib/application-preferences.ts';
+import { readPreferences, savePreferences } from './preference-file.ts';
+import { syncReviewedApplicationAnswers } from './reviewed-application-answers.ts';
 
 test('recapturing an identical discovered answer preserves approval; changed or unapproved answers require review', () => {
   const question = 'Favorite work environment';
@@ -276,4 +282,113 @@ test('a reviewed long role narrative recalls in a fresh browser only for the exa
     await fillSavedPreferences(page, data, '', scope);
     assert.equal(await textarea.inputValue(), '');
   } finally { await browser.close(); }
+});
+
+const LEVER_PRIOR = 'Have you previously been employed by Fixture Co (or acquired/merged company) in any capacity?';
+const LEVER_TOOLS = 'Which of the following platforms have you used? (Select all that apply)';
+const LEVER_ESSAY = 'Describe your automation experience';
+const LEVER_LEVEL = 'Which statement best describes your experience?';
+const LEVER_NOTICE = 'I have read and agree to the Applicant Privacy Notice and understand how my personal information will be used';
+const leverQuestion = (prompt: string, field: string) => `<li class="application-question"><div class="application-label"><div class="text">${prompt}<span class="required">✱</span></div></div><div class="application-field">${field}</div></li>`;
+const leverCheckboxes = (card: string, options: string[]) => `<ul data-qa="checkboxes">${options.map((option, n) =>
+  `<li><label><input type="checkbox" name="cards[${card}][field${n}]" value="${option}"><span>${option}</span></label></li>`).join('')}</ul>`;
+const leverForm = `<form id="application-form"><ul>
+  ${leverQuestion(LEVER_PRIOR, leverCheckboxes('prior', ['Yes', 'No']))}
+  ${leverQuestion(LEVER_TOOLS, leverCheckboxes('tools', ['Alpha Flow', 'Beta Flow', 'Gamma Flow']))}
+  ${leverQuestion(LEVER_ESSAY, '<textarea name="cards[essay][field0]"></textarea>')}
+  ${leverQuestion(LEVER_LEVEL, ['Led delivery', 'Built independently'].map(option => `<label><input type="radio" name="cards[level][field0]" value="${option}">${option}</label>`).join(''))}
+  ${leverQuestion(LEVER_NOTICE, leverCheckboxes('notice', ['Yes']))}
+  </ul>
+  <select name="eeo[disability]"><option value="">Select ...</option><option value="yes">Yes, I have a disability</option>
+    <option value="no">No, I do not have a disability and have not had one in the past</option></select>
+  <label>Name<input type="text" name="eeo[disabilitySignature]"></label>
+  <label>Date<input type="text" name="eeo[disabilitySignatureDate]"></label>
+  <button id="btn-submit" type="submit">Submit application</button></form>`;
+
+test('reviewed Lever answers wiped by the employer refill deterministically for only the exact application', async () => {
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  try {
+    const page = await browser.newPage();
+    await page.setContent(leverForm);
+    const scope = { opportunityId: 'fixture-lever', url: 'https://jobs.lever.co/fixture/11111111-1111-4111-8111-111111111111', pageUrl: page.url() };
+    const data = emptyPreferences();
+    const essay = 'Fixture automation narrative. '.repeat(30).trim();
+    data.application_answers = [[LEVER_PRIOR, 'No'], [LEVER_TOOLS, 'Alpha Flow\nGamma Flow'], [LEVER_ESSAY, essay], [LEVER_LEVEL, 'Built independently']]
+      .map(([question, value]) => ({ opportunityId: scope.opportunityId, url: scope.url, question, value, approvedAt: data.exported_at }));
+    for (const [id, value] of Object.entries({ 'identity.full_name': 'Fixture Applicant', 'eeo.disability_status': 'No' })) {
+      data.preferences[id] = { scope: 'profile_preference', value, source: 'user', updated_at: data.exported_at };
+    }
+    assert.ok(parsePreferences(data)?.application_answers?.length === 4);
+
+    const other = await fillSavedPreferences(page, data, 'Fixture Co', { ...scope, url: scope.url.replace('1111-4111', '2222-4222') });
+    assert.deepEqual(other.filled.filter(id => id.startsWith('application:')), []);
+    assert.equal(await page.locator('input[name="cards[prior][field1]"]').isChecked(), false);
+    assert.equal(await page.locator('textarea').inputValue(), '');
+
+    await page.selectOption('select[name="eeo[disability]"]', 'no');
+    const first = await fillSavedPreferences(page, data, 'Fixture Co', scope);
+    for (const question of [LEVER_PRIOR, LEVER_TOOLS, LEVER_ESSAY, LEVER_LEVEL]) {
+      assert.ok(first.filled.includes('application:' + normalizeQuestion(question)), question);
+    }
+    assert.deepEqual(await page.locator('[name^="cards[prior]"]').evaluateAll(els => els.map(el => (el as HTMLInputElement).checked)), [false, true]);
+    assert.deepEqual(await page.locator('[name^="cards[tools]"]').evaluateAll(els => els.map(el => (el as HTMLInputElement).checked)), [true, false, true]);
+    assert.equal(await page.locator('textarea').inputValue(), essay);
+    assert.equal(await page.locator('input[value="Built independently"]').isChecked(), true);
+    // Consent and signature stay untouched without their explicit opt-ins.
+    assert.equal(await page.locator('[name="cards[notice][field0]"]').isChecked(), false);
+    assert.equal(await page.locator('[name="eeo[disabilitySignature]"]').inputValue(), '');
+
+    await page.locator('[name="cards[tools][field1]"]').check();
+    const optedIn = { ...data, application_privacy_acknowledgement_enabled: true, application_eeo_signature_enabled: true };
+    const second = await fillSavedPreferences(page, optedIn, 'Fixture Co', scope);
+    assert.ok(second.skipped.includes('application:' + normalizeQuestion(LEVER_TOOLS) + ':preserved'));
+    assert.deepEqual(await page.locator('[name^="cards[tools]"]').evaluateAll(els => els.map(el => (el as HTMLInputElement).checked)), [true, true, true]);
+    assert.ok(second.filled.includes('privacy.application_notice_acknowledged'));
+    assert.equal(await page.locator('[name="cards[notice][field0]"]').isChecked(), true);
+    assert.ok(second.filled.includes('eeo.disability_self_identification_signature'));
+    assert.equal(await page.locator('[name="eeo[disabilitySignature]"]').inputValue(), 'Fixture Applicant');
+    assert.match(await page.locator('[name="eeo[disabilitySignatureDate]"]').inputValue(), /^\d{2}\/\d{2}\/\d{4}$/);
+
+    await page.setContent(leverForm);
+    await page.selectOption('select[name="eeo[disability]"]', 'yes');
+    const mismatch = await fillSavedPreferences(page, optedIn, 'Fixture Co', scope);
+    assert.ok(mismatch.skipped.includes('eeo.disability_self_identification_signature:saved_disability_answer_required'));
+    assert.equal(await page.locator('[name="eeo[disabilitySignature]"]').inputValue(), '');
+  } finally { await browser.close(); }
+});
+
+test('explicit review saves per-application answers without promoting employer-specific facts', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'eh-application-answers-'));
+  const file = path.join(root, 'preferences.json');
+  try {
+    await savePreferences(emptyPreferences(), file);
+    const scope = { opportunityId: 'fixture-lever', url: 'https://jobs.lever.co/fixture/11111111-1111-4111-8111-111111111111', employerName: 'Fixture Co' };
+    const essay = 'Fixture automation narrative. '.repeat(30).trim();
+    const fields = [
+      { question: LEVER_PRIOR, kind: 'checkbox', value: 'No' },
+      { question: 'How did you hear about us?', kind: 'checkbox', value: 'LinkedIn' },
+      { question: LEVER_TOOLS, kind: 'checkbox', value: 'Alpha Flow\nGamma Flow' },
+      { question: LEVER_ESSAY, kind: 'textarea', value: essay },
+      { question: LEVER_NOTICE, kind: 'checkbox', value: 'Yes' },
+      { question: 'Website', kind: 'url', value: 'https://fixture.example.test' },
+    ];
+    const receipt = await syncReviewedApplicationAnswers(fields, scope, file);
+    assert.equal(receipt.status, 'REVIEWED_ANSWERS_SAVED_AND_READ_BACK');
+    assert.equal(receipt.applicationAnswers.updated, 4);
+    const saved = await readPreferences(file);
+    const kept = new Map(saved.application_answers?.map(answer => [answer.question, answer]));
+    assert.equal(kept.get(LEVER_PRIOR)?.value, 'No');
+    assert.equal(kept.get('How did you hear about us?')?.value, 'LinkedIn');
+    assert.equal(kept.get(LEVER_ESSAY)?.value, essay);
+    assert.equal(kept.has(LEVER_NOTICE), false);
+    assert.equal(kept.has('Website'), false);
+    assert.ok([...kept.values()].every(answer => answer.opportunityId === scope.opportunityId && answer.url === scope.url));
+    assert.equal(saved.preferences['identity.website']?.value, 'https://fixture.example.test');
+    assert.equal(saved.preferences['recruitment.discovery_source'], undefined);
+    assert.equal(saved.preferences['employment.prior_employer_relationship'], undefined);
+    assert.equal(discoveredValue(LEVER_TOOLS, saved), null);
+    const repeated = await syncReviewedApplicationAnswers(fields, scope, file);
+    assert.deepEqual(repeated.applicationAnswers, { updated: 0, unchanged: 4 });
+    assert.deepEqual(await readPreferences(file), saved);
+  } finally { await fs.rm(root, { recursive: true, force: true }); }
 });

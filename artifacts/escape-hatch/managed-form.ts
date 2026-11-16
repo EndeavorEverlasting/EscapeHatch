@@ -72,7 +72,7 @@ async function inspectPreferenceFields(page: Page, employerName = '') {
     });
     const labelled = (field.getAttribute('aria-labelledby') || '').split(/\s+/).map(id => document.getElementById(id)?.textContent || '');
     const group = field.closest('fieldset');
-    const applicationLabel = field.closest('.application-question, .application-field')?.querySelector('.application-label')?.textContent || '';
+    const applicationLabel = field.closest('.application-question')?.querySelector('.application-label')?.textContent || '';
     const named = [field.name, field.id].flatMap(id => [document.getElementById(id + '_label')?.textContent || '', id.replace(/^user\./, '').replace(/_/g, ' ')]);
     const eeoId = field.id.match(/__systemfield_eeoc_(gender|race|veteran_status)-labeled-radio-\d+$/)?.[1];
     const prompts = [eeoId?.replace(/_/g, ' ') || '', ...labels, ...labelled, field.getAttribute('aria-label') || '', group?.querySelector('legend')?.textContent || '', applicationLabel, ...named];

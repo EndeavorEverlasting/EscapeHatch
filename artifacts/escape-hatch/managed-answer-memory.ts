@@ -166,8 +166,9 @@ export async function readReviewedRoleAnswers(page: Page) {
       copy.querySelectorAll('input,select,textarea,button').forEach(control => control.remove());
       return copy.textContent?.trim() || '';
     });
-    const group = field.closest('fieldset, .application-question, .application-field');
-    const question = explicit || labels.filter(Boolean)[0] || group?.querySelector('legend, .application-label')?.textContent?.trim();
+    const groupLabel = field.closest('.application-question')?.querySelector('.application-label')?.textContent?.trim();
+    const legend = field.closest('fieldset')?.querySelector('legend')?.textContent?.trim();
+    const question = explicit || labels.find(Boolean) || groupLabel || legend;
     return question ? [{ question, value: field.value }] : [];
   }));
   const keys = fields.map(field => roleQuestionKey(field.question));

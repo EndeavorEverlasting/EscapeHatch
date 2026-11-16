@@ -248,10 +248,12 @@ test('a reviewed long role narrative recalls in a fresh browser only for the exa
   try {
     const source = await browser.newPage();
     const label = 'What excites you about this role? 1–4 sentences';
-    const form = `<form><label>${label}<textarea></textarea></label><label>Privacy consent<textarea>Preserve</textarea></label></form>`;
+    const form = `<form><div class="application-question"><div class="application-label">${label}</div>
+      <div class="application-field"><textarea id="role-answer"></textarea></div></div>
+      <label>Privacy consent<textarea>Preserve</textarea></label></form>`;
     const value = ['Fixture experience. '.repeat(20).trim(), 'Fixture review. '.repeat(24).trim()].join('\n\n');
     await source.setContent(form);
-    await source.getByLabel(label).fill(value);
+    await source.locator('#role-answer').fill(value);
     const rows = await readReviewedRoleAnswers(source);
     assert.deepEqual(rows, [{ question: label, value }]);
     const page = await browser.newPage();
@@ -260,7 +262,7 @@ test('a reviewed long role narrative recalls in a fresh browser only for the exa
     const data = emptyPreferences();
     data.reviewed_role_answers = rows.map(row => ({ ...row, opportunityId: scope.opportunityId,
       url: scope.url, approvedAt: data.exported_at }));
-    const textarea = page.getByLabel(label);
+    const textarea = page.locator('#role-answer');
     await fillSavedPreferences(page, data, '', { ...scope, url: 'https://example.test/jobs/b' });
     assert.equal(await textarea.inputValue(), '');
     await fillSavedPreferences(page, data, '', scope);

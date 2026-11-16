@@ -40,6 +40,7 @@ type AuthCheckpoint = {
 
 type ServerResponse = {
   ok: boolean;
+  savedRoleAnswers?: number;
   state?: string;
   browserOpen?: boolean;
   authCheckpoint?: AuthCheckpoint;
@@ -374,6 +375,18 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       setRecordingMessage(result.listeners?.submission?.reason || 'Check the submission listener status before submitting.');
     } catch (error) { setListenerStatus(undefined); setRecordingMessage(error instanceof Error ? error.message : 'Could not track the existing tab. No submission is assumed.'); }
     finally { setBusy(false); }
+  }
+
+  async function saveReviewedRoleAnswers() {
+    if (!currentPage) return;
+    setBusy(true);
+    try {
+      const result = await request('/role-answers/save', { opportunityId: selectedOpportunityId, url,
+        livePageUrl: currentPage.pageUrl, approved: true });
+      setRecordingMessage(`Saved and verified ${result.savedRoleAnswers} role answer(s) in your private profile for this job.`);
+    } catch (error) {
+      setRecordingMessage(error instanceof Error ? error.message : 'Could not save your role answers.');
+    } finally { setBusy(false); }
   }
 
   async function submitReviewedApplication() {
@@ -787,6 +800,11 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           <label className="flex items-start gap-2"><input type="checkbox" checked={listenerStatus?.recordingAnswers ?? false} disabled={!browserOpen || busy}
             onChange={event => void updateListeners({ recordAnswers: event.target.checked })} />Remember answers I enter in this application</label>
           <p className="mt-1 text-xs text-muted-foreground">Recognized answers are saved locally. New questions appear in reusable answers for review. Passwords, files, agreements and certifications are excluded.</p>
+          {currentPage?.opportunityId === selectedOpportunityId && currentPage.applicationUrl === url && (
+            <button type="button" className={secondary} disabled={busy || !browserOpen} onClick={() => void saveReviewedRoleAnswers()}>
+              Save reviewed role answers for this job
+            </button>
+          )}
           <p className="mb-2 text-xs text-muted-foreground">Select the saved job and start listening in its existing Chrome tab. Your employer form will not reload.</p>
           <button type="button" className={secondary} disabled={busy || !browserOpen || !selectedOpportunityId || !url} onClick={() => void trackExistingTab()}>Track existing application tab</button>
           {currentPage?.opportunityId === selectedOpportunityId && currentPage.applicationUrl === url && isLeverApplicationForm(currentPage.pageUrl) && (

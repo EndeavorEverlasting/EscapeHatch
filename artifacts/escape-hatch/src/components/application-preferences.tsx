@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { emptyPreferences, parsePreferences, questions, preferenceChoices, expandProfessionalTitles, suggestProfessionalTitles, type Preferences } from '@/lib/application-preferences';
+import { emptyPreferences, parsePreferences, questions, roleQuestionKey, preferenceChoices, expandProfessionalTitles, suggestProfessionalTitles, type Preferences } from '@/lib/application-preferences';
 import { savedAnswerReviewRows, unrecognizedSavedAnswerCount, hasTalentCommunityAnswers, talentCommunityAnswerHandoff, canReplaceEditorFromDisk } from '@/lib/answer-transparency';
 
 const API = '/__escapehatch/managed-assist/preferences';
@@ -323,15 +323,15 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
       <label className="mt-4 flex items-start gap-2 text-sm"><input type="checkbox" checked={data.optional_omissions?.includes('identity.pronouns') || false}
         onChange={event => { const omit = event.target.checked; markEdited(); setData(current => ({ ...current,
           optional_omissions: omit ? [...new Set([...(current.optional_omissions || []), 'identity.pronouns'])] : (current.optional_omissions || []).filter(id => id !== 'identity.pronouns') })); }} />Leave pronoun fields blank when optional; use my saved answer when required</label>
-      {!!Object.keys(data.discovered_answers || {}).length && <section className="mt-5 rounded-lg border border-border p-4" aria-label="Questions remembered from applications">
+      {!!Object.values(data.discovered_answers || {}).some(answer => !roleQuestionKey(answer.question)) && <section className="mt-5 rounded-lg border border-border p-4" aria-label="Questions remembered from applications">
         <h3 className="font-display text-xl">Questions remembered from applications</h3>
-        {Object.values(data.discovered_answers || {}).some(answer => answer.source === 'observed_question' && !answer.value.trim()) && <div className="mt-3 flex items-start gap-3 rounded-xl border border-primary/25 bg-primary/5 p-3" data-testid="mascot-missing-answer">
+        {Object.values(data.discovered_answers || {}).some(answer => !roleQuestionKey(answer.question) && answer.source === 'observed_question' && !answer.value.trim()) && <div className="mt-3 flex items-start gap-3 rounded-xl border border-primary/25 bg-primary/5 p-3" data-testid="mascot-missing-answer">
           <img src="/escapehatch-mascot.webp" alt="" aria-hidden="true" width={56} height={56} className="h-14 w-14 shrink-0 object-contain" />
           <div><p className="font-bold text-sm">Chirp! This puzzle has an unanswered question.</p>
           <p className="mt-1 text-sm text-muted-foreground">Fill in the question below and choose Save Preferences. EscapeHatch can then fill the exact approved answer into an empty matching employer field; you still review it before submission.</p></div>
         </div>}
         <p className="mt-2 text-sm">Answers are stored privately. Employer-specific motivation should be reviewed and tailored again for a different role. Agreements and certifications stay manual.</p>
-        {Object.entries(data.discovered_answers || {}).map(([key, answer]) => <div key={key} className="mt-3">
+        {Object.entries(data.discovered_answers || {}).filter(([, answer]) => !roleQuestionKey(answer.question)).map(([key, answer]) => <div key={key} className="mt-3">
           <label className="block text-sm">{answer.question}<textarea aria-label={'Saved answer: ' + answer.question} value={answer.value}
             rows={4} className="mt-1 block w-full rounded border border-input bg-background p-2" maxLength={512}
             onChange={event => { const value = event.target.value; markEdited(); setData(current => ({ ...current,

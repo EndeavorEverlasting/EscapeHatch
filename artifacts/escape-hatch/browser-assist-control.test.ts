@@ -83,6 +83,7 @@ test('reviewed Lever flow preserves the exact tab and checks the résumé again 
       <div class="content"><h1>Engineer</h1><form id="application-form">
         <label>Website<input type="url" value="https://example.com"></label>
         <label>Additional notes<input id="notes" value="operator entry"></label>
+        <label>What excites you about this role? 1-4 sentences<textarea id="role-answer"></textarea></label>
         <label>Full name<input name="name" value="Reviewed applicant"></label>
         <div class="application-question">
           <div class="application-label">Which tools have you used?<span class="required">✱</span></div>
@@ -137,6 +138,20 @@ test('reviewed Lever flow preserves the exact tab and checks the résumé again 
     assert.equal(await target.locator('#notes').inputValue(), 'operator entry');
     assert.equal(unrelated.url(), job.url.replace('11111111-', '22222222-') + '/apply');
     assert.equal((await listeners.status()).submission, null, 'restore must not auto-arm observation');
+    const reviewedNarrative = ['Fixture engineering. '.repeat(18).trim(), 'Fixture delivery. '.repeat(24).trim()].join('\n\n');
+    await target.locator('#role-answer').fill(reviewedNarrative);
+    const saveRole = { opportunityId: job.id, url: job.url, livePageUrl: target.url(), approved: true };
+    assert.equal((await request({ ...saveRole, livePageUrl: unrelated.url() }, undefined, '/role-answers/save')).code, 409);
+    const savedRole = await request(saveRole, undefined, '/role-answers/save');
+    assert.deepEqual(savedRole, { code: 200, body: { ok: true, savedRoleAnswers: 1 } });
+    assert.equal((await readPreferences()).reviewed_role_answers?.[0]?.value, reviewedNarrative);
+    await target.locator('#role-answer').fill('');
+    const filledRole = await request({}, undefined, '/fill');
+    assert.equal(filledRole.code, 200, JSON.stringify(filledRole.body));
+    assert.equal(await target.locator('#role-answer').inputValue(), reviewedNarrative);
+    assert.equal(await unrelated.locator('#role-answer').inputValue(), '');
+    assert.equal(await target.evaluate(() => Reflect.get(window, 'attemptCount')), 0);
+
     const payload = { opportunityId: job.id, url: job.url, livePageUrl: target.url() };
     assert.equal((await request(payload, 'https://foreign.example.com')).code, 403);
     assert.equal((await request({ ...payload, opportunityId: 'wrong-job' })).code, 422);

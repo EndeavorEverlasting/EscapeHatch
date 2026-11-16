@@ -4,7 +4,7 @@ export const PREFERENCE_KEY = 'escapeHatch.applicationQuestionPreferences.v1';
 export const PREFERENCE_SCHEMA = 'escapehatch-application-question-preferences/v1';
 export type Preference = { scope: 'profile_preference'; value: string; source: 'user'; updated_at: string };
 export type DiscoveredAnswer = { question: string; value: string; source: 'user' | 'observed_question'; updated_at: string; accepted: boolean };
-export type Preferences = { schema_version: typeof PREFERENCE_SCHEMA; exported_at: string; preferences: Record<string, Preference>; optional_omissions?: string[]; discovered_answers?: Record<string, DiscoveredAnswer>; job_titles?: string[]; professional_titles?: string[]; require_document_review?: boolean; vpn_recovery_assist_enabled?: boolean; application_privacy_acknowledgement_enabled?: boolean };
+export type Preferences = { schema_version: typeof PREFERENCE_SCHEMA; exported_at: string; preferences: Record<string, Preference>; reviewed_role_answers?: ReviewedRoleAnswer[]; optional_omissions?: string[]; discovered_answers?: Record<string, DiscoveredAnswer>; job_titles?: string[]; professional_titles?: string[]; require_document_review?: boolean; vpn_recovery_assist_enabled?: boolean; application_privacy_acknowledgement_enabled?: boolean };
 export const questions = taxonomy.questions;
 export const emptyPreferences = (): Preferences => ({ schema_version: PREFERENCE_SCHEMA, exported_at: new Date().toISOString(), preferences: {}, vpn_recovery_assist_enabled: true, application_privacy_acknowledgement_enabled: false });
 
@@ -50,6 +50,16 @@ export function parsePreferences(input: unknown): Preferences | null {
       if (!item || typeof item.question !== 'string' || !(safeDiscoveredQuestion(item.question) || matchQuestion(item.question)) || key !== normalizeQuestion(item.question) || typeof item.value !== 'string' || item.value.length > 512 || !['user', 'observed_question'].includes(item.source) || typeof item.accepted !== 'boolean' || (item.source === 'observed_question' ? item.value !== '' || item.accepted : !item.value.trim()) || typeof item.updated_at !== 'string' || Number.isNaN(Date.parse(item.updated_at))) continue;
       clean.discovered_answers[key] = { question: item.question, value: item.value.trim(), source: item.source, updated_at: item.updated_at, accepted: item.accepted };
     }
+  }
+  if (data.reviewed_role_answers !== undefined) {
+    if (!Array.isArray(data.reviewed_role_answers) || data.reviewed_role_answers.length > 100) return null;
+    const answers: ReviewedRoleAnswer[] = [];
+    for (const entry of data.reviewed_role_answers) {
+      const answer = parseReviewedRoleAnswer(entry);
+      if (!answer || answers.some(prior => sameRoleAnswerSlot(prior, answer))) return null;
+      answers.push(answer);
+    }
+    clean.reviewed_role_answers = answers;
   }
   for (const [id, entry] of Object.entries(data.preferences)) {
     // Unknown but structurally valid taxonomy IDs are retained for future builds;
@@ -170,12 +180,46 @@ export function safeDiscoveredQuestion(question: string): boolean {
   return text.length >= 4 && text.length <= 300 && !matchQuestion(question) && !/\b(password|secret|token|social security|ssn|birth|bank|account|credit|card|routing|passport|nationality|citizenship|health|insurance|medication|diagnosis|tax|medical|disability|accommodation|veteran|race|ethnicity|gender|religion|sexual|criminal|convict|felony|legal|certify|certification|attest|agree|consent|signature|salary|compensation|authorization|sponsor|clearance)\b/.test(text);
 }
 export function discoveredValue(prompt: string, data: Preferences): string | null {
-  if (!safeDiscoveredQuestion(prompt)) return null;
+  if (roleQuestionKey(prompt) || !safeDiscoveredQuestion(prompt)) return null;
   const answer = data.discovered_answers?.[normalizeQuestion(prompt)];
   return answer?.source === 'user' && answer.accepted === true && answer.value.trim() ? answer.value : null;
 }
 export function acceptDiscoveredAnswer(data: Preferences, normalizedQuestion: string): Preferences {
   const item = data.discovered_answers?.[normalizedQuestion];
-  if (!item || item.source !== 'user' || !item.value.trim() || !safeDiscoveredQuestion(item.question)) return data;
+  if (!item || item.source !== 'user' || !item.value.trim() || !safeDiscoveredQuestion(item.question) || roleQuestionKey(item.question)) return data;
   return { ...data, discovered_answers: { ...data.discovered_answers, [normalizedQuestion]: { ...item, accepted: true } } };
+}
+
+export const MAX_ROLE_ANSWER_LENGTH = 4096;
+export type ReviewedRoleAnswer = {
+  opportunityId: string;
+  url: string;
+  question: string;
+  value: string;
+  approvedAt: string;
+};
+
+export function roleQuestionKey(question: string): string | null {
+  const key = normalizeQuestion(question);
+  const prompt = key.replace(/ (?:[1-9](?: to)? [1-9]|[1-9]) sentences?$/, '');
+  return /^(?:what excites you about (?:this|the) (?:role|position|opportunity)|why are you interested in (?:this|the) (?:role|position|opportunity)|why do you want to (?:work (?:here|with us)|join (?:us|our team)))$/.test(prompt) ? key : null;
+}
+
+export function parseReviewedRoleAnswer(value: unknown): ReviewedRoleAnswer | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const row = value as ReviewedRoleAnswer;
+  if (typeof row.opportunityId !== 'string' || !row.opportunityId.trim() || row.opportunityId.length > 256 ||
+      typeof row.url !== 'string' || row.url.length > 2048 ||
+      typeof row.question !== 'string' || row.question.length > 300 || !roleQuestionKey(row.question) ||
+      typeof row.value !== 'string' || !row.value.trim() || row.value.length > MAX_ROLE_ANSWER_LENGTH ||
+      typeof row.approvedAt !== 'string' || !Number.isFinite(Date.parse(row.approvedAt))) return null;
+  try {
+    const url = new URL(row.url);
+    if (url.protocol !== 'https:' || url.username || url.password || url.href !== row.url) return null;
+  } catch { return null; }
+  return { opportunityId: row.opportunityId, url: row.url, question: row.question, value: row.value, approvedAt: row.approvedAt };
+}
+
+export function sameRoleAnswerSlot(a: ReviewedRoleAnswer, b: ReviewedRoleAnswer): boolean {
+  return a.opportunityId === b.opportunityId && a.url === b.url && roleQuestionKey(a.question) === roleQuestionKey(b.question);
 }

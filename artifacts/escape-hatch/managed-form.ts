@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { matchQuestion, normalizeQuestion, discoveredValue, optionMatches, reusableValue, isRoutineApplicantPrivacyAcknowledgement, type Preferences } from './src/lib/application-preferences.ts';
+import { matchQuestion, normalizeQuestion, discoveredValue, optionMatches, reusableValue, isRoutineApplicantPrivacyAcknowledgement, roleQuestionKey, type Preferences } from './src/lib/application-preferences.ts';
 import { assertEmployerFacingDocumentUrl } from './src/lib/employer-facing-document-url.ts';
 
 export type FillOutcome = { filled: string[]; skipped: string[] };
@@ -72,9 +72,10 @@ async function inspectPreferenceFields(page: Page, employerName = '') {
     });
     const labelled = (field.getAttribute('aria-labelledby') || '').split(/\s+/).map(id => document.getElementById(id)?.textContent || '');
     const group = field.closest('fieldset');
+    const applicationLabel = field.closest('.application-question, .application-field')?.querySelector('.application-label')?.textContent || '';
     const named = [field.name, field.id].flatMap(id => [document.getElementById(id + '_label')?.textContent || '', id.replace(/^user\./, '').replace(/_/g, ' ')]);
     const eeoId = field.id.match(/__systemfield_eeoc_(gender|race|veteran_status)-labeled-radio-\d+$/)?.[1];
-    const prompts = [eeoId?.replace(/_/g, ' ') || '', ...labels, ...labelled, field.getAttribute('aria-label') || '', group?.querySelector('legend')?.textContent || '', ...named];
+    const prompts = [eeoId?.replace(/_/g, ' ') || '', ...labels, ...labelled, field.getAttribute('aria-label') || '', group?.querySelector('legend')?.textContent || '', applicationLabel, ...named];
     // Ashby groups plain labels and binary buttons without label IDs or a form element.
     const ashbyEntry = field.closest('.ashby-application-form-field-entry');
     if (ashbyEntry) for (const child of Array.from(ashbyEntry.children)) {
@@ -124,11 +125,23 @@ export async function captureMilitaryAnswers(page: Page): Promise<Record<string,
 }
 
 // Fills approved values and narrowly scoped saved privacy-notice acknowledgements; never navigates, certifies, or submits.
-export async function fillSavedPreferences(page: Page, preferences: Preferences, employerName = ''): Promise<FillOutcome> {
+export async function fillSavedPreferences(page: Page, preferences: Preferences, employerName = '',
+    roleScope?: { opportunityId: string; url: string; pageUrl: string }): Promise<FillOutcome> {
+  const roleValues = new Map(
+    (roleScope && page.url() === roleScope.pageUrl ? preferences.reviewed_role_answers || [] : [])
+      .filter(answer => answer.opportunityId === roleScope?.opportunityId && answer.url === roleScope?.url)
+      .map(answer => [roleQuestionKey(answer.question), answer.value] as const),
+  );
   const result: FillOutcome = { filled: [], skipped: [] };
   const { controls, descriptors, available, ids } = await inspectPreferenceFields(page, employerName);
   for (let i = 0; i < controls.length; i++) {
     if (!ids[i].length) {
+      const roleKeys = descriptors[i].type === 'textarea'
+        ? [...new Set(descriptors[i].prompts.map(roleQuestionKey).filter(key => key !== null))] : [];
+      if (roleKeys.length) {
+        if (roleKeys.length === 1 && roleValues.has(roleKeys[0])) ids[i] = ['role:' + roleKeys[0]];
+        continue;
+      }
       const candidates = [...new Set(descriptors[i].prompts.filter(prompt => discoveredValue(prompt, preferences)).map(normalizeQuestion))];
       if (candidates.length === 1) ids[i] = ['discovered:' + candidates[0]];
     }
@@ -172,7 +185,8 @@ export async function fillSavedPreferences(page: Page, preferences: Preferences,
       return field.required === true || element.getAttribute('aria-required') === 'true' ||
         /\*|\brequired\b/i.test([labelText, groupText].join(' '));
     })) { result.skipped.push(id + ':optional_omitted'); continue; }
-    let value = id.startsWith('discovered:') ? discoveredValue(id.slice(11), preferences) : reusableValue(id, preferences);
+    let value = id.startsWith('role:') ? roleValues.get(id.slice(5)) :
+      id.startsWith('discovered:') ? discoveredValue(id.slice(11), preferences) : reusableValue(id, preferences);
     if (id === 'identity.phone' && value) value = internationalPhone(value, reusableValue('identity.country', preferences) || '');
     // Conditional detail is applicable only when a clearance is held. Never invent a clearance.
     if (id === 'employment.clearance_details' && reusableValue('employment.current_clearance', preferences) === 'No') value = 'N/A';
@@ -267,6 +281,12 @@ export async function fillSavedPreferences(page: Page, preferences: Preferences,
           }, Number(numeric));
           if (!retained) { await control.fill(existing, { timeout: 2500 }); throw new Error('number not retained'); }
         } else if (['text', 'email', 'tel', 'url', 'textarea'].includes(descriptor.type)) {
+          if (id.startsWith('role:')) {
+            if (page.url() !== roleScope?.pageUrl || !await control.evaluate((element, length) => {
+              const field = element as HTMLTextAreaElement;
+              return field.value === '' && (field.maxLength < 0 || field.maxLength >= length);
+            }, value.length)) { result.skipped.push(id + ':review_required'); continue; }
+          }
           await control.fill(value, { timeout: 2500 });
           const actual = await control.inputValue();
           const retained = id === 'identity.phone' ? actual.replace(/\D/g, '') === value.replace(/\D/g, '') : actual === value;

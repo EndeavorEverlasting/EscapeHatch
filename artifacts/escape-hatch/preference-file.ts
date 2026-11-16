@@ -4,7 +4,7 @@ import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { userDataRoot, legacyPrivateRoots } from './user-data.ts';
-import { emptyPreferences, parsePreferences, type Preferences } from './src/lib/application-preferences.ts';
+import { emptyPreferences, parsePreferences, sameRoleAnswerSlot, type ReviewedRoleAnswer, type Preferences } from './src/lib/application-preferences.ts';
 
 export function preferenceFile() {
   return process.env.ESCAPEHATCH_PREFERENCES_FILE || path.join(userDataRoot(), 'application-question-preferences.json');
@@ -129,7 +129,7 @@ export function mergePreferenceEdits(current: Preferences, input: unknown, remov
   const incoming = parsePreferences(input);
   if (!incoming || !Array.isArray(removedQuestions) || removedQuestions.some(id => typeof id !== 'string')) throw new Error('Invalid preference edit.');
   const merged: Preferences = { ...incoming, preferences: { ...current.preferences },
-    discovered_answers: { ...current.discovered_answers } };
+    discovered_answers: { ...current.discovered_answers }, reviewed_role_answers: current.reviewed_role_answers };
   for (const [id, answer] of Object.entries(incoming.preferences)) {
     const prior = current.preferences[id];
     if (!prior || Date.parse(answer.updated_at) >= Date.parse(prior.updated_at)) merged.preferences[id] = answer;
@@ -146,4 +146,29 @@ export function mergePreferenceEdits(current: Preferences, input: unknown, remov
 
 export async function clearPreferences(file = preferenceFile()) {
   await transaction(file, () => fs.rm(file, { force: true }));
+}
+
+/** Write and verify under the same lock. Reimports never displace newer approval. */
+export function saveReviewedRoleAnswers(answers: ReviewedRoleAnswer[], file = preferenceFile()) {
+  if (!answers.length) return Promise.resolve({ verified: 0 });
+  return transaction(file, async () => {
+    const current = await readPreferencesUnlocked(file);
+    const rows = [...(current.reviewed_role_answers || [])];
+    for (const answer of answers) {
+      const index = rows.findIndex(row => sameRoleAnswerSlot(row, answer));
+      if (index < 0) { rows.push(answer); continue; }
+      const prior = rows[index];
+      if (prior.value === answer.value) {
+        if (Date.parse(answer.approvedAt) > Date.parse(prior.approvedAt)) rows[index] = answer;
+        continue;
+      }
+      if (Date.parse(answer.approvedAt) <= Date.parse(prior.approvedAt)) throw new Error('NEWER_ROLE_ANSWER_PRESERVED');
+      rows[index] = answer;
+    }
+    await writePreferences({ ...current, reviewed_role_answers: rows }, file);
+    const verified = await readPreferencesUnlocked(file);
+    if (!answers.every(answer => verified.reviewed_role_answers?.some(row =>
+      sameRoleAnswerSlot(row, answer) && row.value === answer.value))) throw new Error('ROLE_ANSWER_READBACK_UNVERIFIED');
+    return { verified: answers.length };
+  });
 }

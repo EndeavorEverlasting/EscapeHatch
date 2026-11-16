@@ -10,11 +10,12 @@ import {
   INDEED_ACCOUNT_SLOT_ID,
   indeedSlotIdForUrl,
 } from './resume-selection-store.ts';
+import { readReviewedRoleAnswers } from './managed-answer-memory.ts';
 import { ManagedListeners } from './managed-listeners.ts';
 import { LeverAttemptReceipts, type LeverResumeEvidence } from './lever-attempt-receipts.ts';
 import { isLeverApplicationForm, leverApplicationKey } from './src/lib/application-puzzle.ts';
 import { enqueueSubmissionSync, retrySubmissionSync, readSubmissionSyncStatus, startSubmissionSync } from './tracker-writeback.ts';
-import { APPLICATIONS_KEY } from './src/lib/storage.ts';
+import { APPLICATIONS_KEY, parseApplicationsStorage } from './src/lib/storage.ts';
 import { withCareerPreferences } from './career-preferences.ts';
 import { captureMilitaryAnswers } from './managed-form.ts';
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -26,7 +27,7 @@ import { chromium, type BrowserContext, type Page } from '@playwright/test';
 import type { Plugin } from 'vite';
 import { isLoopbackAddress, readManagedRuntime } from './runtime-control.ts';
 import { userDataRoot } from './user-data.ts';
-import { readPreferences, updatePreferences, clearPreferences, mergePreferenceEdits, preferenceStoreLocator } from './preference-file.ts';
+import { readPreferences, updatePreferences, clearPreferences, mergePreferenceEdits, preferenceStoreLocator, saveReviewedRoleAnswers } from './preference-file.ts';
 import { accessSync, constants as fsConstants } from 'node:fs';
 import { fillSavedPreferences, openApplicationForm } from './managed-form.ts';
 import { emptyPreferences } from './src/lib/application-preferences.ts';
@@ -511,7 +512,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
   // An installed upgrade may retain an old listener object in Vite's cache.
   // Replace observation handles only; never close or navigate employer tabs.
   const previousListeners = cache.listeners;
-  const listeners = previousListeners.implementationVersion === 6 ? previousListeners : new ManagedListeners(undefined, undefined, enqueueSubmissionSync);
+  const listeners = previousListeners.implementationVersion === 7 ? previousListeners : new ManagedListeners(undefined, undefined, enqueueSubmissionSync);
   // Older cached listeners and synthetic middleware fixtures may predate dispose().
   // Preserve the employer tab; replace obsolete handles without invoking an absent method.
   // A new listener starts unarmed and requires exact-application binding before Submit.
@@ -1013,6 +1014,32 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             trustedReturnPath = new URL(live).pathname;
             return respond(res, 200, { ok: true, state: 'application_path_bound_review_required', authCheckpoint });
           }
+          const roleScopeForPage = async (current: Page) => {
+            const pageUrl = current.url();
+            const saved = parseApplicationsStorage((await readWorkspace())?.workspace.values[APPLICATIONS_KEY]);
+            if (saved?.filter(item => item.id === opportunityId && item.url === applicationUrl &&
+                !['applied', 'closed', 'follow_up'].includes(item.status)).length !== 1 || !context) return undefined;
+            try {
+              if (selectExistingApplicationPage(context, applicationUrl, pageUrl) !== current) return undefined;
+            } catch { return undefined; }
+            return { opportunityId, url: applicationUrl, pageUrl };
+          };
+          if (url.pathname === PREFIX + '/role-answers/save') {
+            if (payload.opportunityId !== opportunityId || payload.url !== applicationUrl || payload.approved !== true) {
+              return respond(res, 409, { ok: false, error: 'Confirm the role answers for this exact application.' });
+            }
+            const scope = await roleScopeForPage(page);
+            if (!scope || scope.pageUrl !== payload.livePageUrl) return respond(res, 409, { ok: false, error: 'The existing application tab could not be verified.' });
+            await selectInstalledHostWorkspace();
+            const answers = await readReviewedRoleAnswers(page);
+            if (page.url() !== scope.pageUrl || !answers.length) {
+              return respond(res, 409, { ok: false, error: 'No unique role answer could be read from the current application.' });
+            }
+            const receipt = await saveReviewedRoleAnswers(answers.map(answer => ({
+              ...answer, opportunityId: scope.opportunityId, url: scope.url, approvedAt: new Date().toISOString(),
+            })));
+            return respond(res, 200, { ok: true, savedRoleAnswers: receipt.verified });
+          }
           if (url.pathname === PREFIX + '/listeners') {
             if (payload.opportunityId !== opportunityId || payload.url !== applicationUrl) throw new Error('Select the application bound to this browser.');
             if (typeof payload.recordAnswers === 'boolean') await listeners.setRecording(payload.recordAnswers);
@@ -1078,7 +1105,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             const contact = reviewedContactFields(payload.profile);
             const now = new Date().toISOString();
             const ids: Record<string, string> = { linkedin_url: 'linkedin', region: 'region' };
-            const merged = { ...emptyPreferences(), preferences: { ...preferences.preferences } };
+            const merged = { ...emptyPreferences(), reviewed_role_answers: preferences.reviewed_role_answers, preferences: { ...preferences.preferences } };
             for (const [key, value] of Object.entries(contact)) {
               const id = 'identity.' + (ids[key] || key);
               if (!merged.preferences[id]) {
@@ -1088,6 +1115,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             for (const [id, value] of Object.entries(derivedContactPreferenceValues(merged.preferences))) {
               merged.preferences[id] = { scope: 'profile_preference', source: 'user', value, updated_at: now };
             }
+            const roleScope = preferences.reviewed_role_answers?.length ? await roleScopeForPage(page) : undefined;
             const approvedPreferences = withCareerPreferences(merged, payload.careerProfile, payload.targetRole);
             if (!payload.adapterRegistry) {
               // Safe useful work does not require authorizing unknown navigation.
@@ -1095,7 +1123,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               // files; terminal/intermediate clicks remain wholly unavailable.
               const fallback = await prepareWithoutTrustedNavigation({
                 fill: () => fillSavedPreferences(page!, approvedPreferences,
-                  typeof payload.employerName === 'string' ? payload.employerName.slice(0, 160) : ''),
+                  typeof payload.employerName === 'string' ? payload.employerName.slice(0, 160) : '', roleScope),
                 attach: () => attachPreparedDocuments(packageFiles),
                 expectedUploads: requiredKinds.filter(kind => Boolean(packageFiles[kind])),
               });
@@ -1123,6 +1151,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               authorization,
               registry,
               preferences: approvedPreferences,
+              roleScope,
               prepareAttachments: async () => {
                 const observed = await inspectApplicationRequirements(page!, opportunityId, applicationUrl);
                 const currentKinds = (['resume', 'cover'] as const).filter(kind =>
@@ -1205,7 +1234,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             const contact = reviewedContactFields(payload.profile);
             const now = new Date().toISOString();
             const ids: Record<string, string> = { linkedin_url: 'linkedin', region: 'region' };
-            const merged = { ...emptyPreferences(), preferences: { ...preferences.preferences } };
+            const merged = { ...emptyPreferences(), reviewed_role_answers: preferences.reviewed_role_answers, preferences: { ...preferences.preferences } };
             for (const [key, value] of Object.entries(contact)) {
               const id = 'identity.' + (ids[key] || key);
               if (!merged.preferences[id]) merged.preferences[id] = { scope: 'profile_preference', source: 'user', value, updated_at: now };
@@ -1213,7 +1242,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             for (const [id, value] of Object.entries(derivedContactPreferenceValues(merged.preferences))) {
               merged.preferences[id] = { scope: 'profile_preference', source: 'user', value, updated_at: now };
             }
-            const outcome = await fillSavedPreferences(page, withCareerPreferences(merged, payload.careerProfile, payload.targetRole), typeof payload.employerName === 'string' ? payload.employerName.slice(0, 160) : '');
+            const outcome = await fillSavedPreferences(page, withCareerPreferences(merged, payload.careerProfile, payload.targetRole), typeof payload.employerName === 'string' ? payload.employerName.slice(0, 160) : '', preferences.reviewed_role_answers?.length ? await roleScopeForPage(page) : undefined);
             state = fieldProgressState(outcome);
             return respond(res, 200, { ok: true, state, ...outcome, authCheckpoint, evidenceSummary: evidenceDescription(state), requiresOperatorSubmission: true });
           }

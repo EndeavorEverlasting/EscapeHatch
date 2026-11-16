@@ -40,6 +40,7 @@ export type ManagedPreparationDriverOptions = {
   authorization: NavigationAuthorization;
   registry: TrustedAdapterRegistry;
   preferences: Preferences;
+  roleScope?: Parameters<typeof fillSavedPreferences>[3];
   /** When false, missing file inputs do not block progression (default true). */
   requireUploadsVerified?: boolean;
   prepareAttachments?: () => Promise<void>;
@@ -158,7 +159,7 @@ export function createManagedPreparationDriver(
     },
 
     async prepareCurrentPage(): Promise<PreparationReceipt> {
-      const outcome = await fillSavedPreferences(page, preferences);
+      const outcome = await fillSavedPreferences(page, preferences, '', options.roleScope);
       await options.prepareAttachments?.();
       const unresolved = outcome.skipped.filter(
         (item) =>

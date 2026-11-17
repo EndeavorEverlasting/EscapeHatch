@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "EscapeHatch Fill Saved Answers",
+  "version": "1.0.0",
+  "description": "Fill approved missing fields in one existing Lever tab and preserve the email.",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "action": {
+    "default_title": "EscapeHatch Fill Saved Answers",
+    "default_popup": "popup.html"
+  }
+}

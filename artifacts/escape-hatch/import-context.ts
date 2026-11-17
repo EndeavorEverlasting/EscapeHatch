@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
-import { driveResumeAvailability, driveResumeErrorCode, stageDriveResume, verifyDriveResume } from './drive-resume-source.ts';
+import { driveResumeAvailability, driveResumeErrorCode, registerCurrentDriveResume, stageDriveResume, verifyDriveResume } from './drive-resume-source.ts';
 import { createTrackerSnapshotFromValues, readBoundedFile } from './tracker-refresh.ts';
 import { preferenceFile, saveReviewedRoleAnswers } from './preference-file.ts';
 import { savedLeverApplicationKey } from './src/lib/application-puzzle.ts';
@@ -106,7 +106,7 @@ export async function importContext(kind: string, input: unknown, destination = 
 }
 async function main() {
   const [kind, inputFile] = process.argv.slice(2);
-  if (kind === 'drive-status' || kind === 'drive-verify' || kind === 'drive-resume') {
+  if (kind === 'drive-status' || kind === 'drive-verify' || kind === 'drive-resume' || kind === 'drive-register-current') {
     const root = userDataRoot();
     const sources = path.join(root, 'career-sources.v1.json');
     try {
@@ -116,6 +116,9 @@ async function main() {
         if (result.status === 'DRIVE_SOURCE_CONFIG_INVALID') process.exitCode = 1;
       } else if (kind === 'drive-verify' && inputFile) {
         console.log(await verifyDriveResume(sources, inputFile));
+      } else if (kind === 'drive-register-current' && inputFile) {
+        const input = JSON.parse(await readBoundedFile(inputFile, 64 * 1024));
+        console.log(await registerCurrentDriveResume(root, input));
       } else if (kind === 'drive-resume' && inputFile) {
         const input = JSON.parse(await readBoundedFile(inputFile, 64 * 1024));
         console.log(await stageDriveResume(root, input));

@@ -1,16 +1,22 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import path from 'node:path';
-import { acquireToken, boundedBytes, readRememberedSources, type RememberedDrivePdf } from './tracker-refresh.ts';
+import fs from 'node:fs/promises';
+import { DatabaseSync } from 'node:sqlite';
+import { acquireToken, boundedBytes, parseRememberedSources, readRememberedSources, type RememberedDrivePdf } from './tracker-refresh.ts';
 import { OpportunityDocumentStore, documentScope, parseDocumentSource } from './opportunity-documents.ts';
 import { readHostWorkspaceOwner } from './workspace-owner-file.ts';
 import { readWorkspace } from './workspace-file.ts';
 import { APPLICATIONS_KEY, parseApplicationsStorage } from './src/lib/storage.ts';
 
 const retryWithStoredCredential = new Set([401, 403, 404]);
+const currentLabel = 'Current Gold Standard resume';
+const legacyLabel = 'Approved master resume';
+const sourcesSchema = 'escapehatch-career-sources/v1';
 const TIMEOUT_MS = 10_000;
 const MAX_PDF_BYTES = 5 * 1024 * 1024;
 const knownErrors = new Set([
   'DRIVE_SOURCE_CONFIG_INVALID', 'DRIVE_SOURCE_SELECTION_REQUIRED', 'GOOGLE_AUTH_REQUIRED',
+  'CURRENT_MASTER_REGISTRATION_REQUIRED', 'CURRENT_MASTER_REGISTRATION_CONFLICT', 'CURRENT_MASTER_FILENAME_INVALID',
   'DRIVE_ACCESS_DENIED', 'DRIVE_FILE_UNAVAILABLE', 'DRIVE_PROVIDER_UNAVAILABLE',
   'DRIVE_PDF_METADATA_INVALID', 'DRIVE_PDF_CONTENT_INVALID', 'DRIVE_PDF_HASH_MISMATCH',
   'DRIVE_SOURCE_CHANGED', 'WORKSPACE_OWNER_REQUIRED', 'SAVED_OPPORTUNITY_REQUIRED',
@@ -33,9 +39,12 @@ export async function driveResumeAvailability(file: string, env = process.env) {
 async function selectedPdf(file: string, sourceLabel: string) {
   const result = await readRememberedSources(file);
   if (!result.ok) fail('DRIVE_SOURCE_CONFIG_INVALID');
+  const label = sourceLabel === legacyLabel ? currentLabel : sourceLabel;
   const choices = result.sources.filter((source): source is RememberedDrivePdf =>
-    source.kind === 'google_drive_pdf' && source.label === sourceLabel);
-  if (choices.length !== 1) fail('DRIVE_SOURCE_SELECTION_REQUIRED');
+    source.kind === 'google_drive_pdf' && source.label === label);
+  if (choices.length !== 1) {
+    fail(label === currentLabel ? 'CURRENT_MASTER_REGISTRATION_REQUIRED' : 'DRIVE_SOURCE_SELECTION_REQUIRED');
+  }
   return choices[0];
 }
 
@@ -87,6 +96,9 @@ async function drivePdf(source: RememberedDrivePdf, options: Options) {
     if (item?.id !== fileId || item.mimeType !== 'application/pdf' || item.trashed !== false ||
         typeof item.name !== 'string' || !item.name.trim()) fail('DRIVE_PDF_METADATA_INVALID');
     if (item.capabilities?.canDownload !== true) fail('DRIVE_ACCESS_DENIED');
+    if (source.label === currentLabel && !/(?:^|[_. -])current[_. -]+gold[_. -]+standard\.pdf$/i.test(item.name)) {
+      fail('CURRENT_MASTER_FILENAME_INVALID');
+    }
     let provenance;
     try { provenance = parseDocumentSource({ provider: 'google_drive', fileId, modifiedTime: item.modifiedTime }); }
     catch { fail('DRIVE_PDF_METADATA_INVALID'); }
@@ -103,6 +115,54 @@ async function drivePdf(source: RememberedDrivePdf, options: Options) {
   } finally {
     clearTimeout(timer);
     controller.abort();
+  }
+}
+
+export async function registerCurrentDriveResume(root: string, input: unknown, options: Options = {}) {
+  const request = input as { source?: unknown; expectedPreviousSha256?: unknown } | null;
+  if (!request || Object.keys(request).sort().join(',') !== 'expectedPreviousSha256,source' ||
+      (request.expectedPreviousSha256 !== null &&
+        (typeof request.expectedPreviousSha256 !== 'string' || !/^[a-f0-9]{64}$/.test(request.expectedPreviousSha256)))) {
+    fail('INVALID_DRIVE_RESUME_REQUEST');
+  }
+  let source;
+  try { [source] = parseRememberedSources({ schema: sourcesSchema, sources: [request.source] }); }
+  catch { fail('INVALID_DRIVE_RESUME_REQUEST'); }
+  if (source.kind !== 'google_drive_pdf' || source.label !== currentLabel) fail('INVALID_DRIVE_RESUME_REQUEST');
+  const owner = await readHostWorkspaceOwner(root);
+  if (!owner) fail('WORKSPACE_OWNER_REQUIRED');
+  await drivePdf(source, options);
+  const file = path.join(root, 'career-sources.v1.json');
+  const lock = new DatabaseSync(file + '.lock.sqlite');
+  const temporary = file + '.' + randomUUID() + '.tmp';
+  try {
+    try { lock.exec('PRAGMA busy_timeout=0; BEGIN IMMEDIATE'); }
+    catch { fail('CURRENT_MASTER_REGISTRATION_CONFLICT'); }
+    const currentOwner = await readHostWorkspaceOwner(root);
+    if (!currentOwner || currentOwner.ownerId !== owner.ownerId ||
+        currentOwner.workspaceId !== owner.workspaceId || currentOwner.installationId !== owner.installationId) {
+      fail('WORKSPACE_OWNER_REQUIRED');
+    }
+    const registry = await readRememberedSources(file);
+    if (!registry.ok) fail('DRIVE_SOURCE_CONFIG_INVALID');
+    const matching = registry.sources.filter(item => item.label === currentLabel || item.label === legacyLabel);
+    if (matching.length > 1) fail('CURRENT_MASTER_REGISTRATION_CONFLICT');
+    const [prior] = matching;
+    if (prior?.kind === 'google_drive_pdf' && prior.label === currentLabel &&
+        prior.locator === source.locator && prior.expectedSha256 === source.expectedSha256) {
+      return 'CURRENT_MASTER_ALREADY_REGISTERED';
+    }
+    if (prior && (prior.kind !== 'google_drive_pdf' || prior.expectedSha256 !== request.expectedPreviousSha256)) {
+      fail('CURRENT_MASTER_REGISTRATION_CONFLICT');
+    }
+    const sources = [...registry.sources.filter(item => item !== prior), source];
+    if (sources.length > 50) fail('DRIVE_SOURCE_CONFIG_INVALID');
+    await fs.writeFile(temporary, JSON.stringify({ schema: sourcesSchema, sources }, null, 2) + '\n',
+      { flag: 'wx', mode: 0o600 });
+    await fs.rename(temporary, file);
+    return 'CURRENT_MASTER_REGISTERED';
+  } finally {
+    try { await fs.rm(temporary, { force: true }); } finally { lock.close(); }
   }
 }
 

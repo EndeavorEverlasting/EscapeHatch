@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { importContext } from './import-context.ts';
-import { driveResumeAvailability, driveResumeErrorCode, stageDriveResume, verifyDriveResume } from './drive-resume-source.ts';
+import { driveResumeAvailability, driveResumeErrorCode, registerCurrentDriveResume, stageDriveResume, verifyDriveResume } from './drive-resume-source.ts';
 import { selectHostWorkspace } from './workspace-owner-file.ts';
 import { saveWorkspace } from './workspace-file.ts';
 import { APPLICATIONS_KEY } from './src/lib/storage.ts';
@@ -217,4 +217,34 @@ test('source lookup never chooses between duplicate labels or accepts embedded c
     await fs.writeFile(file, JSON.stringify({ schema: 'escapehatch-career-sources/v1', sources: [altered] }));
     await assert.rejects(verifyDriveResume(file, source.label, { env, fetch: fetcher }), /DRIVE_SOURCE_CONFIG_INVALID/);
   }
+}));
+
+test('historical master labels require the registered current PDF before a provider request', async () => driveFixture(async (_root, file, env) => {
+  const archived = { ...source, label: 'Approved master resume' };
+  await fs.writeFile(file, JSON.stringify({ schema: 'escapehatch-career-sources/v1', sources: [archived] }));
+  await assert.rejects(verifyDriveResume(file, archived.label, { env, fetch: async () => assert.fail('stale source fetched') }),
+    /CURRENT_MASTER_REGISTRATION_REQUIRED/);
+}));
+
+test('current master rotation verifies exact PDF bytes, preserves other entries, and rejects a stale request', async () => driveFixture(async (root, file, env) => {
+  const legacy = { ...source, label: 'Approved master resume', expectedSha256: '1'.repeat(64) };
+  const current = { ...source, label: 'Current Gold Standard resume' };
+  const manifest = { schema: 'escapehatch-career-sources/v1', sources: [source, legacy] };
+  await fs.writeFile(file, JSON.stringify(manifest));
+  const input = { expectedPreviousSha256: legacy.expectedSha256, source: current };
+  const options = { env, fetch: driveFetcher({ metadata: { ...driveMetadata, name: 'Example_Current_Gold_Standard.pdf' } }) };
+  await assert.rejects(registerCurrentDriveResume(root, input, options), /WORKSPACE_OWNER_REQUIRED/);
+  const application = { id: request.opportunityId, url: request.url, status: 'saved',
+    company: 'Synthetic Company', role: 'Synthetic Role', priority: 'normal', notes: '', nextAction: '', updatedAt: '2026-01-01' };
+  const workspace = { schema: 'escapehatch-local-workspace/v1', values: { [APPLICATIONS_KEY]: [application] } };
+  const saved = await saveWorkspace(workspace, null, path.join(root, 'workspace.v1.json'));
+  await selectHostWorkspace(saved.revision, root);
+  await assert.rejects(registerCurrentDriveResume(root, input, { env, fetch: driveFetcher() }), /CURRENT_MASTER_FILENAME_INVALID/);
+  await assert.rejects(registerCurrentDriveResume(root, { ...input, expectedPreviousSha256: null }, options),
+    /CURRENT_MASTER_REGISTRATION_CONFLICT/);
+  assert.deepEqual(JSON.parse(await fs.readFile(file, 'utf8')), manifest);
+  assert.equal(await registerCurrentDriveResume(root, input, options), 'CURRENT_MASTER_REGISTERED');
+  assert.deepEqual(JSON.parse(await fs.readFile(file, 'utf8')).sources, [source, current]);
+  assert.equal(await registerCurrentDriveResume(root, input, options), 'CURRENT_MASTER_ALREADY_REGISTERED');
+  assert.equal(await verifyDriveResume(file, legacy.label, options), 'DRIVE_PDF_VERIFIED');
 }));

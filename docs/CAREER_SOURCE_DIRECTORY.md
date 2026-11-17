@@ -9,6 +9,19 @@ EscapeHatch owns candidate state and opportunity mapping. TokenCorridor owns the
 - Other established access: existing Google application-default credentials, user-approved synced Drive folders, and connected provider adapters are recovery candidates. Never copy browser cookies or secrets, or pretend ChatGPT account authorization transfers to a local agent.
 - The source registry at `scripts/career_source_directory.py` saves only user-selected local/Google folder and tracker locators in a private file outside Git. It supports idempotency and privacy-preserving local metadata counts. It does NOT yet import data into the UI or prove a cloud read.
 
+## Resolve the current master résumé before preparing a new application
+
+Open the applicant's private **Career Agent Start Here** index and use its **Current Gold Standard** entry. Match the registered Drive PDF identity and SHA-256 to that entry. Keep those private values, names and PDF bytes outside Git. Historical links and Downloads filenames are insufficient for a new master selection.
+
+When the installed registry is stale, get the current private registration JSON from the index. From the active repository run:
+
+```powershell
+npm --prefix artifacts/escape-hatch run import:context -- drive-register-current '<absolute-private-registration.json>'
+npm --prefix artifacts/escape-hatch run import:context -- drive-verify 'Current Gold Standard resume'
+```
+
+The request carries `source` (the current PDF source entry) and `expectedPreviousSha256` (the digest being replaced, or null for an initial registration). The command uses the installed workspace owner and existing read-only Drive credential, verifies the current PDF name and digest, and replaces only the master entry. An old `Approved master resume` command resolves to the registered current entry or stops with `CURRENT_MASTER_REGISTRATION_REQUIRED`. Explicit domain selections and existing opportunity packages stay under their existing review and consent rules.
+
 ## Recover a registered Drive résumé on the local host
 
 Use the installed EscapeHatch checkout and its existing private data root. Run
@@ -32,7 +45,7 @@ the SHA-256 from its existing approval record.
 
 ```json
 {
-  "label": "Approved master resume",
+  "label": "Current Gold Standard resume",
   "kind": "google_drive_pdf",
   "locator": "https://drive.google.com/file/d/synthetic_file_identifier/view",
   "expectedSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -43,7 +56,7 @@ Run the following commands from the installed repository root. Use the private
 source label and a request file outside Git.
 
 ```powershell
-npm --prefix artifacts/escape-hatch run import:context -- drive-verify 'Approved master resume'
+npm --prefix artifacts/escape-hatch run import:context -- drive-verify 'Current Gold Standard resume'
 npm --prefix artifacts/escape-hatch run import:context -- drive-resume '<absolute-private-request.json>'
 ```
 
@@ -54,7 +67,7 @@ in the selected workspace. The request uses this shape.
 
 ```json
 {
-  "sourceLabel": "Approved master resume",
+  "sourceLabel": "Current Gold Standard resume",
   "opportunityId": "saved-opportunity-id",
   "url": "https://jobs.example.test/role/apply",
   "expectedPreviousSha256": null

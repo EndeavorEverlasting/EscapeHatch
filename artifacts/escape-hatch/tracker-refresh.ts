@@ -249,34 +249,36 @@ async function refreshTrackerSnapshotNow(snapshotFile: string, options: RefreshO
 export type RememberedDrivePdf = { label: string; kind: 'google_drive_pdf'; locator: string; expectedSha256: string };
 export type RememberedSource = RememberedDrivePdf |
   { label: string; kind: 'drive_folder' | 'google_doc' | 'local_file'; locator: string };
+export function parseRememberedSources(raw: { schema: unknown; sources: unknown }): RememberedSource[] {
+  if (raw.schema !== 'escapehatch-career-sources/v1' || !Array.isArray(raw.sources) || raw.sources.length > 50) fail('INVALID_SOURCES');
+  return raw.sources.map((value: unknown) => {
+    if (!value || typeof value !== 'object') fail('INVALID_SOURCES');
+    const item = value as RememberedSource;
+    if (typeof item.label !== 'string' || !item.label.trim() || /[\x00-\x1f]/.test(item.label) || item.label.length > 200 || typeof item.locator !== 'string' || item.locator.length > 2048 || /[\x00-\x1f]/.test(item.locator)) fail('INVALID_SOURCES');
+    if (item.kind === 'local_file') {
+      if ((!path.win32.isAbsolute(item.locator) && !path.posix.isAbsolute(item.locator)) || (item.locator.startsWith('\\\\') || item.locator.startsWith('//'))) fail('INVALID_SOURCES');
+    } else {
+      const url = new URL(item.locator);
+      if (item.kind === 'google_drive_pdf') {
+        if (url.origin !== 'https://drive.google.com' || url.username || url.password || url.hash ||
+          !['', '?usp=drivesdk', '?usp=sharing'].includes(url.search) ||
+          !/^\/file\/d\/[A-Za-z0-9_-]{10,200}(?:\/view)?\/?$/.test(url.pathname) ||
+          typeof item.expectedSha256 !== 'string' || !/^[a-f0-9]{64}$/.test(item.expectedSha256) ||
+          Object.keys(item).sort().join(',') !== 'expectedSha256,kind,label,locator') fail('INVALID_SOURCES');
+        return { label: item.label, kind: item.kind, locator: item.locator, expectedSha256: item.expectedSha256 };
+      }
+      if (url.protocol !== 'https:' || url.username || url.password ||
+        (item.kind === 'drive_folder' ? url.hostname !== 'drive.google.com' || !/^\/drive\/folders\/[\w-]+\/?$/.test(url.pathname) :
+        item.kind === 'google_doc' ? url.hostname !== 'docs.google.com' || !/^\/document\/d\/[\w-]+(?:\/edit)?\/?$/.test(url.pathname) : true)) fail('INVALID_SOURCES');
+    }
+    return { label: item.label, kind: item.kind, locator: item.locator };
+  });
+}
+
 /** Metadata only: selected local artifacts are listed, never opened through this endpoint. */
 export async function readRememberedSources(file: string): Promise<{ ok: boolean; sources: RememberedSource[]; error?: string }> {
   try {
-    const raw = JSON.parse(await readBoundedFile(file, 65536));
-    if (raw.schema !== 'escapehatch-career-sources/v1' || !Array.isArray(raw.sources) || raw.sources.length > 50) fail('INVALID_SOURCES');
-    const sources = raw.sources.map((value: unknown) => {
-      if (!value || typeof value !== 'object') fail('INVALID_SOURCES');
-      const item = value as RememberedSource;
-      if (typeof item.label !== 'string' || !item.label.trim() || /[\x00-\x1f]/.test(item.label) || item.label.length > 200 || typeof item.locator !== 'string' || item.locator.length > 2048 || /[\x00-\x1f]/.test(item.locator)) fail('INVALID_SOURCES');
-      if (item.kind === 'local_file') {
-        if ((!path.win32.isAbsolute(item.locator) && !path.posix.isAbsolute(item.locator)) || (item.locator.startsWith('\\\\') || item.locator.startsWith('//'))) fail('INVALID_SOURCES');
-      } else {
-        const url = new URL(item.locator);
-        if (item.kind === 'google_drive_pdf') {
-          if (url.origin !== 'https://drive.google.com' || url.username || url.password || url.hash ||
-            !['', '?usp=drivesdk', '?usp=sharing'].includes(url.search) ||
-            !/^\/file\/d\/[A-Za-z0-9_-]{10,200}(?:\/view)?\/?$/.test(url.pathname) ||
-            typeof item.expectedSha256 !== 'string' || !/^[a-f0-9]{64}$/.test(item.expectedSha256) ||
-            Object.keys(item).sort().join(',') !== 'expectedSha256,kind,label,locator') fail('INVALID_SOURCES');
-          return { label: item.label, kind: item.kind, locator: item.locator, expectedSha256: item.expectedSha256 };
-        }
-        if (url.protocol !== 'https:' || url.username || url.password ||
-          (item.kind === 'drive_folder' ? url.hostname !== 'drive.google.com' || !/^\/drive\/folders\/[\w-]+\/?$/.test(url.pathname) :
-          item.kind === 'google_doc' ? url.hostname !== 'docs.google.com' || !/^\/document\/d\/[\w-]+(?:\/edit)?\/?$/.test(url.pathname) : true)) fail('INVALID_SOURCES');
-      }
-      return { label: item.label, kind: item.kind, locator: item.locator };
-    });
-    return { ok: true, sources };
+    return { ok: true, sources: parseRememberedSources(JSON.parse(await readBoundedFile(file, 65536))) };
   } catch (error) {
     return (error as NodeJS.ErrnoException).code === 'ENOENT' ? { ok: true, sources: [] } : { ok: false, sources: [], error: 'INVALID_SOURCES' };
   }

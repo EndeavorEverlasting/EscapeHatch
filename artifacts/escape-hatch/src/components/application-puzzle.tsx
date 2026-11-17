@@ -86,7 +86,7 @@ export function ApplicationPuzzle({ opportunity, url, documents, disabled, onByp
       This form offers LinkedIn prefill. You can choose it on the employer page and complete LinkedIn consent yourself.
       Keep the email LinkedIn supplies for this application. Use the résumé email as your default on applications without LinkedIn.
       Reinspect the form after prefill to see what is still missing.
-    </p>
+    </p>}
     {projection.current ? <>
       <p className="my-3 text-sm font-bold">Current page: {projection.requiredCount} required inputs · {projection.unresolvedCount} still empty or invalid · {projection.unknownCount} with unknown requiredness</p>
       <div className="rounded-lg border border-primary/30 bg-secondary/40 p-3" data-testid="application-checkpoint-progress" aria-live="polite">

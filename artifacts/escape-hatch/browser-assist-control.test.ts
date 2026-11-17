@@ -152,6 +152,20 @@ test('reviewed Lever flow preserves the exact tab and checks the résumé again 
     assert.equal(await unrelated.locator('#role-answer').inputValue(), '');
     assert.equal(await target.evaluate(() => Reflect.get(window, 'attemptCount')), 0);
 
+    // A manually submitted job can still have a stale application tab open.
+    const workspace = (await readWorkspace())!;
+    const applied = await saveWorkspace({ ...workspace.workspace, values: {
+      ...workspace.workspace.values, [APPLICATIONS_KEY]: [{ ...job, status: 'applied' }],
+    } }, workspace.revision);
+    for (const endpoint of ['/launch', '/fill', '/prepare', '/resume', '/attach']) {
+      const blocked = await request({ opportunityId: job.id, url: job.url }, undefined, endpoint);
+      assert.equal(blocked.code, 409, endpoint);
+      assert.equal(blocked.body.error, 'saved_application_no_longer_actionable', endpoint);
+    }
+    assert.equal(await target.locator('#role-answer').inputValue(), reviewedNarrative);
+    assert.equal(await target.evaluate(() => Reflect.get(window, 'attemptCount')), 0);
+    await saveWorkspace(workspace.workspace, applied.revision);
+
     const payload = { opportunityId: job.id, url: job.url, livePageUrl: target.url() };
     assert.equal((await request(payload, 'https://foreign.example.com')).code, 403);
     assert.equal((await request({ ...payload, opportunityId: 'wrong-job' })).code, 422);

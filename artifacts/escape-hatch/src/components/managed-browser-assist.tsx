@@ -2,7 +2,7 @@ import { useOpportunityDocuments } from './opportunity-documents';
 import { ApplicationPuzzle } from './application-puzzle';
 import { ApplicationOutcome } from './application-outcome';
 import type { CurrentApplicationPage } from '@/lib/application-puzzle';
-import { isLeverApplicationForm } from '@/lib/application-puzzle';
+import { isLeverApplicationForm, sameApplicationUrl } from '@/lib/application-puzzle';
 import type { LeverReceipt } from '../../lever-attempt-receipts';
 import { parseSubmissionEvidence, reconcileSubmissionReceipts, submissionMatchesApplication } from '@/lib/submission-reconciliation';
 import type { AssistProfile } from '@/lib/assist-contract';
@@ -769,7 +769,9 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         refresh={formObservation?.revision ?? 0}
         disabled={busy || autoPrepareRequested}
       />
-      <ApplicationPuzzle opportunity={applications.find(item => item.id === selectedOpportunityId)} url={url} documents={documents} disabled={busy || autoPrepareRequested} refresh={formObservation} currentPage={currentPage} onBypass={() => { if (browserOpen) setAutoPrepareRequested(true); }} />
+      <ApplicationPuzzle opportunity={applications.find(item => item.id === selectedOpportunityId)} url={url} documents={documents} disabled={busy || autoPrepareRequested} refresh={formObservation} currentPage={currentPage}
+        navigationBlocked={status === 'browser_open_navigation_unverified' && !!currentPage && currentPage.opportunityId === selectedOpportunityId && sameApplicationUrl(currentPage.applicationUrl, url)}
+        onBypass={() => { if (browserOpen) setAutoPrepareRequested(true); }} />
       <div className="mt-5 rounded-xl bg-secondary/55 p-4">
         <div className="flex items-center gap-2 text-sm font-bold"><CheckCircle2 className="text-primary" size={16} />
           {titles[status] || status.replaceAll('_', ' ')}

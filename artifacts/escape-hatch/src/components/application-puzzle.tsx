@@ -12,10 +12,11 @@ const inspectionErrors: Record<string, string> = {
   action_in_progress: 'Another application action is running. Wait for it to finish, then inspect again.',
 };
 
-export function ApplicationPuzzle({ opportunity, url, documents, disabled, onBypass, refresh, currentPage = null }: {
+export function ApplicationPuzzle({ opportunity, url, documents, disabled, onBypass, refresh, currentPage = null, navigationBlocked = false }: {
   opportunity?: Application; url: string; documents: ReturnType<typeof useOpportunityDocuments>; disabled: boolean; onBypass: () => void;
   refresh?: { opportunityId: string; url: string; revision: number } | null;
   currentPage?: CurrentApplicationPage | null;
+  navigationBlocked?: boolean;
 }) {
   const [inspection, setInspection] = useState<FormInspection | null>(null);
   const [busy, setBusy] = useState(false);
@@ -76,6 +77,16 @@ export function ApplicationPuzzle({ opportunity, url, documents, disabled, onByp
     </div>
     <p className="mt-4 rounded-lg bg-secondary p-3 text-sm leading-6">Start with career sources, select this job, and launch its form above. Inspection reads the current page without filling it. Later pages and posting availability still need verification. You authorize the final Submit after review.</p>
     <p role="status" className="my-3 text-sm">{message}</p>
+    {available && navigationBlocked && <p className="my-3 rounded-lg bg-secondary p-3 text-sm" data-testid="application-browser-fallback">
+      Keep the original tab open. If an earlier Submit attempt is unresolved, check its outcome first.
+      For an unsubmitted form that fails to load in Chrome, open this same saved opportunity in Firefox.
+      For a Lever form, use EscapeHatch’s Firefox fill to reuse approved answers. Edge is a manual fallback if Firefox also fails.
+    </p>}
+    {projection.linkedinPrefillAvailable && <p className="my-3 rounded-lg bg-secondary p-3 text-sm" data-testid="application-linkedin-fallback">
+      This form offers LinkedIn prefill. You can choose it on the employer page and complete LinkedIn consent yourself.
+      Keep the email LinkedIn supplies for this application. Use the résumé email as your default on applications without LinkedIn.
+      Reinspect the form after prefill to see what is still missing.
+    </p>
     {projection.current ? <>
       <p className="my-3 text-sm font-bold">Current page: {projection.requiredCount} required inputs · {projection.unresolvedCount} still empty or invalid · {projection.unknownCount} with unknown requiredness</p>
       <div className="rounded-lg border border-primary/30 bg-secondary/40 p-3" data-testid="application-checkpoint-progress" aria-live="polite">

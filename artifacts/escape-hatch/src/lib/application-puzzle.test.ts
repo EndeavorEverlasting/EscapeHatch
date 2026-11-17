@@ -122,3 +122,12 @@ test('one blank field in a large form never rounds up to 100 percent', () => {
   assert.equal(checkpoint.observedPercent, 99);
   assert.equal(checkpoint.percent, 99);
 });
+
+
+test('LinkedIn prefill guidance stays bound to the inspected opportunity and current page', () => {
+  const available = { ...inspection, linkedinPrefillAvailable: true };
+  assert.equal(projectApplicationPuzzle(available, 'one', inspection.applicationUrl, now, currentPage).linkedinPrefillAvailable, true);
+  assert.equal(projectApplicationPuzzle(available, 'one', inspection.applicationUrl, now + INSPECTION_MAX_AGE_MS + 1, currentPage).linkedinPrefillAvailable, false);
+  assert.equal(projectApplicationPuzzle(available, 'one', inspection.applicationUrl, now, { ...currentPage, pageUrl: inspection.pageUrl + '/later' }).linkedinPrefillAvailable, false);
+  assert.equal(projectApplicationPuzzle(available, 'two', inspection.applicationUrl, now, currentPage).linkedinPrefillAvailable, false);
+});

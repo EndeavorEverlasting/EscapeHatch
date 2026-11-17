@@ -167,3 +167,41 @@ test('conditional cover-letter file is a requirement only while observed and vis
     assert.equal(inspected.requirements.filter(item => item.requirement === 'required').length, 2);
   } finally { await browser.close(); }
 });
+
+
+test('Lever counts one checkbox question and observes available LinkedIn prefill without using it', async () => {
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  try {
+    const page = await browser.newPage();
+    const url = 'https://jobs.lever.co/fixture/11111111-1111-4111-8111-111111111111/apply';
+    await page.route(url, route => route.fulfill({ contentType: 'text/html', body: `
+      <button type="button" hidden id="prefill" onclick="this.textContent = 'Profile added'">Apply with LinkedIn</button>
+      <form id="application-form">
+        <div class="application-question">
+          <p class="application-label">Which tools have you used? <span class="required">*</span></p>
+          <div class="application-field required-field">
+            <label><input type="checkbox" name="tool1">Tool 1</label>
+            <label><input type="checkbox" name="tool2">Tool 2</label>
+            <label><input type="checkbox" name="tool3">Tool 3</label>
+          </div>
+        </div>
+        <label>Applicant privacy notice<input type="checkbox" required></label>
+        <label>Optional notes<input value="Synthetic private value"></label>
+      </form>` }));
+    await page.goto(url);
+    const inspect = () => inspectApplicationRequirements(page, 'fixture', url);
+    const before = await inspect();
+    assert.equal(before.linkedinPrefillAvailable, false);
+    assert.equal(before.requirements.length, 3);
+    assert.equal(before.requirements.filter(field => field.requirement === 'required').length, 2);
+    assert.equal(unresolvedCurrentPageRequirements(before).length, 2);
+    await page.locator('#prefill').evaluate(button => button.removeAttribute('hidden'));
+    await page.getByLabel('Tool 2').check();
+    const after = await inspect();
+    assert.equal(after.linkedinPrefillAvailable, true);
+    assert.equal(after.requirements.filter(field => field.requirement === 'required' && field.populated).length, 1);
+    assert.deepEqual(unresolvedCurrentPageRequirements(after), ['required_operator_action:Applicant privacy notice']);
+    assert.doesNotMatch(JSON.stringify(after), /Synthetic private value/);
+    assert.equal(await page.locator('#prefill').textContent(), 'Apply with LinkedIn');
+  } finally { await browser.close(); }
+});

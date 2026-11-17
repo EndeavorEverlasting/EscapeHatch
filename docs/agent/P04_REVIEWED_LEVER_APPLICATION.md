@@ -12,7 +12,7 @@ Use the source and port reported by that installation. Recover the exact open fo
 
 ## Continue an existing Firefox tab
 
-When LinkedIn has added the profile in Firefox, keep that tab and run the host-owned recovery below from the installed source. The host resolves the exact saved opportunity and builds a private, 30-minute fill package from current approved preferences and that opportunity’s reviewed answers. It uses the résumé-backed profile for missing eligible identity fields. The email is excluded from the package, even if the Firefox email field is empty. Keep the LinkedIn-provided address for this opportunity, and keep the résumé email as the general default.
+When LinkedIn has added the profile in Firefox, keep that tab and run the host-owned recovery below from the installed source. The host resolves the exact saved opportunity and builds a private, 30-minute fill package from current approved preferences, that opportunity’s reviewed answers, and its already-saved opportunity overrides. It uses the résumé-backed profile for missing eligible identity fields. The email is excluded from the package, even if the Firefox email field is empty. Keep the LinkedIn-provided address for this opportunity, and keep the résumé email as the general default.
 
 ```powershell
 npm --prefix artifacts/escape-hatch run application:prepare-firefox -- "<exact open Lever form URL>"

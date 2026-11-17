@@ -56,6 +56,16 @@ test('prepare on host, restore approved answers in Firefox and protect email and
     ],
   });
 
+  const saved = JSON.parse(await fs.readFile(path.join(root, 'prefs.json'), 'utf8'));
+  const reviewed = (question: string, value: string) => ({ opportunityId: 'fixture', url: listing, question, value, approvedAt: stamp });
+  saved.application_answers = [
+    reviewed('How did you hear about us?', 'Referral'),
+    reviewed('Email', alias),
+    reviewed('Are you comfortable completing a live coding exercise?', 'Yes'),
+    { ...reviewed('Why are you interested in this opportunity?', 'Wrong-application override'), opportunityId: 'other' },
+  ];
+  await fs.writeFile(path.join(root, 'prefs.json'), JSON.stringify(saved));
+
   await assert.rejects(prepareFirefoxApplication(other), /SAVED_LEVER_OPPORTUNITY_REQUIRED/);
   const prepared = await prepareFirefoxApplication(application);
   const directory = path.dirname(prepared.manifestPath);
@@ -66,7 +76,7 @@ test('prepare on host, restore approved answers in Firefox and protect email and
   assert.equal(manifest.host_permissions, undefined);
   assert.equal(manifest.web_accessible_resources, undefined);
   const packetText = await fs.readFile(path.join(directory, 'answers.json'), 'utf8');
-  assert.doesNotMatch(packetText, /resume-default|identity\.email|Other private job|Draft only/);
+  assert.doesNotMatch(packetText, /resume-default|linkedin-alias|identity\.email|Other private job|Draft only|Wrong-application override/);
   const packet = JSON.parse(packetText);
 
   const browser = await firefox.launch({ headless: true });
@@ -80,6 +90,7 @@ test('prepare on host, restore approved answers in Firefox and protect email and
     '<label>Country<select id="country"><option value="">Choose</option><option value="US">United States</option></select></label>' +
     '<fieldset><legend>Are you comfortable completing a live coding exercise?</legend>' +
     '<label><input name="coding" type="radio" value="yes">Yes</label><label><input name="coding" type="radio" value="no">No</label></fieldset>' +
+    '<label>How did you hear about us?<select id="source"><option value="">Choose</option><option>Referral</option></select></label>' +
     '<fieldset><legend>Which tools did you use?</legend><label><input type="checkbox" id="tool1" value="1">Service Desk</label>' +
     '<label><input type="checkbox" id="tool2" value="2">Workflow Studio</label></fieldset>' +
     '<label>What excites you about this role? 1–4 sentences<textarea id="role-answer"></textarea></label>' +
@@ -94,13 +105,14 @@ test('prepare on host, restore approved answers in Firefox and protect email and
   assert.equal(result.state, 'FILL_READ_BACK');
   assert.deepEqual(result.filled.sort(), [
     'approved-question:which tools did you use', 'identity.country', 'identity.full_name', 'identity.website',
-    'interview.live_coding_comfort', 'reviewed-role:what excites you about this role 1 4 sentences',
+    'opportunity:are you comfortable completing a live coding exercise', 'opportunity:how did you hear about us', 'reviewed-role:what excites you about this role 1 4 sentences',
   ]);
   assert.deepEqual(result.preserved, ['identity.linkedin']);
   assert.equal(await page.locator('#email').inputValue(), alias);
   assert.equal(await page.locator('#alternate').inputValue(), '');
   assert.equal(await page.locator('#country').inputValue(), 'US');
-  assert.equal(await page.locator('input[name="coding"]:checked').inputValue(), 'no');
+  assert.equal(await page.locator('input[name="coding"]:checked').inputValue(), 'yes');
+  assert.equal(await page.locator('#source').inputValue(), 'Referral');
   assert.equal(await page.locator('#tool1').isChecked(), true);
   assert.equal(await page.locator('#tool2').isChecked(), true);
   assert.equal(await page.locator('#role-answer').inputValue(), roleAnswer);

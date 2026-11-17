@@ -4,16 +4,15 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { readWorkspace } from './workspace-file.ts';
-import { readPreferences } from './preference-file.ts';
+import { readPreferenceSnapshot } from './preference-file.ts';
 import { APPLICATIONS_KEY, PROFILE_KEY, parseApplicationsStorage, parseProfileStorage } from './src/lib/storage.ts';
 import { leverApplicationKey, savedLeverApplicationKey } from './src/lib/application-puzzle.ts';
 import { discoveredValue, matchQuestion, normalizeQuestion, questions, reusableValue, roleQuestionKey } from './src/lib/application-preferences.ts';
 import { assertEmployerFacingDocumentUrl } from './src/lib/employer-facing-document-url.ts';
-import { internationalPhone } from './managed-form.ts';
 
 const source = fileURLToPath(new URL('../../browser/firefox-reviewed-fill/', import.meta.url));
 const assets = ['manifest.json', 'popup.html', 'popup.js', 'fill-known.js'];
-const protectedQuestion = /(?:^|\s)(?:e[\s-]?mail|privacy|consent|attest\w*|certif\w*|sign\w*|agree\w*|acknowledg\w*|password|passcode|captcha|disclosure|voluntary|terms)(?:\s|$)/i;
+const protectedQuestion = /(?:^|\s)(?:e[\s-]?mail|privacy|consent|attest\w*|certif\w*|sign\w*|agree\w*|acknowledg\w*|password|passcode|captcha|disclosure|voluntary|terms|disability|veteran|ethnicity|race|gender)(?:\s|$)/i;
 
 export async function prepareFirefoxApplication(applicationUrl: string) {
   const key = leverApplicationKey(applicationUrl);
@@ -26,7 +25,7 @@ export async function prepareFirefoxApplication(applicationUrl: string) {
   const [job] = matches;
   if (!['saved', 'preparing'].includes(job.status) || job.submissionEvidence) throw new Error('APPLICATION_REQUIRES_RECONCILIATION');
 
-  const saved = await readPreferences();
+  const { preferences: saved, source: stored } = await readPreferenceSnapshot();
   const profile = parseProfileStorage(workspace?.workspace.values[PROFILE_KEY]);
   const fallback: Record<string, string | undefined> = {
     'identity.title': profile?.name_prefix, 'identity.first_name': profile?.first_name,
@@ -57,7 +56,7 @@ export async function prepareFirefoxApplication(applicationUrl: string) {
         definition.automation_policy !== 'fill_if_explicit_preference') continue;
     const value = valueFor(id);
     const aliases = definition.aliases.filter(prompt => matchQuestion(prompt, job.company) === id);
-    add(id, aliases, id === 'identity.phone' && value ? internationalPhone(value, valueFor('identity.country') || '') : value);
+    add(id, aliases, value);
   }
   for (const answer of saved.reviewed_role_answers || []) {
     if (answer.opportunityId === job.id && answer.url === job.url && roleQuestionKey(answer.question)) {
@@ -67,15 +66,39 @@ export async function prepareFirefoxApplication(applicationUrl: string) {
   for (const old of Object.values(saved.discovered_answers || {})) {
     add('approved-question:' + normalizeQuestion(old.question), [old.question], discoveredValue(old.question, saved));
   }
-  if (!answers.length) throw new Error('NO_APPROVED_ANSWERS_AVAILABLE');
+  // Installed versions can already have reviewed opportunity overrides in
+  // this same private file. Read the exact scope without rewriting the store.
+  const overlay = stored && typeof stored === 'object' && 'application_answers' in stored
+    ? stored.application_answers : undefined;
+  if (Array.isArray(overlay) && overlay.length <= 150) {
+    const exact = new Map<string, { question: string; value: string } | null>();
+    for (const row of overlay) {
+      if (!row || row.opportunityId !== job.id || row.url !== job.url ||
+          typeof row.question !== 'string' || row.question.length > 512 ||
+          typeof row.value !== 'string' || !row.value.trim() || row.value.length > 4096 ||
+          typeof row.approvedAt !== 'string' || !Number.isFinite(Date.parse(row.approvedAt))) continue;
+      const label = normalizeQuestion(row.question);
+      if (!label || protectedQuestion.test(label)) continue;
+      if (/^(?:eeo|legal|attestation|marketing|accommodation|military|veteran|talent_community)\./.test(matchQuestion(row.question, job.company) || '')) continue;
+      exact.set(label, exact.has(label) ? null : row);
+    }
+    for (const [label, row] of exact) {
+      // The exact reviewed application answer takes precedence on this prompt.
+      // Duplicate exact rows suppress fallback and require review.
+      for (const answer of answers) answer.aliases = answer.aliases.filter(alias => alias !== label);
+      if (row) add('opportunity:' + label, [row.question], row.value);
+    }
+  }
+  const usableAnswers = answers.filter(answer => answer.aliases.length);
+  if (!usableAnswers.length) throw new Error('NO_APPROVED_ANSWERS_AVAILABLE');
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'escapehatch-firefox-'));
   try {
     await Promise.all(assets.map(name => fs.copyFile(path.join(source, name), path.join(directory, name))));
     const expiresAt = Date.now() + 30 * 60 * 1000;
-    await fs.writeFile(path.join(directory, 'answers.json'), JSON.stringify({ applicationUrl, expiresAt, answers }),
+    await fs.writeFile(path.join(directory, 'answers.json'), JSON.stringify({ applicationUrl, expiresAt, answers: usableAnswers }),
       { flag: 'wx', mode: 0o600 });
     return { state: 'FIREFOX_FILL_READY' as const, manifestPath: path.join(directory, 'manifest.json'),
-      approvedAnswerCount: answers.length, expiresAt: new Date(expiresAt).toISOString(), emailPolicy: 'PRESERVE' as const };
+      approvedAnswerCount: usableAnswers.length, expiresAt: new Date(expiresAt).toISOString(), emailPolicy: 'PRESERVE' as const };
   } catch (error) {
     await fs.rm(directory, { recursive: true, force: true });
     throw error;

@@ -18,7 +18,7 @@
       .replace(/\bu\.s\.(?:a\.)?/g, 'us')
       .replace(/\((?:required|optional|voluntary|select one|please select)\)|\[(?:required|optional)\]|\brequired\b/g, '')
       .replace(/[^a-z0-9]+/g, ' ').trim();
-    const protectedQuestion = /(?:^|\s)(?:e[\s-]?mail|privacy|consent|attest\w*|certif\w*|sign\w*|agree\w*|acknowledg\w*|password|passcode|captcha|disclosure|voluntary|terms)(?:\s|$)/;
+    const protectedQuestion = /(?:^|\s)(?:e[\s-]?mail|privacy|consent|attest\w*|certif\w*|sign\w*|agree\w*|acknowledg\w*|password|passcode|captcha|disclosure|voluntary|terms|disability|veteran|ethnicity|race|gender)(?:\s|$)/;
     const protectedId = /^(?:identity\.email$|(?:eeo|legal|attestation|marketing|accommodation|military|veteran|talent_community)\.)/;
     const types = ['text', 'tel', 'url', 'number', 'textarea', 'select-one', 'select-multiple', 'radio', 'checkbox'];
     const options = ['select-one', 'select-multiple', 'radio', 'checkbox'];

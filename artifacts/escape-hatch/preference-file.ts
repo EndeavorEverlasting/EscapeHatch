@@ -53,18 +53,28 @@ function isDefaultPlatformPreferenceFile(file: string, env: NodeJS.ProcessEnv = 
   return path.resolve(file) === path.resolve(path.join(platformRoot, 'application-question-preferences.json'));
 }
 
-async function readPreferencesUnlocked(file: string): Promise<Preferences> {
+async function readPreferenceSnapshotUnlocked(file: string): Promise<{ preferences: Preferences; source: unknown }> {
   try {
     if (isDefaultPlatformPreferenceFile(file)) await migrateLegacyPreferencesUnlocked(file);
     const bytes = await fs.readFile(file);
     if (bytes.length > 65536) throw new Error('Invalid saved preferences; restore a valid preference export.');
-    const data = parsePreferences(JSON.parse(bytes.toString('utf8').replace(/^\uFEFF/, '')));
+    const source: unknown = JSON.parse(bytes.toString('utf8').replace(/^\uFEFF/, ''));
+    const data = parsePreferences(source);
     if (!data) throw new Error('Invalid saved preferences; restore a valid preference export.');
-    return data;
+    return { preferences: data, source };
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return emptyPreferences();
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { preferences: emptyPreferences(), source: null };
     throw new Error('Saved preferences could not be read. Existing data was preserved.');
   }
+}
+
+async function readPreferencesUnlocked(file: string): Promise<Preferences> {
+  return (await readPreferenceSnapshotUnlocked(file)).preferences;
+}
+
+/** Host-only read of one locked snapshot, including optional opportunity overlays. */
+export function readPreferenceSnapshot(file = preferenceFile()) {
+  return transaction(file, () => readPreferenceSnapshotUnlocked(file));
 }
 
 export function readPreferences(file = preferenceFile()): Promise<Preferences> {

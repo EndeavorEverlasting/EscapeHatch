@@ -19,12 +19,13 @@
   "lanes": [
     {
       "lane_id": "EH-LIVE",
-      "mission": "Use the installed runtime to complete the already reviewed exact Lever application and read back one employer attempt.",
+      "mission": "Reconcile the exact saved opportunity and canonical tracker before any browser action. A same-posting employer confirmation closes the application. If the applicant reports submitting and confirmation is unavailable, reconcile before considering any further submit action. Use the installed runtime to complete an application still awaiting its authorized first attempt.",
       "execution_environment": "LOCAL_AGENT_RUNTIME",
       "provider_access": ["Lever", "existing tracker adapter"],
       "required_capabilities": ["Windows installed EscapeHatch", "existing Chrome tab", "existing scoped Submit authorization"],
       "dependencies": [],
       "evidence_inputs": [
+        {"type": "provider", "owner": "private canonical tracker", "ref": "exact posting row and linked employer confirmation", "freshness": "read before browser actions when the applicant reports a submission", "proof_ceiling": "recorded or directly observed employer outcome"},
         {"type": "runtime", "owner": "installed EscapeHatch", "ref": "Status-EscapeHatch.ps1", "freshness": "read at execution", "proof_ceiling": "runtime identity"},
         {"type": "browser", "owner": "applicant", "ref": "already-open exact Lever form", "freshness": "bind at execution", "proof_ceiling": "live form and provider outcome"}
       ],
@@ -33,7 +34,7 @@
       "posture": "one local operator-authorized writer",
       "launch": {"mode": "argv", "argv": ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ".\\Status-EscapeHatch.ps1"]},
       "return_artifact": "Private answer, attempt, employer confirmation and tracker readback or exact recoverable state.",
-      "validation": ["Exact tab and résumé digest", "Same-opportunity confirmation or unresolved receipt"],
+      "validation": ["Exact posting reconciliation before resuming any tab", "Exact tab and résumé digest for a still-pending application", "Same-opportunity confirmation or unresolved receipt"],
       "status": "AWAITING_INSTALLED_LOCAL_AGENT"
     },
     {

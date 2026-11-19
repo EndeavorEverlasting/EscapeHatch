@@ -50,12 +50,12 @@ export function ApplicationSubmissionSetting() {
     }
   }
 
-  return <section className="mb-5 rounded-xl border border-border bg-card p-4" aria-label="Application submission">
+  return <section className="mb-5 min-w-0 rounded-xl border border-border bg-card p-4" aria-label="Application submission">
     <label className="block text-sm font-semibold" htmlFor="application-submission-mode">Application submission</label>
     <select id="application-submission-mode" value={policy?.mode || 'REVIEW_BEFORE_SUBMIT'}
       disabled={!policy || busy} onChange={event => void save(event.target.value as SubmissionMode)}
       aria-describedby="application-submission-mode-status"
-      className="mt-2 rounded-lg border border-border bg-background px-3 py-2 text-sm">
+      className="mt-2 w-full max-w-xs rounded-lg border border-border bg-background px-3 py-2 text-sm">
       <option value="REVIEW_BEFORE_SUBMIT">Review before submitting</option>
       <option value="AUTO_SUBMIT_WHERE_SUPPORTED">Submit automatically where supported</option>
     </select>

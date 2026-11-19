@@ -14,6 +14,8 @@ import { ArrowUpRight, CheckCircle2, FileUp, LoaderCircle, ShieldCheck } from 'l
 import { getLocalStorage, readStoredValue, writeStoredValue, type Application, type Profile } from '@/lib/storage';
 import { ApplicationPreferences } from './application-preferences';
 import { ResumePlatformSwitcher } from './resume-platform-switcher';
+import { ApplicationSubmissionSetting, submissionDispositionText } from './application-submission-setting';
+import type { SubmissionDisposition } from '../../application-submission-policy';
 import { connectionFromSnapshot, isSubmittedLocked, mergeTrackerIntoApplications, parseTrackerSnapshot, selectNextActionableOpportunity, trackerOpportunityId } from '@/lib/tracker-bridge';
 import { refreshBoundTrackerOnStartup, type TrackerStatusEnvelope } from '@/lib/tracker-refresh-client';
 import { consumeManagedLaunchIntent } from '@/lib/managed-launch-intent';
@@ -54,6 +56,7 @@ type ServerResponse = {
   skipped?: string[];
   attachments?: Record<string, string>;
   requiresOperatorSubmission?: boolean;
+  submissionDisposition?: SubmissionDisposition;
   finalActionActivated?: boolean;
   attemptReceipt?: LeverReceipt;
   receipts?: LeverReceipt[];
@@ -606,7 +609,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           result.preparation.pagesPrepared + '; intermediate steps: ' + result.preparation.intermediateSteps +
           (result.filled?.length ? '. Filled approved fields: ' + result.filled.join(', ') : '') +
           (result.attachments ? '. Document staging: ' + Object.entries(result.attachments).map(([kind, status]) => kind + '=' + status.replaceAll('_', ' ')).join(', ') : '') +
-          '. Final Submit requires your explicit approval.'
+          '. ' + (result.submissionDisposition ? submissionDispositionText[result.submissionDisposition] : 'Final Submit requires your explicit approval.')
         );
       }
     } catch (error) {
@@ -869,6 +872,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         A file input being populated does not prove the employer accepted an upload.
       </p>
     </section>
+    {runtimeChecked && <ApplicationSubmissionSetting />}
     <section aria-label="Reusable application knowledge"><ApplicationPreferences currentRole={applications.find(item => item.id === selectedOpportunityId)?.role} currentPosting={applications.find(item => item.id === selectedOpportunityId)?.jobDescription || ''} reviewedExperience={assistProfile.experience.filter(item => item.id === assistProfile.selectedExperienceId).map(item => item.title + ' ' + item.bullets.join(' ')).join(' ')} refresh={preferencesRefresh} onEdit={() => setRecordMilitary(false)} onLoad={data => setProfile(current => {
       const next = { ...current };
       for (const key of Object.keys(current) as (keyof Profile)[]) {

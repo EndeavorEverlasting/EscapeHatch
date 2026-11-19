@@ -12,6 +12,7 @@
 !artifacts/escape-hatch/public/**
 !contracts/
 !contracts/application-journey-scenes.v1.json
+!contracts/application-submission-policy.v1.json
 !harness/
 !harness/contracts/
 !harness/contracts/application-form-taxonomy.v1.json

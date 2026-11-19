@@ -40,6 +40,7 @@ import {
   maybePullPrivateSyncOnStartup,
 } from './private-sync-after-write.ts';
 import { prepareToFinalReview, type PreparationResult } from './application-autopilot-executor.ts';
+import { isSubmissionMode, readPreparedSubmissionDisposition, readSubmissionPolicy, saveSubmissionMode } from './application-submission-policy.ts';
 import os from 'node:os';
 import {
   ADAPTER_EVIDENCE_SCHEMA,
@@ -578,6 +579,12 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             return respond(res, 200, { ok: true, receipts: leverReceipts.recent(key) });
           } catch { return respond(res, 422, { ok: false, error: 'lever_attempt_receipts_unavailable' }); }
         }
+        if (url.pathname === PREFIX + '/submission-policy' && req.method === 'GET') {
+          if (req.headers.origin && req.headers.origin !== expectedOrigin || req.headers['sec-fetch-site'] === 'cross-site') {
+            return respond(res, 403, { ok: false, error: 'operator_origin_required' });
+          }
+          return respond(res, 200, { ok: true, policy: await readSubmissionPolicy() });
+        }
         if (url.pathname === PREFIX + '/preferences' && req.method === 'GET') {
           if (req.headers.origin && req.headers.origin !== expectedOrigin || req.headers['sec-fetch-site'] === 'cross-site') return respond(res, 403, { ok: false, error: 'operator_origin_required' });
           try {
@@ -679,6 +686,15 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             req.headers[ACTION_HEADER] !== 'confirmed' ||
             req.headers['sec-fetch-site'] === 'cross-site') {
           return respond(res, 403, { ok: false, error: 'operator_origin_required' });
+        }
+        if (url.pathname === PREFIX + '/submission-policy') {
+          try {
+            const { mode } = await readJson(req);
+            if (!isSubmissionMode(mode)) return respond(res, 422, { ok: false, error: 'invalid_submission_mode' });
+            return respond(res, 200, { ok: true, policy: await saveSubmissionMode(mode) });
+          } catch {
+            return respond(res, 422, { ok: false, error: 'submission_policy_save_unverified' });
+          }
         }
         if (cache.busy) return respond(res, 409, { ok: false, error: 'action_in_progress' });
         if (url.pathname === PREFIX + '/requirements') {
@@ -1140,6 +1156,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               state = preparation.state;
               return respond(res, 200, {
                 ok: true, state, ...fallback,
+                submissionDisposition: await readPreparedSubmissionDisposition(preparation.state, applicationUrl, page!.url()),
                 requiresOperatorSubmission: true, reviewPolicy: packageFiles.reviewPolicy,
                 finalActionActivated: false,
               });
@@ -1201,6 +1218,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               ok: true,
               state,
               preparation,
+              submissionDisposition: await readPreparedSubmissionDisposition(preparation.state, applicationUrl, page!.url()),
               requiresOperatorSubmission: true,
               finalActionActivated: false,
             });

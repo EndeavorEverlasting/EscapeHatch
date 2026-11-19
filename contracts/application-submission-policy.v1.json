@@ -1,0 +1,22 @@
+{
+  "schema": "escapehatch/application-submission-policy/v1",
+  "parent_issue": "https://github.com/EndeavorEverlasting/EscapeHatch/issues/69",
+  "setting": "application-submission-policy.json",
+  "scope": "installed applicant workspace",
+  "default": "REVIEW_BEFORE_SUBMIT",
+  "modes": {
+    "REVIEW_BEFORE_SUBMIT": "Prepare eligible applications through final review and hold before the terminal action.",
+    "AUTO_SUBMIT_WHERE_SUPPORTED": "The applicant's saved opt-in is standing authorization to submit eligible prepared applications through a provider-authorized adapter. No per-application approval or agent discretion is required on that route."
+  },
+  "rules": [
+    "One private host setting governs single and queued applications across UI and agents. New installs and missing, invalid or unsupported settings hold before Submit. Re-read the host setting at each terminal decision, including retries and resumed runs.",
+    "A supported route has explicit applicant-side provider authorization, exact opportunity binding, verified final-action effect, complete approved answers and attachments, and durable duplicate protection. A page label, locally imported registry, AI decision or request flag cannot authorize a route.",
+    "A provider's sign-in, MFA, human verification or personal attestation stays with the applicant. Preserve progress and resume from that application without restating reusable answers. The submission setting does not answer demographic questions or grant permission to save those answers on a provider.",
+    "Keep provider-ineligible applications at review or the first unresolved provider requirement. In batch execution, preserve the blocked item and continue eligible independent items.",
+    "Reserve a submission once per application and reconcile uncertain attempts before retry. Only an exact employer or authorized provider receipt changes application status to submitted."
+  ],
+  "supported_automatic_providers": [],
+  "provider_restrictions": {
+    "indeed_apply": "Third-party automation of Indeed Apply requires Indeed-authorized tooling."
+  }
+}

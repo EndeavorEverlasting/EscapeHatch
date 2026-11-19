@@ -583,7 +583,6 @@ export function createManagedBrowserAssistPlugin(): Plugin {
           if (req.headers.origin && req.headers.origin !== expectedOrigin || req.headers['sec-fetch-site'] === 'cross-site') {
             return respond(res, 403, { ok: false, error: 'operator_origin_required' });
           }
-          res.setHeader('Cache-Control', 'no-store');
           return respond(res, 200, { ok: true, policy: await readSubmissionPolicy() });
         }
         if (url.pathname === PREFIX + '/preferences' && req.method === 'GET') {
@@ -692,7 +691,6 @@ export function createManagedBrowserAssistPlugin(): Plugin {
           try {
             const { mode } = await readJson(req);
             if (!isSubmissionMode(mode)) return respond(res, 422, { ok: false, error: 'invalid_submission_mode' });
-            res.setHeader('Cache-Control', 'no-store');
             return respond(res, 200, { ok: true, policy: await saveSubmissionMode(mode) });
           } catch {
             return respond(res, 422, { ok: false, error: 'submission_policy_save_unverified' });

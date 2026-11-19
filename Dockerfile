@@ -3,7 +3,7 @@ WORKDIR /app/artifacts/escape-hatch
 COPY artifacts/escape-hatch/package.json artifacts/escape-hatch/package-lock.json ./
 RUN npm ci --ignore-scripts --no-audit --no-fund
 COPY artifacts/escape-hatch/ ./
-COPY contracts/application-journey-scenes.v1.json /app/contracts/
+COPY contracts/application-journey-scenes.v1.json contracts/application-submission-policy.v1.json /app/contracts/
 COPY harness/contracts/application-form-taxonomy.v1.json /app/harness/contracts/
 COPY browser/application-assist/manifest.json browser/application-assist/reviewed-form.js /app/browser/application-assist/
 RUN VITE_ESCAPEHATCH_CONTAINER=1 npm run build

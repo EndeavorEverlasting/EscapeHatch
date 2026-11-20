@@ -57,6 +57,12 @@ Existing `skills/harness-operations/SKILL.md` and `harness/CODEBASE_MAP.md` are 
 8. Register new durable artifacts and update maps/workflows when authority changes.
 9. Run validation in manifest order before committing.
 
+## Recruiter outreach
+
+Record inbound recruiter contact in the existing private tracker. Preserve the original channel and keep the conversation, applicant interest, consent for recruiter submission, planned submission, and confirmed submission as separate facts with dates and sources. An application-history search establishes the result for the channel and dates searched. Prior submissions through another agency require their own evidence.
+
+When the recruiter owns the next submission step, record that owner and follow up through the agreed channel. Keep the application form and submission date unset until each is established. Store recruiter details, source links, call notes, and correspondence drafts in the user-owned private workspace. Keep applicant-specific evidence out of Git.
+
 ## Application Form Intake
 
 Application pages are modular collections of semantic questions. Employer, ATS vendor, page count, page number, and DOM order are not canonical identity.

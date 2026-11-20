@@ -20,14 +20,15 @@ export function parseEmailApplication(value: unknown): EmailApplication | null {
 }
 
 export function emailApplicationFromTracker(mailto: URL, postingUrl: unknown): EmailApplication | null {
-  if (mailto.protocol !== 'mailto:' || mailto.hash ||
-    [...mailto.searchParams.keys()].some(key => key !== 'subject') ||
-    mailto.searchParams.getAll('subject').length > 1) return null;
+  if (mailto.protocol !== 'mailto:' || mailto.hash) return null;
   try {
+    const query = mailto.search.slice(1);
+    const header = /^([^=&]+)(?:=([^&]*))?$/.exec(query);
+    if (query && (!header || decodeURIComponent(header[1]) !== 'subject')) return null;
     return parseEmailApplication({
       postingUrl,
       recipient: decodeURIComponent(mailto.pathname),
-      subject: mailto.searchParams.get('subject') ?? undefined,
+      subject: header?.[2] === undefined ? undefined : decodeURIComponent(header[2]),
     });
   } catch {
     return null;

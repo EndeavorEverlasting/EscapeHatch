@@ -67,7 +67,7 @@ test('explicit email applications retain a separate, source-bound materials rout
   const postingUrl = 'https://jobs.example.test/vacancies?id=700';
   const rows = [[...heading, 'Source Link'],
     [false, 'High', 'Ready to Apply', 'Synthetic Agency', 'Analyst',
-      'mailto:careers%40example.test?subject=Vacancy%20700%20%E2%80%94%20Analyst', '', '', '', postingUrl],
+      'mailto:careers%40example.test?subject=Vacancy%20700%20%E2%80%94%20C++%20%26%20C%2B%2B=Analyst', '', '', '', postingUrl],
     values[1]];
   const snapshot = createTrackerSnapshotFromValues(rows, target, 'synthetic', date);
   const initial = mergeTrackerIntoApplications([], snapshot);
@@ -75,7 +75,7 @@ test('explicit email applications retain a separate, source-bound materials rout
   const email = applications?.find(item => item.company === 'Synthetic Agency');
   assert.equal(email?.url, '');
   assert.deepEqual(email?.emailApplication, {
-    postingUrl, recipient: 'careers@example.test', subject: 'Vacancy 700 — Analyst',
+    postingUrl, recipient: 'careers@example.test', subject: 'Vacancy 700 — C++ & C++=Analyst',
   });
   assert.match(email?.nextAction || '', /review.*email application/i);
   assert.equal(selectNextActionableOpportunity(snapshot)?.company, 'Synthetic Employer');
@@ -94,6 +94,7 @@ test('unsupported mail parameters and unsafe source URLs remain plain legacy not
     ['mailto:careers@example.test?subject=One&subject=Two', source],
     ['mailto:careers@example.test?cc=someone@example.test', source],
     ['mailto:careers@example.test?subject=One%0D%0ABcc%3AInjected', source],
+    ['mailto:careers@example.test?subject=Unfinished%', source],
     ['mailto:careers@example.test%2Cother@example.test', source],
     ['mailto:careers@example.test', 'https://u:p@jobs.example.test/vacancy/700'],
     ['mailto:careers@example.test', 'http://jobs.example.test/vacancy/700'],

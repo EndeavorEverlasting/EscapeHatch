@@ -7,7 +7,8 @@ import { emailApplicationFromTracker } from './src/lib/email-application.ts';
 
 const MAX_BYTES = 2 * 1024 * 1024;
 const ROW_LIMIT = 1500;
-const TRACKER_COLUMN_LIMIT = 46; // A–AT
+const TRACKER_LAST_COLUMN = 'AV';
+const TRACKER_COLUMN_LIMIT = 48;
 const TIMEOUT_MS = 10_000;
 export type TrackerTarget = { spreadsheetId: string; sheetName: string };
 export type RefreshResult = { ok: true; refreshed: true; snapshot: TrackerSnapshot } | { ok: false; refreshed: false; error: string };
@@ -34,6 +35,9 @@ const headers: Record<string, keyof TrackerRow> = {
   'employer profile key': 'employerProfileKey',
   'internal platform submitted?': 'internalPlatformSubmittedCheckbox',
   'discord community joined?': 'discordCommunityJoinedCheckbox',
+  'opportunity source': 'opportunitySource',
+  'applied basis': 'appliedBasis',
+  'submission proof': 'submissionProof',
 };
 const required = ['company', 'role', 'status', 'priority', 'applyUrl', 'appliedCheckbox'] as const;
 
@@ -41,9 +45,7 @@ const required = ['company', 'role', 'status', 'priority', 'applyUrl', 'appliedC
 export function createTrackerSnapshotFromValues(values: unknown, target: TrackerTarget, authPath: string, capturedAt: Date): TrackerSnapshot {
   if (!validTarget(target) || Number.isNaN(capturedAt.getTime())) fail('INVALID_TARGET');
   if (!Array.isArray(values) || values.length < 1 || values.length >= ROW_LIMIT) fail('INCOMPLETE_RESPONSE');
-  // Read A–AT: prior role/portal columns A–AJ, independent profile milestones AK–AS,
-  // and Discord membership AT. New read fields do not authorize submission writes.
-  // Legacy A–AJ snapshots remain valid. This read width grants NO new write authority.
+  // Intake fields in AU–AV are optional. Older trackers and snapshots remain valid.
   if (!values.every(row => Array.isArray(row) && row.length <= TRACKER_COLUMN_LIMIT && row.every(cell => ['string', 'number', 'boolean'].includes(typeof cell)))) fail('INVALID_ROWS');
   const heading = values[0] as (string | number | boolean)[];
   const seen = new Set<string>();
@@ -209,9 +211,17 @@ async function refreshTrackerSnapshotNow(snapshotFile: string, options: RefreshO
   let response: Response | undefined;
   try {
     if (auth.token.length > 16384 || /[\r\n]/.test(auth.token)) fail('AUTH_REQUIRED');
-    const range = `'${current.sheetName.replace(/'/g, "''")}'!A1:AT${ROW_LIMIT}`;
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(current.spreadsheetId)}/values/${encodeURIComponent(range)}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE`;
-    response = await (options.fetch || fetch)(url, { headers: { authorization: `Bearer ${auth.token}` }, signal: controller.signal, redirect: 'error' });
+    const readValues = (lastColumn: string) => {
+      const range = `'${current.sheetName.replace(/'/g, "''")}'!A1:${lastColumn}${ROW_LIMIT}`;
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(current.spreadsheetId)}/values/${encodeURIComponent(range)}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE`;
+      return (options.fetch || fetch)(url, { headers: { authorization: `Bearer ${auth.token}` }, signal: controller.signal, redirect: 'error' });
+    };
+    response = await readValues(TRACKER_LAST_COLUMN);
+    // Legacy grids may end at AT. Never downgrade a snapshot with known intake data.
+    if (response.status === 400 && !current.applications.some(row => row.opportunitySource || row.appliedBasis)) {
+      void response.body?.cancel().catch(() => {});
+      response = await readValues('AT');
+    }
     if (response.status === 401 || response.status === 403) return { ok: false, refreshed: false, error: 'AUTH_REQUIRED' };
     if (!response.ok) return { ok: false, refreshed: false, error: 'PROVIDER_UNAVAILABLE' };
     const raw = await boundedJson(response, controller.signal);

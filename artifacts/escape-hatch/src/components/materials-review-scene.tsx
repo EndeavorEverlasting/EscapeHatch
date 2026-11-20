@@ -10,20 +10,24 @@ const guide = getJourneyStop('materials');
 
 /** Visible home for deterministic document-review evidence (FORM_PREPARATION.document_review). */
 export function MaterialsReviewScene({ applications }: { applications: Application[] }) {
-  const open = applications.filter(item => item.url && !['applied', 'closed'].includes(item.status));
+  const open = applications.filter(item => item.emailApplication
+    ? (item.status === 'saved' || item.status === 'preparing') && !item.reconciliationConflict
+    : item.url && !['applied', 'closed'].includes(item.status));
   const requestedId = new URLSearchParams(useSearch()).get('opportunityId');
   const [choice, setChoice] = useState<{ from: string | null; id: string }>();
   const selectedId = choice?.from === requestedId ? choice.id : requestedId ?? open[0]?.id;
   const selected = open.find(item => item.id === selectedId);
   const opportunityId = selected?.id || '';
-  const url = selected?.url || '';
+  const email = selected?.emailApplication;
+  const url = email?.postingUrl || selected?.url || '';
   const documents = useOpportunityDocuments(opportunityId, url);
   const status = useMemo(() => projectMaterialsReviewStatus({
     opportunityId,
     applicationUrl: url,
-    requireReview: documents.data?.requireReview !== false,
+    requireReview: Boolean(email) || documents.data?.requireReview !== false,
     documents: documents.data?.package.documents || {},
-  }), [opportunityId, url, documents.data]);
+    delivery: email ? 'email' : undefined,
+  }), [opportunityId, url, documents.data, email]);
 
   return (
     <div className="materials-desk space-y-8" data-testid="materials-review-scene">
@@ -46,7 +50,7 @@ export function MaterialsReviewScene({ applications }: { applications: Applicati
             <h2 className="font-display text-2xl">Opportunity materials</h2>
             <p className="mt-2 text-sm text-muted-foreground">One opportunity at a time. Review is per file version, not per company name.</p>
           </div>
-          {selected && <Link href={journeyOpportunityHref('/assist', selected.id)}
+          {selected?.url && <Link href={journeyOpportunityHref('/assist', selected.id)}
             className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
             data-testid="materials-open-assist">
             {guide.action} <ArrowRight size={16} />
@@ -65,6 +69,14 @@ export function MaterialsReviewScene({ applications }: { applications: Applicati
             {open.map(item => <option key={item.id} value={item.id}>{item.company} · {item.role}</option>)}
           </select>
         </label>
+
+        {email && <section className="mt-5 space-y-2 rounded-xl border border-border p-4" aria-label="Email application instructions">
+          <h3 className="text-sm font-bold">Apply by email</h3>
+          <p className="text-sm text-muted-foreground">Review your PDFs here, then send them using your mail client.</p>
+          <p className="break-words text-sm"><strong>To</strong> {email.recipient}</p>
+          {email.subject && <p className="break-words text-sm"><strong>Subject</strong> {email.subject}</p>}
+          <a href={email.postingUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold text-primary underline">Verify the posting instructions</a>
+        </section>}
 
         <div className="mascot-guidance mt-5 flex items-center gap-3 rounded-xl border border-primary/25 bg-primary/5 p-3">
           <img src="/escapehatch-mascot.webp" alt="" width={40} height={40} className="h-10 w-10 shrink-0" />
@@ -107,7 +119,7 @@ export function MaterialsReviewScene({ applications }: { applications: Applicati
       </section>
 
       {selected ? (
-        <OpportunityDocuments documents={documents} disabled={!selected} onBypass={() => {}} />
+        <OpportunityDocuments documents={documents} disabled={!selected} onBypass={() => {}} delivery={email ? 'email' : undefined} />
       ) : (
         <p className="rounded-xl border border-dashed border-border p-5 text-sm text-muted-foreground">Add or reopen an opportunity under Applications, then return here to seal its documents.</p>
       )}

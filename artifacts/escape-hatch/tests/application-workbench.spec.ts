@@ -1,6 +1,8 @@
 import { expect, test, type Locator } from '@playwright/test';
 import { inspectApplicationRequirements } from '../application-requirements';
 import { SOURCE_BINDINGS_KEY } from '../src/lib/source-bridge';
+import { createTrackerSnapshotFromValues } from '../tracker-refresh';
+import { trackerRowToApplication } from '../src/lib/tracker-bridge';
 
 async function drop(target: Locator, name: string, content: string, count = 1) {
   await target.evaluate((element, { name, content, count }) => {
@@ -9,6 +11,63 @@ async function drop(target: Locator, name: string, content: string, count = 1) {
     element.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer }));
   }, { name, content, count });
 }
+
+test('email-only tracker application opens review materials without a managed browser launch', async ({ page }) => {
+  const posting = 'https://jobs.example.test/vacancy?id=700';
+  const snapshot = createTrackerSnapshotFromValues([
+    ['Applied?', 'Priority', 'Status', 'Company', 'Role', 'Apply Link', 'Source Link'],
+    [false, 'High', 'Ready to Apply', 'Synthetic Agency', 'Analyst',
+      'mailto:careers@example.test?subject=Vacancy%20700', posting],
+  ], { spreadsheetId: 'synthetic_email_tracker', sheetName: 'Applications' }, 'synthetic browser proof', new Date());
+  const job = trackerRowToApplication(snapshot.applications[0]);
+  const requests: string[] = [];
+  page.on('request', request => { requests.push(request.url()); });
+  const digest = 'a'.repeat(64);
+  let staged = false, reviewed = false;
+  await page.route('**/__escapehatch/managed-assist/documents/**', route => {
+    const request = route.request();
+    const endpoint = new URL(request.url());
+    const action = endpoint.pathname.split('/').at(-1);
+    const scope = request.method() === 'POST' ? request.postDataJSON() : Object.fromEntries(endpoint.searchParams);
+    expect(scope.opportunityId).toBe(job.id);
+    expect(scope.url).toBe(posting);
+    if (action === 'file') return route.fulfill({ contentType: 'application/pdf', body: '%PDF-1.4\nsynthetic' });
+    if (action === 'stage') staged = true;
+    if (action === 'review') {
+      expect(scope.sha256).toBe(digest);
+      reviewed = true;
+    }
+    return route.fulfill({ json: { ok: true, requireReview: true, package: {
+      opportunityId: job.id, url: posting, documents: staged ? {
+        resume: { name: 'synthetic-resume.pdf', sha256: digest, size: 22, ...(reviewed ? { reviewedAt: new Date().toISOString() } : {}) },
+      } : {},
+    } } });
+  });
+  await page.goto('/');
+  await page.evaluate(job => localStorage.setItem('escape-hatch-applications', JSON.stringify([job])), job);
+  await page.reload();
+  const action = page.getByTestId('link-prepare-next');
+  await expect(action).toHaveText('Review email materials');
+  await action.click();
+  await expect(page).toHaveURL(/\/materials\?opportunityId=/);
+  const instructions = page.getByRole('region', { name: 'Email application instructions' });
+  await expect(instructions).toContainText('careers@example.test');
+  await expect(instructions).toContainText('Vacancy 700');
+  await expect(instructions.getByRole('link')).toHaveAttribute('href', posting);
+  await expect(page.getByTestId('materials-open-assist')).toHaveCount(0);
+  await expect(page.getByRole('checkbox', { name: 'Require my review before document upload' })).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Opportunity document review' })).toBeVisible();
+  await page.getByLabel('Choose résumé PDF', { exact: true }).setInputFiles({
+    name: 'synthetic-resume.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\nsynthetic résumé'),
+  });
+  await expect(page.getByTestId('materials-seal-resume')).toContainText('synthetic-resume.pdf');
+  await page.getByRole('button', { name: 'Preview résumé' }).click();
+  await page.getByRole('button', { name: 'I reviewed this résumé' }).click();
+  await expect(page.getByTestId('materials-seal-resume')).toHaveAttribute('data-sealed', 'true');
+  await expect(page.getByTestId('materials-review-summary')).toContainText('the email application');
+  expect(requests.some(url => /managed-assist\/(launch|prepare|attach|submit)(\?|$)/.test(url))).toBe(false);
+  expect(requests.some(url => url.startsWith('https://jobs.example.test/'))).toBe(false);
+});
 
 test('refresh reveals connector-exported snapshot for review before employer preparation', async ({ page }) => {
   const job = { id: 'drive-preview', company: 'Synthetic Drive', role: 'Engineer', url: 'https://example.invalid/drive-preview', status: 'saved', priority: 'normal', notes: '', nextAction: '', updatedAt: new Date().toISOString() };

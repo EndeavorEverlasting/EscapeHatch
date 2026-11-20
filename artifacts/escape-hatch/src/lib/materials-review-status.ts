@@ -24,6 +24,7 @@ export function projectMaterialsReviewStatus(input: {
   requireReview: boolean;
   documents: Partial<Record<'resume' | 'cover', { name?: string; reviewedAt?: string } | undefined>>;
   requireCover?: boolean;
+  delivery?: 'email';
 }): MaterialsReviewStatus {
   const requireCover = input.requireCover === true;
   const kinds = (['resume', 'cover'] as const).filter(kind => kind === 'resume' || requireCover || input.documents.cover);
@@ -47,8 +48,11 @@ export function projectMaterialsReviewStatus(input: {
     if (!input.documents.resume) summary = 'Save a résumé PDF for this opportunity, then confirm you reviewed it.';
     else if (input.requireReview && unreviewedKinds.length) {
       summary = `Confirm review for: ${unreviewedKinds.map(kind => kind === 'resume' ? 'résumé' : 'cover letter').join(' and ')}.`;
-    } else if (readyForUploadPolicy) summary = 'Materials meet your current review setting for upload preparation.';
-    else summary = 'Materials are saved. Complete required review before upload preparation.';
+    } else {
+      const destination = input.delivery === 'email' ? 'the email application' : 'upload preparation';
+      summary = readyForUploadPolicy ? `Materials meet your current review setting for ${destination}.` :
+        `Materials are saved. Complete required review before ${destination}.`;
+    }
   }
   return {
     opportunityId: input.opportunityId,

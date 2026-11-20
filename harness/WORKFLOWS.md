@@ -57,6 +57,14 @@ Existing `skills/harness-operations/SKILL.md` and `harness/CODEBASE_MAP.md` are 
 8. Register new durable artifacts and update maps/workflows when authority changes.
 9. Run validation in manifest order before committing.
 
+## Recruiter outreach
+
+Record inbound recruiter contact in the existing private tracker as `Opportunity Source = Inbound Recruiter Outreach`. Preserve the original channel, the role, and when the contact took place. Initial outreach or an expression of interest alone leaves Applied unchecked.
+
+Check Applied and select `Applied Basis = Recruiter-Led Process` when the applicant explicitly opts in for the specific role and there is evidence that the recruiter is moving forward with a concrete hiring step, such as coordinating interviews or proceeding with profile presentation. Date Applied records when those conditions were met. This keeps the opportunity in the active hiring pipeline and out of the new-application queue. Use `Direct Submission` for an application sent through its designated channel.
+
+Record the actual next-action owner, with its evidence and date. Track any agency submission, client receipt, and booked interview as separate milestones. Leave the Apply Link blank until a real application route is established and record employer submission proof only from its own evidence. An application-history search establishes the result for the channel and dates searched. Keep private applicant data and sources out of Git.
+
 ## Application Form Intake
 
 Application pages are modular collections of semantic questions. Employer, ATS vendor, page count, page number, and DOM order are not canonical identity.

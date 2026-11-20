@@ -30,6 +30,9 @@ export type TrackerRow = {
   resumeDoc?: string;
   resumePdf?: string;
   auditedOn?: string;
+  opportunitySource?: string;
+  appliedBasis?: string;
+  submissionProof?: string;
   // Employer account/community milestones belong to the employer, not this job
   // submission. Never infer one state from the other.
   talentCommunityStatus?: string;
@@ -176,11 +179,19 @@ export function parseTrackerSnapshot(value: unknown): TrackerSnapshot | null {
   };
 }
 
+function isRecruiterLedApplication(row: TrackerRow): boolean {
+  return row.appliedCheckbox && row.appliedBasis === 'Recruiter-Led Process';
+}
+
 export function trackerRowToApplication(row: TrackerRow, capturedAt?: string): Application {
+  const recruiterLed = isRecruiterLedApplication(row);
   const status = normalizeStatus(row.status, row.appliedCheckbox);
   const emailApplication = row.applyUrl ? null : parseEmailApplication(row.emailApplication);
-  // Checkbox alone never upgrades to submitted; status text must say Submitted.
-  const safeStatus = row.appliedCheckbox && status === 'saved' ? 'preparing' : status;
+  // The explicit recruiter basis preserves Applied when a pipeline label is stale.
+  // A legacy checkbox alone cannot do this or provide a submission receipt.
+  const safeStatus = recruiterLed && (status === 'saved' || status === 'preparing')
+    ? 'applied'
+    : row.appliedCheckbox && status === 'saved' ? 'preparing' : status;
   const packageBits = [
     row.resumePdf ? 'Resume PDF linked' : 'Resume PDF missing',
     row.resumeDoc ? 'Resume Doc linked' : null,
@@ -199,6 +210,9 @@ export function trackerRowToApplication(row: TrackerRow, capturedAt?: string): A
     notes: [
       `Tracker row ${row.sheetRow} · provider status: ${row.status}`,
       row.appliedCheckbox ? 'Applied? checkbox marked (not independent submit proof)' : 'Applied? unchecked',
+      row.opportunitySource ? `Opportunity source: ${row.opportunitySource}` : null,
+      row.appliedCheckbox && row.appliedBasis ? `Applied basis: ${row.appliedBasis}` : null,
+      row.submissionProof ? `Tracker submission proof: ${row.submissionProof}` : null,
       packageBits.join(' · '),
       row.followUp ? `Follow-up: ${row.followUp}` : null,
       row.talentCommunityStatus ? `Talent community: ${row.talentCommunityStatus}${row.talentCommunityConfirmedOn ? ' · ' + row.talentCommunityConfirmedOn : ''} (not job-submission state)` : null,
@@ -206,7 +220,9 @@ export function trackerRowToApplication(row: TrackerRow, capturedAt?: string): A
       row.notes || null,
     ].filter(Boolean).join('\n'),
     nextAction: row.nextAction?.trim() ||
-      (safeStatus === 'applied' ? 'Do not reapply — follow submitted evidence' :
+      (recruiterLed && (safeStatus === 'applied' || safeStatus === 'follow_up')
+        ? 'Continue through the recruiter' :
+        safeStatus === 'applied' ? 'Do not reapply — follow submitted evidence' :
         emailApplication ? 'Review the materials for this email application' :
         safeStatus === 'preparing' ? 'Review package and prepare managed application' : 'Review tracker row'),
     updatedAt: row.auditedOn && !Number.isNaN(Date.parse(row.auditedOn))
@@ -269,7 +285,8 @@ export function selectNextActionableOpportunity(snapshot: TrackerSnapshot): Trac
 
 export function isSubmittedLocked(row: TrackerRow): boolean {
   const status = row.status.trim().toLowerCase();
-  if (status.startsWith('submit')) return true;
+  // Prevent duplicate intake once a recruiter-led application is active.
+  if (status.startsWith('submit') || isRecruiterLedApplication(row)) return true;
   // A confirmed prior application stays locked through the employer and
   // applicant's post-submission turns. A bare checkbox or pre-submit
   // applicant step alone is never a submission receipt.

@@ -7,7 +7,7 @@ import type { IncomingMessage } from 'node:http';
 import { createTrackerSnapshotFromValues, refreshTrackerSnapshot, readRememberedSources, readTrackerRefreshAvailability } from './tracker-refresh.ts';
 import { readTrackerStatus, trackerRefreshRequestAllowed } from './tracker-control.ts';
 import { parseApplicationsStorage } from './src/lib/storage.ts';
-import { mergeTrackerIntoApplications, selectNextActionableOpportunity } from './src/lib/tracker-bridge.ts';
+import { isSubmittedLocked, mergeTrackerIntoApplications, selectNextActionableOpportunity } from './src/lib/tracker-bridge.ts';
 
 const target = { spreadsheetId: 'synthetic_sheet_123', sheetName: "Applications' history" };
 const heading = ['Applied?', 'Priority', 'Status', 'Company', 'Role', 'Apply Link', 'Notes', 'Next Action', 'Follow-Up Due'];
@@ -53,6 +53,57 @@ test('custom sheet checkbox glyphs remain explicit progress, never submission pr
     assert.equal(snapshot.metrics.submittedStatus, 0);
   }
 });
+
+test('recruiter-led intake survives refresh and stays separate from a submission receipt', async () => fixture(async (file, env) => {
+  const padded = (cells: string[]) => [...cells, ...Array<string>(46 - cells.length).fill('')];
+  const rows = [
+    [...padded([...heading, 'Submission Proof', 'Date Applied']), 'Opportunity Source', 'Applied Basis'],
+    [...padded(['☑', 'High', 'Ready to Apply', 'Synthetic Clinic', 'Coordinator', 'https://example.test/job',
+      '', '', '', 'Unverified', '11/20/2026']), 'Inbound Recruiter Outreach', 'Recruiter-Led Process'],
+    [...padded(['☐', '', 'Research', 'Synthetic Hospital', 'Analyst', '']), 'Inbound Recruiter Outreach'],
+  ];
+  const provider = { ...payload(rows), range: "'Applications'' history'!A1:AV1500" };
+  const result = await refreshTrackerSnapshot(file, { env, fetch: fake(provider), now: () => date });
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  const [advanced, outreach] = result.snapshot.applications;
+  assert.equal(advanced.opportunitySource, 'Inbound Recruiter Outreach');
+  assert.equal(advanced.appliedBasis, 'Recruiter-Led Process');
+  assert.equal(advanced.dateApplied, '11/20/2026');
+  assert.equal(advanced.submissionProof, 'Unverified');
+  assert.equal(isSubmittedLocked(advanced), true);
+  assert.equal(isSubmittedLocked(outreach), false);
+  assert.equal(result.snapshot.metrics.appliedOrSubmittedCheckbox, 1);
+  assert.equal(result.snapshot.metrics.submittedStatus, 0);
+  assert.equal(selectNextActionableOpportunity(result.snapshot), null);
+  const projected = mergeTrackerIntoApplications([], result.snapshot).find(item => item.company === advanced.company);
+  assert.equal(projected?.status, 'applied');
+  assert.equal(projected?.nextAction, 'Continue through the recruiter');
+  assert.equal(projected?.submissionEvidence, undefined);
+  assert.match(projected?.notes ?? '', /Tracker submission proof: Unverified/);
+
+  const saved = await fs.readFile(file, 'utf8');
+  let calls = 0;
+  const legacyFailure = (async () => { calls++; return new Response(null, { status: 400 }); }) as typeof fetch;
+  const rejected = await refreshTrackerSnapshot(file, { env, fetch: legacyFailure });
+  assert.equal(rejected.ok, false);
+  assert.equal(calls, 1);
+  assert.equal(await fs.readFile(file, 'utf8'), saved);
+}));
+
+test('tracker refresh falls back to AT on a legacy grid', async () => fixture(async (file, env) => {
+  const ranges: string[] = [];
+  const fetcher = (async (input) => {
+    const range = decodeURIComponent(new URL(String(input)).pathname).split('!').at(-1)!;
+    ranges.push(range);
+    return range === 'A1:AV1500'
+      ? new Response(null, { status: 400 })
+      : new Response(JSON.stringify({ ...payload(), range: "'Applications'' history'!A1:AT1500" }));
+  }) as typeof fetch;
+  const result = await refreshTrackerSnapshot(file, { env, fetch: fetcher });
+  assert.equal(result.ok, true);
+  assert.deepEqual(ranges, ['A1:AV1500', 'A1:AT1500']);
+}));
 
 test('historical correspondence rows survive as plain text without browser launch authority', () => {
   const rows = [heading, [true, 'High', 'Submitted', 'Synthetic Employer', 'Synthetic Role', 'mailto:synthetic@example.test']];
@@ -124,7 +175,7 @@ test('real request is fixed to existing binding and only a validated response up
     const url = new URL(String(input));
     assert.equal(url.hostname, 'sheets.googleapis.com');
     assert.equal(url.searchParams.get('valueRenderOption'), 'FORMATTED_VALUE');
-    assert.equal(decodeURIComponent(url.pathname), `/v4/spreadsheets/${target.spreadsheetId}/values/'Applications'' history'!A1:AT1500`);
+    assert.equal(decodeURIComponent(url.pathname), `/v4/spreadsheets/${target.spreadsheetId}/values/'Applications'' history'!A1:AV1500`);
     assert.equal(init?.redirect, 'error');
     assert.equal((init?.headers as Record<string, string>).authorization, 'Bearer synthetic-secret');
     assert.ok(init?.signal);

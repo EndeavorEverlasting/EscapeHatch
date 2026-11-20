@@ -78,13 +78,13 @@ export function MaterialsReviewScene({ applications }: { applications: Applicati
           <a href={email.postingUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold text-primary underline">Verify the posting instructions</a>
         </section>}
 
-        <div className="mascot-guidance mt-5 flex items-center gap-3 rounded-xl border border-primary/25 bg-primary/5 p-3">
+        {!email && <div className="mascot-guidance mt-5 flex items-center gap-3 rounded-xl border border-primary/25 bg-primary/5 p-3">
           <img src="/escapehatch-mascot.webp" alt="" width={40} height={40} className="h-10 w-10 shrink-0" />
           <div>
             <p className="text-sm leading-6 text-muted-foreground">{guide.detail}</p>
             {guide.host_scene && <Link href={journeyAtlasHref(guide.host_scene, opportunityId)} className="inline-flex min-h-11 items-center text-xs font-semibold text-primary underline underline-offset-4">Your journey</Link>}
           </div>
-        </div>
+        </div>}
         {requestedId && !selected && <p role="status" className="mt-3 text-sm">This opportunity is unavailable. Choose an open opportunity to review its materials.</p>}
         <ol className="mt-6 grid gap-3 sm:grid-cols-2" aria-label="Document seal status">
           {status.slots.map(slot => {
@@ -124,13 +124,13 @@ export function MaterialsReviewScene({ applications }: { applications: Applicati
         <p className="rounded-xl border border-dashed border-border p-5 text-sm text-muted-foreground">Add or reopen an opportunity under Applications, then return here to seal its documents.</p>
       )}
 
-      <footer className="flex items-start gap-3 rounded-xl border border-border p-4 text-sm text-muted-foreground">
+      {!email && <footer className="flex items-start gap-3 rounded-xl border border-border p-4 text-sm text-muted-foreground">
         <BadgeCheck size={18} className="mt-0.5 shrink-0 text-primary" aria-hidden="true" />
         <p>
           Chat approval and Google Drive drafts are recovery sources, not EscapeHatch review seals.
           Confirm each exact PDF here (or disable the review checkpoint deliberately). Final employer Submit stays yours.
         </p>
-      </footer>
+      </footer>}
     </div>
   );
 }

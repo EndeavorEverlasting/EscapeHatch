@@ -111,7 +111,7 @@ export function OpportunityDocuments({ documents, disabled, onBypass, delivery }
             stagingQueue.current = staging;
             const saved = await staging;
             if (currentScope.current !== scope || intake !== intakeGeneration.current[kind]) return;
-            if (saved?.requireReview === false) pendingBypassScope.current = scope;
+            if (delivery !== 'email' && saved?.requireReview === false) pendingBypassScope.current = scope;
             setIntakeMessages(current => ({ ...current, [kind]: '' }));
             setNotice({ scope, text: 'Saved privately. Review status is tied to the current file version.' });
           } catch (error) {
@@ -128,7 +128,7 @@ export function OpportunityDocuments({ documents, disabled, onBypass, delivery }
           }
         }} />
         <p role="status" className="mt-2 break-words text-sm">{intakeMessages[kind]}</p>
-        {item ? <><p className="mt-2 break-words text-sm">{item.name}</p><p className="text-xs">{item.reviewedAt ? 'You confirmed review on ' + new Date(item.reviewedAt).toLocaleString() : 'Not confirmed reviewed'}{data?.requireReview === false ? ' · Review checkpoint disabled' : ''}</p>
+        {item ? <><p className="mt-2 break-words text-sm">{item.name}</p><p className="text-xs">{item.reviewedAt ? 'You confirmed review on ' + new Date(item.reviewedAt).toLocaleString() : 'Not confirmed reviewed'}{delivery !== 'email' && data?.requireReview === false ? ' · Review checkpoint disabled' : ''}</p>
           <p className="mt-2 text-xs">{driveSourceLink(item) ? <>Recorded source: <a className="underline" href={driveSourceLink(item)!} target="_blank" rel="noreferrer">Open source in Google Drive</a>. Preview below shows the saved version; later Drive edits need a new import and review.</> : item.source?.provider === 'local' ? 'Source: local PDF' : 'Source not recorded; preview the saved PDF.'}</p>
           <button className="mt-2 rounded border border-primary px-3 py-2 text-sm" type="button" disabled={disabled || documents.loading} onClick={() => setPreview({ scope: documents.scopeKey, kind, sha256: item.sha256 })}>Preview {label}</button>
           <button className="mt-2 ml-2 rounded border border-primary px-3 py-2 text-sm" type="button" disabled={disabled || documents.loading || documents.intakePending || Boolean(item.reviewedAt)} onClick={() => { void documents.request('review', { kind, sha256: item.sha256, confirmed: true }).catch(() => {}); }}>I reviewed this {label}</button>

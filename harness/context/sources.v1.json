@@ -95,6 +95,14 @@
       "required": true,
       "encoding": "compact_json"
     },
+    "application_staples": {
+      "path": "harness/workflows/APPLICATION_STAPLES.md",
+      "mode": "full",
+      "authority": 3,
+      "triggers": [],
+      "owner": "harness/workflows/APPLICATION_STAPLES.md",
+      "required": true
+    },
     "application_plan": {
       "path": "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md",
       "mode": "outline",

@@ -7,13 +7,15 @@ on:
       - "tests/test_context_router*.py"
       - "harness/context/**"
       - "harness/WORKFLOWS.md"
+      - "harness/workflows/APPLICATION_STAPLES.md"
       - ".github/workflows/context-routing.yml"
   pull_request:
     paths:
       - "scripts/context_router.py"
-      - "tests/test_context_router.py"
+      - "tests/test_context_router*.py"
       - "harness/context/**"
       - "harness/WORKFLOWS.md"
+      - "harness/workflows/APPLICATION_STAPLES.md"
       - ".github/workflows/context-routing.yml"
 
 permissions:

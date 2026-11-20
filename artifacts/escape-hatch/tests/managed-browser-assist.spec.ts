@@ -456,7 +456,7 @@ test('document review binds both files, persists, invalidates replacements, and 
 });
 
 
-test('one Launch reuses previously reviewed exact PDFs and stops at review when navigation is untrusted', async ({ page }) => {
+test('one Launch prepares with a reviewed résumé and an unreviewed cover draft', async ({ page }) => {
   const actions: string[] = [];
   const jobUrl = 'https://jobs.example.test/apply/reviewed';
   await page.route('**/__escapehatch/managed-assist/**', async route => {
@@ -495,6 +495,11 @@ test('one Launch reuses previously reviewed exact PDFs and stops at review when 
   });
   await page.getByRole('button', { name: 'I reviewed this résumé', exact: true }).click();
   await expect(page.getByText(/You confirmed review on/)).toBeVisible();
+  await page.getByLabel('Choose cover PDF', { exact: true }).setInputFiles({
+    name: 'unreviewed-cover-draft.pdf', mimeType: 'application/pdf',
+    buffer: Buffer.from('%PDF-1.4\noptional draft'),
+  });
+  await expect(page.getByText('unreviewed-cover-draft.pdf', { exact: true })).toBeVisible();
   await page.getByTestId('button-managed-launch').click();
   await expect.poll(() => actions.filter(name => ['launch', 'fill', 'prepare'].includes(name))).toEqual(['launch', 'fill', 'prepare']);
   await expect(page.getByTestId('managed-preparation-state')).toHaveAttribute('data-preparation-state', 'REVIEW_REQUIRED');

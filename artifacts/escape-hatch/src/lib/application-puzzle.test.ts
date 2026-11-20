@@ -102,6 +102,25 @@ test('conditional cover-letter upload changes only the observed required denomin
   assert.equal(result(textAnswer).percent, 67);
 });
 
+test('a collapsed optional cover offer and a written appeal have separate readiness evidence', () => {
+  const observed: FormInspection = { ...inspection, optionalCoverLetterOffered: true, requirements: [
+    { id: 'motivation', label: 'What excites you about this role?', requirement: 'required', kind: 'question', populated: false },
+  ] };
+  const result = projectApplicationPuzzle(observed, 'one', inspection.applicationUrl, now, currentPage);
+  assert.equal(result.checkpoint.coverLetter, 'OPTIONAL');
+  assert.equal(result.checkpoint.optionalCoverLetterOffer, true);
+  assert.equal(result.checkpoint.writtenAppeal?.id, 'motivation');
+  assert.equal(result.checkpoint.requiredCoverInputs, 0);
+  assert.equal(result.requiredCount, 1);
+  assert.equal(result.unresolvedCount, 1);
+  const empty = { ...observed, optionalCoverLetterOffered: undefined, requirements: [] };
+  const withoutBoth = projectApplicationPuzzle(empty, 'one', inspection.applicationUrl, now, currentPage);
+  assert.equal(withoutBoth.checkpoint.coverLetter, 'NOT_OBSERVED');
+  assert.equal(withoutBoth.checkpoint.writtenAppeal, undefined);
+  assert.equal(withoutBoth.unresolvedCount, 0);
+  assert.equal(withoutBoth.finalSubmitAuthorized, false);
+});
+
 test('progress disappears on stale, foreign or unverified page inventories', () => {
   const stale = projectApplicationPuzzle(inspection, 'one', inspection.applicationUrl, now + INSPECTION_MAX_AGE_MS + 1, currentPage);
   assert.equal(stale.checkpoint.percent, null);

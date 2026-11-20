@@ -1,3 +1,5 @@
+import { roleQuestionKey } from './application-preferences.ts';
+
 export type FormRequirement = {
   id: string;
   label: string;
@@ -12,6 +14,7 @@ export type FormInspection = {
   capturedAt: string;
   scope: 'current_page_only';
   requirements: FormRequirement[];
+  optionalCoverLetterOffered?: true;
 };
 export const INSPECTION_MAX_AGE_MS = 5 * 60 * 1000;
 export type CurrentApplicationPage = { opportunityId: string; applicationUrl: string; pageUrl: string };
@@ -35,7 +38,9 @@ export function projectApplicationPuzzle(inspection: FormInspection | null, oppo
   const unknownCount = pieces.filter(piece => piece.requirement === 'unknown').length;
   const filledCount = pieces.filter(piece => piece.populated).length;
   const covers = pieces.filter(piece => piece.kind === 'cover');
-  const coverLetter = !covers.length ? 'NOT_OBSERVED' as const :
+  const optionalCoverLetterOffer = current && inspection?.optionalCoverLetterOffered === true;
+  const writtenAppeal = pieces.find(piece => piece.kind === 'question' && roleQuestionKey(piece.label));
+  const coverLetter = !covers.length && !optionalCoverLetterOffer ? 'NOT_OBSERVED' as const :
     covers.some(piece => piece.requirement === 'required') ? 'REQUIRED' as const :
     covers.some(piece => piece.requirement === 'unknown') ? 'UNKNOWN' as const : 'OPTIONAL' as const;
   // A missing cover-letter input is not a missing document. An observed optional
@@ -54,7 +59,8 @@ export function projectApplicationPuzzle(inspection: FormInspection | null, oppo
       scope: 'current_page_only' as const,
       verifiedRequired, totalRequired: required.length,
       excludedOptional: pieces.filter(piece => piece.requirement === 'optional').length,
-      coverLetter, requiredCoverInputs: required.filter(piece => piece.kind === 'cover').length,
+      coverLetter, optionalCoverLetterOffer, writtenAppeal,
+      requiredCoverInputs: required.filter(piece => piece.kind === 'cover').length,
       percent,
       observedFilled: filledCount,
       observedTotal: pieces.length,

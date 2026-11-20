@@ -88,10 +88,16 @@ export function ApplicationPuzzle({ opportunity, url, documents, disabled, onByp
         <p className="mt-1 text-xs text-muted-foreground" data-testid="application-cover-requirement">{projection.checkpoint.coverLetter === 'REQUIRED'
           ? 'Required cover-letter input observed: included in the required-input denominator. Upload only a reviewed, approved document.'
           : projection.checkpoint.coverLetter === 'OPTIONAL'
-            ? 'Cover-letter input is optional on this page: excluded from required progress.'
+            ? projection.checkpoint.optionalCoverLetterOffer
+              ? 'Supporting documents are optional. You can add a tailored cover note or continue without one.'
+              : 'Cover-letter input is optional on this page: excluded from required progress.'
             : projection.checkpoint.coverLetter === 'UNKNOWN'
               ? 'Cover-letter field exists, but whether it is required remains unknown.'
               : 'No cover-letter upload input observed on this page. A written interest response is separate; later pages may differ.'}</p>
+        {projection.checkpoint.writtenAppeal && <p className="mt-1 text-xs text-muted-foreground">
+          {projection.checkpoint.writtenAppeal.requirement === 'required' ? 'Required' :
+            projection.checkpoint.writtenAppeal.requirement === 'optional' ? 'Optional' : 'Requiredness unknown for this'} written response.
+        </p>}
         <p className="mt-1 text-xs text-muted-foreground">The field count includes optional fields and updates as the employer form changes. Later pages and unsupported fields are outside this count. Submit still requires your approval.</p>
       </div>
       <p className="mb-4 text-xs text-muted-foreground break-all">Observed {new Date(inspection!.capturedAt).toLocaleTimeString()} on {inspection!.pageUrl}. This inventory expires after five minutes.</p>

@@ -43,8 +43,12 @@ export function useOpportunityDocuments(opportunityId: string, url: string) {
   useEffect(() => { setState(null); setIntakePending(false); if (opportunityId && url) void request('status').catch(() => {}); }, [request, opportunityId, url]);
   const bound = state?.package.opportunityId === opportunityId && sameApplicationUrl(state.package.url, url);
   const data = bound ? state : null;
-  const canUpload = Boolean(!intakePending && data && data.package.documents.resume && (!data.requireReview || Object.values(data.package.documents).every(item => item.reviewedAt)));
-  return { data, loading, error, canUpload, request, scopeKey, intakePending, setIntakePending };
+  const resume = data?.package.documents.resume;
+  // Preparation delegates material selection to the current form. Explicit
+  // attachment still uses the reviewed package, including any staged cover.
+  const canAutoPrepare = Boolean(!intakePending && resume && (!data?.requireReview || resume.reviewedAt));
+  const canUpload = Boolean(canAutoPrepare && data && (!data.requireReview || Object.values(data.package.documents).every(item => item.reviewedAt)));
+  return { data, loading, error, canAutoPrepare, canUpload, request, scopeKey, intakePending, setIntakePending };
 }
 export function OpportunityDocuments({ documents, disabled, onBypass }: { documents: ReturnType<typeof useOpportunityDocuments>; disabled: boolean; onBypass: () => void }) {
   const data = documents.data;

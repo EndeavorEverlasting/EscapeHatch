@@ -465,9 +465,9 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   useEffect(() => {
     if (!autoPrepareRequested || busy || documents.loading || !browserOpen) return;
     setAutoPrepareRequested(false);
-    if (!documents.canUpload) { setMessage('Automatic preparation paused: save the opportunity documents and complete required review.'); return; }
+    if (!documents.canAutoPrepare) { setMessage('Automatic preparation paused: save the résumé and complete its required review.'); return; }
     void run('prepare');
-  }, [autoPrepareRequested, busy, documents.loading, documents.canUpload, browserOpen]);
+  }, [autoPrepareRequested, busy, documents.loading, documents.canAutoPrepare, browserOpen]);
 
   useEffect(() => {
     if (!pendingAfterLogin || !authCheckpoint?.canResume || needsOpportunityConfirmation || busy || !browserOpen) return;
@@ -571,7 +571,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           result.authCheckpoint?.phase === 'SESSION_ORIGIN_CHANGED');
         // A previously reviewed exact PDF is already authorized for staging:
         // don't make the operator press Fill and Attach again after launch.
-        if (launchedApplicationForm && documents.canUpload) setAutoPrepareRequested(true);
+        if (launchedApplicationForm && documents.canAutoPrepare) setAutoPrepareRequested(true);
         setPreparation(null);
         setApplications((items) => {
           const existing = items.find((item) => item.id === selectedOpportunityId && item.url === url);

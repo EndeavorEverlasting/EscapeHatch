@@ -104,7 +104,12 @@ Input is `{values, target: {spreadsheetId, sheetName}, capturedAt, provenance: "
 `values` is the actual formatted Sheets ValueRange data, not reconstructed claims. Retain the real read
 time; never refresh an old snapshot merely by changing its timestamp. The importer preserves tracker
 binding and rejects older exports. Unknown/invalid rows fail closed. Historical `mailto:` rows remain
-plain text with no browser launch URL; custom checkbox glyphs remain checkbox evidence only.
+plain text with no browser launch URL. When the tracker provides a single-recipient `mailto:` Apply
+Link (optional `subject` only) and a separate HTTPS Source Link for the exact posting, refresh the
+tracker and choose **Review email materials** under **Applications**. Review binds each local PDF
+to that opportunity and posting. The recipient and subject are displayed for the applicant to send.
+This route has no form discovery, managed browser launch, or automatic submission. Custom checkbox
+glyphs remain checkbox evidence only.
 
 ## Agent launch acceptance
 

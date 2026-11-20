@@ -4,6 +4,7 @@
  */
 import type { Application, ApplicationStatus, Priority } from './storage';
 import { applicationEventUrl } from './application-events.ts';
+import { parseEmailApplication, type EmailApplication } from './email-application.ts';
 
 export const TRACKER_SNAPSHOT_SCHEMA = 'escapehatch/tracker-snapshot/v1';
 export const TRACKER_CONNECTION_KEY = 'escape-hatch-tracker-connection-v1';
@@ -19,6 +20,7 @@ export type TrackerRow = {
   location?: string;
   compensation?: string;
   applyUrl: string;
+  emailApplication?: EmailApplication;
   dateFound?: string;
   dateApplied?: string;
   followUp?: string;
@@ -176,6 +178,7 @@ export function parseTrackerSnapshot(value: unknown): TrackerSnapshot | null {
 
 export function trackerRowToApplication(row: TrackerRow, capturedAt?: string): Application {
   const status = normalizeStatus(row.status, row.appliedCheckbox);
+  const emailApplication = row.applyUrl ? null : parseEmailApplication(row.emailApplication);
   // Checkbox alone never upgrades to submitted; status text must say Submitted.
   const safeStatus = row.appliedCheckbox && status === 'saved' ? 'preparing' : status;
   const packageBits = [
@@ -190,6 +193,7 @@ export function trackerRowToApplication(row: TrackerRow, capturedAt?: string): A
     company: row.company,
     role: row.role,
     url: row.applyUrl,
+    ...(emailApplication ? { emailApplication } : {}),
     status: safeStatus,
     priority: normalizePriority(row.priority),
     notes: [
@@ -203,6 +207,7 @@ export function trackerRowToApplication(row: TrackerRow, capturedAt?: string): A
     ].filter(Boolean).join('\n'),
     nextAction: row.nextAction?.trim() ||
       (safeStatus === 'applied' ? 'Do not reapply — follow submitted evidence' :
+        emailApplication ? 'Review the materials for this email application' :
         safeStatus === 'preparing' ? 'Review package and prepare managed application' : 'Review tracker row'),
     updatedAt: row.auditedOn && !Number.isNaN(Date.parse(row.auditedOn))
       ? new Date(row.auditedOn).toISOString()
@@ -222,7 +227,9 @@ export function mergeTrackerIntoApplications(
       byId.set(item.id, item);
       continue;
     }
-    if (applicationEventUrl(prior.url) !== applicationEventUrl(item.url)) {
+    if (applicationEventUrl(prior.url) !== applicationEventUrl(item.url) ||
+        (prior.emailApplication && item.emailApplication &&
+          prior.emailApplication.postingUrl !== item.emailApplication.postingUrl)) {
       byId.set(item.id, { ...prior, reconciliationConflict: 'opportunity_url_changed' });
       continue;
     }

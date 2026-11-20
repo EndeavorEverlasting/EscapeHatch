@@ -100,7 +100,10 @@ export type ApplicationDetails = Pick<Application, 'company' | 'role' | 'url' | 
 /** Recheck against the latest record, including receipts that arrived during editing. */
 export function applyApplicationDetails(application: Application, details: ApplicationDetails, updatedAt: string): Application {
   const conflict = applicationUrlEditConflicts(application, details.url);
-  return { ...application, company: details.company, role: details.role, url: conflict ? application.url : details.url,
+  const url = conflict ? application.url : details.url;
+  const { emailApplication, ...previous } = application;
+  return { ...previous, ...(emailApplication && !url ? { emailApplication } : {}),
+    company: details.company, role: details.role, url,
     status: details.status, priority: details.priority, notes: details.notes, nextAction: details.nextAction, updatedAt,
     ...(conflict ? { reconciliationConflict: 'opportunity_url_changed' as const } : {}) };
 }

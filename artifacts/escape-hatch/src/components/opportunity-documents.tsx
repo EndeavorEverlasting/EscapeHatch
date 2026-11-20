@@ -50,7 +50,7 @@ export function useOpportunityDocuments(opportunityId: string, url: string) {
   const canUpload = Boolean(canAutoPrepare && data && (!data.requireReview || Object.values(data.package.documents).every(item => item.reviewedAt)));
   return { data, loading, error, canAutoPrepare, canUpload, request, scopeKey, intakePending, setIntakePending };
 }
-export function OpportunityDocuments({ documents, disabled, onBypass }: { documents: ReturnType<typeof useOpportunityDocuments>; disabled: boolean; onBypass: () => void }) {
+export function OpportunityDocuments({ documents, disabled, onBypass, delivery }: { documents: ReturnType<typeof useOpportunityDocuments>; disabled: boolean; onBypass: () => void; delivery?: 'email' }) {
   const data = documents.data;
   const [preview, setPreview] = useState<{ scope: string; kind: 'resume' | 'cover'; sha256: string } | null>(null);
   const [notice, setNotice] = useState<{ scope: string; text: string } | null>(null);
@@ -83,12 +83,12 @@ export function OpportunityDocuments({ documents, disabled, onBypass }: { docume
   const fileUrl = (kind: 'resume' | 'cover') => API + 'file?' + new URLSearchParams({ opportunityId: data?.package.opportunityId || '', url: data?.package.url || '', kind, sha256: data?.package.documents[kind]?.sha256 || '' });
   return <section className="my-4 rounded-xl border border-border bg-card p-4" aria-label="Opportunity document review">
     <h3 className="font-display text-xl">Documents and review</h3>
-    <p className="mt-2 text-sm">Selected files are saved privately for this opportunity. Selecting a file does not upload it to the employer or mean you reviewed it.</p>
+    <p className="mt-2 text-sm">Selected files are saved privately for this opportunity. {delivery === 'email' ? 'Confirm each file after you review it.' : 'Selecting a file does not upload it to the employer or mean you reviewed it.'}</p>
     <p className="mt-2 text-sm text-muted-foreground">Use a local PDF or ask your connected agent to import a selected Google Drive PDF. Review the saved PDF here before preparing the application. Drive access belongs to that connection; the file chooser browses this computer.</p>
     <button type="button" className="mt-2 min-h-11 rounded border border-primary px-3 py-2 text-sm" disabled={disabled || documents.loading || documents.intakePending || !data} onClick={() => { void documents.request('status').catch(() => {}); }}>Refresh saved documents</button>
-    <label className="my-3 flex items-start gap-2 text-sm font-semibold"><input type="checkbox" aria-label="Require my review before document upload" checked={pendingPolicy?.scope === documents.scopeKey ? pendingPolicy.value : data?.requireReview !== false} disabled={disabled || documents.loading || documents.intakePending || !data}
+    {delivery !== 'email' && <><label className="my-3 flex items-start gap-2 text-sm font-semibold"><input type="checkbox" aria-label="Require my review before document upload" checked={pendingPolicy?.scope === documents.scopeKey ? pendingPolicy.value : data?.requireReview !== false} disabled={disabled || documents.loading || documents.intakePending || !data}
       onChange={event => { const requireReview = event.target.checked; if (requireReview) pendingBypassScope.current = null; setPendingPolicy({ scope: documents.scopeKey, value: requireReview }); void documents.request('policy', { requireReview }).then(() => { if (!requireReview) { pendingBypassScope.current = documents.scopeKey; updateIntakeGate(); } }).catch(() => {}).finally(() => setPendingPolicy(null)); }} />Require my review before document upload</label>
-    <details className="text-xs text-muted-foreground"><summary className="min-h-11 cursor-pointer py-3 font-bold">How document review works</summary><p className="leading-5">Review on: confirm each exact file before uploading. Review off: your explicit start/launch reuses saved documents and attempts preparation to final review. Turning review off never marks a file reviewed. Missing documents, unknown answers, failed uploads or missing trusted navigation evidence still stop preparation. Final Submit stays yours.</p></details>
+    <details className="text-xs text-muted-foreground"><summary className="min-h-11 cursor-pointer py-3 font-bold">How document review works</summary><p className="leading-5">Review on: confirm each exact file before uploading. Review off: your explicit start/launch reuses saved documents and attempts preparation to final review. Turning review off never marks a file reviewed. Missing documents, unknown answers, failed uploads or missing trusted navigation evidence still stop preparation. Final Submit stays yours.</p></details></>}
     <div className="mt-3 grid gap-3 sm:grid-cols-2">{(['resume', 'cover'] as const).map(kind => {
       const item = data?.package.documents[kind], label = kind === 'resume' ? 'résumé' : 'cover letter';
       return <div key={kind} className="document-slot rounded-lg border border-border p-3">
@@ -111,7 +111,7 @@ export function OpportunityDocuments({ documents, disabled, onBypass }: { docume
             stagingQueue.current = staging;
             const saved = await staging;
             if (currentScope.current !== scope || intake !== intakeGeneration.current[kind]) return;
-            if (saved?.requireReview === false) pendingBypassScope.current = scope;
+            if (delivery !== 'email' && saved?.requireReview === false) pendingBypassScope.current = scope;
             setIntakeMessages(current => ({ ...current, [kind]: '' }));
             setNotice({ scope, text: 'Saved privately. Review status is tied to the current file version.' });
           } catch (error) {
@@ -128,7 +128,7 @@ export function OpportunityDocuments({ documents, disabled, onBypass }: { docume
           }
         }} />
         <p role="status" className="mt-2 break-words text-sm">{intakeMessages[kind]}</p>
-        {item ? <><p className="mt-2 break-words text-sm">{item.name}</p><p className="text-xs">{item.reviewedAt ? 'You confirmed review on ' + new Date(item.reviewedAt).toLocaleString() : 'Not confirmed reviewed'}{data?.requireReview === false ? ' · Review checkpoint disabled' : ''}</p>
+        {item ? <><p className="mt-2 break-words text-sm">{item.name}</p><p className="text-xs">{item.reviewedAt ? 'You confirmed review on ' + new Date(item.reviewedAt).toLocaleString() : 'Not confirmed reviewed'}{delivery !== 'email' && data?.requireReview === false ? ' · Review checkpoint disabled' : ''}</p>
           <p className="mt-2 text-xs">{driveSourceLink(item) ? <>Recorded source: <a className="underline" href={driveSourceLink(item)!} target="_blank" rel="noreferrer">Open source in Google Drive</a>. Preview below shows the saved version; later Drive edits need a new import and review.</> : item.source?.provider === 'local' ? 'Source: local PDF' : 'Source not recorded; preview the saved PDF.'}</p>
           <button className="mt-2 rounded border border-primary px-3 py-2 text-sm" type="button" disabled={disabled || documents.loading} onClick={() => setPreview({ scope: documents.scopeKey, kind, sha256: item.sha256 })}>Preview {label}</button>
           <button className="mt-2 ml-2 rounded border border-primary px-3 py-2 text-sm" type="button" disabled={disabled || documents.loading || documents.intakePending || Boolean(item.reviewedAt)} onClick={() => { void documents.request('review', { kind, sha256: item.sha256, confirmed: true }).catch(() => {}); }}>I reviewed this {label}</button>

@@ -3,9 +3,11 @@ import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
 import { computeTrackerMetrics, parseTrackerSnapshot, type TrackerRow, type TrackerSnapshot } from './src/lib/tracker-bridge.ts';
+import { emailApplicationFromTracker } from './src/lib/email-application.ts';
 
 const MAX_BYTES = 2 * 1024 * 1024;
 const ROW_LIMIT = 1500;
+const TRACKER_COLUMN_LIMIT = 46; // A–AT
 const TIMEOUT_MS = 10_000;
 export type TrackerTarget = { spreadsheetId: string; sheetName: string };
 export type RefreshResult = { ok: true; refreshed: true; snapshot: TrackerSnapshot } | { ok: false; refreshed: false; error: string };
@@ -42,7 +44,7 @@ export function createTrackerSnapshotFromValues(values: unknown, target: Tracker
   // Read A–AT: prior role/portal columns A–AJ, independent profile milestones AK–AS,
   // and Discord membership AT. New read fields do not authorize submission writes.
   // Legacy A–AJ snapshots remain valid. This read width grants NO new write authority.
-  if (!values.every(row => Array.isArray(row) && row.length <= 46 && row.every(cell => ['string', 'number', 'boolean'].includes(typeof cell)))) fail('INVALID_ROWS');
+  if (!values.every(row => Array.isArray(row) && row.length <= TRACKER_COLUMN_LIMIT && row.every(cell => ['string', 'number', 'boolean'].includes(typeof cell)))) fail('INVALID_ROWS');
   const heading = values[0] as (string | number | boolean)[];
   const seen = new Set<string>();
   const columns = heading.map(cell => {
@@ -80,14 +82,16 @@ export function createTrackerSnapshotFromValues(values: unknown, target: Tracker
         Object.assign(row, { [key]: text });
       }
     });
-    if (!row.company || !row.role || !row.status || !row.priority) fail('INVALID_ROWS');
+    if (!row.company || !row.role || !row.status) fail('INVALID_ROWS');
     if (row.applyUrl) {
       try {
-        const protocol = new URL(row.applyUrl).protocol;
-        if (protocol === 'mailto:') {
+        const url = new URL(row.applyUrl);
+        if (url.protocol === 'mailto:') {
+          const route = emailApplicationFromTracker(url, row.sourceLink);
+          if (route) row.emailApplication = route;
           row.notes = [row.notes, 'Manual correspondence link (not a browser application): ' + row.applyUrl].filter(Boolean).join('\n');
           row.applyUrl = '';
-        } else if (!['http:', 'https:'].includes(protocol)) fail('INVALID_ROWS');
+        } else if (!['http:', 'https:'].includes(url.protocol)) fail('INVALID_ROWS');
       }
       catch { fail('INVALID_ROWS'); }
     }
@@ -225,7 +229,7 @@ async function refreshTrackerSnapshotNow(snapshotFile: string, options: RefreshO
       }
       return n - 1;
     };
-    if (!extent || columnIndex(extent[1]) < 0 || columnIndex(extent[1]) > 43 || Number(extent[2]) > ROW_LIMIT) fail('INCOMPLETE_RESPONSE');
+    if (!extent || columnIndex(extent[1]) < 0 || columnIndex(extent[1]) >= TRACKER_COLUMN_LIMIT || Number(extent[2]) > ROW_LIMIT) fail('INCOMPLETE_RESPONSE');
     const snapshot = createTrackerSnapshotFromValues(raw.values, current, auth.source, (options.now || (() => new Date()))());
     if (controller.signal.aborted) fail('TIMEOUT');
     if (await readBoundedFile(snapshotFile, MAX_BYTES) !== previous) return { ok: false, refreshed: false, error: 'SOURCE_CHANGED_RETRY' };

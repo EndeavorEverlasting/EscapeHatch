@@ -6,6 +6,8 @@ import os from 'node:os';
 import type { IncomingMessage } from 'node:http';
 import { createTrackerSnapshotFromValues, refreshTrackerSnapshot, readRememberedSources, readTrackerRefreshAvailability } from './tracker-refresh.ts';
 import { readTrackerStatus, trackerRefreshRequestAllowed } from './tracker-control.ts';
+import { parseApplicationsStorage } from './src/lib/storage.ts';
+import { mergeTrackerIntoApplications, selectNextActionableOpportunity } from './src/lib/tracker-bridge.ts';
 
 const target = { spreadsheetId: 'synthetic_sheet_123', sheetName: "Applications' history" };
 const heading = ['Applied?', 'Priority', 'Status', 'Company', 'Role', 'Apply Link', 'Notes', 'Next Action', 'Follow-Up Due'];
@@ -32,6 +34,17 @@ test('valid bounded response projects every row and derives metrics', () => {
   assert.match(snapshot.contentDigest, /^[a-f0-9]{64}$/);
 });
 
+test('a complete current tracker response preserves an unrelated blank-priority row', async () => fixture(async (file, env) => {
+  const historical = [false, '', 'Research', 'Unprioritized Employer', 'Analyst', 'https://example.test/historical'];
+  const response = { ...payload([...values, historical]), range: "'Applications'' history'!A1:AT1500" };
+  const result = await refreshTrackerSnapshot(file, { env, fetch: fake(response), now: () => date });
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.snapshot.applications[1].priority, '');
+  assert.equal(result.snapshot.applications[1].company, 'Unprioritized Employer');
+  assert.equal(mergeTrackerIntoApplications([], result.snapshot).find(item => item.company === 'Unprioritized Employer')?.priority, 'normal');
+}));
+
 test('custom sheet checkbox glyphs remain explicit progress, never submission proof', () => {
   for (const [glyph, expected] of [['☑', true], ['☒', true], ['☐', false]] as const) {
     const rows = [heading, [glyph, 'High', 'Ready to Apply', 'Synthetic Employer', 'Synthetic Role', 'https://example.test/apply']];
@@ -47,6 +60,54 @@ test('historical correspondence rows survive as plain text without browser launc
   assert.equal(snapshot.applications.length, 1);
   assert.equal(snapshot.applications[0].applyUrl, '');
   assert.match(snapshot.applications[0].notes!, /Manual correspondence link/);
+  assert.equal(snapshot.applications[0].emailApplication, undefined);
+});
+
+test('explicit email applications retain a separate, source-bound materials route across a private reload', () => {
+  const postingUrl = 'https://jobs.example.test/vacancies?id=700';
+  const rows = [[...heading, 'Source Link'],
+    [false, 'High', 'Ready to Apply', 'Synthetic Agency', 'Analyst',
+      'mailto:careers%40example.test?subject=Vacancy%20700%20%E2%80%94%20C++%20%26%20C%2B%2B=Analyst', '', '', '', postingUrl],
+    values[1]];
+  const snapshot = createTrackerSnapshotFromValues(rows, target, 'synthetic', date);
+  const initial = mergeTrackerIntoApplications([], snapshot);
+  const applications = parseApplicationsStorage(JSON.parse(JSON.stringify(initial)));
+  const email = applications?.find(item => item.company === 'Synthetic Agency');
+  assert.equal(email?.url, '');
+  assert.deepEqual(email?.emailApplication, {
+    postingUrl, recipient: 'careers@example.test', subject: 'Vacancy 700 — C++ & C++=Analyst',
+  });
+  assert.match(email?.nextAction || '', /review.*email application/i);
+  assert.equal(selectNextActionableOpportunity(snapshot)?.company, 'Synthetic Employer');
+
+  const changed = rows.map(row => [...row]);
+  changed[1][heading.length] = 'https://jobs.example.test/vacancies?id=701';
+  const later = createTrackerSnapshotFromValues(changed, target, 'synthetic', date);
+  const reconciled = mergeTrackerIntoApplications(initial, later).find(item => item.id === email?.id);
+  assert.equal(reconciled?.reconciliationConflict, 'opportunity_url_changed');
+  assert.equal(reconciled?.emailApplication?.postingUrl, postingUrl);
+});
+
+test('unsupported mail parameters and unsafe source URLs remain plain legacy notes', () => {
+  const source = 'https://jobs.example.test/vacancy/700';
+  const cases = [
+    ['mailto:careers@example.test?subject=One&subject=Two', source],
+    ['mailto:careers@example.test?cc=someone@example.test', source],
+    ['mailto:careers@example.test?subject=One%0D%0ABcc%3AInjected', source],
+    ['mailto:careers@example.test?subject=Unfinished%', source],
+    ['mailto:careers@example.test%2Cother@example.test', source],
+    ['mailto:careers@example.test', 'https://u:p@jobs.example.test/vacancy/700'],
+    ['mailto:careers@example.test', 'http://jobs.example.test/vacancy/700'],
+  ];
+  for (const [link, posting] of cases) {
+    const rows = [[...heading, 'Source Link'],
+      [false, 'High', 'Ready to Apply', 'Synthetic Agency', 'Analyst', link, '', '', '', posting]];
+    const snapshot = createTrackerSnapshotFromValues(rows, target, 'synthetic', date);
+    assert.equal(snapshot.applications[0].applyUrl, '');
+    assert.equal(snapshot.applications[0].emailApplication, undefined);
+    assert.match(snapshot.applications[0].notes || '', /Manual correspondence link/);
+    assert.equal(selectNextActionableOpportunity(snapshot), null);
+  }
 });
 
 test('missing, duplicate, aliased duplicate, invalid and truncated rows fail closed', () => {

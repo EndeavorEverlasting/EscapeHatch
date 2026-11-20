@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { sameApplicationUrl, type FormInspection } from './src/lib/application-puzzle.ts';
+import { isLeverApplicationForm, sameApplicationUrl, type FormInspection } from './src/lib/application-puzzle.ts';
 
 export function assertInspectionScope(selectedId: unknown, selectedUrl: unknown, opportunityId: string, applicationUrl: string, liveUrl: string) {
   const live = new URL(liveUrl), launched = new URL(applicationUrl);
@@ -14,7 +14,13 @@ export async function inspectApplicationRequirements(page: Page, opportunityId: 
   const pageUrl = page.url();
   assertInspectionScope(opportunityId, applicationUrl, opportunityId, applicationUrl, pageUrl);
   const requirements = await observeApplicationFields(page);
-  return { opportunityId, applicationUrl, pageUrl, capturedAt: new Date().toISOString(), scope: 'current_page_only', requirements };
+  const linkedInAction = /^(?:apply|auto[- ]?fill|pre[- ]?fill) with linkedin$|^use (?:my )?linkedin profile$/i;
+  const linkedinPrefillAvailable = isLeverApplicationForm(pageUrl) && (await page
+    .getByRole('button', { name: linkedInAction })
+    .or(page.getByRole('link', { name: linkedInAction }))
+    .filter({ visible: true }).count()) > 0;
+  if (page.url() !== pageUrl) throw new Error('Page changed during inspection. Inspect again.');
+  return { opportunityId, applicationUrl, pageUrl, capturedAt: new Date().toISOString(), scope: 'current_page_only', requirements, linkedinPrefillAvailable };
 }
 
 /** Shared by preparation and terminal preflight as well as the progress display. */
@@ -112,9 +118,10 @@ export async function observeApplicationFields(page: Page): Promise<FormInspecti
       const resume = /r[ée]sum[ée]|\bcv\b/i.test(label), cover = /cover\s*(letter|note)?/i.test(label);
       const kind = isFile ? (resume && !cover ? 'resume' as const : cover && !resume ? 'cover' as const : 'file' as const) : 'question' as const;
       // Only controls with a definite group identity can share a denominator term.
-      const container = leverCheckboxGroup || (type === 'radio' && name
+      const container = checkboxGroup ? leverQuestion : (type === 'radio' && name
         ? (control as HTMLInputElement).form || root : radio ? control.closest('[role="radiogroup"]') : null);
-      const key = container ? type + ':' + (native ? name : 'custom-radio') : '';
+      // Lever gives options in the same question distinct HTML names.
+      const key = checkboxGroup ? 'lever-checkbox-question' : container ? type + ':' + (native ? name : 'custom-radio') : '';
       const map = container ? (groups.get(container) ?? new Map<string, number>()) : null;
       if (container && map) groups.set(container, map);
       const prior = key ? map?.get(key) : undefined;

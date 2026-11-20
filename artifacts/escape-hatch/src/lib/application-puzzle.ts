@@ -12,6 +12,7 @@ export type FormInspection = {
   capturedAt: string;
   scope: 'current_page_only';
   requirements: FormRequirement[];
+  linkedinPrefillAvailable?: boolean;
 };
 export const INSPECTION_MAX_AGE_MS = 5 * 60 * 1000;
 export type CurrentApplicationPage = { opportunityId: string; applicationUrl: string; pageUrl: string };
@@ -47,6 +48,7 @@ export function projectApplicationPuzzle(inspection: FormInspection | null, oppo
   const percent = unknownCount === 0 ? percentage(verifiedRequired, required.length) : null;
   return {
     current, pieces,
+    linkedinPrefillAvailable: current && inspection?.linkedinPrefillAvailable === true,
     requiredCount: required.length,
     unresolvedCount: required.length - verifiedRequired,
     unknownCount,

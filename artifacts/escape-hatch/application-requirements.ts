@@ -14,7 +14,15 @@ export async function inspectApplicationRequirements(page: Page, opportunityId: 
   const pageUrl = page.url();
   assertInspectionScope(opportunityId, applicationUrl, opportunityId, applicationUrl, pageUrl);
   const requirements = await observeApplicationFields(page);
-  return { opportunityId, applicationUrl, pageUrl, capturedAt: new Date().toISOString(), scope: 'current_page_only', requirements };
+  // A collapsed review section can offer a letter without rendering an upload
+  // control. Use the explicit optional offer as metadata, not an input.
+  const optionalOffer = page.getByText(
+    /^No cover letter or additional documents added\. This is optional to add\.$/i,
+  ).filter({ visible: true });
+  const optionalCoverLetterOffered = await optionalOffer.count() === 1;
+  if (page.url() !== pageUrl) throw new Error('Page changed during inspection. Inspect again.');
+  return { opportunityId, applicationUrl, pageUrl, capturedAt: new Date().toISOString(),
+    scope: 'current_page_only', requirements, ...(optionalCoverLetterOffered ? { optionalCoverLetterOffered: true } : {}) };
 }
 
 /** Shared by preparation and terminal preflight as well as the progress display. */

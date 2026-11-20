@@ -150,14 +150,18 @@ test('conditional cover-letter file is a requirement only while observed and vis
         </label>
         <div id="cover-wrapper" hidden><label>Cover letter * <input type="file" id="cover" required></label></div>
         <label>Why are you interested? <textarea id="interest" required></textarea></label>
+        <p id="cover-offer">No cover letter or additional documents added. This is optional to add.</p>
       </form>`
     }));
     await page.goto(applicationUrl);
     let inspected = await inspectApplicationRequirements(page, 'synthetic-cover', applicationUrl);
+    assert.equal(inspected.optionalCoverLetterOffered, true);
     assert.equal(inspected.requirements.some(item => item.kind === 'cover'), false);
     assert.equal(inspected.requirements.filter(item => item.requirement === 'required').length, 2);
     await page.locator('#extra').selectOption('yes');
+    await page.locator('#cover-offer').evaluate(offer => { offer.setAttribute('hidden', ''); });
     inspected = await inspectApplicationRequirements(page, 'synthetic-cover', applicationUrl);
+    assert.equal(inspected.optionalCoverLetterOffered, undefined);
     assert.equal(inspected.requirements.find(item => item.kind === 'cover')?.requirement, 'required');
     assert.equal(inspected.requirements.find(item => item.kind === 'cover')?.populated, false);
     assert.equal(inspected.requirements.filter(item => item.requirement === 'required').length, 3);

@@ -76,6 +76,20 @@ test('real request is fixed to existing binding and only a validated response up
   assert.equal(JSON.stringify(result).includes('synthetic-secret'), false);
 }));
 
+test('the provider can return the complete requested AT range after a manual submission', async () => fixture(async (file, env) => {
+  const completedRow = [true, 'High', 'Submitted', 'Synthetic Employer', 'Synthetic Role', 'https://example.test/apply'];
+  const providerResponse = { ...payload([heading, completedRow]), range: "'Applications'' history'!A1:AT1500" };
+  const result = await refreshTrackerSnapshot(file, { env, fetch: fake(providerResponse) });
+  assert.equal(result.ok, true);
+  const saved = JSON.parse(await fs.readFile(file, 'utf8'));
+  assert.equal(saved.applications[0].status, 'Submitted');
+  assert.equal(saved.metrics.submittedStatus, 1);
+  const invalid = await refreshTrackerSnapshot(file, { env, fetch: fake({
+    ...providerResponse, range: "'Applications'' history'!A1:AU1500",
+  }) });
+  assert.deepEqual(invalid, { ok: false, refreshed: false, error: 'INCOMPLETE_RESPONSE' });
+}));
+
 test('missing credentials never invokes provider and preserves snapshot bytes', async () => fixture(async (file, env, original) => {
   delete env.TOKEN_CORRIDOR_GOOGLE_TOKEN;
   const result = await refreshTrackerSnapshot(file, { env, fetch: (() => { throw new Error('MUST_NOT_CALL'); }) as typeof fetch });

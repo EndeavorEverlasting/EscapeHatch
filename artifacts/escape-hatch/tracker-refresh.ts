@@ -6,6 +6,7 @@ import { computeTrackerMetrics, parseTrackerSnapshot, type TrackerRow, type Trac
 
 const MAX_BYTES = 2 * 1024 * 1024;
 const ROW_LIMIT = 1500;
+const LAST_TRACKER_COLUMN = 'AT';
 const TIMEOUT_MS = 10_000;
 export type TrackerTarget = { spreadsheetId: string; sheetName: string };
 export type RefreshResult = { ok: true; refreshed: true; snapshot: TrackerSnapshot } | { ok: false; refreshed: false; error: string };
@@ -205,7 +206,7 @@ async function refreshTrackerSnapshotNow(snapshotFile: string, options: RefreshO
   let response: Response | undefined;
   try {
     if (auth.token.length > 16384 || /[\r\n]/.test(auth.token)) fail('AUTH_REQUIRED');
-    const range = `'${current.sheetName.replace(/'/g, "''")}'!A1:AT${ROW_LIMIT}`;
+    const range = `'${current.sheetName.replace(/'/g, "''")}'!A1:${LAST_TRACKER_COLUMN}${ROW_LIMIT}`;
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(current.spreadsheetId)}/values/${encodeURIComponent(range)}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE`;
     response = await (options.fetch || fetch)(url, { headers: { authorization: `Bearer ${auth.token}` }, signal: controller.signal, redirect: 'error' });
     if (response.status === 401 || response.status === 403) return { ok: false, refreshed: false, error: 'AUTH_REQUIRED' };
@@ -225,7 +226,7 @@ async function refreshTrackerSnapshotNow(snapshotFile: string, options: RefreshO
       }
       return n - 1;
     };
-    if (!extent || columnIndex(extent[1]) < 0 || columnIndex(extent[1]) > 43 || Number(extent[2]) > ROW_LIMIT) fail('INCOMPLETE_RESPONSE');
+    if (!extent || columnIndex(extent[1]) < 0 || columnIndex(extent[1]) > columnIndex(LAST_TRACKER_COLUMN) || Number(extent[2]) > ROW_LIMIT) fail('INCOMPLETE_RESPONSE');
     const snapshot = createTrackerSnapshotFromValues(raw.values, current, auth.source, (options.now || (() => new Date()))());
     if (controller.signal.aborted) fail('TIMEOUT');
     if (await readBoundedFile(snapshotFile, MAX_BYTES) !== previous) return { ok: false, refreshed: false, error: 'SOURCE_CHANGED_RETRY' };

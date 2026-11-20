@@ -922,6 +922,20 @@ export function createManagedBrowserAssistPlugin(): Plugin {
             }
             return respond(res, 200, { ok: true, package: await documentStore.read(scope.opportunityId, scope.url), requireReview: (await readPreferences()).require_document_review !== false });
           }
+          // Use the current saved status even if this browser was bound before
+          // the tracker recorded a manual submission.
+          const preparationTarget = url.pathname === PREFIX + '/launch'
+            ? { id: payload.opportunityId, url: payload.url }
+            : [PREFIX + '/fill', PREFIX + '/prepare', PREFIX + '/resume', PREFIX + '/attach'].includes(url.pathname)
+              ? { id: opportunityId, url: applicationUrl }
+              : null;
+          if (preparationTarget?.id && preparationTarget.url) {
+            const applications = parseApplicationsStorage((await readWorkspace())?.workspace.values[APPLICATIONS_KEY]);
+            if (applications?.some(item => item.id === preparationTarget.id && item.url === preparationTarget.url &&
+              (item.status === 'applied' || item.status === 'closed'))) {
+              return respond(res, 409, { ok: false, error: 'saved_application_no_longer_actionable' });
+            }
+          }
           if (url.pathname === PREFIX + '/launch') {
             const jobUrl = validateApplicationUrl(payload.url);
             const talentCommunity = isCognizantTalentCommunity(jobUrl);

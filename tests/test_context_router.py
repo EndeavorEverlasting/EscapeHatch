@@ -42,6 +42,54 @@ class ContextRoutingTests(unittest.TestCase):
         self.assertTrue({"governance", "harness_skill", "application_parent",
                          "application_mapping"}.issubset(ids))
         self.assertNotIn("runtime_manager", ids)
+        self.assertNotIn("application_staples", ids)
+
+    def test_application_staples_aliases_load_the_full_workflow_at_default_budget(self):
+        tasks = [
+            "Prepare the prereqs for this role",
+            "Prep the pre-reqs for the new opportunity",
+            "Get the prerequisites for this job listing",
+            "Get the preqs for https://www.indeed.com/viewjob?jk=example",
+            "Prepare the staples for the next role",
+            "Prepare the application staples and tell me the context",
+            "Let's prepare the job application staples",
+        ]
+        for task in tasks:
+            with self.subTest(task=task):
+                receipt = router.select(BASE, task)
+                self.assertEqual(receipt["lane"], "application")
+                entry = next(e for e in receipt["selected"] if e["id"] == "application_staples")
+                self.assertEqual(entry["mode"], "full")
+                self.assertTrue(entry["required"])
+                for artifact in ("Application form or URL", "Résumé", "Cover letter", "Local answers prepped"):
+                    self.assertIn(artifact, entry["payload"])
+                router.verify_receipt(BASE, receipt)
+
+    def test_generic_aliases_preserve_other_lanes(self):
+        for task, expected in [
+            ("List Windows startup prerequisites", "runtime"),
+            ("List prereqs that apply to Windows startup", "runtime"),
+            ("Show prerequisites for this job in GitHub Actions", "general"),
+            ("Show prereqs for this role in the test harness", "harness"),
+            ("Order staples for the office", "general"),
+            ("Prepare the prereqs for the test harness", "harness"),
+            ("Review the prerequisites for this tool", "general"),
+        ]:
+            with self.subTest(task=task):
+                receipt = router.select(BASE, task)
+                self.assertEqual(receipt["lane"], expected)
+                self.assertNotIn("application_staples", {e["id"] for e in receipt["selected"]})
+        self.assertEqual(router.select(BASE, "prepare application staples", "general")["lane"], "general")
+
+    def test_explicit_application_lane_preserves_known_job_context(self):
+        receipt = router.select(BASE, "prepare the prerequisites", "application")
+        self.assertIn("application_staples", receipt["explicit_required"])
+        router.verify_receipt(BASE, receipt)
+
+    def test_missing_application_staples_workflow_blocks_selection(self):
+        (self.root / "harness/workflows/APPLICATION_STAPLES.md").unlink()
+        with self.assertRaisesRegex(ValueError, "CONTEXT_REQUIRED_SOURCE_MISSING:application_staples"):
+            router.select(self.root, "prepare application staples")
 
     def test_ambiguous_auto_task_fail_closed_to_general(self):
         self.assertEqual(router.resolve_lane("fix startup and application", "auto",

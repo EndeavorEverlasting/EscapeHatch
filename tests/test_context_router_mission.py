@@ -53,6 +53,21 @@ class MissionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "CONTEXT_MISSION_DUPLICATE_ID"):
             router.compact_mission(item)
 
+    def test_ordinary_application_preserves_room_for_private_mission(self):
+        with tempfile.TemporaryDirectory() as d:
+            private = Path(d) / "private.json"
+            private.write_text(json.dumps(example()))
+            output = Path(d) / "receipt.json"
+            cmd = [sys.executable, str(BASE / "scripts/context_router.py"),
+                   "--task", "prepare employer application",
+                   "--mission-file", str(private), "--output", str(output)]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stdout)
+            receipt = json.loads(output.read_text())
+            self.assertEqual(receipt["lane"], "application")
+            self.assertNotIn("application_staples", {e["id"] for e in receipt["selected"]})
+            self.assertEqual(receipt["mission_brief"]["objective"], example()["objective"])
+
     def test_full_private_stdout_never_printed(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "repo"

@@ -21,6 +21,16 @@ LANE_HINTS = {
 }
 
 
+APPLICATION_STAPLES = re.compile(r"\b(?:job\s+)?application\s+staples\b", re.I)
+PREPARATION_ALIASES = re.compile(r"\b(?:pre-?reqs|prerequisites|preqs|staples)\b", re.I)
+JOB_OPPORTUNITY_CONTEXT = re.compile(
+    r"\b(?:job\s+(?:application|posting|listing|opportunity)|employer\s+application)\b|"
+    r"https?://(?:[a-z0-9-]+\.)?indeed\.com/viewjob\?",
+    re.I,
+)
+ROLE_CONTEXT = re.compile(r"\b(?:this|next|new|indeed)\s+(?:role|opportunity)\b", re.I)
+
+
 def load_policy(root: Path) -> dict:
     policy = json.loads((root / POLICY_PATH).read_text(encoding="utf-8"))
     if policy.get("schema") != "escapehatch-model-context/v1":
@@ -46,13 +56,31 @@ def load_policy(root: Path) -> dict:
     return policy
 
 
+def hinted_lanes(task: str) -> list[str]:
+    return [lane for lane, hints in LANE_HINTS.items()
+            if any(re.search(r"\b" + re.escape(hint) + r"\b", task.lower()) for hint in hints)]
+
+
+def requests_application_staples(task: str, matches: list[str], requested: str) -> bool:
+    if APPLICATION_STAPLES.search(task):
+        return True
+    if not PREPARATION_ALIASES.search(task):
+        return False
+    return (
+        requested == "application"
+        or bool(JOB_OPPORTUNITY_CONTEXT.search(task))
+        or (bool(ROLE_CONTEXT.search(task)) and matches in ([], ["application"]))
+    )
+
+
 def resolve_lane(task: str, requested: str, policy: dict) -> str:
     if requested != "auto":
         if requested not in policy["lanes"]:
             raise ValueError("CONTEXT_UNKNOWN_LANE")
         return requested
-    matches = [lane for lane, hints in LANE_HINTS.items()
-               if any(re.search(r"\b" + re.escape(hint) + r"\b", task.lower()) for hint in hints)]
+    matches = hinted_lanes(task)
+    if requests_application_staples(task, matches, requested):
+        return "application"
     return matches[0] if len(matches) == 1 else "general"
 
 
@@ -78,6 +106,8 @@ def render_source(raw: bytes, path: Path, mode: str, encoding: str | None = None
 def select(root: Path, task: str, lane: str = "auto", budget: int = 32768, require_full: tuple[str, ...] = ()) -> dict:
     policy = load_policy(root)
     picked = resolve_lane(task, lane, policy)
+    if picked == "application" and requests_application_staples(task, hinted_lanes(task), lane):
+        require_full = (*require_full, "application_staples")
     if budget < 1:
         raise ValueError("CONTEXT_BUDGET_INVALID")
     unknown = sorted(set(require_full) - set(policy["sources"]))

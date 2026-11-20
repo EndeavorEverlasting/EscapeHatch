@@ -29,6 +29,8 @@ Application work must cite #69, prove its contribution, and list unproven parent
 
 For the zero-friction, extension-free, review-only application experience and its verified-versus-unproven implementation gates, read `docs/agent/P04_ZERO_FRICTION_APPLICATION_EXECUTION_2026-10-20.md` before changing the managed browser, answer memory, job source bridge, onboarding or submission path. A safe registry-free field-fill/PDF fallback is `REVIEW_REQUIRED`, **not** `REVIEW_READY` or full parent completion.
 
+For application staples and job-application prep shorthand, use [Application Staples](harness/workflows/APPLICATION_STAPLES.md) before handing off the opportunity.
+
 ### Canonical installation-to-application scene graph is contractual
 
 Use `contracts/application-journey-scenes.v1.json` and its scene runbook for setup, browser and application review. Run `python scripts/validate_application_journey.py`. Preserve independently owned installer and launcher work. A click or file-picker result is not employer acceptance. For explicit approval to Submit a reviewed application, [follow the managed Lever procedure](docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md#approved-submit-on-managed-lever). It owns exact-tab, approved-résumé and receipt recovery. Credentials, CAPTCHA and personal attestations stay with the operator.

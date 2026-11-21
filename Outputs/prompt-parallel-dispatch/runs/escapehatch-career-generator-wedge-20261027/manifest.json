@@ -1,0 +1,181 @@
+{
+  "schema_version": "prompt-parallel-dispatch/v1",
+  "run_id": "EH-P141-P04-CAREER-GENERATOR-20261027",
+  "repository": "EndeavorEverlasting/EscapeHatch",
+  "strategic_owner": "docs/plans/P141-P04-CAREER-DOCUMENT-GENERATOR-WEDGE-20261027.md",
+  "graph_width": 2,
+  "parallel_disposition": "DEGRADED",
+  "manifest_status": "PLANNED_NOT_EXECUTABLE",
+  "autonomy_gap": "No callable local runner in current chat. Exact P04 CLI contract and dispatcher absent from verified TokenCorridor main; do not claim dispatch, manifest contract validation or implementation.",
+  "lanes": [
+    {
+      "lane_id": "S0-SOURCE-PREFLIGHT",
+      "mission": "Recover installed private source revision, available generator baseline and active branch/worktree evidence without changing user data",
+      "dependencies": [],
+      "owned_mutation_surfaces": [
+        "private untracked evaluation readiness receipt"
+      ],
+      "forbidden_surfaces": [
+        "real applicant data in public Git",
+        "existing approved PDFs",
+        "running ATS session",
+        "PR #115",
+        "#92",
+        "#89"
+      ],
+      "adapter": {
+        "kind": "unresolved",
+        "rung": null
+      },
+      "launch": null,
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [
+        {
+          "provider_family": "private_career_source",
+          "operation": "read existing user-approved revisions",
+          "authority_state": "AVAILABLE_UNVERIFIED",
+          "mutation_authority": false
+        }
+      ],
+      "required_capabilities": [
+        "installed source selection",
+        "private source read",
+        "local Git status"
+      ],
+      "evidence_inputs": [],
+      "expected_artifacts": [
+        "private untracked evaluation readiness receipt"
+      ],
+      "validation": [
+        "source revision and baseline identity readback",
+        "no active employer mutation"
+      ],
+      "convergence_owner": "E3-ADMISSION",
+      "status": "PLANNED"
+    },
+    {
+      "lane_id": "E1-EVALUATION-COMPARATOR",
+      "mission": "Define B0/B1/B2 blinded evaluation dataset and nonprivate synthetic inputs only; no generator implementation",
+      "dependencies": [
+        "S0-SOURCE-PREFLIGHT"
+      ],
+      "owned_mutation_surfaces": [
+        "isolated evaluation-method notes; not shared source contracts"
+      ],
+      "forbidden_surfaces": [
+        "private prose in Git",
+        "generator implementation",
+        "active browser",
+        "PR #115",
+        "#92",
+        "#89"
+      ],
+      "adapter": {
+        "kind": "unresolved",
+        "rung": null
+      },
+      "launch": null,
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "provider_access": [],
+      "required_capabilities": [
+        "synthetic fixtures",
+        "blinded evaluation rubric"
+      ],
+      "evidence_inputs": [],
+      "expected_artifacts": [
+        "bounded comparator evaluation spec"
+      ],
+      "validation": [
+        "same source and role inputs across B0/B1/B2",
+        "no unsupported private data"
+      ],
+      "convergence_owner": "E3-ADMISSION",
+      "status": "PLANNED"
+    },
+    {
+      "lane_id": "E2-VOICE-FIDELITY-RUBRIC",
+      "mission": "Independently define factual attribution, voice-retention, approvals and zero-invented-claim acceptance rules",
+      "dependencies": [
+        "S0-SOURCE-PREFLIGHT"
+      ],
+      "owned_mutation_surfaces": [
+        "isolated rubric/negative cases; not shared validators"
+      ],
+      "forbidden_surfaces": [
+        "approved candidate documents",
+        "public author voice text",
+        "PR #115",
+        "#92",
+        "#89"
+      ],
+      "adapter": {
+        "kind": "unresolved",
+        "rung": null
+      },
+      "launch": null,
+      "execution_environment": "CI_OR_REMOTE_RUNNER",
+      "provider_access": [],
+      "required_capabilities": [
+        "synthetic validation checks",
+        "versioned evidence review"
+      ],
+      "evidence_inputs": [],
+      "expected_artifacts": [
+        "rubric and falsification cases"
+      ],
+      "validation": [
+        "source claims immutable without approval",
+        "two employer archetypes",
+        "hard zero material invented claims"
+      ],
+      "convergence_owner": "E3-ADMISSION",
+      "status": "PLANNED"
+    },
+    {
+      "lane_id": "E3-ADMISSION",
+      "mission": "Converge synthetic comparator and rubric, determine P82 eligibility or P95 architecture route; stop before prototype",
+      "dependencies": [
+        "E1-EVALUATION-COMPARATOR",
+        "E2-VOICE-FIDELITY-RUBRIC"
+      ],
+      "owned_mutation_surfaces": [
+        "strategy decision receipt"
+      ],
+      "forbidden_surfaces": [
+        "generator implementation",
+        "user submission",
+        "unapproved document mutation"
+      ],
+      "adapter": {
+        "kind": "unresolved",
+        "rung": null
+      },
+      "launch": null,
+      "execution_environment": "CURRENT_CHAT_RUNTIME",
+      "provider_access": [
+        {
+          "provider_family": "github",
+          "operation": "read convergence notes and receipts",
+          "authority_state": "VERIFIED",
+          "mutation_authority": true
+        }
+      ],
+      "required_capabilities": [
+        "evidence synthesis",
+        "falsification decision"
+      ],
+      "evidence_inputs": [],
+      "expected_artifacts": [
+        "P82 admission or REJECT/P95 route decision"
+      ],
+      "validation": [
+        "one primary uncertainty",
+        "baseline/comparator real",
+        "predeclared decision",
+        "no invented proof"
+      ],
+      "convergence_owner": "P141 strategic owner",
+      "status": "PLANNED"
+    }
+  ]
+}

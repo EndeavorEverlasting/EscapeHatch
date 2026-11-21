@@ -14,7 +14,7 @@ export type LeverReceipt = {
   resumeAfter: 'NOT_OBSERVED' | 'EMPTY' | 'PRESENT';
   resumeSha256: string | null;
   dispatch: 'NOT_ATTEMPTED' | 'ATTEMPTING' | 'CLICK_RETURNED' | 'CLICK_UNCERTAIN' | 'CLICK_OBSERVED';
-  response: 'NOT_EXPECTED' | 'PENDING' | 'LEVER_VERIFICATION_ERROR' | 'VALIDATION_FAILED' | 'CONFIRMED';
+  response: 'NOT_EXPECTED' | 'PENDING' | 'LEVER_VERIFICATION_ERROR' | 'VALIDATION_FAILED' | 'CHALLENGE_UNRESOLVED' | 'CONFIRMED';
   code: string;
   observerAttemptId: string | null;
 };
@@ -81,6 +81,14 @@ export class LeverAttemptReceipts {
       AND dispatch <> 'NOT_ATTEMPTED' AND response <> 'CONFIRMED'
       AND (response = 'PENDING' OR ? = 'CONFIRMED')
     `).run(response, resumeAfter, scope, id, response));
+  }
+
+  /** Closes a dispatched attempt whose employer challenge ended without any employer outcome. */
+  releaseUnconfirmed(job: string, id: string): boolean {
+    return this.access(job, (db, scope) => db.prepare(`
+      UPDATE receipts SET response = 'CHALLENGE_UNRESOLVED' WHERE scope = ? AND id = ? AND action = 'SUBMIT'
+      AND response = 'PENDING' AND dispatch IN ('CLICK_RETURNED','CLICK_UNCERTAIN','CLICK_OBSERVED')
+    `).run(scope, id).changes === 1);
   }
 
   pending(job: string): boolean {

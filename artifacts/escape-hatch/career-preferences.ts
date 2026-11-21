@@ -6,6 +6,10 @@ export function withCareerPreferences(saved: Preferences, raw: unknown, targetRo
   const result = { ...saved, preferences: { ...saved.preferences } };
   for (const id of Object.keys(result.preferences)) if (id.startsWith('experience.') || (id.startsWith('education.') && id !== 'education.highest_completed_level')) delete result.preferences[id];
   const profile = parseAssistProfile(raw);
+  // Employment history keeps former-employer questions under review for those employers.
+  const employers = [saved.preferences['experience.company']?.value, ...(profile?.experience || []).map(item => item?.company)]
+    .filter((name): name is string => typeof name === 'string' && Boolean(name.trim()) && name.length <= 160);
+  if (employers.length) result.former_employers = [...new Set([...(saved.former_employers || []), ...employers.map(name => name.trim())])];
   const values: Record<string, unknown> = {};
   const first = saved.preferences['identity.first_name']?.value, last = saved.preferences['identity.last_name']?.value;
   if (first && last && !saved.preferences['identity.full_name']?.value.trim()) values['identity.full_name'] = first.trim() + ' ' + last.trim();

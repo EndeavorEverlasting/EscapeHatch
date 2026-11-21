@@ -76,7 +76,7 @@
   },
   "scopes": {
     "profile_preference": "stable or user-decided value reused until changed, subject to question confirmation policy",
-    "opportunity_override": "value chosen for one opportunity, such as compensation",
+    "opportunity_override": "value chosen for one opportunity, such as compensation; stored as application_answers keyed by exact saved opportunity, URL and normalized question, refilled only on that verified application tab",
     "session_confirmation": "current confirmation for legal/compliance or other per-application facts"
   },
   "privacy": {
@@ -126,6 +126,23 @@
         "runtime": "enabled flag gates only recognized applicant privacy checkbox Fill Plan items; manual uncheck and Undo remain preserved",
         "proof_ceiling": "repository and CI only until actual installed Chrome/Android sessions are observed"
       }
+    },
+    "application_eeo_self_identification_signature": {
+      "field": "application_eeo_signature_enabled",
+      "default": false,
+      "persistence": "existing private local-file preference adapter; not public Git",
+      "behavior": "After a one-time user opt-in, and only when the form's disability status selection matches the saved eeo.disability_status preference, fill the self-identification name with the saved identity.full_name and today's date; preserve any entered name or date and verify both values.",
+      "exclusions": [
+        "changing or inferring a disability answer",
+        "accuracy certifications",
+        "final Submit"
+      ],
+      "user_controls": [
+        "Save Preferences",
+        "Disable and Save",
+        "Clear Preferences"
+      ],
+      "evidence": "Actual employer-browser acceptance remains unproven until installed Windows runtime testing."
     }
   },
   "attestation_policy": "manual_only"

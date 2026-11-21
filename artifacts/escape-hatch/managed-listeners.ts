@@ -85,8 +85,12 @@ export function submissionAdapter(applicationUrl: string) {
   return { submitSelector: '#root button', successSelector: '#root h1, #root h2, #root [role="status"], #root [role="alert"], #root div', confirmationPaths: [] };
 }
 
+const ARM_REFUSALS = ['No bound submission observer.', 'Listener disposed.',
+  'Submission already confirmed; start a new bound session for another application.', 'Cannot arm on a different application.',
+  'Preexisting confirmation cannot prove this submission.', 'A unique enabled application form transition control is required before arming.'];
+
 export class ManagedListeners {
-  readonly implementationVersion = 8;
+  readonly implementationVersion = 9;
   private leverAttempt: ((event: LeverAttemptEvent) => void) | null = null;
   private page: Page | null = null;
   private stopMemory: (() => Promise<void>) | null = null;
@@ -180,7 +184,11 @@ export class ManagedListeners {
 
   async arm() {
     try { if (!this.observer) throw new Error('No bound submission observer.'); if ((await this.observer.arm()).state === 'ARMED') this.error = ''; }
-    catch { this.error = 'Submission tracking could not arm on this page. Review the current application before trying again.'; }
+    catch (error) {
+      // Observer refusals are fixed host strings; never page text or values.
+      const reason = error instanceof Error && ARM_REFUSALS.includes(error.message) ? ' (' + error.message + ')' : '';
+      this.error = 'Submission tracking could not arm on this page. Review the current application before trying again.' + reason;
+    }
     return this.status();
   }
   async disarm() { await this.observer?.disarm(); return this.status(); }

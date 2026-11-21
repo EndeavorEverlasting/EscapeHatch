@@ -296,6 +296,23 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
           Reuse my approval for routine applicant privacy notices during job applications
         </label>
         <p className="mt-2 text-xs text-muted-foreground">Off until you enable and save it. EscapeHatch checks only clearly identified application privacy acknowledgements, verifies the result, and leaves optional marketing/data sharing, contracts, certifications, signatures, and final submission for your own review. You can turn this off or clear it at any time.</p>
+        <label className="mt-3 flex items-start gap-2 text-sm">
+          <input type="checkbox" data-testid="eeo-signature-toggle"
+            checked={data.application_eeo_signature_enabled === true}
+            onChange={event => { markEdited(); setData(current => ({ ...current, application_eeo_signature_enabled: event.target.checked })); }} />
+          Complete the disability self-identification name and date with my saved full name
+        </label>
+        <p className="mt-2 text-xs text-muted-foreground">Off until you enable and save it. Applies only after the form shows your saved disability status answer, fills today's date, and keeps any name or date already entered.</p>
+      </section>
+      <section className="mt-4 rounded-xl border border-border p-4" aria-label="Former employers">
+        <h3 className="font-display text-xl">Former employers</h3>
+        <label className="mt-3 block text-sm">Companies you have worked for, one per line
+          <textarea data-testid="former-employers" className="mt-1 w-full rounded border border-border p-2" rows={3}
+            key={(data.former_employers || []).join('\n')} defaultValue={(data.former_employers || []).join('\n')}
+            onChange={() => markEdited()}
+            onBlur={event => { const names = [...new Set(event.target.value.split('\n').map(name => name.trim()).filter(Boolean))]; setData(current => ({ ...current, former_employers: names })); }} />
+        </label>
+        <p className="mt-2 text-xs text-muted-foreground">"Have you worked for this employer before?" is answered No unless the employer is listed here or in your saved work history. Listed employers stay for your review. You can correct any answer on the form before Submit.</p>
       </section>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {questions.filter(q => q.automation_policy === 'fill_if_explicit_preference' && q.confirmation_policy === 'until_changed' && q.id !== 'identity.full_name' && !q.id.startsWith('experience.') && !['education.institution', 'education.credential', 'education.field_of_study', 'education.dates', 'education.details'].includes(q.id)).map(q => {

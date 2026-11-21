@@ -1,7 +1,8 @@
 import { matchQuestion, normalizeQuestion, parsePreferences, questions, roleQuestionKey, safeDiscoveredQuestion,
-  sameRoleAnswerSlot, MAX_ROLE_ANSWER_LENGTH, type Preferences, type ReviewedRoleAnswer } from './src/lib/application-preferences.ts';
+  sameRoleAnswerSlot, sameApplicationAnswerSlot, MAX_ROLE_ANSWER_LENGTH, type Preferences, type ReviewedRoleAnswer,
+  type ReviewedApplicationAnswer } from './src/lib/application-preferences.ts';
 import { assertEmployerFacingDocumentUrl } from './src/lib/employer-facing-document-url.ts';
-import { mergeReviewedRoleAnswers, updateAndVerifyPreferences } from './preference-file.ts';
+import { mergeApplicationAnswers, mergeReviewedRoleAnswers, updateAndVerifyPreferences } from './preference-file.ts';
 
 type Field = { question: string; kind: string; value: string };
 type Scope = { opportunityId: string; url: string; employerName: string };
@@ -21,23 +22,31 @@ export async function syncReviewedApplicationAnswers(input: unknown, scope: Scop
     const role = kind === 'textarea' ? roleQuestionKey(question) : null;
     const matched = matchQuestion(question, scope.employerName);
     const key = role ? 'role:' + role : matched ?? label;
-    return { question, value, label, role, matched, key };
+    return { question, kind, value, label, role, matched, key };
   });
   const approvedAt = new Date().toISOString();
   let expected: Preferences | undefined;
-  const receipt = { updated: 0, unchanged: 0, skipped: 0 };
+  const receipt = { updated: 0, unchanged: 0, skipped: 0, applicationAnswers: { updated: 0, unchanged: 0 } };
   await updateAndVerifyPreferences(async current => {
     await assertSourceCurrent?.();
     const preferences = { ...current.preferences };
     const discovered = { ...current.discovered_answers };
     const roleAnswers: ReviewedRoleAnswer[] = [];
+    const applicationAnswers: ReviewedApplicationAnswer[] = [];
+    const keepForApplication = (question: string, value: string) => {
+      if (value.length > MAX_ROLE_ANSWER_LENGTH) return;
+      const answer = { opportunityId: scope.opportunityId, url: scope.url, question, value, approvedAt };
+      if (current.application_answers?.some(prior => sameApplicationAnswerSlot(prior, answer) && prior.value === value)) {
+        receipt.applicationAnswers.unchanged++;
+      } else { applicationAnswers.push(answer); receipt.applicationAnswers.updated++; }
+    };
     const duplicates = new Set<string>();
     const keys = new Set<string>();
     for (const row of rows) {
       if (keys.has(row.key)) duplicates.add(row.key);
       keys.add(row.key);
     }
-    for (const { question, value, label, role, matched, key } of rows) {
+    for (const { question, kind, value, label, role, matched, key } of rows) {
       if (!value.trim()) continue;
       if (duplicates.has(key) || PROTECTED.test(label) || (matched && /^(eeo|accommodation|military|veteran|legal|marketing|attestation)\./.test(matched))) {
         receipt.skipped++; continue;
@@ -50,15 +59,21 @@ export async function syncReviewedApplicationAnswers(input: unknown, scope: Scop
         continue;
       }
       const trimmed = value.trim();
-      if (trimmed.length > 512 || /^(?:please )?(?:select|choose)(?: one)?[ .…-]*$/i.test(trimmed)) {
+      if (/^(?:please )?(?:select|choose)(?: one)?[ .…-]*$/i.test(trimmed)) {
         receipt.skipped++; continue;
       }
       try { assertEmployerFacingDocumentUrl(question, trimmed); }
       catch { receipt.skipped++; continue; }
+      if (trimmed.length > 512) {
+        if (kind === 'textarea') keepForApplication(question, value);
+        receipt.skipped++; continue;
+      }
       const definition = questions.find(item => item.id === matched);
-      if (definition && definition.answer_scope === 'profile' &&
+      const profileWide = Boolean(definition && definition.answer_scope === 'profile' &&
           definition.automation_policy === 'fill_if_explicit_preference' && definition.confirmation_policy === 'until_changed' &&
-          !/^employment\.(?:current_employee|previous_employee|prior_employer_relationship)$/.test(definition.id)) {
+          !/^employment\.(?:current_employee|previous_employee|prior_employer_relationship)$/.test(definition.id));
+      if (!profileWide) keepForApplication(question, kind === 'textarea' ? value : trimmed);
+      if (profileWide && definition) {
         const prior = preferences[definition.id];
         if (prior?.value === trimmed) receipt.unchanged++;
         else if (prior && Date.parse(prior.updated_at) > Date.parse(approvedAt)) receipt.skipped++;
@@ -78,8 +93,9 @@ export async function syncReviewedApplicationAnswers(input: unknown, scope: Scop
         }
       } else receipt.skipped++;
     }
-    if (!receipt.updated) { expected = current; return current; }
-    const next = mergeReviewedRoleAnswers({ ...current, preferences, discovered_answers: discovered }, roleAnswers);
+    if (!receipt.updated && !receipt.applicationAnswers.updated) { expected = current; return current; }
+    const next = mergeApplicationAnswers(
+      mergeReviewedRoleAnswers({ ...current, preferences, discovered_answers: discovered }, roleAnswers), applicationAnswers);
     expected = parsePreferences(next) || undefined;
     if (!expected) throw new Error('REVIEWED_PROFILE_CAPACITY_OR_VALIDATION_FAILED');
     return expected;

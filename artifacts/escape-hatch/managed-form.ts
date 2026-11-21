@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { matchQuestion, normalizeQuestion, discoveredValue, optionMatches, reusableValue, isRoutineApplicantPrivacyAcknowledgement, roleQuestionKey, type Preferences } from './src/lib/application-preferences.ts';
+import { matchQuestion, normalizeQuestion, discoveredValue, optionMatches, reusableValue, isRoutineApplicantPrivacyAcknowledgement, roleQuestionKey, applicationAnswerValue, employerRelationshipDefault, type Preferences } from './src/lib/application-preferences.ts';
 import { assertEmployerFacingDocumentUrl } from './src/lib/employer-facing-document-url.ts';
 
 export type FillOutcome = { filled: string[]; skipped: string[] };
@@ -88,9 +88,17 @@ async function inspectPreferenceFields(page: Page, employerName = '') {
       if (previous && /label$/i.test(previous.id)) prompts.push(previous.textContent || '');
     }
     const selectWidget = field.closest('.Select');
+    // A choice group is its labelled container; Lever may give each checkbox option its own name.
+    const containers = 'fieldset, [role="group"], [role="radiogroup"], .application-question';
+    const container = field.closest(containers);
+    const heading = container?.querySelector('legend, .application-label');
+    const headingCopy = heading?.cloneNode(true) as Element | undefined;
+    headingCopy?.querySelectorAll('input,select,textarea,button,[aria-hidden="true"],.required').forEach(control => control.remove());
     return { type, name: field.name, prompts, readonly: field.readOnly, option: type === 'toggle' ? field.textContent?.trim() || '' : labels.join(' ').trim() || field.value,
       role: field.getAttribute('role'), selectWidget: Boolean(selectWidget),
-      selectedText: selectWidget?.querySelector('[role="option"][aria-selected="true"]')?.textContent?.trim() || '' };
+      selectedText: selectWidget?.querySelector('[role="option"][aria-selected="true"]')?.textContent?.trim() || '',
+      group: container ? Array.from(document.querySelectorAll(containers)).indexOf(container) : -1,
+      groupPrompt: (container?.getAttribute('aria-label') || headingCopy?.textContent || '').trim() };
   })));
   const available = await Promise.all(controls.map(async (control, i) =>
     !descriptors[i].readonly && ['text', 'email', 'tel', 'url', 'textarea', 'number', 'select', 'radio', 'toggle'].includes(descriptors[i].type) &&
@@ -132,9 +140,21 @@ export async function fillSavedPreferences(page: Page, preferences: Preferences,
       .filter(answer => answer.opportunityId === roleScope?.opportunityId && answer.url === roleScope?.url)
       .map(answer => [roleQuestionKey(answer.question), answer.value] as const),
   );
+  // Answers reviewed on this exact application outrank profile-wide values (opportunity_override).
+  const applicationScope = roleScope && page.url() === roleScope.pageUrl ? roleScope : undefined;
+  const applicationValues = new Map<string, string>();
   const result: FillOutcome = { filled: [], skipped: [] };
   const { controls, descriptors, available, ids } = await inspectPreferenceFields(page, employerName);
   for (let i = 0; i < controls.length; i++) {
+    if (applicationScope && descriptors[i].type !== 'checkbox') {
+      const keys = [...new Set(descriptors[i].prompts.filter(prompt => prompt.trim() &&
+        applicationAnswerValue(preferences, applicationScope, prompt) !== null).map(normalizeQuestion))];
+      if (keys.length === 1) {
+        applicationValues.set(keys[0], applicationAnswerValue(preferences, applicationScope, keys[0])!);
+        ids[i] = ['application:' + keys[0]];
+        continue;
+      }
+    }
     if (!ids[i].length) {
       const roleKeys = descriptors[i].type === 'textarea'
         ? [...new Set(descriptors[i].prompts.map(roleQuestionKey).filter(key => key !== null))] : [];
@@ -157,13 +177,20 @@ export async function fillSavedPreferences(page: Page, preferences: Preferences,
         const labelledBy = (field.getAttribute('aria-labelledby') || '').split(/\s+/).map(id => document.getElementById(id)?.textContent || '');
         return [...labels, aria, ...labelledBy].filter(Boolean).join(' ');
       });
-      if (!isRoutineApplicantPrivacyAcknowledgement(noticeText)) continue;
+      // Lever renders the notice as the group prompt and a lone affirmative option.
+      const groupNotice = descriptor.group >= 0 && descriptor.groupPrompt &&
+        descriptors.filter(peer => peer.type === 'checkbox' && peer.group === descriptor.group).length === 1 &&
+        /^(?:yes|i agree|agree|i acknowledge|acknowledge|i accept|accept)$/.test(normalizeQuestion(noticeText))
+        ? descriptor.groupPrompt : '';
+      if (groupNotice) {
+        if (!isRoutineApplicantPrivacyAcknowledgement(groupNotice)) continue;
+      } else if (!isRoutineApplicantPrivacyAcknowledgement(noticeText)) continue;
       const proofId = 'privacy.application_notice_acknowledged';
       try {
         if (!await control.isVisible() || !await control.isEnabled() || await control.getAttribute('readonly') !== null) {
           result.skipped.push(proofId + ':unavailable'); continue;
         }
-        const fingerprint = [page.url(), await control.getAttribute('id') || '', await control.getAttribute('name') || '', normalizeQuestion(noticeText)].join('|');
+        const fingerprint = [page.url(), await control.getAttribute('id') || '', await control.getAttribute('name') || '', normalizeQuestion(groupNotice || noticeText)].join('|');
         if (await control.isChecked()) { result.skipped.push(proofId + ':preserved'); continue; }
         const prior = privacyChecksApplied.get(page);
         if (prior?.has(fingerprint)) { result.skipped.push(proofId + ':user_override'); continue; }
@@ -176,6 +203,7 @@ export async function fillSavedPreferences(page: Page, preferences: Preferences,
       continue;
     }
     if (['hidden', 'file', 'password', 'submit', 'button', 'reset'].includes(descriptor.type)) continue;
+    if (/^eeo\[disabilitySignature(?:Date)?\]$/.test(descriptor.name)) continue;
     if (ids[index].length !== 1) { result.skipped.push('unmapped_or_ambiguous'); continue; }
     const id = ids[index][0];
     if (preferences.optional_omissions?.includes(id) && !await control.evaluate(element => {
@@ -185,8 +213,9 @@ export async function fillSavedPreferences(page: Page, preferences: Preferences,
       return field.required === true || element.getAttribute('aria-required') === 'true' ||
         /\*|\brequired\b/i.test([labelText, groupText].join(' '));
     })) { result.skipped.push(id + ':optional_omitted'); continue; }
-    let value = id.startsWith('role:') ? roleValues.get(id.slice(5)) :
+    let value = id.startsWith('application:') ? applicationValues.get(id.slice(12)) : id.startsWith('role:') ? roleValues.get(id.slice(5)) :
       id.startsWith('discovered:') ? discoveredValue(id.slice(11), preferences) : reusableValue(id, preferences);
+    value ||= employerRelationshipDefault(id, employerName, preferences);
     if (id === 'identity.phone' && value) value = internationalPhone(value, reusableValue('identity.country', preferences) || '');
     // Conditional detail is applicable only when a clearance is held. Never invent a clearance.
     if (id === 'employment.clearance_details' && reusableValue('employment.current_clearance', preferences) === 'No') value = 'N/A';
@@ -299,5 +328,78 @@ export async function fillSavedPreferences(page: Page, preferences: Preferences,
       result.filled.push(id);
     } catch { result.skipped.push(id + ':not_verified'); }
   }
+  await fillCheckboxGroups(page, preferences, applicationScope, controls, descriptors, result, employerName);
+  await fillEeoSelfIdentificationSignature(page, preferences, result);
   return { filled: [...new Set(result.filled)], skipped: [...new Set(result.skipped)] };
+}
+
+const PROTECTED_GROUP = /\b(?:privacy|consent|agree|acknowledg\w*|attest\w*|certif\w*|signature|terms|disclosure)\b/;
+
+// Multi-select and Yes/No checkbox groups answered on this application or approved for reuse.
+// Any operator selection already present in a group is preserved untouched.
+async function fillCheckboxGroups(page: Page, preferences: Preferences, scope: { opportunityId: string; url: string } | undefined,
+    controls: Awaited<ReturnType<typeof inspectPreferenceFields>>['controls'],
+    descriptors: Awaited<ReturnType<typeof inspectPreferenceFields>>['descriptors'], result: FillOutcome, employerName: string) {
+  const groups = new Map<number, number[]>();
+  descriptors.forEach((descriptor, index) => {
+    if (descriptor.type === 'checkbox' && descriptor.group >= 0 && descriptor.groupPrompt) {
+      groups.set(descriptor.group, [...(groups.get(descriptor.group) || []), index]);
+    }
+  });
+  for (const members of groups.values()) {
+    const prompt = descriptors[members[0]].groupPrompt;
+    const key = normalizeQuestion(prompt);
+    if (!key || PROTECTED_GROUP.test(key)) continue;
+    const scoped = applicationAnswerValue(preferences, scope, prompt);
+    const discovered = scoped ?? discoveredValue(prompt, preferences);
+    const relationship = matchQuestion(prompt, employerName);
+    const value = discovered ?? (relationship ? employerRelationshipDefault(relationship, employerName, preferences) : null);
+    if (!value) continue;
+    const id = scoped !== null ? 'application:' + key : discovered !== null ? 'discovered:' + key : relationship!;
+    try {
+      const usable = await Promise.all(members.map(async i => await controls[i].isVisible() && await controls[i].isEnabled()));
+      if (usable.some(ok => !ok)) { result.skipped.push(id + ':unavailable'); continue; }
+      if ((await Promise.all(members.map(i => controls[i].isChecked()))).some(Boolean)) { result.skipped.push(id + ':preserved'); continue; }
+      const choices = [...new Set(value.split('\n').map(line => line.trim()).filter(Boolean))];
+      const targets = choices.map(choice => members.filter(i => optionMatches(choice, descriptors[i].option)));
+      if (!choices.length || targets.some(matches => matches.length !== 1)) { result.skipped.push(id + ':option_mismatch'); continue; }
+      for (const [i] of targets) await controls[i].check({ timeout: 2500 });
+      const checked = await Promise.all(members.map(i => controls[i].isChecked()));
+      const expected = new Set(targets.map(([i]) => i));
+      if (members.some((i, n) => checked[n] !== expected.has(i))) throw new Error('selection not retained');
+      result.filled.push(id);
+    } catch { result.skipped.push(id + ':not_verified'); }
+  }
+}
+
+// Opt-in only: completes the self-identification name/date after the saved disability answer is selected.
+async function fillEeoSelfIdentificationSignature(page: Page, preferences: Preferences, result: FillOutcome) {
+  if (preferences.application_eeo_signature_enabled !== true) return;
+  const status = page.locator('select[name="eeo[disability]"]');
+  const name = page.locator('input[name="eeo[disabilitySignature]"]');
+  const date = page.locator('input[name="eeo[disabilitySignatureDate]"]');
+  if (await status.count() !== 1 || await name.count() !== 1 || await date.count() !== 1) return;
+  const proofId = 'eeo.disability_self_identification_signature';
+  const fullName = reusableValue('identity.full_name', preferences);
+  const saved = reusableValue('eeo.disability_status', preferences);
+  const selected = await status.evaluate(element => {
+    const select = element as HTMLSelectElement;
+    return select.value ? select.selectedOptions[0]?.textContent?.trim() || '' : '';
+  });
+  if (!fullName || !saved || !selected || !optionMatches(saved, selected)) { result.skipped.push(proofId + ':saved_disability_answer_required'); return; }
+  try {
+    if (!await name.isVisible() || !await name.isEditable() || !await date.isVisible() || !await date.isEditable()) {
+      result.skipped.push(proofId + ':unavailable'); return;
+    }
+    if ((await name.inputValue()).trim() || (await date.inputValue()).trim()) { result.skipped.push(proofId + ':preserved'); return; }
+    const today = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const dateValue = await date.getAttribute('type') === 'date'
+      ? `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`
+      : `${pad(today.getMonth() + 1)}/${pad(today.getDate())}/${today.getFullYear()}`;
+    await name.fill(fullName, { timeout: 2500 });
+    await date.fill(dateValue, { timeout: 2500 });
+    if (await name.inputValue() !== fullName || await date.inputValue() !== dateValue) throw new Error('signature not retained');
+    result.filled.push(proofId);
+  } catch { result.skipped.push(proofId + ':not_verified'); }
 }

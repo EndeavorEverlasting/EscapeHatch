@@ -10,13 +10,15 @@ type RequestBody = Record<string, string | boolean>;
 type Reply = { ok?: boolean; error?: string; attemptReceipt?: LeverReceipt; receipts?: LeverReceipt[];
   listeners?: { recordingAnswers?: boolean; submission?: { state?: string }; receipts?: SubmissionEvidence[] };
   answerSync?: { status: string; updated: number; unchanged: number; skipped: number }; blockers?: string[];
+  employerChallenge?: boolean;
+  filled?: string[]; skipped?: string[];
   package?: { documents: { resume?: { reviewedAt?: string; sha256?: string } } };
 };
-type LocalOptions = { livePageUrl: string; port: number; submitReviewedOnce: boolean };
+type LocalOptions = { livePageUrl: string; port: number; submitReviewedOnce: boolean; retryUnconfirmedOnce?: boolean };
 type Receipt = { state: string; [key: string]: unknown };
 const FAILURES = ['LEVER_VERIFICATION_ERROR', 'VALIDATION_FAILED'];
 
-export async function completeReviewedLeverApplication({ livePageUrl, port, submitReviewedOnce }: LocalOptions): Promise<Receipt> {
+export async function completeReviewedLeverApplication({ livePageUrl, port, submitReviewedOnce, retryUnconfirmedOnce = false }: LocalOptions): Promise<Receipt> {
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('INSTALLED_ASSIST_PORT_REQUIRED');
   const key = leverApplicationKey(livePageUrl);
   if (!key) throw new Error('EXACT_OPEN_LEVER_APPLICATION_URL_REQUIRED');
@@ -51,6 +53,7 @@ export async function completeReviewedLeverApplication({ livePageUrl, port, subm
   const previous = await history();
   const existing = proof(status) || job.submissionEvidence;
   if (existing && submissionMatchesApplication(existing, job.url) && existing.opportunityId === job.id) return finish(existing, previous);
+  let released: LeverReceipt | undefined;
   if (previous) {
     // Prior dispatch belongs to the existing application, including a pending
     // result after a client timeout. Reconcile it without replaying Submit.
@@ -58,7 +61,15 @@ export async function completeReviewedLeverApplication({ livePageUrl, port, subm
     const evidence = observed && proof(observed);
     const attempt = await history() || previous;
     if (evidence) return finish(evidence, attempt);
-    return { state: FAILURES.includes(attempt.response) ? 'EMPLOYER_REJECTED' : 'RECONCILIATION_PENDING', attempt };
+    // Only an explicit operator retry may continue past an attempt without an employer outcome.
+    if (!retryUnconfirmedOnce || attempt.response === 'CONFIRMED') {
+      return { state: FAILURES.includes(attempt.response) ? 'EMPLOYER_REJECTED' : 'RECONCILIATION_PENDING', attempt };
+    }
+    if (attempt.response === 'PENDING') {
+      const release = await request('/lever-attempt/release-unconfirmed', { ...scope, attemptId: attempt.id, confirmedRetry: true });
+      if (!release.ok) return { state: 'RECONCILIATION_PENDING', code: release.error, attempt };
+      released = await history();
+    }
   }
   if (!['saved', 'preparing'].includes(job.status)) throw new Error('SAVED_APPLICATION_NO_LONGER_ACTIONABLE');
   const bound = await request('/listeners/bind-existing', { ...scope, recordAnswers: true });
@@ -70,7 +81,17 @@ export async function completeReviewedLeverApplication({ livePageUrl, port, subm
     return { state: 'PROFILE_SYNC_REQUIRED', code: sync.error || 'ANSWER_RECEIPT_UNVERIFIED' };
   }
   const answerSync = sync.answerSync;
-  if (!submitReviewedOnce) return { state: 'ANSWERS_SAVED', answerSync };
+  // Restore approved answers the employer cleared, then save the completed form for this application.
+  const fill = await request('/fill', { ...scope, employerName: job.company });
+  if (!fill.ok) return { state: 'DETERMINISTIC_FILL_REQUIRED', code: fill.error || 'FILL_UNAVAILABLE', answerSync };
+  const restored = { filled: fill.filled?.length ?? 0, skipped: fill.skipped?.length ?? 0 };
+  if (restored.filled) {
+    const resync = await request('/reviewed-answers/save', { ...scope, approved: true });
+    if (!resync.ok || resync.answerSync?.status !== 'REVIEWED_ANSWERS_SAVED_AND_READ_BACK') {
+      return { state: 'PROFILE_SYNC_REQUIRED', code: resync.error || 'ANSWER_RECEIPT_UNVERIFIED', restored };
+    }
+  }
+  if (!submitReviewedOnce) return { state: 'ANSWERS_SAVED', answerSync, restored };
 
   const documents = await request('/documents/status' + query);
   const resume = documents.package?.documents.resume;
@@ -89,28 +110,31 @@ export async function completeReviewedLeverApplication({ livePageUrl, port, subm
   // further action, and never issue another terminal call in this run.
   const sent = await request('/submit-authorized', { ...attachment, confirmedSubmit: true }).catch(() => null);
   if (sent && !sent.ok && sent.attemptReceipt?.dispatch === 'NOT_ATTEMPTED') {
-    return { state: 'SUBMIT_PRECONDITION_REQUIRED', code: sent.error, attempt: sent.attemptReceipt,
+    return { state: 'SUBMIT_PRECONDITION_REQUIRED', code: sent.error, attempt: sent.attemptReceipt, restored,
       blockers: sent.blockers };
   }
   let attempt = sent?.attemptReceipt;
-  for (let poll = 0; poll < 10; poll++) {
+  // An employer challenge belongs to the operator; keep observing while it is solved.
+  const polls = sent?.employerChallenge ? 300 : 10;
+  for (let poll = 0; poll < polls; poll++) {
     const observed = await request('/listeners/refresh', scope).catch(() => null);
     attempt = await history().catch(() => undefined) || attempt;
     const evidence = (observed && proof(observed)) || (sent && proof(sent));
     if (evidence) return finish(evidence, attempt, answerSync);
-    if (attempt && FAILURES.includes(attempt.response)) return { state: 'EMPLOYER_REJECTED', attempt, answerSync };
-    if (poll < 9) await new Promise(resolve => setTimeout(resolve, 1000));
+    if (attempt && FAILURES.includes(attempt.response)) return { state: 'EMPLOYER_REJECTED', attempt, answerSync, released };
+    if (poll < polls - 1) await new Promise(resolve => setTimeout(resolve, 1000));
   }
-  return { state: 'RECONCILIATION_PENDING', attempt, answerSync };
+  return { state: sent?.employerChallenge ? 'EMPLOYER_VERIFICATION_REQUIRED' : 'RECONCILIATION_PENDING', attempt, answerSync, released };
 }
 
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
   const [port, livePageUrl, mode, ...extra] = process.argv.slice(2);
-  if (!port || !livePageUrl || !['--sync-reviewed', '--submit-reviewed-once'].includes(mode) || extra.length) {
-    console.error('Usage: node reviewed-lever-application.ts <installed-port> <exact-open-Lever-URL> --sync-reviewed|--submit-reviewed-once');
+  if (!port || !livePageUrl || !['--sync-reviewed', '--submit-reviewed-once', '--retry-unconfirmed-once'].includes(mode) || extra.length) {
+    console.error('Usage: node reviewed-lever-application.ts <installed-port> <exact-open-Lever-URL> --sync-reviewed|--submit-reviewed-once|--retry-unconfirmed-once');
     process.exitCode = 2;
   } else {
-    completeReviewedLeverApplication({ port: Number(port), livePageUrl, submitReviewedOnce: mode === '--submit-reviewed-once' })
+    completeReviewedLeverApplication({ port: Number(port), livePageUrl, submitReviewedOnce: mode !== '--sync-reviewed',
+      retryUnconfirmedOnce: mode === '--retry-unconfirmed-once' })
       .then(receipt => {
         console.log(JSON.stringify(receipt));
         if (!['EMPLOYER_CONFIRMED', 'ANSWERS_SAVED'].includes(receipt.state)) process.exitCode = 1;

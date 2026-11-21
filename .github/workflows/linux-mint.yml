@@ -1,0 +1,42 @@
+name: Linux Mint bootstrap and runtime validation
+
+on:
+  push:
+    paths:
+      - "Get-EscapeHatch.sh"
+      - "scripts/linux/**"
+      - "tests/test_linux_mint_bootstrap.py"
+      - "docs/LINUX_MINT_AND_MOBILE_ENTRYPOINTS.md"
+      - ".github/workflows/linux-mint.yml"
+  pull_request:
+    paths:
+      - "Get-EscapeHatch.sh"
+      - "scripts/linux/**"
+      - "tests/test_linux_mint_bootstrap.py"
+      - "docs/LINUX_MINT_AND_MOBILE_ENTRYPOINTS.md"
+      - ".github/workflows/linux-mint.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  linux-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Inspect Linux bootstrap shell and Python syntax
+        run: |
+          bash -n Get-EscapeHatch.sh
+          python3 -m py_compile scripts/linux/escapehatch_runtime.py
+      - name: Verify managed runtime lifecycle and fail-closed controls
+        run: python3 -m unittest discover -s tests -p 'test_linux_mint_bootstrap.py' -v
+      - name: Validate existing application parent and scene contract
+        run: |
+          python3 scripts/validate_application_journey.py
+          python3 scripts/validate_application_autofill_parent.py

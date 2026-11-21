@@ -1,0 +1,776 @@
+{
+  "schema_version": "prompt-parallel-dispatch/v1",
+  "run_id": "escapehatch-learning-suite-20261030",
+  "repository": "EndeavorEverlasting/EscapeHatch",
+  "base_ref": {
+    "provider_default_head": "bdbb64ecaf0447f50ee7269d132c4a4753439be0",
+    "branch": "main"
+  },
+  "primary_orchestration_artifact": "Outputs/prompt-parallel-dispatch/runs/escapehatch-learning-suite-20261030/manifest.json",
+  "plan_path": "docs/agent/P04_ESCAPEHATCH_LEARNING_SUITE_2026-10-30.md",
+  "parent_policy": "EscapeHatch application parent issue #69 remains OPEN; this is a distinct learning-suite extension, not proof of application completion",
+  "runtime_partition": {
+    "current_host": "CURRENT_CHAT_RUNTIME",
+    "provider_routes": [
+      "GitHub",
+      "Google Drive read-only"
+    ],
+    "target_host": "LOCAL_AGENT_RUNTIME",
+    "physical_permission_gate": "OPERATOR_OR_PHYSICAL_RUNTIME"
+  },
+  "graph": {
+    "max_width": 4,
+    "ready_after_floor": [
+      "EHL-A",
+      "EHL-B",
+      "EHL-C",
+      "EHL-D"
+    ],
+    "parallel_disposition": "REQUIRED_BUT_DEGRADED",
+    "convergence_owner": "EHL-F"
+  },
+  "status": "DURABLE_PLAN_WRITTEN_UNDISPATCHED",
+  "parallel_execution": {
+    "observed_parallelism": false,
+    "executor": "NONE_PROVEN",
+    "gap": "canonical dispatch script and schema absent in EscapeHatch and TokenCorridor default branches; no linked Windows worker, browser or authenticated agent-execution API exposed to CURRENT_CHAT_RUNTIME",
+    "smallest_recovery": "on actual Windows runner, inspect/implement authorized dispatch adapter in its own harness lane; validate this run-scoped manifest before launch; do not overwrite reserved generic manifest"
+  },
+  "source_security": {
+    "public_synthetic_only": true,
+    "private_user_data_not_tracked": true,
+    "source_aliases": [
+      "opaque:private-career/interview-workbook",
+      "opaque:private-learning/latentlearning"
+    ],
+    "raw_private_urls_forbidden": true
+  },
+  "operating_modes": [
+    "EXAM_STUDY",
+    "MOCK_INTERVIEW",
+    "LIVE_PERMITTED",
+    "RESTRICTED_NO_ASSIST"
+  ],
+  "protected_decisions": [
+    "LatentLearning independently owns private mastery history",
+    "no competing personal-learning store in EscapeHatch",
+    "operator controls final ATS Submit",
+    "restricted/proctored live assistance disabled",
+    "no UI redesign before reviewed design",
+    "existing PR #145 and #147 remain independent",
+    "source evidence is not proof of local installation"
+  ],
+  "lanes": [
+    {
+      "lane_id": "EHL-0",
+      "mission": "Reconcile current repo/owners/privacy and dependency graph",
+      "dependencies": [],
+      "execution_environment": "CURRENT_CHAT_RUNTIME",
+      "required_capabilities": [
+        "authenticated_github_connector"
+      ],
+      "provider_access": [
+        {
+          "provider_family": "GitHub",
+          "authority_state": "VERIFIED",
+          "mutation_authority": "new isolated planning branch only"
+        }
+      ],
+      "typed_evidence_inputs": [
+        {
+          "evidence_type": "repository_governance",
+          "source_owner": "EscapeHatch",
+          "sanitized_ref": "AGENTS.md",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "SOURCE_INSPECTED"
+        },
+        {
+          "evidence_type": "parent_contract",
+          "source_owner": "EscapeHatch",
+          "sanitized_ref": "harness/contracts/application-autofill-parent.v1.json",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "SOURCE_INSPECTED"
+        },
+        {
+          "evidence_type": "application_progress",
+          "source_owner": "EscapeHatch",
+          "sanitized_ref": "opaque:active-pr-147",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "SOURCE_INSPECTED"
+        },
+        {
+          "evidence_type": "private_interview_doctrine",
+          "source_owner": "operator-private-workbook",
+          "sanitized_ref": "opaque:private-career/interview-workbook",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PROTECTED_EXTERNAL",
+          "proof_ceiling": "READ_WITH_AUTHORITY_NO_PUBLIC_CONTENT"
+        },
+        {
+          "evidence_type": "learning_authority",
+          "source_owner": "private learner workspace",
+          "sanitized_ref": "opaque:private-learning/latentlearning",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PROTECTED_EXTERNAL",
+          "proof_ceiling": "SOURCE_INSPECTED_NO_WRITE"
+        }
+      ],
+      "owned_mutation_surfaces": [
+        "docs/agent/P04_ESCAPEHATCH_LEARNING_SUITE_2026-10-30.md",
+        "Outputs/prompt-parallel-dispatch/runs/escapehatch-learning-suite-20261030/manifest.json"
+      ],
+      "forbidden_surfaces": [
+        "application code",
+        "private study records",
+        "existing manifests",
+        "public private-source IDs"
+      ],
+      "branch_or_worktree": "CURRENT_CHAT_RUNTIME_READ_ONLY_OR_PLAN_BRANCH",
+      "selected_adapter": "GITHUB_PROVIDER_TOOL",
+      "adapter_ladder_rung": "3_provider",
+      "launch_action": "GitHub provider readback on new planning branch",
+      "expected_return": {
+        "receipt_schema": "escapehatch/learning-suite-lane-receipt/v1",
+        "fields": [
+          "lane_id",
+          "base_head",
+          "branch",
+          "files_changed",
+          "checks_run",
+          "results",
+          "privacy_verdict",
+          "commit_sha",
+          "pull_request_url",
+          "runtime_proof",
+          "remaining_gate"
+        ]
+      },
+      "validation": [
+        "GitHub branch readback",
+        "manifest JSON structural checks"
+      ],
+      "convergence_owner": "EHL-F",
+      "status": "UNDISPATCHED",
+      "proof_ceiling": "REPO_SOURCE_OR_PLAN_ONLY"
+    },
+    {
+      "lane_id": "EHL-A",
+      "mission": "Typed session/utterance/diagram-patch contract with deterministic replay and negative controls",
+      "dependencies": [
+        "EHL-0"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "required_capabilities": [
+        "isolated_windows_checkout",
+        "git",
+        "node_or_python",
+        "repo_tests"
+      ],
+      "provider_access": [
+        {
+          "provider_family": "GitHub",
+          "operation": "fetch/PR/CI",
+          "authority_state": "AVAILABLE_UNVERIFIED",
+          "mutation_authority": "isolated-owned-branch-only"
+        }
+      ],
+      "typed_evidence_inputs": [
+        {
+          "evidence_type": "repository_governance",
+          "source_owner": "EscapeHatch",
+          "sanitized_ref": "AGENTS.md",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "SOURCE_INSPECTED"
+        },
+        {
+          "evidence_type": "parent_contract",
+          "source_owner": "EscapeHatch",
+          "sanitized_ref": "harness/contracts/application-autofill-parent.v1.json",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "SOURCE_INSPECTED"
+        },
+        {
+          "evidence_type": "application_progress",
+          "source_owner": "EscapeHatch",
+          "sanitized_ref": "opaque:active-pr-147",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "SOURCE_INSPECTED"
+        },
+        {
+          "evidence_type": "private_interview_doctrine",
+          "source_owner": "operator-private-workbook",
+          "sanitized_ref": "opaque:private-career/interview-workbook",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PROTECTED_EXTERNAL",
+          "proof_ceiling": "READ_WITH_AUTHORITY_NO_PUBLIC_CONTENT"
+        },
+        {
+          "evidence_type": "learning_authority",
+          "source_owner": "private learner workspace",
+          "sanitized_ref": "opaque:private-learning/latentlearning",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PROTECTED_EXTERNAL",
+          "proof_ceiling": "SOURCE_INSPECTED_NO_WRITE"
+        }
+      ],
+      "owned_mutation_surfaces": [
+        "new learning session event schema and focused pure tests (path after collision-free owner inspection)"
+      ],
+      "forbidden_surfaces": [
+        "artifacts/escape-hatch/src/lib/application-events.ts",
+        "browser/application-assist/*",
+        "private transcript",
+        "UI visual edits"
+      ],
+      "branch_or_worktree": "NEW_UNIQUE_WORKTREE_AFTER_PREFLIGHT",
+      "selected_adapter": "UNRESOLVED_NO_AGENT_RUNNER",
+      "adapter_ladder_rung": "UNRESOLVED",
+      "launch_action": "On the actual Windows checkout, run: git fetch origin && git status --short && git worktree list; inspect overlapping open PRs; isolate a unique branch/worktree; execute owned validators. No real capture until explicit permission.",
+      "expected_return": {
+        "receipt_schema": "escapehatch/learning-suite-lane-receipt/v1",
+        "fields": [
+          "lane_id",
+          "base_head",
+          "branch",
+          "files_changed",
+          "checks_run",
+          "results",
+          "privacy_verdict",
+          "commit_sha",
+          "pull_request_url",
+          "runtime_proof",
+          "remaining_gate"
+        ]
+      },
+      "validation": [
+        "node synthetic event replay tests",
+        "duplicate/out-of-order/rejection fixtures",
+        "typed patch admission"
+      ],
+      "convergence_owner": "EHL-F",
+      "status": "UNDISPATCHED",
+      "proof_ceiling": "UNPROVEN_ON_TARGET_HOST"
+    },
+    {
+      "lane_id": "EHL-B",
+      "mission": "Consented local learning bridge; private LatentLearning keeps mastery authority",
+      "dependencies": [
+        "EHL-0"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "required_capabilities": [
+        "isolated_windows_checkout",
+        "git",
+        "node_or_python",
+        "repo_tests"
+      ],
+      "provider_access": [
+        {
+          "provider_family": "GitHub",
+          "operation": "fetch/PR/CI",
+          "authority_state": "AVAILABLE_UNVERIFIED",
+          "mutation_authority": "isolated-owned-branch-only"
+        }
+      ],
+      "typed_evidence_inputs": [
+        {
+          "evidence_type": "repository_governance",
+          "source_owner": "EscapeHatch",
+          "sanitized_ref": "AGENTS.md",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "SOURCE_INSPECTED"
+        },
+        {
+          "evidence_type": "parent_contract",
+          "source_owner": "EscapeHatch",
+          "sanitized_ref": "harness/contracts/application-autofill-parent.v1.json",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "SOURCE_INSPECTED"
+        },
+        {
+          "evidence_type": "application_progress",
+          "source_owner": "EscapeHatch",
+          "sanitized_ref": "opaque:active-pr-147",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "SOURCE_INSPECTED"
+        },
+        {
+          "evidence_type": "private_interview_doctrine",
+          "source_owner": "operator-private-workbook",
+          "sanitized_ref": "opaque:private-career/interview-workbook",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PROTECTED_EXTERNAL",
+          "proof_ceiling": "READ_WITH_AUTHORITY_NO_PUBLIC_CONTENT"
+        },
+        {
+          "evidence_type": "learning_authority",
+          "source_owner": "private learner workspace",
+          "sanitized_ref": "opaque:private-learning/latentlearning",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PROTECTED_EXTERNAL",
+          "proof_ceiling": "SOURCE_INSPECTED_NO_WRITE"
+        }
+      ],
+      "owned_mutation_surfaces": [
+        "new narrow learning bridge interface + synthetic consent/authority tests"
+      ],
+      "forbidden_surfaces": [
+        "LatentLearning repository writes",
+        "existing career/profile stores",
+        "public learner data",
+        "unapproved sync"
+      ],
+      "branch_or_worktree": "NEW_UNIQUE_WORKTREE_AFTER_PREFLIGHT",
+      "selected_adapter": "UNRESOLVED_NO_AGENT_RUNNER",
+      "adapter_ladder_rung": "UNRESOLVED",
+      "launch_action": "On the actual Windows checkout, run: git fetch origin && git status --short && git worktree list; inspect overlapping open PRs; isolate a unique branch/worktree; execute owned validators. No real capture until explicit permission.",
+      "expected_return": {
+        "receipt_schema": "escapehatch/learning-suite-lane-receipt/v1",
+        "fields": [
+          "lane_id",
+          "base_head",
+          "branch",
+          "files_changed",
+          "checks_run",
+          "results",
+          "privacy_verdict",
+          "commit_sha",
+          "pull_request_url",
+          "runtime_proof",
+          "remaining_gate"
+        ]
+      },
+      "validation": [
+        "private-owner guard",
+        "no mastery promotion without demonstration",
+        "no implicit outbound export"
+      ],
+      "convergence_owner": "EHL-F",
+      "status": "UNDISPATCHED",
+      "proof_ceiling": "UNPROVEN_ON_TARGET_HOST"
+    },
+    {
+      "lane_id": "EHL-C",
+      "mission": "Windows live-audio bridge feasibility and synthetic replay, reusing already researched AudioBoarder",
+      "dependencies": [
+        "EHL-0"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "required_capabilities": [
+        "isolated_windows_checkout",
+        "git",
+        "node_or_python",
+        "repo_tests"
+      ],
+      "provider_access": [
+        {
+          "provider_family": "GitHub",
+          "operation": "fetch/PR/CI",
+          "authority_state": "AVAILABLE_UNVERIFIED",
+          "mutation_authority": "isolated-owned-branch-only"
+        }
+      ],
+      "typed_evidence_inputs": [
+        {
+          "evidence_type": "repository_governance",
+          "source_owner": "EscapeHatch",
+          "sanitized_ref": "AGENTS.md",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "SOURCE_INSPECTED"
+        },
+        {
+          "evidence_type": "parent_contract",
+          "source_owner": "EscapeHatch",
+          "sanitized_ref": "harness/contracts/application-autofill-parent.v1.json",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "SOURCE_INSPECTED"
+        },
+        {
+          "evidence_type": "application_progress",
+          "source_owner": "EscapeHatch",
+          "sanitized_ref": "opaque:active-pr-147",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "SOURCE_INSPECTED"
+        },
+        {
+          "evidence_type": "private_interview_doctrine",
+          "source_owner": "operator-private-workbook",
+          "sanitized_ref": "opaque:private-career/interview-workbook",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PROTECTED_EXTERNAL",
+          "proof_ceiling": "READ_WITH_AUTHORITY_NO_PUBLIC_CONTENT"
+        },
+        {
+          "evidence_type": "learning_authority",
+          "source_owner": "private learner workspace",
+          "sanitized_ref": "opaque:private-learning/latentlearning",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PROTECTED_EXTERNAL",
+          "proof_ceiling": "SOURCE_INSPECTED_NO_WRITE"
+        }
+      ],
+      "owned_mutation_surfaces": [
+        "new adapter boundary/healthcheck in owned integration area; no existing AudioBoarder fork edits"
+      ],
+      "forbidden_surfaces": [
+        "real interview capture without approval",
+        "unconsented system audio",
+        "model credentials",
+        "installer changes"
+      ],
+      "branch_or_worktree": "NEW_UNIQUE_WORKTREE_AFTER_PREFLIGHT",
+      "selected_adapter": "UNRESOLVED_NO_AGENT_RUNNER",
+      "adapter_ladder_rung": "UNRESOLVED",
+      "launch_action": "On the actual Windows checkout, run: git fetch origin && git status --short && git worktree list; inspect overlapping open PRs; isolate a unique branch/worktree; execute owned validators. No real capture until explicit permission.",
+      "expected_return": {
+        "receipt_schema": "escapehatch/learning-suite-lane-receipt/v1",
+        "fields": [
+          "lane_id",
+          "base_head",
+          "branch",
+          "files_changed",
+          "checks_run",
+          "results",
+          "privacy_verdict",
+          "commit_sha",
+          "pull_request_url",
+          "runtime_proof",
+          "remaining_gate"
+        ]
+      },
+      "validation": [
+        "mic/system-audio synthetic fixture",
+        "caption finality",
+        "device health vs active session",
+        "local/offline and Azure-cost checks"
+      ],
+      "convergence_owner": "EHL-F",
+      "status": "UNDISPATCHED",
+      "proof_ceiling": "UNPROVEN_ON_TARGET_HOST"
+    },
+    {
+      "lane_id": "EHL-D",
+      "mission": "Visual/voice session product experience: two reviewed concepts before any UI mutation",
+      "dependencies": [
+        "EHL-0"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "required_capabilities": [
+        "isolated_windows_checkout",
+        "git",
+        "node_or_python",
+        "repo_tests"
+      ],
+      "provider_access": [
+        {
+          "provider_family": "GitHub",
+          "operation": "fetch/PR/CI",
+          "authority_state": "AVAILABLE_UNVERIFIED",
+          "mutation_authority": "isolated-owned-branch-only"
+        }
+      ],
+      "typed_evidence_inputs": [
+        {
+          "evidence_type": "repository_governance",
+          "source_owner": "EscapeHatch",
+          "sanitized_ref": "AGENTS.md",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "SOURCE_INSPECTED"
+        },
+        {
+          "evidence_type": "parent_contract",
+          "source_owner": "EscapeHatch",
+          "sanitized_ref": "harness/contracts/application-autofill-parent.v1.json",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "SOURCE_INSPECTED"
+        },
+        {
+          "evidence_type": "application_progress",
+          "source_owner": "EscapeHatch",
+          "sanitized_ref": "opaque:active-pr-147",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "SOURCE_INSPECTED"
+        },
+        {
+          "evidence_type": "private_interview_doctrine",
+          "source_owner": "operator-private-workbook",
+          "sanitized_ref": "opaque:private-career/interview-workbook",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PROTECTED_EXTERNAL",
+          "proof_ceiling": "READ_WITH_AUTHORITY_NO_PUBLIC_CONTENT"
+        },
+        {
+          "evidence_type": "learning_authority",
+          "source_owner": "private learner workspace",
+          "sanitized_ref": "opaque:private-learning/latentlearning",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PROTECTED_EXTERNAL",
+          "proof_ceiling": "SOURCE_INSPECTED_NO_WRITE"
+        }
+      ],
+      "owned_mutation_surfaces": [
+        "design proposals and acceptance matrix only (new standalone artifact)"
+      ],
+      "forbidden_surfaces": [
+        "existing cockpit components",
+        "PR #147 studio UI",
+        "unapproved aesthetic changes",
+        "proctored hint UI"
+      ],
+      "branch_or_worktree": "NEW_UNIQUE_WORKTREE_AFTER_PREFLIGHT",
+      "selected_adapter": "UNRESOLVED_NO_AGENT_RUNNER",
+      "adapter_ladder_rung": "UNRESOLVED",
+      "launch_action": "On the actual Windows checkout, run: git fetch origin && git status --short && git worktree list; inspect overlapping open PRs; isolate a unique branch/worktree; execute owned validators. No real capture until explicit permission.",
+      "expected_return": {
+        "receipt_schema": "escapehatch/learning-suite-lane-receipt/v1",
+        "fields": [
+          "lane_id",
+          "base_head",
+          "branch",
+          "files_changed",
+          "checks_run",
+          "results",
+          "privacy_verdict",
+          "commit_sha",
+          "pull_request_url",
+          "runtime_proof",
+          "remaining_gate"
+        ]
+      },
+      "validation": [
+        "desktop and mobile sketches",
+        "keyboard/reduced-motion accessibility checklist",
+        "approval record"
+      ],
+      "convergence_owner": "EHL-F",
+      "status": "UNDISPATCHED",
+      "proof_ceiling": "UNPROVEN_ON_TARGET_HOST"
+    },
+    {
+      "lane_id": "EHL-E",
+      "mission": "Link career skill evidence to interview/exam drills and deterministic mastery evidence without duplicate learner store",
+      "dependencies": [
+        "EHL-A",
+        "EHL-B",
+        "EHL-C",
+        "EHL-D"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "required_capabilities": [
+        "isolated_windows_checkout",
+        "git",
+        "node_or_python",
+        "repo_tests"
+      ],
+      "provider_access": [
+        {
+          "provider_family": "GitHub",
+          "operation": "fetch/PR/CI",
+          "authority_state": "AVAILABLE_UNVERIFIED",
+          "mutation_authority": "isolated-owned-branch-only"
+        }
+      ],
+      "typed_evidence_inputs": [
+        {
+          "evidence_type": "repository_governance",
+          "source_owner": "EscapeHatch",
+          "sanitized_ref": "AGENTS.md",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "SOURCE_INSPECTED"
+        },
+        {
+          "evidence_type": "parent_contract",
+          "source_owner": "EscapeHatch",
+          "sanitized_ref": "harness/contracts/application-autofill-parent.v1.json",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "SOURCE_INSPECTED"
+        },
+        {
+          "evidence_type": "application_progress",
+          "source_owner": "EscapeHatch",
+          "sanitized_ref": "opaque:active-pr-147",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "SOURCE_INSPECTED"
+        },
+        {
+          "evidence_type": "private_interview_doctrine",
+          "source_owner": "operator-private-workbook",
+          "sanitized_ref": "opaque:private-career/interview-workbook",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PROTECTED_EXTERNAL",
+          "proof_ceiling": "READ_WITH_AUTHORITY_NO_PUBLIC_CONTENT"
+        },
+        {
+          "evidence_type": "learning_authority",
+          "source_owner": "private learner workspace",
+          "sanitized_ref": "opaque:private-learning/latentlearning",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PROTECTED_EXTERNAL",
+          "proof_ceiling": "SOURCE_INSPECTED_NO_WRITE"
+        }
+      ],
+      "owned_mutation_surfaces": [
+        "new bounded integration orchestrator + synthetic fixtures, ownership after PR #147 reconciliation"
+      ],
+      "forbidden_surfaces": [
+        "PR #145 skill field files",
+        "PR #147 preapplication studio files",
+        "ATS submission logic",
+        "private learner history"
+      ],
+      "branch_or_worktree": "NEW_UNIQUE_WORKTREE_AFTER_PREFLIGHT",
+      "selected_adapter": "UNRESOLVED_NO_AGENT_RUNNER",
+      "adapter_ladder_rung": "UNRESOLVED",
+      "launch_action": "On the actual Windows checkout, run: git fetch origin && git status --short && git worktree list; inspect overlapping open PRs; isolate a unique branch/worktree; execute owned validators. No real capture until explicit permission.",
+      "expected_return": {
+        "receipt_schema": "escapehatch/learning-suite-lane-receipt/v1",
+        "fields": [
+          "lane_id",
+          "base_head",
+          "branch",
+          "files_changed",
+          "checks_run",
+          "results",
+          "privacy_verdict",
+          "commit_sha",
+          "pull_request_url",
+          "runtime_proof",
+          "remaining_gate"
+        ]
+      },
+      "validation": [
+        "cross-session isolation",
+        "adaptive drill correctness",
+        "no phantom mastery",
+        "safe exam/practice mode",
+        "replay and rollback"
+      ],
+      "convergence_owner": "EHL-F",
+      "status": "UNDISPATCHED",
+      "proof_ceiling": "UNPROVEN_ON_TARGET_HOST"
+    },
+    {
+      "lane_id": "EHL-F",
+      "mission": "Converge changes and establish real Windows permitted-session proof",
+      "dependencies": [
+        "EHL-E"
+      ],
+      "execution_environment": "LOCAL_AGENT_RUNTIME",
+      "required_capabilities": [
+        "isolated_windows_checkout",
+        "git",
+        "node_or_python",
+        "repo_tests"
+      ],
+      "provider_access": [
+        {
+          "provider_family": "GitHub",
+          "operation": "fetch/PR/CI",
+          "authority_state": "AVAILABLE_UNVERIFIED",
+          "mutation_authority": "isolated-owned-branch-only"
+        }
+      ],
+      "typed_evidence_inputs": [
+        {
+          "evidence_type": "repository_governance",
+          "source_owner": "EscapeHatch",
+          "sanitized_ref": "AGENTS.md",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "SOURCE_INSPECTED"
+        },
+        {
+          "evidence_type": "parent_contract",
+          "source_owner": "EscapeHatch",
+          "sanitized_ref": "harness/contracts/application-autofill-parent.v1.json",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "SOURCE_INSPECTED"
+        },
+        {
+          "evidence_type": "application_progress",
+          "source_owner": "EscapeHatch",
+          "sanitized_ref": "opaque:active-pr-147",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PUBLIC_TRACKED",
+          "proof_ceiling": "SOURCE_INSPECTED"
+        },
+        {
+          "evidence_type": "private_interview_doctrine",
+          "source_owner": "operator-private-workbook",
+          "sanitized_ref": "opaque:private-career/interview-workbook",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PROTECTED_EXTERNAL",
+          "proof_ceiling": "READ_WITH_AUTHORITY_NO_PUBLIC_CONTENT"
+        },
+        {
+          "evidence_type": "learning_authority",
+          "source_owner": "private learner workspace",
+          "sanitized_ref": "opaque:private-learning/latentlearning",
+          "revision_or_freshness": "2026-10-30",
+          "visibility": "PROTECTED_EXTERNAL",
+          "proof_ceiling": "SOURCE_INSPECTED_NO_WRITE"
+        }
+      ],
+      "owned_mutation_surfaces": [
+        "owned PR convergence",
+        "local test and performance receipts",
+        "separate operator-authorized live demo"
+      ],
+      "forbidden_surfaces": [
+        "unreviewed merges",
+        "employer final Submit",
+        "restricted assessments",
+        "claiming deployment from CI"
+      ],
+      "branch_or_worktree": "NEW_UNIQUE_WORKTREE_AFTER_PREFLIGHT",
+      "selected_adapter": "UNRESOLVED_NO_AGENT_RUNNER",
+      "adapter_ladder_rung": "UNRESOLVED",
+      "launch_action": "On the actual Windows checkout, run: git fetch origin && git status --short && git worktree list; inspect overlapping open PRs; isolate a unique branch/worktree; execute owned validators. No real capture until explicit permission.",
+      "expected_return": {
+        "receipt_schema": "escapehatch/learning-suite-lane-receipt/v1",
+        "fields": [
+          "lane_id",
+          "base_head",
+          "branch",
+          "files_changed",
+          "checks_run",
+          "results",
+          "privacy_verdict",
+          "commit_sha",
+          "pull_request_url",
+          "runtime_proof",
+          "remaining_gate"
+        ]
+      },
+      "validation": [
+        "repo parent/journey checks",
+        "role-skill regression checks",
+        "consented Windows mic+loopback live UI test",
+        "latency/cost measurements",
+        "provider readback"
+      ],
+      "convergence_owner": "EHL-F",
+      "status": "UNDISPATCHED",
+      "proof_ceiling": "UNPROVEN_ON_TARGET_HOST"
+    }
+  ]
+}

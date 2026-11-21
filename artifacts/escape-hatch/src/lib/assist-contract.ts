@@ -39,6 +39,9 @@ export type AssistExperience = {
   dates: string;
   location: string;
   bullets: string[];
+  /** Skills approved for this experience, not the global skills list. */
+  skillsUsed?: string[];
+  skillsUsedReviewedAt?: string;
   provenance: Provenance;
 };
 

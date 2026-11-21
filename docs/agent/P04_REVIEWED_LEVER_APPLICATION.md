@@ -1,6 +1,8 @@
 # Finish an already reviewed Lever application
 
-**Launch order.** Start with the installed Windows workspace and the currently open application. Read attempt history, bind the exact tab, save reviewed answers, verify the approved résumé, then use the guarded Submit path once. Observe the employer response and reconcile any confirmation. The product rollout and fixture validation can proceed independently of the already open application.
+**Launch order.** When the applicant reports they already submitted, reconcile that outcome before opening or modifying an application tab. Match the saved opportunity and canonical tracker row by the exact Lever posting. An employer confirmation for that posting, including one captured after a manual submission in another browser, closes the application. Refresh the existing tracker snapshot when the row already records the confirmation. If confirmation is unavailable, preserve the applicant's report and reconcile the outcome before considering any further submit action.
+
+For a reviewed application still awaiting submission, start with the installed Windows workspace and the currently open form. Read attempt history, bind the exact tab, save reviewed answers, verify the approved résumé, then use the guarded Submit path once. Observe the employer response and reconcile any confirmation. Product rollouts and fixture validation can proceed independently.
 
 **First command from the installation-selected EscapeHatch checkout**
 
@@ -45,6 +47,6 @@ If the installed service is still on the prior released path, use the same seque
 
 ## Outcome evidence
 
-Report whether a click occurred, the last observed employer response, the before/after résumé evidence, the private receipt ID, and tracker reconciliation. Only a same-job confirmation receipt supports Applied. If evidence remains pending, leave the application at its verified state and name the next local readback. Keep answer text, documents, raw page data, and private workspace locators on the local host.
+Report who performed the submission, the last observed employer response, the résumé evidence available for the attempt, and tracker reconciliation. For a managed attempt, include the private receipt ID when available. When the applicant submits directly, use their same-posting employer confirmation and the existing private tracker instead of fabricating a managed receipt. If evidence remains pending, leave the application at its verified state and name the next readback. Keep answer text, documents, raw page data, and private workspace locators on the local host.
 
 The [dispatch manifest](../../Outputs/prompt-parallel-dispatch/runs/reviewed-lever-application/manifest.json) binds the lanes to [Application Assist parent issue #69](https://github.com/EndeavorEverlasting/EscapeHatch/issues/69). Linux fixture evidence and repository CI can cover regression behavior. Windows installation, the already open employer session, actual acceptance, and tracker provider synchronization require their own observations.

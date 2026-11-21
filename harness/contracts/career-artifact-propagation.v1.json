@@ -96,5 +96,62 @@
   ],
   "validation": "python scripts/validate_career_artifact_propagation.py",
   "private_receipt_source": "local_untracked_or_connected",
-  "proof_ceiling": "A graph and synthetic receipt pass confirms bookkeeping expectations only. It does not prove live provider revisions, export-byte identity, operator review, active application state, or browser submission."
+  "proof_ceiling": "A graph and synthetic receipt pass confirms bookkeeping expectations only. It does not prove live provider revisions, export-byte identity, operator review, active application state, or browser submission.",
+  "derivative_composition": {
+    "owner": "existing career-artifact-propagation lineage; not a new private answer store",
+    "inputs": {
+      "factual_claims": "current reviewed master resume and claim-fidelity evidence",
+      "author_voice": "latest approved owner edits and connected private career narrative policy",
+      "employer_context": "current opportunity-specific requirements and evidence",
+      "optional_prior_derivatives": "style exemplars only; never automatically promote factual assertions"
+    },
+    "precedence": [
+      "explicit_current_author_correction",
+      "approved_factual_source",
+      "current_employer_requirement",
+      "earlier_generated_draft"
+    ],
+    "outputs": [
+      "role_resume",
+      "role_cover_letter",
+      "short_application_answer"
+    ],
+    "scope_policies": {
+      "employer_facts": "exact_opportunity_only",
+      "author_voice": "reusable_only_when_explicitly_approved",
+      "factual_claims": "approved_source_only",
+      "approved_cover_letters": "protected_without_explicit_edit_approval",
+      "submitted_applications": "immutable_without_separate_operator_authority"
+    },
+    "composition_steps": [
+      "load_source_revisions",
+      "resolve_claim_ids",
+      "resolve_voice_rules",
+      "match_live_role_requirements",
+      "compose_role_scoped_draft",
+      "apply_format_and_sentence_limits",
+      "operator_review",
+      "versioned_export_and_readback"
+    ],
+    "required_derivative_receipt": [
+      "source_claim_revision",
+      "author_voice_revision",
+      "opportunity_fingerprint",
+      "claim_provenance_ids",
+      "artifact_revision",
+      "author_review_state",
+      "export_readback_state"
+    ],
+    "short_answer_policy": "For limited form fields, produce a separate condensed draft that honors constraints without destroying the full user-approved source wording.",
+    "statuses": [
+      "DRAFT",
+      "NEEDS_AUTHOR_REVIEW",
+      "APPROVED",
+      "EXPORTED_VERIFIED",
+      "PROTECTED_NO_EDIT",
+      "BLOCKED"
+    ],
+    "private_content_prohibited_in_git": true,
+    "synthetic_validation_does_not_prove_live_private_source_hydration": true
+  }
 }

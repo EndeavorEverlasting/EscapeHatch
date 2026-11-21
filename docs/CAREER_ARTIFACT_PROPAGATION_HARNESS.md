@@ -12,6 +12,15 @@ Trigger this harness whenever the operator corrects career facts, confirms a new
 5. **Receipt every descendant.** `UPDATED_VERIFIED` and `VERIFIED_UNCHANGED` require source revision, destination revision, digest and provider readback. `PROTECTED_NO_EDIT` is for user-approved material; `BLOCKED` needs a concrete next action; `NOT_APPLICABLE` is only allowed for optional nodes. Record non-current statuses instead of claiming universal synchronization.
 6. **Test / report / hand off.** Store *real* receipts only in an operator-private untracked location; run `python scripts/validate_career_artifact_propagation.py --input /path/to/private-receipts.json`. Default `python scripts/validate_career_artifact_propagation.py` proves only synthetic graph semantics. Report changed/untouched/protected/blocked outputs, provider readback, export proof, packet hashes, and remaining live-browser gate.
 
+## Author-voice and derivative composition (same canonical lineage)
+This harness also triggers on **explicit author-revised career language**, including a personally polished cover-letter paragraph or short application answer. Inspect the existing private career index and the latest approved author-voice standard before composing new career materials; never place those source documents, their IDs, or quoted private writing into public Git.
+
+Read `derivative_composition` in the **existing** artifact-propagation contract, not another answer/profile database. Compose with current factual claim revision, author-voice revision, employer-specific requirement snapshot, and approved evidence IDs. Keep earlier role-specific résumés and letters as reference examples, not independent factual authorities. A previously submitted application, accepted cover letter, or reviewed résumé keeps its own approval/release state; no automatic historical rewrite.
+
+For a new opportunity, build **role résumé**, **role cover letter**, and **short application response** as distinct derivatives of the same reviewed evidence and authorial voice. Apply any employer field limit to a *new candidate response*, retaining the full owner-approved source wording unchanged. Do not infer employer culture from the author's desire to work with a team that values their engineering work.
+
+Receipt each derivative with source claim revision, author voice revision, opportunity identity, claim IDs, artifact revision, operator review and export readback. The contract validator checks these requirements structurally; it does **not** establish connected-private-Drive ingestion, semantic correctness, actual PDF regeneration or managed-browser completion. Those require separate provider and local-host proof.
+
 ## Codebase and canonical path seam
 - Existing career content checks: `contracts/career-claim-fidelity.v1.json`, `scripts/validate_career_claim_fidelity.py`, `contracts/resume-presentation.v1.json`.
 - Existing career-state validator: `scripts/validate_career_state.py`; CI owner: `.github/workflows/career-state.yml`.

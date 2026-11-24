@@ -237,3 +237,19 @@ test('Today never resurrects a locally submitted opportunity from an older Ready
   assert.equal(selectNextHomeApplication(null, [submittedLocal]), null);
   assert.equal(selectNextHomeApplication(formerlyReady, [{ ...formerlyReady, reconciliationConflict: 'opportunity_url_changed' }]), null);
 });
+
+test('next opportunity selection rejects submitted Indeed aliases across row IDs and tracking URLs', () => {
+  const base = 'https://www.indeed.com/viewjob?jk=0123456789abcdef';
+  const submitted = row({ sheetRow: 90, company: 'Synthetic A', role: 'Engineer',
+    status: 'Submitted', appliedCheckbox: true, applyUrl: base + '&from=search' });
+  const alias = row({ sheetRow: 91, company: 'Synthetic A', role: 'Engineer',
+    status: 'Ready to Apply', priority: 'High', applyUrl: base + '&from=app-tracker' });
+  const next = row({ sheetRow: 92, company: 'Synthetic B', role: 'Engineer',
+    status: 'Ready to Apply', priority: 'Medium', applyUrl: 'https://www.indeed.com/viewjob?jk=abcdef0123456789' });
+  assert.equal(selectNextActionableOpportunity(snapshot([submitted, alias, next]))?.sheetRow, 92);
+  assert.equal(selectNextActionableOpportunity(snapshot([submitted, alias])), null);
+  const local = [submitted, alias, next].map(item => trackerRowToApplication(item));
+  assert.equal(selectNextHomeApplication(local[1], local)?.id, local[2].id);
+  assert.equal(selectNextHomeApplication(local[1], local.slice(0, 2)), null);
+  assert.equal(selectNextHomeApplication(local[1], [local[0]]), null);
+});

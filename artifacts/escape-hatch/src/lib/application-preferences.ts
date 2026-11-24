@@ -78,6 +78,20 @@ export function normalizeQuestion(text: string) {
   return text.normalize('NFKC').toLowerCase().replace(/\bu\.s\.(?:a\.)?/g, 'us').replace(/\((?:required|optional|voluntary|select one|please select)\)|\[(?:required|optional)\]|\brequired\b/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
+// Only map standalone, positively worded communications opt-ins. Long SMS
+// disclosures require explicit evidence that declining does not affect hiring.
+const OPTIONAL_COMMUNICATION_IDS = new Set([
+  'marketing.recruiting_updates_opt_in', 'marketing.recruiting_sms_opt_in',
+]);
+export function isOptionalCommunicationsPreference(id: string): boolean {
+  return OPTIONAL_COMMUNICATION_IDS.has(id);
+}
+function isOptionalRecruitingSmsDisclosure(text: string): boolean {
+  if (text.length > 2400 || !/^by selecting yes i consent to receive (?:informational )?(?:recruiting|recruitment)(?: related)? text messages\b/.test(text)) return false;
+  if (!/\bselecting no will not (?:remove me from consideration|affect my application|affect my candidacy)\b/.test(text)) return false;
+  return !/\b(?:talent community|background check|arbitration|certify|attest|signature|waiver|waive|share my data|data sharing|agree to (?:the )?terms|consent to (?:processing|sharing|a background)|required to receive|must consent)\b/.test(text);
+}
+
 export function matchQuestion(prompt: string, employerName = ''): string | null {
   let text = normalizeQuestion(prompt);
   const employer = normalizeQuestion(employerName);
@@ -94,7 +108,7 @@ export function matchQuestion(prompt: string, employerName = ''): string | null 
     return 'employment.prior_employer_relationship';
   }
   const matches = questions.filter(q => q.aliases.some(alias => normalizeQuestion(alias) === text));
-  return matches.length === 1 ? matches[0].id : null;
+  return matches.length === 1 ? matches[0].id : matches.length === 0 && isOptionalRecruitingSmsDisclosure(text) ? 'marketing.recruiting_sms_opt_in' : null;
 }
 
 // A user-enabled preference is limited to a routine applicant privacy-notice
@@ -113,7 +127,13 @@ export function isRoutineApplicantPrivacyAcknowledgement(label: string): boolean
 export function reusableValue(id: string, data: Preferences): string | null {
   const question = questions.find(q => q.id === id);
   if (!question || question.automation_policy !== 'fill_if_explicit_preference' || question.confirmation_policy !== 'until_changed') return null;
-  return data.preferences[id]?.value || null;
+  const explicit = data.preferences[id]?.value;
+  if (isOptionalCommunicationsPreference(id)) {
+    // A default is not an invented reviewed answer or a grant of consent.
+    if (explicit !== undefined) return /^(yes|no)$/i.test(explicit) ? explicit : null;
+    return 'No';
+  }
+  return explicit || null;
 }
 
 // Only explicit semantic equivalents. No substring matching (Male must never match Female).
@@ -129,6 +149,8 @@ export function optionMatches(value: string, option: string): boolean {
 }
 
 export const preferenceChoices: Record<string, string[]> = {
+  'marketing.recruiting_updates_opt_in': ['Yes', 'No'],
+  'marketing.recruiting_sms_opt_in': ['Yes', 'No'],
   'employment.work_authorization_proof': ['Yes', 'No'],
   'employment.lower_48_resident': ['Yes', 'No'],
   'employment.current_employee': ['Yes', 'No'],

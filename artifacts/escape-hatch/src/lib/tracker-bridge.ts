@@ -4,6 +4,7 @@
  */
 import type { Application, ApplicationStatus, Priority } from './storage';
 import { applicationEventUrl } from './application-events.ts';
+import { lockedIndeedPostingKeys, isLockedIndeedPosting } from './indeed-posting-identity.ts';
 import { parseEmailApplication, type EmailApplication } from './email-application.ts';
 
 export const TRACKER_SNAPSHOT_SCHEMA = 'escapehatch/tracker-snapshot/v1';
@@ -269,8 +270,11 @@ export function mergeTrackerIntoApplications(
 export function selectNextActionableOpportunity(snapshot: TrackerSnapshot): TrackerRow | null {
   // Prefer the latest high-priority Ready entry, not a hard-coded old employer.
   // This is a suggestion only; user selection and existing sessions remain authoritative.
+  const locked = lockedIndeedPostingKeys(snapshot.applications.filter(row =>
+    isSubmittedLocked(row) || normalizeStatus(row.status, row.appliedCheckbox) === 'closed' || row.appliedCheckbox
+  ).map(row => row.applyUrl));
   const ready = snapshot.applications.filter((row) => {
-    if (!/^ready to apply$/i.test(row.status.trim()) || row.appliedCheckbox) return false;
+    if (!/^ready to apply$/i.test(row.status.trim()) || row.appliedCheckbox || isLockedIndeedPosting(row.applyUrl, locked)) return false;
     try {
       const url = new URL(row.applyUrl);
       return url.protocol === 'https:' && url.hostname.includes('.') &&
@@ -327,9 +331,11 @@ export function selectNextHomeApplication(
   suggested: Application | null,
   existing: readonly Application[],
 ): Application | null {
-  const eligible = (item: Application) =>
+  const actionable = (item: Application) =>
     (item.status === 'saved' || item.status === 'preparing') &&
     !item.submissionEvidence && !item.reconciliationConflict;
+  const locked = lockedIndeedPostingKeys(existing.filter(item => !actionable(item)).map(item => item.url));
+  const eligible = (item: Application) => actionable(item) && !isLockedIndeedPosting(item.url, locked);
   const reconciled = suggested ? existing.find(item => item.id === suggested.id) || suggested : null;
   if (reconciled && eligible(reconciled)) return reconciled;
   return existing.find(item => eligible(item) && item.nextAction.trim()) ||

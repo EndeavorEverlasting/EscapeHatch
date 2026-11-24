@@ -19,6 +19,11 @@ test("clean text is still review-required; no invented quality ratings or outcom
 const hazards = [
   ["PLACEHOLDER", "[Your achievement]"],
   ["PLACEHOLDER", "{{company}}"],
+  ["PLACEHOLDER", "[FIRST_NAME]"],
+  ["PLACEHOLDER", "[First Name]"],
+  ["PLACEHOLDER", "<YOUR NAME>"],
+  ["PLACEHOLDER", "{company}"],
+  ["PLACEHOLDER", "[COMPANY_NAME]"],
   ["PLACEHOLDER", "${name}"],
   ["TEMPLATE_INSTRUCTION", "Insert your achievements here"],
   ["TEMPLATE_INSTRUCTION", "Here is your revised cover letter"],

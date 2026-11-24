@@ -295,11 +295,12 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
             onChange={event => { markEdited(); setData(current => ({ ...current, application_privacy_acknowledgement_enabled: event.target.checked })); }} />
           Reuse my approval for routine applicant privacy notices during job applications
         </label>
-        <p className="mt-2 text-xs text-muted-foreground">Off until you enable and save it. EscapeHatch checks only clearly identified application privacy acknowledgements, verifies the result, and leaves optional marketing/data sharing, contracts, certifications, signatures, and final submission for your own review. You can turn this off or clear it at any time.</p>
+        <p className="mt-2 text-xs text-muted-foreground">Off until you enable and save it. EscapeHatch checks only clearly identified application privacy acknowledgements, verifies the result, and leaves bundled consent, data sharing, contracts, certifications, signatures, and final submission for your own review. You can turn this off or clear it at any time.</p>
       </section>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {questions.filter(q => q.automation_policy === 'fill_if_explicit_preference' && q.confirmation_policy === 'until_changed' && q.id !== 'identity.full_name' && !q.id.startsWith('experience.') && !['education.institution', 'education.credential', 'education.field_of_study', 'education.dates', 'education.details'].includes(q.id)).map(q => {
           const label = preferenceFieldLabel(q.id, q.aliases[0]);
+          const communicationsDefault = ['marketing.recruiting_updates_opt_in', 'marketing.recruiting_sms_opt_in'].includes(q.id);
           const value = data.preferences[q.id]?.value || '';
           const choices = q.id === 'identity.job_title' ? [...new Set([...(data.job_titles || []), ...(value ? [value] : [])])] : q.id === 'identity.professional_title' ? [...new Set([...(data.professional_titles || []), ...(value ? [value] : [])])] : preferenceChoices[q.id];
           const change = (value: string) => {
@@ -313,7 +314,7 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
           };
           return <label key={q.id} className="text-sm">{label}
             {choices ? <select aria-label={label} className="mt-1 block w-full rounded border border-input bg-background p-2" value={value} onChange={event => change(event.target.value)}>
-              <option value="">Not answered</option>
+              <option value="">{communicationsDefault ? 'No (product default)' : 'Not answered'}</option>
               {value && !choices.includes(value) && <option value={value}>{value} (saved answer)</option>}
               {choices.map(choice => <option key={choice} value={choice}>{choice}</option>)}
             </select> : <input aria-label={label} className="mt-1 block w-full rounded border border-input bg-background p-2" value={value} onChange={event => change(event.target.value)} />}

@@ -2,9 +2,10 @@ import { Link } from 'wouter';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import type { Application } from '@/lib/storage';
 
-export function ApplicationOutcome({ application, receiptCaptured, onChooseAnother }: {
+export function ApplicationOutcome({ application, receiptCaptured, nextPosting, onChooseAnother }: {
   application: Application;
   receiptCaptured: boolean;
+  nextPosting?: { url: string; company: string; role: string } | null;
   onChooseAnother: () => void;
 }) {
   return (
@@ -38,10 +39,12 @@ export function ApplicationOutcome({ application, receiptCaptured, onChooseAnoth
       {!receiptCaptured && <p className="mb-6 max-w-prose text-sm leading-relaxed text-muted-foreground">
         The listener hasn’t captured an employer receipt for this job. That is separate from its saved applied status. Review the confirmation; don’t submit again to test the listener.
       </p>}
+      <p className="mb-4 text-sm text-muted-foreground">Optional post-application surveys can be left unanswered. A job-board navigation failure does not undo this saved application. Continue from your private queue instead.</p>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <Link href="/applications" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-medium text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">
           View applications <ArrowRight aria-hidden="true" className="h-4 w-4" />
         </Link>
+        {nextPosting && <a href={nextPosting.url} target="_blank" rel="noopener noreferrer" onClick={onChooseAnother} className="min-h-11 rounded-xl border border-border px-5 py-3 text-sm font-medium hover:bg-muted" data-testid="next-indeed-posting">Open next saved job: {nextPosting.company} — {nextPosting.role}</a>}
         <button type="button" onClick={onChooseAnother} className="min-h-11 rounded-xl border border-border px-5 py-3 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">Choose another job</button>
       </div>
       <p className="mt-5 text-sm text-muted-foreground">Your <Link href="/answers" className="underline underline-offset-4">saved answers</Link> stay in your private workspace for the next application.</p>

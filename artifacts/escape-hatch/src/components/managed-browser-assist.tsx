@@ -1,6 +1,9 @@
 import { useOpportunityDocuments } from './opportunity-documents';
 import { ApplicationPuzzle } from './application-puzzle';
 import { ApplicationOutcome } from './application-outcome';
+import { recordedApplication, nextIndeedPosting, type OutcomeBinding } from '@/lib/post-application-continuation';
+import { evaluateOpportunityFit } from '@/lib/opportunity-fit';
+import { isLockedIndeedPosting, lockedIndeedPostingKeys } from '@/lib/indeed-posting-identity';
 import type { CurrentApplicationPage } from '@/lib/application-puzzle';
 import { isLeverApplicationForm } from '@/lib/application-puzzle';
 import type { LeverReceipt } from '../../lever-attempt-receipts';
@@ -160,6 +163,13 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const [recordingMessage, setRecordingMessage] = useState('');
   const [browserOpen, setBrowserOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState<CurrentApplicationPage | null>(null);
+  const [recordedBinding, setRecordedBinding] = useState<OutcomeBinding | null>(null);
+  useEffect(() => {
+    if (!currentPage) return;
+    const applied = recordedApplication(currentPage, applications);
+    setRecordedBinding(previous => applied ? { opportunityId: applied.id, applicationUrl: applied.url } :
+      previous?.opportunityId === currentPage.opportunityId && previous.applicationUrl === currentPage.applicationUrl ? previous : null);
+  }, [currentPage, applications]);
   const [preparation, setPreparation] = useState<PreparationResult | null>(null);
   const [formObservation, setFormObservation] = useState<{ opportunityId: string; url: string; revision: number } | null>(null);
   const [listenerStatus, setListenerStatus] = useState<ServerResponse['listeners']>();
@@ -347,7 +357,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
           }
         }
         setBrowserOpen(Boolean(result.browserOpen));
-      } catch { if (!cancelled) { setCurrentPage(null); setListenerConnected(false); setListenerStatus(undefined); setTrackerSync(undefined); setRecordingMessage('Listener connection interrupted. No submission is assumed.'); } }
+      } catch { if (!cancelled) { setCurrentPage(null); setListenerConnected(false); setListenerStatus(undefined); setTrackerSync(undefined); setRecordingMessage('Listener connection interrupted. Previously recorded applications are preserved; no new submission is assumed.'); } }
       if (!cancelled) timer = setTimeout(observe, browserOpen ? 1500 : 5000);
     }
     void observe();
@@ -496,7 +506,8 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       if (action === 'launch') {
         setRecordMilitary(false);
         const opportunity = applications.find((item) => item.id === selectedOpportunityId && item.url === url);
-        if (applications.some((item) => item.url === url && (item.status === 'applied' || item.status === 'closed'))) {
+        const locked = applications.filter(item => item.status === 'applied' || item.status === 'closed' || item.status === 'follow_up' || item.submissionEvidence || item.reconciliationConflict);
+        if (locked.some(item => item.url === url) || isLockedIndeedPosting(url, lockedIndeedPostingKeys(locked.map(item => item.url)))) {
           throw new Error('This opportunity is already applied or closed. Do not reapply.');
         }
         body = { url, opportunityId: opportunity?.id || '', employerName: opportunity?.company || '' };
@@ -628,14 +639,16 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const button = 'inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50';
   const secondary = 'inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-bold hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50';
 
-  const completedApplication = currentPage && applications.find(item =>
-    item.id === currentPage.opportunityId && item.url === currentPage.applicationUrl && item.status === 'applied');
+  const completedApplication = recordedApplication(currentPage ?? recordedBinding, applications);
+  const selectedOpportunity = applications.find(item => item.id === selectedOpportunityId && item.url === url);
+  const fit = selectedOpportunity ? evaluateOpportunityFit(assistProfile, selectedOpportunity.jobDescription) : null;
   if (completedApplication && completedApplication.id !== dismissedOutcomeId) {
     const receipt = parseSubmissionEvidence(listenerStatus?.submission?.receipt);
     const captured = listenerConnected && listenerStatus?.opportunityId === completedApplication.id &&
       listenerStatus.submission?.state === 'CONFIRMED' && receipt?.opportunityId === completedApplication.id &&
       submissionMatchesApplication(receipt, completedApplication.url);
     return <ApplicationOutcome application={completedApplication} receiptCaptured={Boolean(captured)}
+      nextPosting={nextIndeedPosting(applications, completedApplication.id)}
       onChooseAnother={() => {
         setDismissedOutcomeId(completedApplication.id);
         operatorSelected.current = true;
@@ -695,6 +708,14 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         </div>
       </div>
 
+      {fit && <section aria-label="Local opportunity fit evidence" className="mt-4 rounded-xl border border-border p-4 text-sm" data-testid="local-opportunity-fit">
+        <h3 className="font-bold">Local opportunity fit evidence</h3>
+        {fit.state === 'evidence_available' ? <>
+          <p>Reviewed skills mentioned: {fit.matched.length ? fit.matched.join(', ') : 'None found'}</p>
+          <p>Reviewed skills not mentioned: {fit.notMentioned.length ? fit.notMentioned.join(', ') : 'None'}</p>
+          <p className="text-xs text-muted-foreground">Text overlap only. Requirements, experience, compensation and other qualifications are not assessed.</p>
+        </> : <p>{fit.state === 'profile_review_required' ? 'Review your career profile first.' : fit.state === 'description_required' ? 'Save the posting description to compare it locally.' : 'Add reviewed skills to your career profile.'}</p>}
+      </section>}
       <section aria-label="Application guidance" data-testid="application-journey-coach"
         className="mt-4 rounded-xl border border-primary/25 bg-primary/5 p-4" aria-live="polite">
         <div className="flex items-center gap-3">

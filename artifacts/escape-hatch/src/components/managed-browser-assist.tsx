@@ -2,7 +2,8 @@ import { useOpportunityDocuments } from './opportunity-documents';
 import { ApplicationPuzzle } from './application-puzzle';
 import { ApplicationOutcome } from './application-outcome';
 import { recordedApplication, nextIndeedPosting, type OutcomeBinding } from '@/lib/post-application-continuation';
-import { evaluateOpportunityFit } from '@/lib/opportunity-fit';
+import { allowsAutomaticRecommendation, evaluateOpportunityFit } from '@/lib/opportunity-fit';
+import { useRecommendationWorkMode } from './use-recommendation-work-mode';
 import { isLockedIndeedPosting, lockedIndeedPostingKeys } from '@/lib/indeed-posting-identity';
 import type { CurrentApplicationPage } from '@/lib/application-puzzle';
 import { isLeverApplicationForm } from '@/lib/application-puzzle';
@@ -143,6 +144,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const [savedJourney, setSavedJourney] = useState(() => readStoredValue(getLocalStorage(), JOURNEY_RESUME_KEY, EMPTY_JOURNEY_RESUME, parseJourneyResume));
   const autoLaunchAttempted = useRef(false);
   const [explicitLaunchId] = useState(() => consumeManagedLaunchIntent(window.sessionStorage));
+  const recommendationMode = useRecommendationWorkMode();
   const [verifiedNextReadyId, setVerifiedNextReadyId] = useState<string | null>(null);
   const [trackerChecked, setTrackerChecked] = useState(false);
   const [runtimeChecked, setRuntimeChecked] = useState(false);
@@ -227,8 +229,11 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     let active = true;
     // Direct /assist shares Home's provider-bound read-only refresh; stale data never
     // authorizes an automatic browser launch. Preserve the prior snapshot on failure.
+    setVerifiedNextReadyId(null);
+    setTrackerChecked(false);
     async function hydrateTracker() {
       try {
+        if (recommendationMode === null) return;
         const response = await fetch('/__escapehatch/tracker/status', { credentials: 'same-origin' });
         if (!response.ok) return;
         const original = await response.json() as TrackerStatusEnvelope;
@@ -237,7 +242,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         const snapshot = parseTrackerSnapshot(current.snapshot);
         if (!snapshot || connectionFromSnapshot(snapshot).status !== 'CONNECTED') return;
         setApplications((existing) => mergeTrackerIntoApplications(existing, snapshot));
-        const next = selectNextActionableOpportunity(snapshot);
+        const next = selectNextActionableOpportunity(snapshot, recommendationMode);
         if (next?.applyUrl && !isSubmittedLocked(next)) setVerifiedNextReadyId(trackerOpportunityId(next));
       } catch {
         // Local selection remains available. Failed authorization/refresh never
@@ -248,7 +253,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     }
     void hydrateTracker();
     return () => { active = false; };
-  }, [setApplications]);
+  }, [setApplications, recommendationMode]);
 
   useEffect(() => {
     if (operatorSelected.current || browserOpen) return;
@@ -257,7 +262,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     const requested = applications.find((item) => item.id === requestedId && permitted(item));
     // Align the default selection to Home's fresh, validated tracker candidate.
     // Do not silently choose the first stale Ready entry when order changes.
-    const ready = applications.find((item) => permitted(item) &&
+    const ready = applications.find((item) => recommendationMode !== null && allowsAutomaticRecommendation(item, recommendationMode) && permitted(item) &&
       item.id === verifiedNextReadyId &&
       /provider status:\s*ready to apply/i.test(item.notes) &&
       /Applied\? unchecked/i.test(item.notes));
@@ -273,7 +278,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       setSelectedOpportunityId(next.id);
       setUrl(next.url);
     }
-  }, [applications, browserOpen, savedJourney, verifiedNextReadyId]);
+  }, [applications, browserOpen, savedJourney, verifiedNextReadyId, recommendationMode]);
 
   useEffect(() => {
     let active = true;
@@ -427,7 +432,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   }
 
   useEffect(() => {
-    if (!explicitLaunchId || autoLaunchAttempted.current || !trackerChecked || !runtimeChecked) return;
+    if (!explicitLaunchId || autoLaunchAttempted.current || !trackerChecked || !runtimeChecked || recommendationMode === null) return;
     const queryId = new URLSearchParams(window.location.search).get('opportunityId');
     if (queryId !== explicitLaunchId || verifiedNextReadyId !== explicitLaunchId) {
       autoLaunchAttempted.current = true;
@@ -440,6 +445,11 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       setMessage('Automatic launch stopped: no active matching opportunity was available.');
       return;
     }
+    if (!allowsAutomaticRecommendation(selected, recommendationMode)) {
+      autoLaunchAttempted.current = true;
+      setMessage('Automatic launch withheld: workplace eligibility does not match your saved recommendation policy. Manual selection remains available.');
+      return;
+    }
     // Selection is populated in a separate effect. Never launch a stale or other employer URL.
     if (selectedOpportunityId !== selected.id || url !== selected.url) return;
     if (operatorSelected.current) {
@@ -449,7 +459,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     }
     autoLaunchAttempted.current = true;
     void run('launch');
-  }, [applications, explicitLaunchId, runtimeChecked, trackerChecked, selectedOpportunityId, url, verifiedNextReadyId]);
+  }, [applications, explicitLaunchId, runtimeChecked, trackerChecked, selectedOpportunityId, url, verifiedNextReadyId, recommendationMode]);
 
   useEffect(() => {
     if (!recordMilitary || !browserOpen) return;
@@ -648,7 +658,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       listenerStatus.submission?.state === 'CONFIRMED' && receipt?.opportunityId === completedApplication.id &&
       submissionMatchesApplication(receipt, completedApplication.url);
     return <ApplicationOutcome application={completedApplication} receiptCaptured={Boolean(captured)}
-      nextPosting={nextIndeedPosting(applications, completedApplication.id)}
+      nextPosting={recommendationMode === null ? null : nextIndeedPosting(applications, completedApplication.id, recommendationMode)}
       onChooseAnother={() => {
         setDismissedOutcomeId(completedApplication.id);
         operatorSelected.current = true;

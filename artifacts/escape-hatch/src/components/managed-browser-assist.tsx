@@ -459,11 +459,11 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       return;
     }
     autoLaunchAttempted.current = true;
-    void run('launch');
+    void run('launch', true);
   }, [applications, explicitLaunchId, runtimeChecked, trackerChecked, selectedOpportunityId, url, verifiedNextReadyId, recommendationMode]);
 
   useEffect(() => {
-    if (!nextDispatch || busy || documents.loading || recommendationMode === null || !runtimeChecked) return;
+    if (!nextDispatch || busy || documents.loading || documents.intakePending || recommendationMode === null || !runtimeChecked) return;
     const candidate = nextIndeedApplication(applications, nextDispatch.completedId, recommendationMode);
     if (!candidate || candidate.id !== nextDispatch.opportunityId || candidate.url !== nextDispatch.applicationUrl ||
         candidate.id !== selectedOpportunityId || candidate.url !== url) {
@@ -472,8 +472,8 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       return;
     }
     setNextDispatch(null);
-    void run('launch');
-  }, [nextDispatch, busy, documents.loading, recommendationMode, runtimeChecked, applications, selectedOpportunityId, url]);
+    void run('launch', true);
+  }, [nextDispatch, busy, documents.loading, documents.intakePending, recommendationMode, runtimeChecked, applications, selectedOpportunityId, url]);
 
   useEffect(() => {
     if (!recordMilitary || !browserOpen) return;
@@ -522,7 +522,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     }
   }
 
-  async function run(action: 'launch' | 'fill' | 'attach' | 'prepare' | 'resume') {
+  async function run(action: 'launch' | 'fill' | 'attach' | 'prepare' | 'resume', automaticRecommendation = false) {
     setBusy(true);
     setMessage('');
     try {
@@ -534,7 +534,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         if (locked.some(item => item.url === url) || isLockedIndeedPosting(url, lockedIndeedPostingKeys(locked.map(item => item.url)))) {
           throw new Error('This opportunity is already applied or closed. Do not reapply.');
         }
-        body = { url, opportunityId: opportunity?.id || '', employerName: opportunity?.company || '' };
+        body = { url, opportunityId: opportunity?.id || '', employerName: opportunity?.company || '', automaticRecommendation };
       } else if (action === 'fill' || action === 'resume') {
         if (currentPage && (url !== currentPage.applicationUrl || currentPage.opportunityId &&
             (currentPage.opportunityId !== selectedOpportunityId || !applications.some(item =>

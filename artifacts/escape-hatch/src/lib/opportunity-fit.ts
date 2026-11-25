@@ -20,3 +20,64 @@ export function evaluateOpportunityFit(profile: FitProfile, description?: string
   }
   return { state: 'evidence_available', matched, notMentioned };
 }
+
+
+export type WorkMode = 'remote' | 'hybrid' | 'on_site' | 'unknown';
+export type OpportunityRubricInput = {
+  workMode: WorkMode;
+  preference: 'remote_only' | 'any';
+  commute: 'acceptable' | 'unacceptable' | 'unknown';
+  intent: 'career' | 'interview_practice' | 'unknown';
+};
+export const OPPORTUNITY_RUBRIC_PREFIX = 'EscapeHatch rubric v1: ';
+
+export function normalizeWorkMode(value?: string): WorkMode {
+  const mode = value?.normalize('NFKC').trim().toLowerCase().replace(/[\s_-]+/g, ' ');
+  if (mode === 'remote' || mode === 'fully remote' || mode === '100% remote') return 'remote';
+  if (mode === 'hybrid') return 'hybrid';
+  if (mode === 'on site' || mode === 'onsite' || mode === 'in person' || mode === 'on premises' || mode === 'on prem') return 'on_site';
+  return 'unknown';
+}
+
+/** Hard eligibility is independent of skills, practice intent and submission. */
+export function evaluateOpportunityRubric(input: OpportunityRubricInput) {
+  const reasons: string[] = [];
+  if (input.preference === 'remote_only' && (input.workMode === 'on_site' || input.workMode === 'hybrid'))
+    reasons.push('REMOTE_REQUIREMENT_MISMATCH');
+  if (input.workMode !== 'remote' && input.commute === 'unacceptable')
+    reasons.push('COMMUTE_UNACCEPTABLE');
+  const eligibility = reasons.length ? 'incompatible' :
+    input.workMode === 'unknown' || (input.workMode !== 'remote' && input.commute === 'unknown') ? 'unknown' : 'eligible';
+  const recommend = eligibility === 'eligible' && input.intent === 'career';
+  return { eligibility, intent: input.intent, reasons, recommend,
+    priority: recommend ? null : 'low', fitScore: eligibility === 'incompatible' ? 0 : null } as const;
+}
+
+/** A private, versioned tracker note is the explicit operator input, not free-text inference.
+ * No note retains legacy behavior; duplicate or malformed versioned notes fail closed. */
+export function readOpportunityRubric(notes?: string): OpportunityRubricInput | null | 'invalid' {
+  const lines = (notes || '').split(/\r?\n/).filter(line => line.startsWith('EscapeHatch rubric '));
+  if (!lines.length) return null;
+  if (lines.length !== 1 || !lines[0].startsWith(OPPORTUNITY_RUBRIC_PREFIX)) return 'invalid';
+  const match = /^(remote|hybrid|on_site|unknown); (remote_only|any); (acceptable|unacceptable|unknown); (career|interview_practice|unknown)$/.exec(lines[0].slice(OPPORTUNITY_RUBRIC_PREFIX.length));
+  if (!match) return 'invalid';
+  return { workMode: match[1] as WorkMode, preference: match[2] as OpportunityRubricInput['preference'],
+    commute: match[3] as OpportunityRubricInput['commute'], intent: match[4] as OpportunityRubricInput['intent'] };
+}
+
+export function rubricAllowsRecommendation(notes?: string, trackerWorkMode?: string): boolean {
+  const input = readOpportunityRubric(notes);
+  if (input === null) return true; // existing records are not silently reclassified
+  if (input === 'invalid') return false;
+  const observed = normalizeWorkMode(trackerWorkMode);
+  if (observed !== 'unknown' && observed !== input.workMode) return false;
+  return evaluateOpportunityRubric(input).recommend;
+}
+
+/** Preserve the provider-owned rubric across local free-text edits on refresh. */
+export function mergeRubricNotes(local: string, provider: string): string {
+  const marker = (value: string) => value.split(/\r?\n/).filter(line => line.startsWith('EscapeHatch rubric '));
+  const incoming = marker(provider);
+  if (!incoming.length) return local;
+  return [...local.split(/\r?\n/).filter(line => !line.startsWith('EscapeHatch rubric ')), ...incoming].join('\n');
+}

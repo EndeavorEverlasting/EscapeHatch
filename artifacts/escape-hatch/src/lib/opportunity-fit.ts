@@ -23,13 +23,19 @@ export function evaluateOpportunityFit(profile: FitProfile, description?: string
 
 
 export type WorkMode = 'remote' | 'hybrid' | 'on_site' | 'unknown';
-export type OpportunityRubricInput = {
+export type OpportunityMatchInput = {
   workMode: WorkMode;
   preference: 'remote_only' | 'any';
   commute: 'acceptable' | 'unacceptable' | 'unknown';
-  intent: 'career' | 'interview_practice' | 'unknown';
 };
-export const OPPORTUNITY_RUBRIC_PREFIX = 'EscapeHatch rubric v1: ';
+export type OpportunityDecision = {
+  jobDesire: 'want' | 'do_not_want' | 'unknown';
+  applicationDecision: 'apply' | 'do_not_apply' | 'undecided';
+  purpose: 'career' | 'interview_practice' | 'unknown';
+};
+export type OpportunityRubricInput = OpportunityMatchInput & OpportunityDecision;
+export const OPPORTUNITY_RUBRIC_PREFIX = 'EscapeHatch rubric v2: ';
+const LEGACY_PREFIX = 'EscapeHatch rubric v1: ';
 
 export function normalizeWorkMode(value?: string): WorkMode {
   const mode = value?.normalize('NFKC').trim().toLowerCase().replace(/[\s_-]+/g, ' ');
@@ -39,42 +45,65 @@ export function normalizeWorkMode(value?: string): WorkMode {
   return 'unknown';
 }
 
-/** Hard eligibility is independent of skills, practice intent and submission. */
-export function evaluateOpportunityRubric(input: OpportunityRubricInput) {
+/** Arrangement compatibility only: not overall fit, a score, or an application gate. */
+export function evaluateOpportunityRubric(input: OpportunityMatchInput) {
   const reasons: string[] = [];
   if (input.preference === 'remote_only' && (input.workMode === 'on_site' || input.workMode === 'hybrid'))
     reasons.push('REMOTE_REQUIREMENT_MISMATCH');
-  if (input.workMode !== 'remote' && input.commute === 'unacceptable')
+  if ((input.workMode === 'on_site' || input.workMode === 'hybrid') && input.commute === 'unacceptable')
     reasons.push('COMMUTE_UNACCEPTABLE');
   const eligibility = reasons.length ? 'incompatible' :
     input.workMode === 'unknown' || (input.workMode !== 'remote' && input.commute === 'unknown') ? 'unknown' : 'eligible';
-  const recommend = eligibility === 'eligible' && input.intent === 'career';
-  return { eligibility, intent: input.intent, reasons, recommend,
-    priority: recommend ? null : 'low', fitScore: eligibility === 'incompatible' ? 0 : null } as const;
+  return { eligibility, reasons } as const;
 }
 
-/** A private, versioned tracker note is the explicit operator input, not free-text inference.
- * No note retains legacy behavior; duplicate or malformed versioned notes fail closed. */
+/** A measured skill-text coverage ratio, not an overall fit score. No intent input. */
+export function skillEvidenceCoverage(fit: OpportunityFit): { matched: number; total: number; fraction: number } | null {
+  const matched = fit.matched.length, total = matched + fit.notMentioned.length;
+  return fit.state === 'evidence_available' && total > 0 ? { matched, total, fraction: matched / total } : null;
+}
+
+/** A private, versioned tracker note is explicit data, not natural-language inference.
+ * V1 intent never implied either job desire or application authorization. */
 export function readOpportunityRubric(notes?: string): OpportunityRubricInput | null | 'invalid' {
   const lines = (notes || '').split(/\r?\n/).filter(line => line.startsWith('EscapeHatch rubric '));
   if (!lines.length) return null;
-  if (lines.length !== 1 || !lines[0].startsWith(OPPORTUNITY_RUBRIC_PREFIX)) return 'invalid';
-  const match = /^(remote|hybrid|on_site|unknown); (remote_only|any); (acceptable|unacceptable|unknown); (career|interview_practice|unknown)$/.exec(lines[0].slice(OPPORTUNITY_RUBRIC_PREFIX.length));
-  if (!match) return 'invalid';
-  return { workMode: match[1] as WorkMode, preference: match[2] as OpportunityRubricInput['preference'],
-    commute: match[3] as OpportunityRubricInput['commute'], intent: match[4] as OpportunityRubricInput['intent'] };
+  if (lines.length !== 1) return 'invalid';
+  const line = lines[0];
+  const match = /^(remote|hybrid|on_site|unknown); (remote_only|any); (acceptable|unacceptable|unknown); (want|do_not_want|unknown); (apply|do_not_apply|undecided); (career|interview_practice|unknown)$/.exec(line.slice(OPPORTUNITY_RUBRIC_PREFIX.length));
+  const legacy = /^(remote|hybrid|on_site|unknown); (remote_only|any); (acceptable|unacceptable|unknown); (career|interview_practice|unknown)$/.exec(line.slice(LEGACY_PREFIX.length));
+  const v2 = line.startsWith(OPPORTUNITY_RUBRIC_PREFIX) && match;
+  const v1 = line.startsWith(LEGACY_PREFIX) && legacy;
+  const values = v2 || v1;
+  if (!values) return 'invalid';
+  return { workMode: values[1] as WorkMode, preference: values[2] as OpportunityMatchInput['preference'],
+    commute: values[3] as OpportunityMatchInput['commute'],
+    jobDesire: v2 ? values[4] as OpportunityDecision['jobDesire'] : 'unknown',
+    applicationDecision: v2 ? values[5] as OpportunityDecision['applicationDecision'] : 'undecided',
+    purpose: values[v2 ? 6 : 4] as OpportunityDecision['purpose'] };
 }
 
+/** Discovery policy, not the mathematical match computation. */
 export function rubricAllowsRecommendation(notes?: string, trackerWorkMode?: string): boolean {
   const input = readOpportunityRubric(notes);
   if (input === null) return true; // existing records are not silently reclassified
   if (input === 'invalid') return false;
   const observed = normalizeWorkMode(trackerWorkMode);
   if (observed !== 'unknown' && observed !== input.workMode) return false;
-  return evaluateOpportunityRubric(input).recommend;
+  return evaluateOpportunityRubric(input).eligibility === 'eligible' &&
+    input.jobDesire !== 'do_not_want' && input.purpose !== 'interview_practice' && input.applicationDecision !== 'do_not_apply';
 }
 
-/** Preserve the provider-owned rubric across local free-text edits on refresh. */
+/** Execution routing is distinct from discovery; selection does not authorize submission. */
+export function applicationPreparationRank(notes?: string, trackerWorkMode?: string): 0 | 1 | null {
+  const input = readOpportunityRubric(notes);
+  if (input === 'invalid') return null;
+  if (input?.applicationDecision === 'do_not_apply') return null;
+  if (input?.applicationDecision === 'apply') return 0;
+  return rubricAllowsRecommendation(notes, trackerWorkMode) ? 1 : null;
+}
+
+/** Preserve provider-owned rubric across local free-text edits on refresh. */
 export function mergeRubricNotes(local: string, provider: string): string {
   const marker = (value: string) => value.split(/\r?\n/).filter(line => line.startsWith('EscapeHatch rubric '));
   const incoming = marker(provider);

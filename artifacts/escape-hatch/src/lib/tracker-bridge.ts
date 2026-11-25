@@ -3,7 +3,7 @@
  * Never invents counts. Never treats Applied? checkbox alone as Submitted proof.
  */
 import type { Application, ApplicationStatus, Priority } from './storage';
-import { rubricAllowsRecommendation, mergeRubricNotes, readOpportunityRubric, normalizeWorkMode } from './opportunity-fit.ts';
+import { applicationPreparationRank, mergeRubricNotes, readOpportunityRubric, normalizeWorkMode } from './opportunity-fit.ts';
 import { applicationEventUrl } from './application-events.ts';
 import { lockedIndeedPostingKeys, isLockedIndeedPosting } from './indeed-posting-identity.ts';
 import { parseEmailApplication, type EmailApplication } from './email-application.ts';
@@ -196,7 +196,7 @@ export function trackerRowToApplication(row: TrackerRow, capturedAt?: string): A
     : row.appliedCheckbox && status === 'saved' ? 'preparing' : status;
   const rubricInput = readOpportunityRubric(row.notes);
   const observedMode = normalizeWorkMode(row.workMode);
-  const projectedNotes = rubricInput && rubricInput !== 'invalid' && observedMode !== 'unknown' && observedMode !== rubricInput.workMode
+  const projectedNotes = rubricInput && rubricInput !== 'invalid' && observedMode !== 'unknown' && observedMode !== rubricInput.workMode && rubricInput.applicationDecision !== 'apply'
     ? [row.notes, 'EscapeHatch rubric conflict: tracker work mode differs'].join('\n') : row.notes;
   const packageBits = [
     row.resumePdf ? 'Resume PDF linked' : 'Resume PDF missing',
@@ -212,7 +212,7 @@ export function trackerRowToApplication(row: TrackerRow, capturedAt?: string): A
     url: row.applyUrl,
     ...(emailApplication ? { emailApplication } : {}),
     status: safeStatus,
-    priority: rubricAllowsRecommendation(row.notes, row.workMode) ? normalizePriority(row.priority) : 'low',
+    priority: normalizePriority(row.priority),
     notes: [
       `Tracker row ${row.sheetRow} · provider status: ${row.status}`,
       row.appliedCheckbox ? 'Applied? checkbox marked (not independent submit proof)' : 'Applied? unchecked',
@@ -279,7 +279,7 @@ export function selectNextActionableOpportunity(snapshot: TrackerSnapshot): Trac
     isSubmittedLocked(row) || normalizeStatus(row.status, row.appliedCheckbox) === 'closed' || row.appliedCheckbox
   ).map(row => row.applyUrl));
   const ready = snapshot.applications.filter((row) => {
-    if (!rubricAllowsRecommendation(row.notes, row.workMode) || !/^ready to apply$/i.test(row.status.trim()) || row.appliedCheckbox || isLockedIndeedPosting(row.applyUrl, locked)) return false;
+    if (applicationPreparationRank(row.notes, row.workMode) === null || !/^ready to apply$/i.test(row.status.trim()) || row.appliedCheckbox || isLockedIndeedPosting(row.applyUrl, locked)) return false;
     try {
       const url = new URL(row.applyUrl);
       return url.protocol === 'https:' && url.hostname.includes('.') &&
@@ -288,7 +288,7 @@ export function selectNextActionableOpportunity(snapshot: TrackerSnapshot): Trac
   });
   const rank = (priority: string) => /^high$/i.test(priority.trim()) ? 0 :
     /^medium$/i.test(priority.trim()) ? 1 : 2;
-  ready.sort((a, b) => rank(a.priority) - rank(b.priority) || b.sheetRow - a.sheetRow);
+  ready.sort((a, b) => applicationPreparationRank(a.notes, a.workMode)! - applicationPreparationRank(b.notes, b.workMode)! || rank(a.priority) - rank(b.priority) || b.sheetRow - a.sheetRow);
   return ready[0] || null;
 }
 
@@ -340,8 +340,11 @@ export function selectNextHomeApplication(
     (item.status === 'saved' || item.status === 'preparing') &&
     !item.submissionEvidence && !item.reconciliationConflict;
   const locked = lockedIndeedPostingKeys(existing.filter(item => !actionable(item)).map(item => item.url));
-  const eligible = (item: Application) => actionable(item) && rubricAllowsRecommendation(item.notes) && !isLockedIndeedPosting(item.url, locked);
+  const eligible = (item: Application) => actionable(item) && applicationPreparationRank(item.notes) !== null && !isLockedIndeedPosting(item.url, locked);
   const reconciled = suggested ? existing.find(item => item.id === suggested.id) || suggested : null;
+  if (reconciled && eligible(reconciled) && applicationPreparationRank(reconciled.notes) === 0) return reconciled;
+  const explicitlySelected = existing.find(item => eligible(item) && applicationPreparationRank(item.notes) === 0);
+  if (explicitlySelected) return explicitlySelected;
   if (reconciled && eligible(reconciled)) return reconciled;
   return existing.find(item => eligible(item) && item.nextAction.trim()) ||
     existing.find(eligible) || null;

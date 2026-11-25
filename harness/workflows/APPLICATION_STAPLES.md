@@ -9,6 +9,8 @@ For an identified job opportunity, “prereqs,” “pre-reqs,” “prerequisit
 
 Return usable links and unresolved items, and record evidence in the user-owned tracker when available. Keep applicant files and values out of Git. A private handoff is prepared material. Claim saved local answers only after exact-opportunity readback.
 
+Explicit operator choice to apply activates the four preparation staples regardless of mathematical match, work arrangement, desire for the job or interview-practice purpose. Do not treat that choice as a change to match inputs, fit score or final submission authority. Resolve missing employer identity/form evidence without suppressing safe preparation. See [Opportunity rubric](../../docs/agent/OPPORTUNITY_RUBRIC_V1.md).
+
 The bound form governs required fields and attachments. Follow Resume Presentation and Application Form Intake in [Workflows](../WORKFLOWS.md). Preparation invokes no submission action.
 
 For inbound recruiter contacts, use [Recruiter outreach](../WORKFLOWS.md#recruiter-outreach) to record the source and next action.

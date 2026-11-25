@@ -719,7 +719,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       <section aria-label="Application guidance" data-testid="application-journey-coach"
         className="mt-4 rounded-xl border border-primary/25 bg-primary/5 p-4" aria-live="polite">
         <div className="flex items-center gap-3">
-          <img src="/escapehatch-mascot.webp" alt="" width={40} height={40} className="tutorial-scene-avatar h-10 w-10 shrink-0" />
+          <img key={journey.current.id} src="/escapehatch-mascot.webp" alt="" width={40} height={40} className="tutorial-scene-avatar h-10 w-10 shrink-0" />
           <p className="text-sm font-bold text-primary">Your next step</p>
         </div>
         <dl className="mt-2 grid gap-2 rounded-lg border border-border bg-card p-3 text-xs sm:grid-cols-2" data-testid="journey-scene-status">

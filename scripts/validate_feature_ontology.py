@@ -68,8 +68,8 @@ def validate(data: dict, actual: set[str], journey: dict, routes: set[str]) -> d
     if missing or stale:
         raise OntologyError(f"unmapped={len(missing)} {missing}; stale={len(stale)} {stale}")
     for fid, feature in features.items():
-        if feature.get("authority") not in actual:
-            raise OntologyError(f"missing feature authority: {fid}")
+        if owners.get(feature.get("authority")) != fid:
+            raise OntologyError(f"missing or misowned feature authority: {fid}")
     graph = data.get("journey", {})
     if graph.get("authority") != JOURNEY:
         raise OntologyError("journey authority drift")

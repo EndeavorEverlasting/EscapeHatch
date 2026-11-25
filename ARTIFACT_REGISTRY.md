@@ -84,6 +84,9 @@ user-owned and untracked. Installation receipt/shortcut removal never deletes th
 | Application requirements middleware proof | `artifacts/escape-hatch/tests/application-requirements-control.spec.ts` | tracked real loopback middleware/browser proof | reject cross-origin/wrong-job reads and preserve DOM | canonical Playwright configuration |
 | Validation-focus race proof | `artifacts/escape-hatch/tests/validation-focus.spec.ts` | tracked deterministic real-input regression | hold old validation frame while selecting next input | canonical Playwright configuration |
 | Guided workbench dispatch record | `Outputs/prompt-parallel-dispatch/manifest.json` | tracked execution record, canonical validation blocked | native read-only review plus primary writer | schema/runner unavailable; see workbench evidence |
+| Feature ontology | `harness/contracts/feature-ontology.v1.json` | tracked canonical inventory | feature ontology | `python scripts/validate_feature_ontology.py` |
+| Feature ontology validator | `scripts/validate_feature_ontology.py` | tracked gate | harness | `python scripts/validate_feature_ontology.py` |
+| Feature ontology negative controls | `tests/test_feature_ontology.py` | tracked tests | harness | `python tests/test_feature_ontology.py` |
 | Agent governance doctrine | `AGENTS.md` | tracked canonical contract | governance sprint only | `python scripts/validate_governance.py` |
 | Harness manifest | `harness/manifest.v1.json` | tracked machine-readable registry | harness sprint only | `python scripts/validate_harness.py` |
 | Codebase map | `harness/CODEBASE_MAP.md` | tracked operator/agent map | update when structure/commands change | `python scripts/validate_harness.py` |

@@ -254,7 +254,6 @@
         "artifacts/escape-hatch/public/robots.txt",
         "artifacts/escape-hatch/src/App.tsx",
         "artifacts/escape-hatch/src/components/error-boundary.tsx",
-        "artifacts/escape-hatch/src/components/puzzle-gallery-display.tsx",
         "artifacts/escape-hatch/src/components/ui/accordion.tsx",
         "artifacts/escape-hatch/src/components/ui/alert-dialog.tsx",
         "artifacts/escape-hatch/src/components/ui/alert.tsx",
@@ -313,7 +312,6 @@
         "artifacts/escape-hatch/src/hooks/use-mobile.tsx",
         "artifacts/escape-hatch/src/hooks/use-toast.ts",
         "artifacts/escape-hatch/src/index.css",
-        "artifacts/escape-hatch/src/lib/email-application.ts",
         "artifacts/escape-hatch/src/lib/utils.ts",
         "artifacts/escape-hatch/src/main.tsx",
         "artifacts/escape-hatch/src/pages/not-found.tsx",
@@ -383,6 +381,7 @@
         "artifacts/escape-hatch/src/components/profile-puzzle-gallery.css",
         "artifacts/escape-hatch/src/components/puzzle-atlas-shelf.css",
         "artifacts/escape-hatch/src/components/puzzle-atlas-shelf.tsx",
+        "artifacts/escape-hatch/src/components/puzzle-gallery-display.tsx",
         "artifacts/escape-hatch/src/lib/profile-puzzle-gallery.test.ts",
         "artifacts/escape-hatch/src/lib/profile-puzzle-gallery.ts",
         "artifacts/escape-hatch/src/lib/profile-puzzle-gallery.v1.json",
@@ -494,6 +493,7 @@
         "artifacts/escape-hatch/src/components/application-identity-warning.tsx",
         "artifacts/escape-hatch/src/lib/application-events.test.ts",
         "artifacts/escape-hatch/src/lib/application-events.ts",
+        "artifacts/escape-hatch/src/lib/email-application.ts",
         "artifacts/escape-hatch/src/lib/indeed-posting-identity.test.ts",
         "artifacts/escape-hatch/src/lib/indeed-posting-identity.ts",
         "artifacts/escape-hatch/src/lib/opportunity-fit.ts",
@@ -595,7 +595,6 @@
         "artifacts/escape-hatch/tests/application-navigation.spec.ts",
         "artifacts/escape-hatch/tests/assist.spec.ts",
         "artifacts/escape-hatch/tests/managed-browser-assist.spec.ts",
-        "contracts/application-assist-presence-surface.v1.json",
         "contracts/application-navigation-authority.v1.json",
         "contracts/career-browser-pid-selection.v1.json",
         "contracts/managed-browser-progression.v1.json",
@@ -745,7 +744,8 @@
         "android/application-assist/gradle/wrapper/gradle-wrapper.properties",
         "android/application-assist/gradlew",
         "android/application-assist/gradlew.bat",
-        "android/application-assist/settings.gradle.kts"
+        "android/application-assist/settings.gradle.kts",
+        "contracts/application-assist-presence-surface.v1.json"
       ]
     },
     "private-workspace": {
@@ -986,7 +986,8 @@
       ],
       "/assist": [
         "artifacts/escape-hatch/src/components/managed-browser-assist.tsx",
-        "artifacts/escape-hatch/src/components/workspace-journey-guide.tsx"
+        "artifacts/escape-hatch/src/components/workspace-journey-guide.tsx",
+        "artifacts/escape-hatch/src/components/application-outcome.tsx"
       ]
     },
     "scenes": {

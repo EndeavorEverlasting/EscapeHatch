@@ -58,6 +58,12 @@ class FeatureOntologyTest(unittest.TestCase):
         with self.assertRaises(OntologyError):
             self.check(candidate)
 
+    def test_misowned_authority(self):
+        candidate = copy.deepcopy(self.data)
+        candidate["features"]["tutorial"]["authority"] = "not-mapped"
+        with self.assertRaises(OntologyError):
+            self.check(candidate)
+
     def test_duplicate_json_key(self):
         with self.assertRaises(OntologyError):
             json.loads('{"same": 1, "same": 2}', object_pairs_hook=unique_object)

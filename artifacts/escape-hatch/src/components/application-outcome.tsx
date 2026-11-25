@@ -12,7 +12,7 @@ export function ApplicationOutcome({ application, receiptCaptured, nextPosting, 
     <section aria-labelledby="application-outcome-heading" data-testid="application-outcome"
       className="rounded-[1.5rem] border border-primary/20 bg-card p-6 sm:p-9">
       <div className="flex items-start gap-5">
-        <img src="/escapehatch-mascot.webp" alt="" width="72" height="72" className="h-16 w-16 shrink-0 sm:h-[72px] sm:w-[72px]" />
+        <img src="/escapehatch-mascot.webp" alt="" width="72" height="72" className="tutorial-scene-avatar h-16 w-16 shrink-0 sm:h-[72px] sm:w-[72px]" />
         <div className="min-w-0">
           <h2 id="application-outcome-heading" className="font-display text-3xl leading-tight sm:text-4xl">Application recorded.</h2>
           <p className="mt-3 break-words text-lg font-medium">{application.company}</p>

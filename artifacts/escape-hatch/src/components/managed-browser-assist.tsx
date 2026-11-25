@@ -150,10 +150,10 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const [trackerChecked, setTrackerChecked] = useState(false);
   const [runtimeChecked, setRuntimeChecked] = useState(false);
   const documents = useOpportunityDocuments(selectedOpportunityId, url);
-  const [autoPrepareRequested, setAutoPrepareRequested] = useState(false);
+  const [autoPrepareRequested, setAutoPrepareRequested] = useState<OutcomeBinding | null>(null);
   const [status, setStatus] = useState('idle');
   const [authCheckpoint, setAuthCheckpoint] = useState<AuthCheckpoint | null>(null);
-  const [pendingAfterLogin, setPendingAfterLogin] = useState(false);
+  const [pendingAfterLogin, setPendingAfterLogin] = useState<OutcomeBinding | null>(null);
   const [needsOpportunityConfirmation, setNeedsOpportunityConfirmation] = useState(false);
   const [observedPageUrl, setObservedPageUrl] = useState('');
   const [emailDraft, setEmailDraft] = useState('');
@@ -497,18 +497,29 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   }, [recordMilitary, browserOpen]);
 
   useEffect(() => {
-    if (!autoPrepareRequested || busy || documents.loading || !browserOpen) return;
-    setAutoPrepareRequested(false);
+    if (!autoPrepareRequested || busy || documents.loading || documents.intakePending || !browserOpen) return;
+    const binding = autoPrepareRequested;
+    setAutoPrepareRequested(null);
+    if (binding.opportunityId !== selectedOpportunityId || binding.applicationUrl !== url ||
+        !applications.some(item => item.id === binding.opportunityId && item.url === binding.applicationUrl &&
+          (item.status === 'saved' || item.status === 'preparing') && !item.submissionEvidence && !item.reconciliationConflict)) {
+      setMessage('Automatic preparation cancelled: the original opportunity changed.'); return;
+    }
     if (!documents.canAutoPrepare) { setMessage('Automatic preparation paused: save the résumé and complete its required review.'); return; }
     void run('prepare');
-  }, [autoPrepareRequested, busy, documents.loading, documents.canAutoPrepare, browserOpen]);
+  }, [autoPrepareRequested, busy, documents.loading, documents.intakePending, documents.canAutoPrepare, browserOpen, selectedOpportunityId, url, applications]);
 
   useEffect(() => {
     if (!pendingAfterLogin || !authCheckpoint?.canResume || needsOpportunityConfirmation || busy || !browserOpen) return;
-    // A prior explicit Launch authorizes only the guarded Fill, not navigation or Submit.
-    setPendingAfterLogin(false);
-    void run('resume');
-  }, [pendingAfterLogin, authCheckpoint?.canResume, needsOpportunityConfirmation, busy, browserOpen]);
+    const binding = pendingAfterLogin;
+    setPendingAfterLogin(null);
+    if (binding.opportunityId !== selectedOpportunityId || binding.applicationUrl !== url ||
+        !applications.some(item => item.id === binding.opportunityId && item.url === binding.applicationUrl &&
+          (item.status === 'saved' || item.status === 'preparing') && !item.submissionEvidence && !item.reconciliationConflict)) return;
+    // Same scoped launch: guarded resume must succeed before preparation can continue.
+    // The host still controls verified effects, required fields and final Submit.
+    void run('resume', false, true);
+  }, [pendingAfterLogin, authCheckpoint?.canResume, needsOpportunityConfirmation, busy, browserOpen, selectedOpportunityId, url, applications]);
 
   async function checkSignIn() {
     try {
@@ -522,7 +533,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     }
   }
 
-  async function run(action: 'launch' | 'fill' | 'attach' | 'prepare' | 'resume', automaticRecommendation = false) {
+  async function run(action: 'launch' | 'fill' | 'attach' | 'prepare' | 'resume', automaticRecommendation = false, continuePreparation = false) {
     setBusy(true);
     setMessage('');
     try {
@@ -602,11 +613,11 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         setBrowserOpen(true);
         const launchedOpportunity = applications.find(item => item.id === selectedOpportunityId && item.url === url);
         if (launchedOpportunity) rememberOpportunity(launchedOpportunity);
+        const binding = launchedOpportunity ? { opportunityId: launchedOpportunity.id, applicationUrl: launchedOpportunity.url } : null;
         setPendingAfterLogin(result.authCheckpoint?.phase === 'AUTH_HANDOFF' ||
-          result.authCheckpoint?.phase === 'SESSION_ORIGIN_CHANGED');
-        // A previously reviewed exact PDF is already authorized for staging:
-        // don't make the operator press Fill and Attach again after launch.
-        if (launchedApplicationForm && documents.canAutoPrepare) setAutoPrepareRequested(true);
+          result.authCheckpoint?.phase === 'SESSION_ORIGIN_CHANGED' ? binding : null);
+        // The effect revalidates the exact job and reviewed materials before preparing.
+        if (launchedApplicationForm && binding) setAutoPrepareRequested(binding);
         setPreparation(null);
         setApplications((items) => {
           const existing = items.find((item) => item.id === selectedOpportunityId && item.url === url);
@@ -615,6 +626,9 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
             : item);
           return items; // A custom URL never creates an unverified employer ledger record.
         });
+      }
+      if (action === 'resume' && continuePreparation && result.authCheckpoint?.canResume && selectedOpportunityId) {
+        setAutoPrepareRequested({ opportunityId: selectedOpportunityId, applicationUrl: url });
       }
       if (action === 'fill' || action === 'resume' || action === 'launch') {
         await request('/questions', {}).then(() => setPreferencesRefresh(value => value + 1)).catch(() => {});
@@ -658,7 +672,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     operatorSelected.current = true;
     setSelectedOpportunityId('');
     setNextDispatch(null);
-    setPendingAfterLogin(false);
+    setPendingAfterLogin(null);
     setUrl(event.target.value);
   };
   const button = 'inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50';
@@ -680,8 +694,8 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         if (!candidate) return;
         operatorSelected.current = true;
         autoLaunchAttempted.current = true;
-        setPendingAfterLogin(false);
-        setAutoPrepareRequested(false);
+        setPendingAfterLogin(null);
+        setAutoPrepareRequested(null);
         setPreparation(null);
         setDismissedOutcomeId(completedApplication.id);
         setSelectedOpportunityId(candidate.id);
@@ -725,7 +739,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
                   operatorSelected.current = true;
                   setNextDispatch(null);
                   setSelectedOpportunityId(opportunity?.id || '');
-                  setPendingAfterLogin(false);
+                  setPendingAfterLogin(null);
                   setUrl(opportunity?.url || '');
                   rememberOpportunity(opportunity);
                 }}>
@@ -832,9 +846,9 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         opportunityId={selectedOpportunityId || undefined}
         url={url.trim() || undefined}
         refresh={formObservation?.revision ?? 0}
-        disabled={busy || autoPrepareRequested}
+        disabled={busy || Boolean(autoPrepareRequested)}
       />
-      <ApplicationPuzzle opportunity={applications.find(item => item.id === selectedOpportunityId)} url={url} documents={documents} disabled={busy || autoPrepareRequested} refresh={formObservation} currentPage={currentPage} onBypass={() => { if (browserOpen) setAutoPrepareRequested(true); }} />
+      <ApplicationPuzzle opportunity={applications.find(item => item.id === selectedOpportunityId)} url={url} documents={documents} disabled={busy || Boolean(autoPrepareRequested)} refresh={formObservation} currentPage={currentPage} onBypass={() => { if (browserOpen && selectedOpportunityId) setAutoPrepareRequested({ opportunityId: selectedOpportunityId, applicationUrl: url }); }} />
       <div className="mt-5 rounded-xl bg-secondary/55 p-4">
         <div className="flex items-center gap-2 text-sm font-bold"><CheckCircle2 className="text-primary" size={16} />
           {titles[status] || status.replaceAll('_', ' ')}

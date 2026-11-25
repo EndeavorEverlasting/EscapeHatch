@@ -1,10 +1,11 @@
+import type { RecommendationWorkMode } from './opportunity-fit.ts';
 import taxonomy from '../../../../harness/contracts/application-form-taxonomy.v1.json' with { type: 'json' };
 
 export const PREFERENCE_KEY = 'escapeHatch.applicationQuestionPreferences.v1';
 export const PREFERENCE_SCHEMA = 'escapehatch-application-question-preferences/v1';
 export type Preference = { scope: 'profile_preference'; value: string; source: 'user'; updated_at: string };
 export type DiscoveredAnswer = { question: string; value: string; source: 'user' | 'observed_question'; updated_at: string; accepted: boolean };
-export type Preferences = { schema_version: typeof PREFERENCE_SCHEMA; exported_at: string; preferences: Record<string, Preference>; reviewed_role_answers?: ReviewedRoleAnswer[]; optional_omissions?: string[]; discovered_answers?: Record<string, DiscoveredAnswer>; job_titles?: string[]; professional_titles?: string[]; require_document_review?: boolean; vpn_recovery_assist_enabled?: boolean; application_privacy_acknowledgement_enabled?: boolean };
+export type Preferences = { schema_version: typeof PREFERENCE_SCHEMA; exported_at: string; preferences: Record<string, Preference>; reviewed_role_answers?: ReviewedRoleAnswer[]; optional_omissions?: string[]; discovered_answers?: Record<string, DiscoveredAnswer>; job_titles?: string[]; professional_titles?: string[]; recommendation_work_mode?: RecommendationWorkMode; require_document_review?: boolean; vpn_recovery_assist_enabled?: boolean; application_privacy_acknowledgement_enabled?: boolean };
 export const questions = taxonomy.questions;
 export const emptyPreferences = (): Preferences => ({ schema_version: PREFERENCE_SCHEMA, exported_at: new Date().toISOString(), preferences: {}, vpn_recovery_assist_enabled: true, application_privacy_acknowledgement_enabled: false });
 
@@ -21,6 +22,10 @@ export function parsePreferences(input: unknown): Preferences | null {
   const clean = emptyPreferences();
   if (data.optional_omissions) clean.optional_omissions = [...new Set(data.optional_omissions)];
   clean.exported_at = data.exported_at;
+  if (data.recommendation_work_mode !== undefined) {
+    if (data.recommendation_work_mode !== 'any' && data.recommendation_work_mode !== 'remote_only') return null;
+    clean.recommendation_work_mode = data.recommendation_work_mode;
+  }
   if (data.vpn_recovery_assist_enabled !== undefined) {
     if (typeof data.vpn_recovery_assist_enabled !== 'boolean') return null;
     clean.vpn_recovery_assist_enabled = data.vpn_recovery_assist_enabled;

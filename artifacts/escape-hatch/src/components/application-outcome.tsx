@@ -2,11 +2,12 @@ import { Link } from 'wouter';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import type { Application } from '@/lib/storage';
 
-export function ApplicationOutcome({ application, receiptCaptured, nextPosting, onChooseAnother }: {
+export function ApplicationOutcome({ application, receiptCaptured, nextPosting, onChooseAnother, onPrepareNext }: {
   application: Application;
   receiptCaptured: boolean;
   nextPosting?: { url: string; company: string; role: string } | null;
   onChooseAnother: () => void;
+  onPrepareNext?: () => void;
 }) {
   return (
     <section aria-labelledby="application-outcome-heading" data-testid="application-outcome"
@@ -44,6 +45,7 @@ export function ApplicationOutcome({ application, receiptCaptured, nextPosting, 
         <Link href="/applications" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-medium text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">
           View applications <ArrowRight aria-hidden="true" className="h-4 w-4" />
         </Link>
+        {nextPosting && onPrepareNext && <button type="button" onClick={onPrepareNext} data-testid="prepare-next-indeed-posting" className="min-h-11 rounded-xl bg-primary px-5 py-3 text-sm font-medium text-primary-foreground">Prepare next job: {nextPosting.company} — {nextPosting.role}</button>}
         {nextPosting && <a href={nextPosting.url} target="_blank" rel="noopener noreferrer" onClick={onChooseAnother} className="min-h-11 rounded-xl border border-border px-5 py-3 text-sm font-medium hover:bg-muted" data-testid="next-indeed-posting">Open next saved job: {nextPosting.company} — {nextPosting.role}</a>}
         <button type="button" onClick={onChooseAnother} className="min-h-11 rounded-xl border border-border px-5 py-3 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">Choose another job</button>
       </div>

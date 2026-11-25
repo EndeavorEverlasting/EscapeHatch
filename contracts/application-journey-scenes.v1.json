@@ -24,7 +24,8 @@
       },
       "feature_ids": [
         "journey-guidance",
-        "installation-runtime"
+        "installation-runtime",
+        "cockpit-ui"
       ],
       "avatar_guide": {
         "copy_owner": "coach_prompt",
@@ -36,7 +37,13 @@
             "kind": "workspace_preview"
           }
         ],
-        "native_runtime_proof": "not_certified"
+        "native_runtime_proof": "not_certified",
+        "voice_paths": [
+          "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx",
+          "artifacts/escape-hatch/src/main.tsx",
+          "artifacts/escape-hatch/src/App.tsx",
+          "artifacts/escape-hatch/src/components/journey-atlas.tsx"
+        ]
       },
       "implementation_paths": [
         "Get-EscapeHatch.cmd",
@@ -64,7 +71,8 @@
       },
       "feature_ids": [
         "journey-guidance",
-        "installation-runtime"
+        "installation-runtime",
+        "cockpit-ui"
       ],
       "avatar_guide": {
         "copy_owner": "coach_prompt",
@@ -76,7 +84,13 @@
             "kind": "workspace_preview"
           }
         ],
-        "native_runtime_proof": "not_certified"
+        "native_runtime_proof": "not_certified",
+        "voice_paths": [
+          "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx",
+          "artifacts/escape-hatch/src/main.tsx",
+          "artifacts/escape-hatch/src/App.tsx",
+          "artifacts/escape-hatch/src/components/journey-atlas.tsx"
+        ]
       },
       "implementation_paths": [
         "scripts/windows/EscapeHatch-Install.ps1",
@@ -103,7 +117,8 @@
       },
       "feature_ids": [
         "journey-guidance",
-        "installation-runtime"
+        "installation-runtime",
+        "cockpit-ui"
       ],
       "avatar_guide": {
         "copy_owner": "coach_prompt",
@@ -115,7 +130,13 @@
             "kind": "workspace_preview"
           }
         ],
-        "native_runtime_proof": "not_certified"
+        "native_runtime_proof": "not_certified",
+        "voice_paths": [
+          "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx",
+          "artifacts/escape-hatch/src/main.tsx",
+          "artifacts/escape-hatch/src/App.tsx",
+          "artifacts/escape-hatch/src/components/journey-atlas.tsx"
+        ]
       },
       "implementation_paths": [
         "Get-EscapeHatch.cmd",
@@ -143,7 +164,8 @@
       "feature_ids": [
         "journey-guidance",
         "installation-runtime",
-        "workspace-identity"
+        "workspace-identity",
+        "cockpit-ui"
       ],
       "avatar_guide": {
         "copy_owner": "coach_prompt",
@@ -155,7 +177,13 @@
             "kind": "workspace_preview"
           }
         ],
-        "native_runtime_proof": "not_certified"
+        "native_runtime_proof": "not_certified",
+        "voice_paths": [
+          "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx",
+          "artifacts/escape-hatch/src/main.tsx",
+          "artifacts/escape-hatch/src/App.tsx",
+          "artifacts/escape-hatch/src/components/journey-atlas.tsx"
+        ]
       },
       "implementation_paths": [
         "scripts/windows/EscapeHatch-Runtime.ps1",
@@ -194,7 +222,12 @@
             "kind": "active_cockpit"
           }
         ],
-        "native_runtime_proof": "not_certified"
+        "native_runtime_proof": "not_certified",
+        "voice_paths": [
+          "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx",
+          "artifacts/escape-hatch/src/main.tsx",
+          "artifacts/escape-hatch/src/App.tsx"
+        ]
       },
       "implementation_paths": [
         "artifacts/escape-hatch/src/App.tsx",
@@ -242,7 +275,13 @@
             "kind": "active_cockpit"
           }
         ],
-        "native_runtime_proof": "not_certified"
+        "native_runtime_proof": "not_certified",
+        "voice_paths": [
+          "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx",
+          "artifacts/escape-hatch/src/main.tsx",
+          "artifacts/escape-hatch/src/App.tsx",
+          "artifacts/escape-hatch/src/components/managed-browser-assist.tsx"
+        ]
       },
       "implementation_paths": [
         "artifacts/escape-hatch/tracker-refresh.ts",
@@ -276,7 +315,8 @@
         "career-sources",
         "application-preferences",
         "application-documents",
-        "managed-application"
+        "managed-application",
+        "cockpit-ui"
       ],
       "avatar_guide": {
         "copy_owner": "coach_prompt",
@@ -293,7 +333,13 @@
             "kind": "active_cockpit"
           }
         ],
-        "native_runtime_proof": "not_certified"
+        "native_runtime_proof": "not_certified",
+        "voice_paths": [
+          "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx",
+          "artifacts/escape-hatch/src/main.tsx",
+          "artifacts/escape-hatch/src/App.tsx",
+          "artifacts/escape-hatch/src/components/managed-browser-assist.tsx"
+        ]
       },
       "implementation_paths": [
         "artifacts/escape-hatch/src/components/sources-page.tsx",
@@ -323,7 +369,8 @@
       "feature_ids": [
         "journey-guidance",
         "managed-application",
-        "browser-extension"
+        "browser-extension",
+        "cockpit-ui"
       ],
       "avatar_guide": {
         "copy_owner": "coach_prompt",
@@ -340,7 +387,14 @@
             "kind": "workspace_preview"
           }
         ],
-        "native_runtime_proof": "not_certified"
+        "native_runtime_proof": "not_certified",
+        "voice_paths": [
+          "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx",
+          "artifacts/escape-hatch/src/main.tsx",
+          "artifacts/escape-hatch/src/App.tsx",
+          "artifacts/escape-hatch/src/components/journey-atlas.tsx",
+          "artifacts/escape-hatch/src/components/managed-browser-assist.tsx"
+        ]
       },
       "implementation_paths": [
         "artifacts/escape-hatch/browser-assist-control.ts",
@@ -368,7 +422,8 @@
       "feature_ids": [
         "journey-guidance",
         "managed-application",
-        "browser-extension"
+        "browser-extension",
+        "cockpit-ui"
       ],
       "avatar_guide": {
         "copy_owner": "coach_prompt",
@@ -385,7 +440,14 @@
             "kind": "workspace_preview"
           }
         ],
-        "native_runtime_proof": "not_certified"
+        "native_runtime_proof": "not_certified",
+        "voice_paths": [
+          "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx",
+          "artifacts/escape-hatch/src/main.tsx",
+          "artifacts/escape-hatch/src/App.tsx",
+          "artifacts/escape-hatch/src/components/journey-atlas.tsx",
+          "artifacts/escape-hatch/src/components/managed-browser-assist.tsx"
+        ]
       },
       "implementation_paths": [
         "artifacts/escape-hatch/managed-auth-checkpoint.ts",
@@ -413,7 +475,8 @@
       },
       "feature_ids": [
         "journey-guidance",
-        "managed-application"
+        "managed-application",
+        "cockpit-ui"
       ],
       "avatar_guide": {
         "copy_owner": "coach_prompt",
@@ -430,7 +493,14 @@
             "kind": "workspace_preview"
           }
         ],
-        "native_runtime_proof": "not_certified"
+        "native_runtime_proof": "not_certified",
+        "voice_paths": [
+          "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx",
+          "artifacts/escape-hatch/src/main.tsx",
+          "artifacts/escape-hatch/src/App.tsx",
+          "artifacts/escape-hatch/src/components/journey-atlas.tsx",
+          "artifacts/escape-hatch/src/components/managed-browser-assist.tsx"
+        ]
       },
       "implementation_paths": [
         "artifacts/escape-hatch/managed-auth-checkpoint.ts",
@@ -459,7 +529,8 @@
         "journey-guidance",
         "managed-application",
         "application-documents",
-        "application-preferences"
+        "application-preferences",
+        "cockpit-ui"
       ],
       "avatar_guide": {
         "copy_owner": "coach_prompt",
@@ -476,7 +547,14 @@
             "kind": "workspace_preview"
           }
         ],
-        "native_runtime_proof": "not_certified"
+        "native_runtime_proof": "not_certified",
+        "voice_paths": [
+          "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx",
+          "artifacts/escape-hatch/src/main.tsx",
+          "artifacts/escape-hatch/src/App.tsx",
+          "artifacts/escape-hatch/src/components/journey-atlas.tsx",
+          "artifacts/escape-hatch/src/components/managed-browser-assist.tsx"
+        ]
       },
       "implementation_paths": [
         "artifacts/escape-hatch/managed-form.ts",
@@ -505,7 +583,8 @@
       "feature_ids": [
         "journey-guidance",
         "managed-application",
-        "application-preferences"
+        "application-preferences",
+        "cockpit-ui"
       ],
       "avatar_guide": {
         "copy_owner": "coach_prompt",
@@ -522,7 +601,14 @@
             "kind": "workspace_preview"
           }
         ],
-        "native_runtime_proof": "not_certified"
+        "native_runtime_proof": "not_certified",
+        "voice_paths": [
+          "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx",
+          "artifacts/escape-hatch/src/main.tsx",
+          "artifacts/escape-hatch/src/App.tsx",
+          "artifacts/escape-hatch/src/components/journey-atlas.tsx",
+          "artifacts/escape-hatch/src/components/managed-browser-assist.tsx"
+        ]
       },
       "implementation_paths": [
         "artifacts/escape-hatch/application-autopilot-executor.ts",
@@ -552,7 +638,8 @@
       "feature_ids": [
         "journey-guidance",
         "submission-evidence",
-        "managed-application"
+        "managed-application",
+        "cockpit-ui"
       ],
       "avatar_guide": {
         "copy_owner": "coach_prompt",
@@ -569,7 +656,14 @@
             "kind": "workspace_preview"
           }
         ],
-        "native_runtime_proof": "not_certified"
+        "native_runtime_proof": "not_certified",
+        "voice_paths": [
+          "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx",
+          "artifacts/escape-hatch/src/main.tsx",
+          "artifacts/escape-hatch/src/App.tsx",
+          "artifacts/escape-hatch/src/components/journey-atlas.tsx",
+          "artifacts/escape-hatch/src/components/managed-browser-assist.tsx"
+        ]
       },
       "implementation_paths": [
         "artifacts/escape-hatch/application-submission-policy.ts",
@@ -599,7 +693,8 @@
         "journey-guidance",
         "managed-application",
         "workspace-identity",
-        "network-recovery"
+        "network-recovery",
+        "cockpit-ui"
       ],
       "avatar_guide": {
         "copy_owner": "coach_prompt",
@@ -621,7 +716,15 @@
             "kind": "startup_recovery"
           }
         ],
-        "native_runtime_proof": "not_certified"
+        "native_runtime_proof": "not_certified",
+        "voice_paths": [
+          "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx",
+          "artifacts/escape-hatch/src/main.tsx",
+          "artifacts/escape-hatch/src/App.tsx",
+          "artifacts/escape-hatch/src/components/journey-atlas.tsx",
+          "artifacts/escape-hatch/src/components/managed-browser-assist.tsx",
+          "artifacts/escape-hatch/src/components/workspace-startup.tsx"
+        ]
       },
       "implementation_paths": [
         "artifacts/escape-hatch/managed-auth-checkpoint.ts",
@@ -944,7 +1047,8 @@
       "host_scene": null,
       "feature_ids": [
         "journey-guidance",
-        "career-sources"
+        "career-sources",
+        "cockpit-ui"
       ],
       "implementation_paths": [
         "artifacts/escape-hatch/src/components/sources-page.tsx",
@@ -965,7 +1069,13 @@
             "kind": "workspace_preview"
           }
         ],
-        "native_runtime_proof": "not_certified"
+        "native_runtime_proof": "not_certified",
+        "voice_paths": [
+          "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx",
+          "artifacts/escape-hatch/src/main.tsx",
+          "artifacts/escape-hatch/src/App.tsx",
+          "artifacts/escape-hatch/src/components/journey-atlas.tsx"
+        ]
       }
     },
     {
@@ -1001,7 +1111,13 @@
             "kind": "workspace_preview"
           }
         ],
-        "native_runtime_proof": "not_certified"
+        "native_runtime_proof": "not_certified",
+        "voice_paths": [
+          "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx",
+          "artifacts/escape-hatch/src/main.tsx",
+          "artifacts/escape-hatch/src/App.tsx",
+          "artifacts/escape-hatch/src/components/journey-atlas.tsx"
+        ]
       }
     },
     {
@@ -1015,7 +1131,8 @@
       "host_scene": null,
       "feature_ids": [
         "journey-guidance",
-        "application-preferences"
+        "application-preferences",
+        "cockpit-ui"
       ],
       "implementation_paths": [
         "artifacts/escape-hatch/src/components/application-preferences.tsx",
@@ -1036,7 +1153,13 @@
             "kind": "workspace_preview"
           }
         ],
-        "native_runtime_proof": "not_certified"
+        "native_runtime_proof": "not_certified",
+        "voice_paths": [
+          "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx",
+          "artifacts/escape-hatch/src/main.tsx",
+          "artifacts/escape-hatch/src/App.tsx",
+          "artifacts/escape-hatch/src/components/journey-atlas.tsx"
+        ]
       }
     },
     {
@@ -1072,7 +1195,13 @@
             "kind": "workspace_preview"
           }
         ],
-        "native_runtime_proof": "not_certified"
+        "native_runtime_proof": "not_certified",
+        "voice_paths": [
+          "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx",
+          "artifacts/escape-hatch/src/main.tsx",
+          "artifacts/escape-hatch/src/App.tsx",
+          "artifacts/escape-hatch/src/components/journey-atlas.tsx"
+        ]
       }
     },
     {
@@ -1086,7 +1215,8 @@
       "host_scene": "APPLICATION_ENTRY",
       "feature_ids": [
         "journey-guidance",
-        "managed-application"
+        "managed-application",
+        "cockpit-ui"
       ],
       "implementation_paths": [
         "artifacts/escape-hatch/src/components/managed-browser-assist.tsx",
@@ -1107,7 +1237,14 @@
             "kind": "workspace_preview"
           }
         ],
-        "native_runtime_proof": "not_certified"
+        "native_runtime_proof": "not_certified",
+        "voice_paths": [
+          "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx",
+          "artifacts/escape-hatch/src/main.tsx",
+          "artifacts/escape-hatch/src/App.tsx",
+          "artifacts/escape-hatch/src/components/journey-atlas.tsx",
+          "artifacts/escape-hatch/src/components/managed-browser-assist.tsx"
+        ]
       }
     },
     {
@@ -1121,7 +1258,8 @@
       "host_scene": "FORM_PREPARATION",
       "feature_ids": [
         "journey-guidance",
-        "application-documents"
+        "application-documents",
+        "cockpit-ui"
       ],
       "implementation_paths": [
         "artifacts/escape-hatch/src/components/materials-review-scene.tsx",
@@ -1142,7 +1280,13 @@
             "kind": "workspace_preview"
           }
         ],
-        "native_runtime_proof": "not_certified"
+        "native_runtime_proof": "not_certified",
+        "voice_paths": [
+          "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx",
+          "artifacts/escape-hatch/src/main.tsx",
+          "artifacts/escape-hatch/src/App.tsx",
+          "artifacts/escape-hatch/src/components/journey-atlas.tsx"
+        ]
       }
     },
     {
@@ -1157,7 +1301,8 @@
       "feature_ids": [
         "journey-guidance",
         "managed-application",
-        "submission-evidence"
+        "submission-evidence",
+        "cockpit-ui"
       ],
       "implementation_paths": [
         "artifacts/escape-hatch/src/components/managed-browser-assist.tsx",
@@ -1178,7 +1323,14 @@
             "kind": "workspace_preview"
           }
         ],
-        "native_runtime_proof": "not_certified"
+        "native_runtime_proof": "not_certified",
+        "voice_paths": [
+          "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx",
+          "artifacts/escape-hatch/src/main.tsx",
+          "artifacts/escape-hatch/src/App.tsx",
+          "artifacts/escape-hatch/src/components/journey-atlas.tsx",
+          "artifacts/escape-hatch/src/components/managed-browser-assist.tsx"
+        ]
       }
     }
   ],
@@ -1202,5 +1354,85 @@
     "conflict_policy": "preserve_divergent_nonempty_pointers",
     "empty_semantics": "absence_default_not_forget_authority"
   },
-  "feature_ontology": "harness/contracts/feature-ontology.v1.json"
+  "feature_ontology": "harness/contracts/feature-ontology.v1.json",
+  "supplemental_guides": [
+    {
+      "id": "workspace-startup",
+      "title": "Set up your private workspace",
+      "detail": "Recover or create your local workspace before continuing. If existing copies disagree, review them before choosing. Your information stays under your control.",
+      "action": "Recover or create your workspace",
+      "route": "/",
+      "feature_ids": [
+        "journey-guidance",
+        "workspace-identity",
+        "cockpit-ui"
+      ],
+      "implementation_paths": [
+        "artifacts/escape-hatch/src/components/workspace-startup.tsx",
+        "artifacts/escape-hatch/workspace-file.ts"
+      ],
+      "avatar_guide": {
+        "copy_owner": "detail",
+        "next_action_owner": "action",
+        "surfaces": [
+          {
+            "path": "artifacts/escape-hatch/src/components/workspace-startup.tsx",
+            "marker": "startup-recovery-avatar",
+            "kind": "startup_recovery"
+          }
+        ],
+        "native_runtime_proof": "not_certified",
+        "voice_paths": [
+          "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx",
+          "artifacts/escape-hatch/src/main.tsx",
+          "artifacts/escape-hatch/src/App.tsx",
+          "artifacts/escape-hatch/src/components/workspace-startup.tsx"
+        ]
+      }
+    },
+    {
+      "id": "recorded-outcome",
+      "title": "Application recorded",
+      "detail": "Review the recorded application and its separate receipt status. When you are ready, choose another saved opportunity. Nothing is submitted by this guide.",
+      "action": "Choose another opportunity",
+      "route": "/assist",
+      "feature_ids": [
+        "journey-guidance",
+        "submission-evidence",
+        "managed-application",
+        "cockpit-ui"
+      ],
+      "implementation_paths": [
+        "artifacts/escape-hatch/src/components/application-outcome.tsx",
+        "artifacts/escape-hatch/src/components/managed-browser-assist.tsx",
+        "artifacts/escape-hatch/managed-submission-observer.ts"
+      ],
+      "avatar_guide": {
+        "copy_owner": "detail",
+        "next_action_owner": "action",
+        "surfaces": [
+          {
+            "path": "artifacts/escape-hatch/src/components/application-outcome.tsx",
+            "marker": "application-outcome",
+            "kind": "active_cockpit"
+          }
+        ],
+        "native_runtime_proof": "not_certified",
+        "voice_paths": [
+          "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx",
+          "artifacts/escape-hatch/src/main.tsx",
+          "artifacts/escape-hatch/src/App.tsx",
+          "artifacts/escape-hatch/src/components/managed-browser-assist.tsx"
+        ]
+      }
+    }
+  ],
+  "tutorial_voice": {
+    "default_enabled": true,
+    "storage_key": "escapehatch.tutorial-voice.v1",
+    "copy_authority": "public_canonical_scene_and_stop_text_only",
+    "single_owner": "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx",
+    "root_owner": "artifacts/escape-hatch/src/main.tsx",
+    "runtime_proof": "not_certified"
+  }
 }

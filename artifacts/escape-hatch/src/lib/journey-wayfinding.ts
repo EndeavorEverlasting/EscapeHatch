@@ -3,7 +3,8 @@ import registry from '../../../../contracts/application-journey-scenes.v1.json' 
 export const PUBLIC_ROUTES = ['/', '/profile', '/sources', '/answers', '/applications', '/assist', '/materials', '/journey'] as const;
 
 /** The guide only projects catalogued text and destinations. Host code owns progression. */
-export const JOURNEY_DESTINATIONS = registry.guide_stops;
+export const JOURNEY_DESTINATIONS = registry.guide_stops.map(({ id, route, title, detail, action, next, badge, host_scene }) =>
+  ({ id, route, title, detail, action, next, badge, host_scene }));
 
 const containerSceneIds = new Set(['HOME_READY', 'OPPORTUNITY_INTAKE', 'PREREQUISITES']);
 

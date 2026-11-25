@@ -1460,7 +1460,8 @@
         "contracts/application-journey-scenes.v1.json",
         "artifacts/escape-hatch/src/lib/application-journey-projection.ts",
         "artifacts/escape-hatch/src/components/journey-atlas.tsx",
-        "artifacts/escape-hatch/src/components/guided-start.tsx"
+        "artifacts/escape-hatch/src/components/guided-start.tsx",
+        "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx"
       ],
       "files": [
         {
@@ -1497,6 +1498,10 @@
         },
         {
           "path": "artifacts/escape-hatch/src/components/puzzle-gallery-display.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx",
           "role": "source"
         },
         {
@@ -1592,10 +1597,6 @@
           "role": "contract"
         },
         {
-          "path": "docs/GUIDED_APPLICATION_WORKBENCH.md",
-          "role": "documentation"
-        },
-        {
           "path": "docs/agent/APPLICATION_JOURNEY_SCENE_SYSTEM_2026-10-25.md",
           "role": "documentation"
         },
@@ -1605,6 +1606,10 @@
         },
         {
           "path": "docs/agent/P04_PROFILE_PUZZLE_ATELIER_CONVERGENCE_2026-11-03.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/GUIDED_APPLICATION_WORKBENCH.md",
           "role": "documentation"
         },
         {

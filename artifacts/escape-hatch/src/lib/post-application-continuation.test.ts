@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { Application } from './storage.ts';
-import { recordedApplication, nextIndeedPosting, nextIndeedApplication } from './post-application-continuation.ts';
+import { recordedApplication, nextIndeedPosting, nextIndeedApplication, isActiveApplicationBinding } from './post-application-continuation.ts';
 import { evaluateOpportunityFit, evaluateWorkplaceEligibility, allowsAutomaticRecommendation } from './opportunity-fit.ts';
 
 const a = (id: string, key: string, status: Application['status'] = 'saved', suffix = ''): Application => ({
@@ -72,4 +72,13 @@ test('managed dispatch and ordinary-browser link share the exact eligible candid
   assert.equal(target?.url, remote.url);
   assert.equal(nextIndeedPosting(candidates, done.id, 'remote_only')?.url, 'https://www.indeed.com/viewjob?jk=1111111111111111');
   assert.equal(nextIndeedApplication(candidates.map(item => item.id === remote.id ? { ...item, status: 'applied' } : item), done.id, 'remote_only'), null);
+});
+
+test('pending preparation or auth resume cannot drift to another opportunity or a closed job', () => {
+  const binding = { opportunityId: next.id, applicationUrl: next.url };
+  assert.equal(isActiveApplicationBinding(binding, binding, [next]), true);
+  assert.equal(isActiveApplicationBinding(binding, { ...binding, opportunityId: alias.id }, [next, alias]), false);
+  assert.equal(isActiveApplicationBinding(binding, { ...binding, applicationUrl: alias.url }, [next, alias]), false);
+  assert.equal(isActiveApplicationBinding(binding, binding, [{ ...next, status: 'applied' }]), false);
+  assert.equal(isActiveApplicationBinding(binding, binding, [{ ...next, reconciliationConflict: 'opportunity_url_changed' }]), false);
 });

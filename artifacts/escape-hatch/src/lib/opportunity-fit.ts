@@ -116,9 +116,58 @@ export function readOpportunityRubric(notes?: string): OpportunityRubricInput | 
     purpose: values[v2 ? 6 : 4] as OpportunityDecision['purpose'] };
 }
 
+
+export type OpportunityType = 'learning' | 'career' | 'needs_assessment';
+export type RequirementAssessment = {
+  sourceRef: string;
+  complete: boolean;
+  requirements: { id: string; state: 'met' | 'unmet' | 'unknown'; evidenceRef?: string }[];
+};
+const REQUIREMENTS_PREFIX = 'EscapeHatch requirements v1: ';
+
+/** Reviewed requirement evidence is separate from profile text coverage and intent.
+ * Missing evidence is unknown, not proof of an unmet requirement. */
+export function readRequirementAssessment(notes?: string): RequirementAssessment | null | 'invalid' {
+  const lines = (notes || '').split(/\r?\n/).filter(line => line.startsWith('EscapeHatch requirements '));
+  if (!lines.length) return null;
+  if (lines.length !== 1 || !lines[0].startsWith(REQUIREMENTS_PREFIX)) return 'invalid';
+  try {
+    const v = JSON.parse(lines[0].slice(REQUIREMENTS_PREFIX.length));
+    if (!v || typeof v.sourceRef !== 'string' || !v.sourceRef.trim() ||
+        typeof v.complete !== 'boolean' || !Array.isArray(v.requirements) || !v.requirements.length) return 'invalid';
+    const ids = new Set<string>();
+    for (const item of v.requirements) {
+      if (!item || typeof item.id !== 'string' || !item.id.trim() || ids.has(item.id) ||
+          !['met', 'unmet', 'unknown'].includes(item.state) ||
+          (item.state !== 'unknown' && (typeof item.evidenceRef !== 'string' || !item.evidenceRef.trim()))) return 'invalid';
+      ids.add(item.id);
+    }
+    return v as RequirementAssessment;
+  } catch { return 'invalid'; }
+}
+
+export function deriveOpportunityType(notes?: string, trackerWorkMode?: string): {
+  type: OpportunityType; reasons: string[];
+} {
+  const rubric = readOpportunityRubric(notes);
+  const requirements = readRequirementAssessment(notes);
+  if (rubric === 'invalid' || requirements === 'invalid') return { type: 'needs_assessment', reasons: ['INVALID_MATCH_EVIDENCE'] };
+  const observed = normalizeWorkMode(trackerWorkMode);
+  if (rubric && observed !== 'unknown' && observed !== rubric.workMode)
+    return { type: 'needs_assessment', reasons: ['WORK_MODE_CONFLICT'] };
+  const match = rubric ? evaluateOpportunityRubric(rubric) : null;
+  const unmet = requirements?.requirements.filter(item => item.state === 'unmet') || [];
+  const reasons = [...(match?.reasons || []), ...unmet.map(item => 'UNMET_REQUIREMENT:' + item.id)];
+  if (reasons.length) return { type: 'learning', reasons };
+  if (match?.eligibility === 'eligible' && requirements?.complete && requirements.requirements.every(item => item.state === 'met'))
+    return { type: 'career', reasons: [] };
+  return { type: 'needs_assessment', reasons: ['MATCH_EVIDENCE_INCOMPLETE'] };
+}
+
 /** Discovery policy, not the mathematical match computation. */
 export function rubricAllowsRecommendation(notes?: string, trackerWorkMode?: string): boolean {
   const input = readOpportunityRubric(notes);
+  if (deriveOpportunityType(notes, trackerWorkMode).type === 'learning' || readRequirementAssessment(notes) === 'invalid') return false;
   if (input === null) return true; // existing records are not silently reclassified
   if (input === 'invalid') return false;
   const observed = normalizeWorkMode(trackerWorkMode);
@@ -138,10 +187,13 @@ export function applicationPreparationRank(notes?: string, trackerWorkMode?: str
 
 /** Preserve provider-owned rubric across local free-text edits on refresh. */
 export function mergeRubricNotes(local: string, provider: string): string {
-  const marker = (value: string) => value.split(/\r?\n/).filter(line => line.startsWith('EscapeHatch rubric '));
-  const incoming = marker(provider);
-  if (!incoming.length) return local;
-  return [...local.split(/\r?\n/).filter(line => !line.startsWith('EscapeHatch rubric ')), ...incoming].join('\n');
+  let lines = local.split(/\r?\n/);
+  const providerLines = provider.split(/\r?\n/);
+  for (const prefix of ['EscapeHatch rubric ', 'EscapeHatch requirements ']) {
+    const incoming = providerLines.filter(line => line.startsWith(prefix));
+    if (incoming.length) lines = [...lines.filter(line => !line.startsWith(prefix)), ...incoming];
+  }
+  return lines.join('\n');
 }
 
 export const EMPTY_OPPORTUNITY_DECISION: OpportunityDecision = {
@@ -170,6 +222,6 @@ export function localApplicationPreparationRank(notes?: string, local?: Opportun
   if (local.applicationDecision === 'apply') return 0;
   if (local.applicationDecision === 'do_not_apply' || local.jobDesire === 'do_not_want' || local.purpose === 'interview_practice') return null;
   const rubric = readOpportunityRubric(notes);
-  if (rubric === 'invalid') return null;
+  if (rubric === 'invalid' || readRequirementAssessment(notes) === 'invalid' || deriveOpportunityType(notes).type === 'learning') return null;
   return !rubric || evaluateOpportunityRubric(rubric).eligibility === 'eligible' ? 1 : null;
 }

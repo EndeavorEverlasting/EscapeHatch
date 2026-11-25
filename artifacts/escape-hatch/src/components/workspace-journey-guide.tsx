@@ -6,7 +6,7 @@ const containerWorkspace = import.meta.env.VITE_ESCAPEHATCH_CONTAINER === '1';
 
 /** Guidance for the standalone workspace pages. Assist uses its live coach. */
 export function WorkspaceJourneyGuide({ route }: { route: string }) {
-  if (route === '/assist' || route === '/materials') return null;
+  if (route === '/assist') return null;
   const current = getWorkspaceGuide(route);
   if (!current) return null;
   const stop = getJourneyStop(current.id, containerWorkspace);

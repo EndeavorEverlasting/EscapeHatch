@@ -1,7 +1,7 @@
 import { useOpportunityDocuments } from './opportunity-documents';
 import { ApplicationPuzzle } from './application-puzzle';
 import { ApplicationOutcome } from './application-outcome';
-import { recordedApplication, nextIndeedPosting, type OutcomeBinding } from '@/lib/post-application-continuation';
+import { recordedApplication, nextIndeedPosting, nextIndeedApplication, type OutcomeBinding } from '@/lib/post-application-continuation';
 import { allowsAutomaticRecommendation, evaluateOpportunityFit } from '@/lib/opportunity-fit';
 import { useRecommendationWorkMode } from './use-recommendation-work-mode';
 import { isLockedIndeedPosting, lockedIndeedPostingKeys } from '@/lib/indeed-posting-identity';
@@ -140,6 +140,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const [url, setUrl] = useState('');
   const [selectedOpportunityId, setSelectedOpportunityId] = useState('');
   const [dismissedOutcomeId, setDismissedOutcomeId] = useState('');
+  const [nextDispatch, setNextDispatch] = useState<(OutcomeBinding & { completedId: string }) | null>(null);
   const operatorSelected = useRef(false);
   const [savedJourney, setSavedJourney] = useState(() => readStoredValue(getLocalStorage(), JOURNEY_RESUME_KEY, EMPTY_JOURNEY_RESUME, parseJourneyResume));
   const autoLaunchAttempted = useRef(false);
@@ -462,6 +463,19 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   }, [applications, explicitLaunchId, runtimeChecked, trackerChecked, selectedOpportunityId, url, verifiedNextReadyId, recommendationMode]);
 
   useEffect(() => {
+    if (!nextDispatch || busy || documents.loading || recommendationMode === null || !runtimeChecked) return;
+    const candidate = nextIndeedApplication(applications, nextDispatch.completedId, recommendationMode);
+    if (!candidate || candidate.id !== nextDispatch.opportunityId || candidate.url !== nextDispatch.applicationUrl ||
+        candidate.id !== selectedOpportunityId || candidate.url !== url) {
+      setNextDispatch(null);
+      setMessage('Next application changed before dispatch. Review the current selection.');
+      return;
+    }
+    setNextDispatch(null);
+    void run('launch');
+  }, [nextDispatch, busy, documents.loading, recommendationMode, runtimeChecked, applications, selectedOpportunityId, url]);
+
+  useEffect(() => {
     if (!recordMilitary || !browserOpen) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
@@ -643,6 +657,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const handleUrl = (event: ChangeEvent<HTMLInputElement>) => {
     operatorSelected.current = true;
     setSelectedOpportunityId('');
+    setNextDispatch(null);
     setPendingAfterLogin(false);
     setUrl(event.target.value);
   };
@@ -659,7 +674,22 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       submissionMatchesApplication(receipt, completedApplication.url);
     return <ApplicationOutcome application={completedApplication} receiptCaptured={Boolean(captured)}
       nextPosting={recommendationMode === null ? null : nextIndeedPosting(applications, completedApplication.id, recommendationMode)}
+      onPrepareNext={() => {
+        if (recommendationMode === null) return;
+        const candidate = nextIndeedApplication(applications, completedApplication.id, recommendationMode);
+        if (!candidate) return;
+        operatorSelected.current = true;
+        autoLaunchAttempted.current = true;
+        setPendingAfterLogin(false);
+        setAutoPrepareRequested(false);
+        setPreparation(null);
+        setDismissedOutcomeId(completedApplication.id);
+        setSelectedOpportunityId(candidate.id);
+        setUrl(candidate.url);
+        setNextDispatch({ opportunityId: candidate.id, applicationUrl: candidate.url, completedId: completedApplication.id });
+      }}
       onChooseAnother={() => {
+        setNextDispatch(null);
         setDismissedOutcomeId(completedApplication.id);
         operatorSelected.current = true;
         setSelectedOpportunityId(''); setUrl(''); setContinuityError(''); setMessage('Choose a saved job to prepare next. The previous employer tab stays open.');
@@ -693,6 +723,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
                 onChange={(event) => {
                   const opportunity = applications.find((item) => item.id === event.target.value);
                   operatorSelected.current = true;
+                  setNextDispatch(null);
                   setSelectedOpportunityId(opportunity?.id || '');
                   setPendingAfterLogin(false);
                   setUrl(opportunity?.url || '');

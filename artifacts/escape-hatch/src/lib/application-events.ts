@@ -101,8 +101,9 @@ export type ApplicationDetails = Pick<Application, 'company' | 'role' | 'url' | 
 export function applyApplicationDetails(application: Application, details: ApplicationDetails, updatedAt: string): Application {
   const conflict = applicationUrlEditConflicts(application, details.url);
   const url = conflict ? application.url : details.url;
-  const { emailApplication, ...previous } = application;
+  const { emailApplication, opportunityDecision, ...previous } = application;
   return { ...previous, ...(emailApplication && !url ? { emailApplication } : {}),
+    ...(opportunityDecision && url === application.url && details.company === application.company && details.role === application.role ? { opportunityDecision } : {}),
     company: details.company, role: details.role, url,
     status: details.status, priority: details.priority, notes: details.notes, nextAction: details.nextAction, updatedAt,
     ...(conflict ? { reconciliationConflict: 'opportunity_url_changed' as const } : {}) };

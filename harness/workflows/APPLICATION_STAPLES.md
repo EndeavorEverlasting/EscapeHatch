@@ -9,6 +9,8 @@ For an identified job opportunity, “prereqs,” “pre-reqs,” “prerequisit
 
 Return usable links and unresolved items, and record evidence in the user-owned tracker when available. Keep applicant files and values out of Git. A private handoff is prepared material. Claim saved local answers only after exact-opportunity readback.
 
+Explicit apply triggers staples regardless of fit or desire.
+
 The bound form governs required fields and attachments. Follow Resume Presentation and Application Form Intake in [Workflows](../WORKFLOWS.md). Preparation invokes no submission action.
 
 For inbound recruiter contacts, use [Recruiter outreach](../WORKFLOWS.md#recruiter-outreach) to record the source and next action.

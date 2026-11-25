@@ -666,5 +666,34 @@
     "context_readiness": false,
     "conflict_policy": "preserve_divergent_nonempty_pointers",
     "empty_semantics": "absence_default_not_forget_authority"
-  }
+  },
+  "opportunity_decision_scenes": [
+    {
+      "id": "MATCH_REVIEW",
+      "parent_scene": "OPPORTUNITY_INTAKE",
+      "title": "Review the match",
+      "coach_prompt": "Chirp! Matching uses evidence, not whether you want the job. Review the work arrangement and available evidence before making your own choice.",
+      "next": "JOB_DESIRE",
+      "owner": "opportunity-fit",
+      "avatar": true
+    },
+    {
+      "id": "JOB_DESIRE",
+      "parent_scene": "OPPORTUNITY_INTAKE",
+      "title": "Do you want this job?",
+      "coach_prompt": "Chirp! Wanting the job is separate from matching it. You can want it, not want it, or be unsure.",
+      "next": "APPLICATION_DECISION",
+      "owner": "opportunityDecision.jobDesire",
+      "avatar": true
+    },
+    {
+      "id": "APPLICATION_DECISION",
+      "parent_scene": "OPPORTUNITY_INTAKE",
+      "title": "Do you want to apply?",
+      "coach_prompt": "Chirp! You can apply even when you do not want the job, including for interview practice. Your decision does not change the match or authorize submission.",
+      "next": "PREREQUISITES",
+      "owner": "opportunityDecision.applicationDecision",
+      "avatar": true
+    }
+  ]
 }

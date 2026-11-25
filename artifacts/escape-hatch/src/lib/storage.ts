@@ -1,3 +1,4 @@
+import { parseOpportunityDecision, type OpportunityDecision } from './opportunity-fit.ts';
 import { parseSubmissionEvidence, type SubmissionEvidence } from './submission-reconciliation.ts';
 import { parseApplicationEvents, type ApplicationEvent } from './application-events.ts';
 import { parseEmailApplication, type EmailApplication } from './email-application.ts';
@@ -41,6 +42,7 @@ export type Application = {
   nextAction: string;
   jobDescription?: string;
   workMode?: string;
+  opportunityDecision?: OpportunityDecision;
   submissionEvidence?: SubmissionEvidence;
   events?: ApplicationEvent[];
   reconciliationConflict?: 'opportunity_url_changed';
@@ -136,8 +138,9 @@ export function parseAnswersStorage(value: unknown): AnswerSnippet[] | null {
 export function parseApplicationsStorage(value: unknown): Application[] | null {
   if (!Array.isArray(value)) return null;
   const applications = value.map((item) => {
-    if (!isRecord(item) || !hasOnlyKeys(item, ['id', 'company', 'role', 'url', 'emailApplication', 'status', 'priority', 'notes', 'nextAction', 'updatedAt', 'jobDescription', 'workMode', 'submissionEvidence', 'events', 'reconciliationConflict'])) return null;
+    if (!isRecord(item) || !hasOnlyKeys(item, ['id', 'company', 'role', 'url', 'emailApplication', 'status', 'priority', 'notes', 'nextAction', 'updatedAt', 'jobDescription', 'workMode', 'submissionEvidence', 'events', 'reconciliationConflict', 'opportunityDecision'])) return null;
     if (item.reconciliationConflict !== undefined && item.reconciliationConflict !== 'opportunity_url_changed') return null;
+    if (item.opportunityDecision !== undefined && !parseOpportunityDecision(item.opportunityDecision)) return null;
     const submissionEvidence = item.submissionEvidence === undefined ? undefined : parseSubmissionEvidence(item.submissionEvidence);
     if (submissionEvidence === null) return null;
     if (!isText(item.id) || !item.id.trim() || !isText(item.company) || !item.company.trim()) return null;

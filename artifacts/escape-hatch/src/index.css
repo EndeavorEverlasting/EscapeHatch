@@ -301,3 +301,8 @@
 @media (prefers-reduced-motion: reduce) {
   .journey-atlas-piece { transition: none; animation: none; transform: none; }
 }
+
+/* A brief scene-entry gesture; never loop or override reduced-motion preferences. */
+@keyframes tutorial-scene-enter { from { opacity: .65; transform: translateY(4px) scale(.96); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: no-preference) { .tutorial-scene-avatar { animation: tutorial-scene-enter 260ms ease-out both; } }
+@media (prefers-reduced-motion: reduce) { .tutorial-scene-avatar { animation: none; transition: none; } }

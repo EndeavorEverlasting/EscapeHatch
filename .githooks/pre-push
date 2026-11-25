@@ -34,7 +34,7 @@ do
     python scripts/validate_governance.py
     python scripts/validate_product_version.py
     python scripts/validate_repository_promotion.py
-    python scripts/validate_harness.py
+    python scripts/validate_harness.py --snapshot
   )
 
   if [ "$remote_sha" != "$zero" ] && git cat-file -e "$remote_sha^{commit}" 2>/dev/null; then

@@ -31,6 +31,10 @@ For the zero-friction, extension-free, review-only application experience and it
 
 For application staples and job-application prep shorthand, use [Application Staples](harness/workflows/APPLICATION_STAPLES.md) before handing off the opportunity.
 
+### Zero unmapped tracked files and tutorial ownership
+
+Before adding, deleting, renaming or moving tracked files, update the exact feature inventory in `harness/contracts/feature-ontology.v1.json` in the same change. Run `python scripts/validate_feature_ontology.py` and `python tests/test_feature_ontology.py`. Never use wildcard owners or exemptions to conceal source. The canonical journey contract remains the scene authority; its feature bindings identify concrete implementation paths, not proof of runtime behavior. New public routes and canonical scenes require explicit implementation bindings and tutorial coverage. Preserve user-controlled submission and applicant privacy.
+
 ### Canonical installation-to-application scene graph is contractual
 
 Use `contracts/application-journey-scenes.v1.json` and its scene runbook for setup, browser and application review. Run `python scripts/validate_application_journey.py`. Preserve independently owned installer and launcher work. A click or file-picker result is not employer acceptance. For explicit approval to Submit a reviewed application, [follow the managed Lever procedure](docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md#approved-submit-on-managed-lever). It owns exact-tab, approved-résumé and receipt recovery. Credentials, CAPTCHA and personal attestations stay with the operator.

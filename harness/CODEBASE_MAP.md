@@ -1,5 +1,9 @@
 # EscapeHatch Codebase Map
 
+## Exact feature ontology
+
+[`harness/contracts/feature-ontology.v1.json`](contracts/feature-ontology.v1.json) is the executable file-level feature inventory. Every tracked file belongs to exactly one feature; no directory globs, blanket exemptions or silent auto-classification are accepted by validation. Its scene and route bindings reference the existing application journey contract and actual implementation paths. Update the inventory when adding, moving or deleting files. `python scripts/validate_feature_ontology.py` and `python tests/test_feature_ontology.py` run independently and through the harness. A static ownership pass does not certify animated or audible runtime behavior.
+
 ## Repository floor
 
 EscapeHatch has canonical governance, an operational harness, a portable career-state graph, a local-first application-companion contract, an ATS-conservative resume-presentation contract, and a StudySyndicate guidance bridge. Application-form automation is split into a product lane and a harness lane: product code owns runtime behavior; the harness owns semantic question identity, preference safety policy, validation, and operating procedures.

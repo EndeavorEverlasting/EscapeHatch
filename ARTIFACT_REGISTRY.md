@@ -19,6 +19,9 @@ This file is the canonical registry for durable EscapeHatch artifacts. A plausib
 
 ## Registered artifacts
 
+The exact feature-ownership inventory is `harness/contracts/feature-ontology.v1.json`; its enforcement owner is `scripts/validate_feature_ontology.py`, with `tests/test_feature_ontology.py` as negative controls. The machine inventory, not the descriptive registry, enumerates all tracked files.
+
+
 | Artifact | Path | Policy | Update trigger | Validation |
 | --- | --- | --- | --- | --- |
 | Installation lifecycle owner | `scripts/windows/EscapeHatch-Install.ps1` | tracked; preserves user-owned resources | install/bootstrap/remove behavior | `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/windows/Test-EscapeHatch-Install.ps1` |

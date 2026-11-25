@@ -9,6 +9,8 @@ MANIFEST = ROOT / "harness/manifest.v1.json"
 SCHEMA = "escapehatch-harness/v1"
 COMPONENTS = {
     "codebase_map": "harness/CODEBASE_MAP.md",
+    "feature_ontology": "harness/contracts/feature-ontology.v1.json",
+    "feature_ontology_validator": "scripts/validate_feature_ontology.py",
     "workflow_specs": "harness/WORKFLOWS.md",
     "artifact_registry": "ARTIFACT_REGISTRY.md",
     "harness_validator": "scripts/validate_harness.py",
@@ -55,6 +57,8 @@ VALIDATION_ORDER = [
     "python scripts/validate_resume_presentation.py",
     "python scripts/validate_resume_presentation_visual.py",
     "python scripts/validate_resume_visual_spike.py",
+    "python scripts/validate_feature_ontology.py",
+    "python tests/test_feature_ontology.py",
     "python scripts/validate_harness.py",
     "python scripts/validate_career_state.py",
     "python scripts/validate_local_runtime_lifecycle.py",
@@ -245,6 +249,14 @@ def main() -> int:
     try:
         manifest = load_manifest(); validate_markers(); rows = parse_registry(); validate_hooks(); validate_resolver(); validate_ci()
         run_validator("scripts/validate_governance.py"); run_validator("scripts/validate_product_version.py"); run_validator("scripts/validate_repository_promotion.py"); run_validator("scripts/validate_application_harness.py"); run_validator("scripts/validate_application_companion.py"); run_validator("scripts/validate_resume_presentation.py"); run_validator("scripts/validate_local_runtime_lifecycle.py")
+        ontology = [sys.executable, str(ROOT / "scripts/validate_feature_ontology.py")]
+        if "--snapshot" in sys.argv:
+            ontology.append("--snapshot")
+        result = subprocess.run(ontology, cwd=ROOT, text=True, capture_output=True)
+        if result.returncode:
+            raise HarnessError(result.stdout + result.stderr)
+        print(result.stdout.strip())
+        run_validator("tests/test_feature_ontology.py")
         negatives = self_tests(manifest)
     except HarnessError as exc:
         print(f"HARNESS_VALIDATION: FAIL: {exc}", file=sys.stderr); return 1

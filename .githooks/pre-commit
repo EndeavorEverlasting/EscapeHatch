@@ -14,6 +14,6 @@ git -C "$repo" checkout-index --all --prefix="$snapshot/"
   python scripts/validate_governance.py
   python scripts/validate_product_version.py
   python scripts/validate_repository_promotion.py
-  python scripts/validate_harness.py
+  python scripts/validate_harness.py --snapshot
 )
 git -C "$repo" diff --cached --check

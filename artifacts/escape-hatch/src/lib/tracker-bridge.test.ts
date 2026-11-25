@@ -253,3 +253,18 @@ test('next opportunity selection rejects submitted Indeed aliases across row IDs
   assert.equal(selectNextHomeApplication(local[1], local.slice(0, 2)), null);
   assert.equal(selectNextHomeApplication(local[1], [local[0]]), null);
 });
+
+test('remote-only tracker and home suggestions reject higher-priority incompatible postings', () => {
+  const onsite = row({ sheetRow: 51, company: 'Synthetic onsite', role: 'PM', status: 'Ready to Apply', priority: 'High', workMode: 'In person', applyUrl: 'https://jobs.example.test/onsite' });
+  const unknown = row({ sheetRow: 52, company: 'Synthetic unknown', role: 'PM', status: 'Ready to Apply', priority: 'High', applyUrl: 'https://jobs.example.test/unknown' });
+  const remote = row({ sheetRow: 50, company: 'Synthetic remote', role: 'PM', status: 'Ready to Apply', workMode: 'Remote', applyUrl: 'https://jobs.example.test/remote' });
+  assert.equal(selectNextActionableOpportunity(snapshot([onsite, unknown, remote]), 'remote_only')?.company, remote.company);
+  assert.equal(selectNextActionableOpportunity(snapshot([onsite, unknown]), 'remote_only'), null);
+  const applications = [onsite, unknown, remote].map(item => trackerRowToApplication(item));
+  assert.equal(applications[2].workMode, 'Remote');
+  assert.equal(selectNextHomeApplication(applications[0], applications, 'remote_only')?.company, remote.company);
+  assert.equal(selectNextHomeApplication(applications[0], applications.slice(0, 2), 'remote_only'), null);
+  const contradictory = { ...applications[2], jobDescription: 'Work Location: In person' };
+  assert.equal(selectNextHomeApplication(contradictory, [contradictory], 'remote_only'), null);
+  assert.equal(selectNextHomeApplication(applications[0], applications)?.id, applications[0].id);
+});

@@ -1,3 +1,4 @@
+import { allowsAutomaticRecommendation, type RecommendationWorkMode } from './opportunity-fit.ts';
 /**
  * Deterministic Google/local tracker projection into EscapeHatch applications.
  * Never invents counts. Never treats Applied? checkbox alone as Submitted proof.
@@ -210,6 +211,7 @@ export function trackerRowToApplication(row: TrackerRow, capturedAt?: string): A
     company: row.company,
     role: row.role,
     url: row.applyUrl,
+    ...(typeof row.workMode === 'string' && row.workMode.length <= 512 && row.workMode.trim() ? { workMode: row.workMode } : {}),
     ...(emailApplication ? { emailApplication } : {}),
     status: safeStatus,
     priority: normalizePriority(row.priority),
@@ -273,13 +275,14 @@ export function mergeTrackerIntoApplications(
   return [...byId.values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
-export function selectNextActionableOpportunity(snapshot: TrackerSnapshot): TrackerRow | null {
+export function selectNextActionableOpportunity(snapshot: TrackerSnapshot, mode: RecommendationWorkMode = 'any'): TrackerRow | null {
   // Prefer the latest high-priority Ready entry, not a hard-coded old employer.
   // This is a suggestion only; user selection and existing sessions remain authoritative.
   const locked = lockedIndeedPostingKeys(snapshot.applications.filter(row =>
     isSubmittedLocked(row) || normalizeStatus(row.status, row.appliedCheckbox) === 'closed' || row.appliedCheckbox
   ).map(row => row.applyUrl));
   const ready = snapshot.applications.filter((row) => {
+    if (!allowsAutomaticRecommendation(row, mode)) return false;
     if (applicationPreparationRank(row.notes, row.workMode) === null || !/^ready to apply$/i.test(row.status.trim()) || row.appliedCheckbox || isLockedIndeedPosting(row.applyUrl, locked)) return false;
     try {
       const url = new URL(row.applyUrl);
@@ -336,12 +339,13 @@ export function connectionFromSnapshot(
 export function selectNextHomeApplication(
   suggested: Application | null,
   existing: readonly Application[],
+  mode: RecommendationWorkMode = 'any',
 ): Application | null {
   const actionable = (item: Application) =>
     (item.status === 'saved' || item.status === 'preparing') &&
     !item.submissionEvidence && !item.reconciliationConflict;
   const locked = lockedIndeedPostingKeys(existing.filter(item => !actionable(item)).map(item => item.url));
-  const eligible = (item: Application) => actionable(item) && localApplicationPreparationRank(item.notes, item.opportunityDecision) !== null && !isLockedIndeedPosting(item.url, locked);
+  const eligible = (item: Application) => actionable(item) && localApplicationPreparationRank(item.notes, item.opportunityDecision) !== null && !isLockedIndeedPosting(item.url, locked) && allowsAutomaticRecommendation(item, mode);
   const reconciled = suggested ? existing.find(item => item.id === suggested.id) || suggested : null;
   if (reconciled && eligible(reconciled) && localApplicationPreparationRank(reconciled.notes, reconciled.opportunityDecision) === 0) return reconciled;
   const explicitlySelected = existing.find(item => eligible(item) && localApplicationPreparationRank(item.notes, item.opportunityDecision) === 0);

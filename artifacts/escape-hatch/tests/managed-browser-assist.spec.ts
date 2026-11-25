@@ -239,6 +239,7 @@ test('one explicit Home click opens the verified Thyme Care job and fills approv
     actions.push(action);
     if (action === 'launch') launches.push(route.request().postDataJSON());
     const result = action === 'status' ? { ok: true, state: 'idle', browserOpen: false } :
+      action === 'preferences' ? { ok: true, preferences: { schema_version: 'escapehatch-application-question-preferences/v1', exported_at: '2026-01-01T00:00:00Z', preferences: {}, recommendation_work_mode: 'any' } } :
       action === 'launch' ? { ok: true, state: 'application_form_open_review_required' } :
       action === 'fill' ? { ok: true, state: 'fields_partially_filled_review_required', filled: ['first_name'], skipped: ['unknown_question'] } :
       { ok: false, error: 'unexpected_action' };
@@ -251,7 +252,7 @@ test('one explicit Home click opens the verified Thyme Care job and fills approv
   await expect(page.getByTestId('managed-job-url')).toHaveValue(row.applyUrl);
   await expect(page.getByTestId('managed-browser-feedback')).toContainText('Filled: first_name');
   await expect(page.getByTestId('managed-browser-feedback')).toContainText('Skipped: unknown_question');
-  expect(launches).toEqual([{ url: row.applyUrl, opportunityId: trackerOpportunityId(row), employerName: 'Thyme Care' }]);
+  expect(launches).toEqual([{ url: row.applyUrl, opportunityId: trackerOpportunityId(row), employerName: 'Thyme Care', automaticRecommendation: true }]);
   expect(actions.filter((action) => ['launch', 'fill', 'prepare', 'attach'].includes(action))).toEqual(['launch', 'fill']);
   assertNeverSubmitted(actions);
   await page.reload();

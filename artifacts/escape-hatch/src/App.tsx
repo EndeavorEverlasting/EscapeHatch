@@ -1,5 +1,6 @@
 import { OpportunityDecisionGuide } from '@/components/opportunity-decision-guide';
 import type { OpportunityDecision } from '@/lib/opportunity-fit';
+import { useRecommendationWorkMode } from '@/components/use-recommendation-work-mode';
 import { forwardRef, type ChangeEvent, type FormEvent, type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/error-boundary';
@@ -619,12 +620,13 @@ function HomePage({ profile, answers, assistProfile, applications, setApplicatio
   };
   const liveSnapshot = tracker.status === 'CONNECTED' ? tracker.snapshot : null;
   const staleMeta = tracker.status === 'STALE' ? tracker : null;
-  const nextTracker = liveSnapshot ? selectNextActionableOpportunity(liveSnapshot) : null;
+  const recommendationMode = useRecommendationWorkMode();
+  const nextTracker = liveSnapshot && recommendationMode !== null ? selectNextActionableOpportunity(liveSnapshot, recommendationMode) : null;
   const nextTrackerApp = nextTracker ? trackerRowToApplication(nextTracker) : null;
   const active = applications.filter((application) => application.status !== 'closed');
   // Actionable next never resurrects applied/follow-up/closed work as a new puzzle.
   // Display may still show a local Applied confirmation when nothing else is on deck.
-  const nextActionable = selectNextHomeApplication(nextTrackerApp, applications);
+  const nextActionable = recommendationMode === null ? null : selectNextHomeApplication(nextTrackerApp, applications, recommendationMode);
   const next = nextActionable
     || active.find((application) => application.status === 'applied')
     || null;

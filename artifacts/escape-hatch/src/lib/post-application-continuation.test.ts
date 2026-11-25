@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { Application } from './storage.ts';
-import { recordedApplication, nextIndeedPosting } from './post-application-continuation.ts';
-import { evaluateOpportunityFit } from './opportunity-fit.ts';
+import { recordedApplication, nextIndeedPosting, nextIndeedApplication, isActiveApplicationBinding, reconcileLiveWorkplaceContradiction } from './post-application-continuation.ts';
+import { evaluateOpportunityFit, evaluateWorkplaceEligibility, allowsAutomaticRecommendation } from './opportunity-fit.ts';
 
 const a = (id: string, key: string, status: Application['status'] = 'saved', suffix = ''): Application => ({
   id, company: 'Synthetic employer', role: 'Engineer', url: 'https://www.indeed.com/viewjob?jk=' + key + suffix,
@@ -35,4 +35,78 @@ test('missing review or description does not invent a fit assessment', () => {
   assert.equal(evaluateOpportunityFit({ skills: ['Python'] }, 'Python').state, 'profile_review_required');
   assert.equal(evaluateOpportunityFit({ approvedAt: '2026-01-01', skills: ['Python'] }, '').state, 'description_required');
   assert.equal(evaluateOpportunityFit({ approvedAt: '2026-01-01', skills: [] }, 'Python').state, 'skills_required');
+});
+
+test('remote-only rejects explicit commute requirements even against a remote card', () => {
+  const evidence = { workMode: 'Remote', jobDescription: 'Ability to Commute:\n\n- Example Town, NY 00000 (Required)\n\nWork Location: In person' };
+  assert.equal(evaluateWorkplaceEligibility(evidence).state, 'required_commute');
+  assert.equal(allowsAutomaticRecommendation(evidence, 'remote_only'), false);
+  assert.equal(allowsAutomaticRecommendation(evidence, 'any'), true);
+});
+test('workplace evidence distinguishes hybrid, in-person, unknown, and explicit remote', () => {
+  for (const workMode of ['Hybrid', 'On-site', 'In person', 'Remote / Hybrid']) {
+    assert.equal(evaluateWorkplaceEligibility({ workMode }).state, 'non_remote_workplace');
+  }
+  assert.equal(evaluateWorkplaceEligibility({ jobDescription: 'Experience with remote desktop tools and remote interviews.' }).state, 'workplace_unverified');
+  assert.equal(evaluateWorkplaceEligibility({ workMode: 'Remote', jobDescription: 'Work Location: In person' }).state, 'non_remote_workplace');
+  assert.equal(evaluateWorkplaceEligibility({ jobDescription: 'Work Location: Remote' }).state, 'remote_confirmed');
+  assert.equal(evaluateWorkplaceEligibility({ workMode: 'Fully remote' }).state, 'remote_confirmed');
+});
+test('Indeed continuation skips ineligible and unknown postings without changing recorded outcomes', () => {
+  const onsite = { ...a('onsite', '2222222222222222'), workMode: 'In person' };
+  const ambiguous = a('unknown', '3333333333333333');
+  const remote = { ...next, workMode: 'Remote' };
+  assert.equal(nextIndeedPosting([done, onsite, ambiguous, remote], done.id, 'remote_only')?.url, 'https://www.indeed.com/viewjob?jk=1111111111111111');
+  assert.equal(nextIndeedPosting([done, onsite, ambiguous], done.id, 'remote_only'), null);
+  assert.equal(nextIndeedPosting([done, onsite], done.id)?.url, onsite.url);
+  const practice = { ...onsite, status: 'applied' as const };
+  assert.equal(recordedApplication({ opportunityId: practice.id, applicationUrl: practice.url }, [practice]), practice);
+});
+
+test('managed dispatch and ordinary-browser link share the exact eligible candidate', () => {
+  const remote = { ...next, workMode: 'Remote' };
+  const misleading = { ...a('misleading', '2222222222222222'), workMode: 'Remote', jobDescription: 'Work Location: In person' };
+  const candidates = [done, alias, misleading, remote];
+  const target = nextIndeedApplication(candidates, done.id, 'remote_only');
+  assert.equal(target, remote);
+  assert.equal(target?.url, remote.url);
+  assert.equal(nextIndeedPosting(candidates, done.id, 'remote_only')?.url, 'https://www.indeed.com/viewjob?jk=1111111111111111');
+  assert.equal(nextIndeedApplication(candidates.map(item => item.id === remote.id ? { ...item, status: 'applied' } : item), done.id, 'remote_only'), null);
+});
+
+test('pending preparation or auth resume cannot drift to another opportunity or a closed job', () => {
+  const binding = { opportunityId: next.id, applicationUrl: next.url };
+  assert.equal(isActiveApplicationBinding(binding, binding, [next]), true);
+  assert.equal(isActiveApplicationBinding(binding, { ...binding, opportunityId: alias.id }, [next, alias]), false);
+  assert.equal(isActiveApplicationBinding(binding, { ...binding, applicationUrl: alias.url }, [next, alias]), false);
+  assert.equal(isActiveApplicationBinding(binding, binding, [{ ...next, status: 'applied' }]), false);
+  assert.equal(isActiveApplicationBinding(binding, binding, [{ ...next, reconciliationConflict: 'opportunity_url_changed' }]), false);
+  const manual = { opportunityId: '', applicationUrl: 'https://jobs.example.com/apply/manual' };
+  assert.equal(isActiveApplicationBinding(manual, manual, [done]), true);
+  assert.equal(isActiveApplicationBinding({ opportunityId: '', applicationUrl: done.url }, { opportunityId: '', applicationUrl: done.url }, [done]), false);
+});
+
+test('live workplace contradiction updates workMode, preserves non-applied status, and advances to next remote-confirmed candidate', () => {
+  const contradicted = { ...a('contradicted', '3333333333333333'), workMode: 'Remote' };
+  const backup = { ...a('backup', '4444444444444444'), workMode: 'Remote' };
+  const res = reconcileLiveWorkplaceContradiction(
+    [done, contradicted, backup],
+    { opportunityId: contradicted.id, applicationUrl: contradicted.url },
+    'required_commute',
+    '2026-11-25T12:00:00Z',
+  );
+  assert.equal(res.updated, true);
+  const updatedRow = res.applications.find(item => item.id === contradicted.id);
+  assert.equal(updatedRow?.status, 'saved');
+  assert.equal(updatedRow?.workMode, 'Commute required (live posting)');
+  assert.equal(res.next?.id, backup.id);
+  // Bounded exclusion prevents cycling back to already-rejected candidates
+  const second = reconcileLiveWorkplaceContradiction(
+    res.applications,
+    { opportunityId: backup.id, applicationUrl: backup.url },
+    'non_remote_workplace',
+    '2026-11-25T12:01:00Z',
+    new Set([contradicted.id, backup.id]),
+  );
+  assert.equal(second.next, null);
 });

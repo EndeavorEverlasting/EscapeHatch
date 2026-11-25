@@ -119,6 +119,7 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
         return;
       }
       setDirty(false); setClearRequested(false); setRemovedQuestions([]);
+      window.dispatchEvent(new Event('escapehatch-recommendation-policy-changed'));
       setMessage(clear ? 'Shared EscapeHatch profile cleared on this computer.' : 'Shared EscapeHatch profile saved and read back. Fill will reuse these explicit answers across browsers on this account.');
     } catch { setMessage('Save failed. Your edits remain here; no successful persistence is claimed.'); }
     finally { setBusy(false); }
@@ -287,6 +288,16 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
       <p role="status" className="mt-2 text-sm">{copyStatus}</p>
     </section>}
     <fieldset disabled={!ready || busy}>
+      <section className="mt-4 rounded-xl border border-border p-4" aria-label="Job recommendation preferences">
+        <h3 className="font-display text-xl">Workplace eligibility</h3>
+        <label className="mt-3 flex items-start gap-2 text-sm">
+          <input type="checkbox" data-testid="remote-only-recommendation-toggle"
+            checked={data.recommendation_work_mode === 'remote_only'}
+            onChange={event => { markEdited(); setData(current => ({ ...current, recommendation_work_mode: event.target.checked ? 'remote_only' : 'any' })); }} />
+          Recommend only remote opportunities
+        </label>
+        <p className="mt-2 text-xs text-muted-foreground">Save to exclude on-site, hybrid, required-commute and unverified workplace listings from automatic recommendations. Manually selected opportunities remain available. Applying to an exception never changes this setting.</p>
+      </section>
       <section className="mt-4 rounded-xl border border-border p-4" aria-label="Applicant privacy acknowledgements">
         <h3 className="font-display text-xl">Applicant privacy acknowledgements</h3>
         <label className="mt-3 flex items-start gap-2 text-sm">

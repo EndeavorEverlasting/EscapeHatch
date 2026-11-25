@@ -21,6 +21,39 @@ export function evaluateOpportunityFit(profile: FitProfile, description?: string
   return { state: 'evidence_available', matched, notMentioned };
 }
 
+export type RecommendationWorkMode = 'any' | 'remote_only';
+type WorkplaceEvidence = { workMode?: string; jobDescription?: string };
+export type WorkplaceEligibility = {
+  state: 'remote_confirmed' | 'non_remote_workplace' | 'required_commute' | 'workplace_unverified';
+};
+
+/** Workplace eligibility precedes skill ranking; a search-card label cannot override a posting requirement. */
+export function evaluateWorkplaceEligibility(evidence: WorkplaceEvidence): WorkplaceEligibility {
+  const mode = typeof evidence.workMode === 'string' ? evidence.workMode.normalize('NFKC').trim().toLowerCase() : '';
+  const description = typeof evidence.jobDescription === 'string' ? evidence.jobDescription.normalize('NFKC').toLowerCase() : '';
+  const commute = /(?:ability to commute|commute requirements?)\s*:\s*(?:\n\s*)*[-•]?\s*[^\n]*\(\s*required\s*\)/i;
+  if (/\b(?:commute\s+required|required\s+commute)\b/.test(mode) ||
+      commute.test(description) || /\b(?:must commute|required to commute|commuting is required|commute is required)\b/.test(description)) {
+    return { state: 'required_commute' };
+  }
+  const labels = [...description.matchAll(/(?:^|\n)\s*(?:work location|workplace type|work mode|work arrangement)\s*:\s*([^\n]+)/g)].map(match => match[1].trim());
+  const nonRemote = /\b(?:in[\s-]+person|on[\s-]?site|hybrid|office[\s-]+based)\b/;
+  if ([mode, ...labels].some(value => nonRemote.test(value)) ||
+      /\b(?:this (?:is a|role is|position is) (?:fully )?(?:on[\s-]?site|hybrid|in[\s-]+person)|must work (?:on[\s-]?site|in[\s-]+person)|not (?:a )?remote)\b/.test(description)) {
+    return { state: 'non_remote_workplace' };
+  }
+  const remote = /^(?:(?:fully|100%)\s+)?remote(?:\s*\([^)]*\))?$/;
+  if ([mode, ...labels].some(value => remote.test(value)) ||
+      /\bthis (?:is a|role is|position is) (?:fully|100%) remote\b/.test(description)) {
+    return { state: 'remote_confirmed' };
+  }
+  return { state: 'workplace_unverified' };
+}
+
+/** Manual selection remains available; an exception does not change the recommendation policy. */
+export function allowsAutomaticRecommendation(evidence: WorkplaceEvidence, mode: RecommendationWorkMode = 'any'): boolean {
+  return mode === 'any' || evaluateWorkplaceEligibility(evidence).state === 'remote_confirmed';
+}
 
 export type WorkMode = 'remote' | 'hybrid' | 'on_site' | 'unknown';
 export type OpportunityMatchInput = {

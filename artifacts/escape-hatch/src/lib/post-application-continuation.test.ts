@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { Application } from './storage.ts';
 import { recordedApplication, nextIndeedPosting } from './post-application-continuation.ts';
-import { evaluateOpportunityFit } from './opportunity-fit.ts';
+import { evaluateOpportunityFit, evaluateWorkplaceEligibility, allowsAutomaticRecommendation } from './opportunity-fit.ts';
 
 const a = (id: string, key: string, status: Application['status'] = 'saved', suffix = ''): Application => ({
   id, company: 'Synthetic employer', role: 'Engineer', url: 'https://www.indeed.com/viewjob?jk=' + key + suffix,
@@ -35,4 +35,30 @@ test('missing review or description does not invent a fit assessment', () => {
   assert.equal(evaluateOpportunityFit({ skills: ['Python'] }, 'Python').state, 'profile_review_required');
   assert.equal(evaluateOpportunityFit({ approvedAt: '2026-01-01', skills: ['Python'] }, '').state, 'description_required');
   assert.equal(evaluateOpportunityFit({ approvedAt: '2026-01-01', skills: [] }, 'Python').state, 'skills_required');
+});
+
+test('remote-only rejects explicit commute requirements even against a remote card', () => {
+  const evidence = { workMode: 'Remote', jobDescription: 'Ability to Commute:\n\n- Example Town, NY 00000 (Required)\n\nWork Location: In person' };
+  assert.equal(evaluateWorkplaceEligibility(evidence).state, 'required_commute');
+  assert.equal(allowsAutomaticRecommendation(evidence, 'remote_only'), false);
+  assert.equal(allowsAutomaticRecommendation(evidence, 'any'), true);
+});
+test('workplace evidence distinguishes hybrid, in-person, unknown, and explicit remote', () => {
+  for (const workMode of ['Hybrid', 'On-site', 'In person', 'Remote / Hybrid']) {
+    assert.equal(evaluateWorkplaceEligibility({ workMode }).state, 'non_remote_workplace');
+  }
+  assert.equal(evaluateWorkplaceEligibility({ jobDescription: 'Experience with remote desktop tools and remote interviews.' }).state, 'workplace_unverified');
+  assert.equal(evaluateWorkplaceEligibility({ workMode: 'Remote', jobDescription: 'Work Location: In person' }).state, 'non_remote_workplace');
+  assert.equal(evaluateWorkplaceEligibility({ jobDescription: 'Work Location: Remote' }).state, 'remote_confirmed');
+  assert.equal(evaluateWorkplaceEligibility({ workMode: 'Fully remote' }).state, 'remote_confirmed');
+});
+test('Indeed continuation skips ineligible and unknown postings without changing recorded outcomes', () => {
+  const onsite = { ...a('onsite', '2222222222222222'), workMode: 'In person' };
+  const ambiguous = a('unknown', '3333333333333333');
+  const remote = { ...next, workMode: 'Remote' };
+  assert.equal(nextIndeedPosting([done, onsite, ambiguous, remote], done.id, 'remote_only')?.url, 'https://www.indeed.com/viewjob?jk=1111111111111111');
+  assert.equal(nextIndeedPosting([done, onsite, ambiguous], done.id, 'remote_only'), null);
+  assert.equal(nextIndeedPosting([done, onsite], done.id)?.url, onsite.url);
+  const practice = { ...onsite, status: 'applied' as const };
+  assert.equal(recordedApplication({ opportunityId: practice.id, applicationUrl: practice.url }, [practice]), practice);
 });

@@ -1,3 +1,5 @@
+import { evaluateWorkplaceEligibility } from './src/lib/opportunity-fit.ts';
+import { indeedPostingKey } from './src/lib/indeed-posting-identity.ts';
 import { selectInstalledHostWorkspace, readHostWorkspaceOwner } from './workspace-owner-file.ts';
 import { readWorkspace } from './workspace-file.ts';
 import { prepareWithoutTrustedNavigation } from './managed-prepare-fallback.ts';
@@ -924,6 +926,10 @@ export function createManagedBrowserAssistPlugin(): Plugin {
           }
           if (url.pathname === PREFIX + '/launch') {
             const jobUrl = validateApplicationUrl(payload.url);
+            const automaticRecommendation = payload.automaticRecommendation === true;
+            // Read the private policy at the host immediately before dispatch.
+            const remoteOnly = automaticRecommendation && (await readPreferences()).recommendation_work_mode === 'remote_only';
+            const postingKey = remoteOnly ? indeedPostingKey(jobUrl) : null;
             const talentCommunity = isCognizantTalentCommunity(jobUrl);
             if (talentCommunity !== (payload.opportunityId === COGNIZANT_TALENT_ID)) {
               return respond(res, 409, { ok: false, error: 'talent_community_scope_mismatch' });
@@ -957,6 +963,7 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               page = restoredPage;
               await page.bringToFront();
               state = 'application_restored_review_required';
+              if (remoteOnly && postingKey) return respond(res, 409, { ok: false, error: 'Remote-only recommendation paused: review the restored posting or application tab manually.' });
             } else {
               // New work gets a blank page; NEVER navigate a different live employer
               // tab (including one held in the Vite hot-reload cache).
@@ -968,6 +975,23 @@ export function createManagedBrowserAssistPlugin(): Plugin {
               try {
                 await page.goto(jobUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
                 state = 'application_open_review_required';
+                if (remoteOnly && postingKey) {
+                  // Require the exact live posting and its rendered description before Apply.
+                  let workplace = 'workplace_unverified';
+                  try {
+                    if (indeedPostingKey(page.url()) === postingKey) {
+                      const description = page.locator('#jobDescriptionText');
+                      if (await description.count() === 1 && await description.isVisible()) {
+                        const text = await description.innerText({ timeout: 3000 });
+                        if (indeedPostingKey(page.url()) === postingKey) workplace = evaluateWorkplaceEligibility({ jobDescription: text }).state;
+                      }
+                    }
+                  } catch { /* missing evidence is not permission */ }
+                  if (workplace !== 'remote_confirmed') {
+                    state = 'workplace_review_required';
+                    return respond(res, 409, { ok: false, error: 'Remote-only recommendation withheld: ' + workplace + '. No application entry was opened.' });
+                  }
+                }
                 if (!talentCommunity && await openApplicationForm(page)) state = 'application_form_open_review_required';
                 // A community enrollment must not click a site Apply/Join control while opening.
               } catch (error) {

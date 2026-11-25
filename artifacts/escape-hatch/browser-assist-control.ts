@@ -989,7 +989,16 @@ export function createManagedBrowserAssistPlugin(): Plugin {
                   } catch { /* missing evidence is not permission */ }
                   if (workplace !== 'remote_confirmed') {
                     state = 'workplace_review_required';
-                    return respond(res, 409, { ok: false, error: 'Remote-only recommendation withheld: ' + workplace + '. No application entry was opened.' });
+                    const contradicted = workplace === 'non_remote_workplace' || workplace === 'required_commute';
+                    return respond(res, 409, {
+                      ok: false,
+                      code: 'workplace_eligibility_rejected',
+                      workplaceState: workplace,
+                      contradicted,
+                      opportunityId: typeof payload.opportunityId === 'string' ? payload.opportunityId : '',
+                      applicationUrl: jobUrl,
+                      error: 'Remote-only recommendation withheld: ' + workplace + '. No application entry was opened.',
+                    });
                   }
                 }
                 if (!talentCommunity && await openApplicationForm(page)) state = 'application_form_open_review_required';

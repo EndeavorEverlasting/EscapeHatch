@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { Application } from './storage.ts';
-import { recordedApplication, nextIndeedPosting, nextIndeedApplication, isActiveApplicationBinding } from './post-application-continuation.ts';
+import { recordedApplication, nextIndeedPosting, nextIndeedApplication, isActiveApplicationBinding, reconcileLiveWorkplaceContradiction } from './post-application-continuation.ts';
 import { evaluateOpportunityFit, evaluateWorkplaceEligibility, allowsAutomaticRecommendation } from './opportunity-fit.ts';
 
 const a = (id: string, key: string, status: Application['status'] = 'saved', suffix = ''): Application => ({
@@ -81,4 +81,32 @@ test('pending preparation or auth resume cannot drift to another opportunity or 
   assert.equal(isActiveApplicationBinding(binding, { ...binding, applicationUrl: alias.url }, [next, alias]), false);
   assert.equal(isActiveApplicationBinding(binding, binding, [{ ...next, status: 'applied' }]), false);
   assert.equal(isActiveApplicationBinding(binding, binding, [{ ...next, reconciliationConflict: 'opportunity_url_changed' }]), false);
+  const manual = { opportunityId: '', applicationUrl: 'https://jobs.example.com/apply/manual' };
+  assert.equal(isActiveApplicationBinding(manual, manual, [done]), true);
+  assert.equal(isActiveApplicationBinding({ opportunityId: '', applicationUrl: done.url }, { opportunityId: '', applicationUrl: done.url }, [done]), false);
+});
+
+test('live workplace contradiction updates workMode, preserves non-applied status, and advances to next remote-confirmed candidate', () => {
+  const contradicted = { ...a('contradicted', '3333333333333333'), workMode: 'Remote' };
+  const backup = { ...a('backup', '4444444444444444'), workMode: 'Remote' };
+  const res = reconcileLiveWorkplaceContradiction(
+    [done, contradicted, backup],
+    { opportunityId: contradicted.id, applicationUrl: contradicted.url },
+    'required_commute',
+    '2026-11-25T12:00:00Z',
+  );
+  assert.equal(res.updated, true);
+  const updatedRow = res.applications.find(item => item.id === contradicted.id);
+  assert.equal(updatedRow?.status, 'saved');
+  assert.equal(updatedRow?.workMode, 'Commute required (live posting)');
+  assert.equal(res.next?.id, backup.id);
+  // Bounded exclusion prevents cycling back to already-rejected candidates
+  const second = reconcileLiveWorkplaceContradiction(
+    res.applications,
+    { opportunityId: backup.id, applicationUrl: backup.url },
+    'non_remote_workplace',
+    '2026-11-25T12:01:00Z',
+    new Set([contradicted.id, backup.id]),
+  );
+  assert.equal(second.next, null);
 });

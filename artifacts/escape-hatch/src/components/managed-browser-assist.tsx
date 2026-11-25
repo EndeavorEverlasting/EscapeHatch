@@ -1,7 +1,7 @@
 import { useOpportunityDocuments } from './opportunity-documents';
 import { ApplicationPuzzle } from './application-puzzle';
 import { ApplicationOutcome } from './application-outcome';
-import { recordedApplication, nextIndeedPosting, nextIndeedApplication, isActiveApplicationBinding, type OutcomeBinding } from '@/lib/post-application-continuation';
+import { recordedApplication, nextIndeedPosting, nextIndeedApplication, isActiveApplicationBinding, reconcileLiveWorkplaceContradiction, type LiveWorkplaceContradictionState, type OutcomeBinding } from '@/lib/post-application-continuation';
 import { allowsAutomaticRecommendation, evaluateOpportunityFit } from '@/lib/opportunity-fit';
 import { useRecommendationWorkMode } from './use-recommendation-work-mode';
 import { isLockedIndeedPosting, lockedIndeedPostingKeys } from '@/lib/indeed-posting-identity';
@@ -53,6 +53,9 @@ type ServerResponse = {
   needsOpportunityConfirmation?: boolean;
   currentPage?: CurrentApplicationPage | null;
   error?: string;
+  code?: string;
+  workplaceState?: string;
+  contradicted?: boolean;
   filled?: string[];
   evidenceSummary?: string;
   networkDiagnosis?: { code: 'VPN_INTERFERENCE_SUSPECTED' | 'NETWORK_FAILURE_UNATTRIBUTED' | 'NAVIGATION_FAILURE_UNCLASSIFIED'; causeVerified: false; vpnCandidateDetected: boolean } | null;
@@ -75,6 +78,18 @@ type ServerResponse = {
   trackerSync?: { state: string; pending: number; synced: number; authRequired: number; conflicts: number; retryRequired: number };
 };
 
+class ManagedAssistError extends Error {
+  code?: string;
+  workplaceState?: string;
+  contradicted?: boolean;
+  constructor(message: string, details?: { code?: string; workplaceState?: string; contradicted?: boolean }) {
+    super(message);
+    this.code = details?.code;
+    this.workplaceState = details?.workplaceState;
+    this.contradicted = details?.contradicted;
+  }
+}
+
 async function request(endpoint: string, body?: object): Promise<ServerResponse> {
   const response = await fetch(API + endpoint, body ? {
     method: 'POST',
@@ -83,7 +98,13 @@ async function request(endpoint: string, body?: object): Promise<ServerResponse>
     body: JSON.stringify(body),
   } : { credentials: 'same-origin' });
   const json = await response.json() as ServerResponse;
-  if (!response.ok || !json.ok) throw new Error(json.error || 'Local browser action failed.');
+  if (!response.ok || !json.ok) {
+    throw new ManagedAssistError(json.error || 'Local browser action failed.', {
+      code: json.code,
+      workplaceState: json.workplaceState,
+      contradicted: json.contradicted,
+    });
+  }
   return json;
 }
 
@@ -93,6 +114,7 @@ const titles: Record<string, string> = {
   application_open_review_required: 'Application opened — sign in if requested',
   application_restored_review_required: 'Existing application recovered — review entered answers',
   application_form_open_review_required: 'Application form opened — ready to fill',
+  workplace_review_required: 'Workplace eligibility withheld — review or continue',
   browser_open_navigation_unverified: 'Chrome opened — verify the URL manually',
   fields_filled_review_required: 'Verified fields read back — review the page',
   fields_partially_filled_review_required: 'Some fields verified — other fields need review',
@@ -141,6 +163,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const [selectedOpportunityId, setSelectedOpportunityId] = useState('');
   const [dismissedOutcomeId, setDismissedOutcomeId] = useState('');
   const [nextDispatch, setNextDispatch] = useState<(OutcomeBinding & { completedId: string }) | null>(null);
+  const workplaceRejectedIds = useRef<Set<string>>(new Set());
   const operatorSelected = useRef(false);
   const [savedJourney, setSavedJourney] = useState(() => readStoredValue(getLocalStorage(), JOURNEY_RESUME_KEY, EMPTY_JOURNEY_RESUME, parseJourneyResume));
   const autoLaunchAttempted = useRef(false);
@@ -227,6 +250,12 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   });
 
   useEffect(() => {
+    if (recommendationMode === null) {
+      setVerifiedNextReadyId(null);
+      setTrackerChecked(false);
+      return;
+    }
+    const mode = recommendationMode;
     let active = true;
     // Direct /assist shares Home's provider-bound read-only refresh; stale data never
     // authorizes an automatic browser launch. Preserve the prior snapshot on failure.
@@ -234,7 +263,6 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     setTrackerChecked(false);
     async function hydrateTracker() {
       try {
-        if (recommendationMode === null) return;
         const response = await fetch('/__escapehatch/tracker/status', { credentials: 'same-origin' });
         if (!response.ok) return;
         const original = await response.json() as TrackerStatusEnvelope;
@@ -243,7 +271,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         const snapshot = parseTrackerSnapshot(current.snapshot);
         if (!snapshot || connectionFromSnapshot(snapshot).status !== 'CONNECTED') return;
         setApplications((existing) => mergeTrackerIntoApplications(existing, snapshot));
-        const next = selectNextActionableOpportunity(snapshot, recommendationMode);
+        const next = selectNextActionableOpportunity(snapshot, mode);
         if (next?.applyUrl && !isSubmittedLocked(next)) setVerifiedNextReadyId(trackerOpportunityId(next));
       } catch {
         // Local selection remains available. Failed authorization/refresh never
@@ -541,7 +569,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         if (locked.some(item => item.url === url) || isLockedIndeedPosting(url, lockedIndeedPostingKeys(locked.map(item => item.url)))) {
           throw new Error('This opportunity is already applied or closed. Do not reapply.');
         }
-        body = { url, opportunityId: opportunity?.id || '', employerName: opportunity?.company || '', automaticRecommendation };
+        body = { url, opportunityId: opportunity?.id || '', employerName: opportunity?.company || '', ...(automaticRecommendation ? { automaticRecommendation: true } : {}) };
       } else if (action === 'fill' || action === 'resume') {
         if (currentPage && (url !== currentPage.applicationUrl || currentPage.opportunityId &&
             (currentPage.opportunityId !== selectedOpportunityId || !applications.some(item =>
@@ -610,10 +638,11 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         const launchedOpportunity = applications.find(item => item.id === selectedOpportunityId && item.url === url);
         if (launchedOpportunity) rememberOpportunity(launchedOpportunity);
         const binding = launchedOpportunity ? { opportunityId: launchedOpportunity.id, applicationUrl: launchedOpportunity.url } : null;
+        const loginBinding = binding ?? (url ? { opportunityId: '', applicationUrl: url } : null);
         setPendingAfterLogin(result.authCheckpoint?.phase === 'AUTH_HANDOFF' ||
-          result.authCheckpoint?.phase === 'SESSION_ORIGIN_CHANGED' ? binding : null);
+          result.authCheckpoint?.phase === 'SESSION_ORIGIN_CHANGED' ? loginBinding : null);
         // The effect revalidates the exact job and reviewed materials before preparing.
-        if (launchedApplicationForm && binding) setAutoPrepareRequested(binding);
+        if (launchedApplicationForm && binding && documents.canAutoPrepare) setAutoPrepareRequested(binding);
         setPreparation(null);
         setApplications((items) => {
           const existing = items.find((item) => item.id === selectedOpportunityId && item.url === url);
@@ -658,7 +687,37 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         );
       }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Action failed.');
+      if (action === 'launch' && automaticRecommendation && error instanceof ManagedAssistError &&
+          error.code === 'workplace_eligibility_rejected' && error.contradicted &&
+          (error.workplaceState === 'non_remote_workplace' || error.workplaceState === 'required_commute')) {
+        const workplaceState: LiveWorkplaceContradictionState = error.workplaceState;
+        if (selectedOpportunityId) workplaceRejectedIds.current.add(selectedOpportunityId);
+        const reconciled = reconcileLiveWorkplaceContradiction(
+          applications,
+          { opportunityId: selectedOpportunityId, applicationUrl: url },
+          workplaceState,
+          new Date().toISOString(),
+          workplaceRejectedIds.current,
+        );
+        if (reconciled.updated) setApplications(reconciled.applications);
+        setStatus('workplace_review_required');
+        if (reconciled.next) {
+          operatorSelected.current = false;
+          setSelectedOpportunityId(reconciled.next.id);
+          setUrl(reconciled.next.url);
+          setNextDispatch({
+            opportunityId: reconciled.next.id,
+            applicationUrl: reconciled.next.url,
+            completedId: selectedOpportunityId,
+          });
+          setMessage('Skipped posting after live workplace check (' + workplaceState + '). Advancing to next remote-confirmed job: ' + reconciled.next.company + ' — ' + reconciled.next.role + '.');
+        } else {
+          setNextDispatch(null);
+          setMessage('Skipped posting after live workplace check (' + workplaceState + '). No other remote-confirmed opportunities remain.');
+        }
+      } else {
+        setMessage(error instanceof Error ? error.message : 'Action failed.');
+      }
     } finally {
       setBusy(false);
     }

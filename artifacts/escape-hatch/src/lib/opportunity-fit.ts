@@ -32,7 +32,8 @@ export function evaluateWorkplaceEligibility(evidence: WorkplaceEvidence): Workp
   const mode = typeof evidence.workMode === 'string' ? evidence.workMode.normalize('NFKC').trim().toLowerCase() : '';
   const description = typeof evidence.jobDescription === 'string' ? evidence.jobDescription.normalize('NFKC').toLowerCase() : '';
   const commute = /(?:ability to commute|commute requirements?)\s*:\s*(?:\n\s*)*[-•]?\s*[^\n]*\(\s*required\s*\)/i;
-  if (commute.test(description) || /\b(?:must commute|required to commute|commuting is required|commute is required)\b/.test(description)) {
+  if (/\b(?:commute\s+required|required\s+commute)\b/.test(mode) ||
+      commute.test(description) || /\b(?:must commute|required to commute|commuting is required|commute is required)\b/.test(description)) {
     return { state: 'required_commute' };
   }
   const labels = [...description.matchAll(/(?:^|\n)\s*(?:work location|workplace type|work mode|work arrangement)\s*:\s*([^\n]+)/g)].map(match => match[1].trim());

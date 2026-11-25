@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { Application } from './storage.ts';
-import { recordedApplication, nextIndeedPosting } from './post-application-continuation.ts';
+import { recordedApplication, nextIndeedPosting, nextIndeedApplication } from './post-application-continuation.ts';
 import { evaluateOpportunityFit, evaluateWorkplaceEligibility, allowsAutomaticRecommendation } from './opportunity-fit.ts';
 
 const a = (id: string, key: string, status: Application['status'] = 'saved', suffix = ''): Application => ({
@@ -61,4 +61,15 @@ test('Indeed continuation skips ineligible and unknown postings without changing
   assert.equal(nextIndeedPosting([done, onsite], done.id)?.url, onsite.url);
   const practice = { ...onsite, status: 'applied' as const };
   assert.equal(recordedApplication({ opportunityId: practice.id, applicationUrl: practice.url }, [practice]), practice);
+});
+
+test('managed dispatch and ordinary-browser link share the exact eligible candidate', () => {
+  const remote = { ...next, workMode: 'Remote' };
+  const misleading = { ...a('misleading', '2222222222222222'), workMode: 'Remote', jobDescription: 'Work Location: In person' };
+  const candidates = [done, alias, misleading, remote];
+  const target = nextIndeedApplication(candidates, done.id, 'remote_only');
+  assert.equal(target, remote);
+  assert.equal(target?.url, remote.url);
+  assert.equal(nextIndeedPosting(candidates, done.id, 'remote_only')?.url, 'https://www.indeed.com/viewjob?jk=1111111111111111');
+  assert.equal(nextIndeedApplication(candidates.map(item => item.id === remote.id ? { ...item, status: 'applied' } : item), done.id, 'remote_only'), null);
 });

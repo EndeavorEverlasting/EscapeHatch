@@ -74,6 +74,7 @@ export function JourneyAtlas({ applications }: { applications: Application[] }) 
       </ol>
       <div id="journey-scene-inspection" className="journey-atlas-inspection mt-5 rounded-2xl border border-primary/20 bg-primary/5 p-5" data-testid="journey-selected-step">
         <div aria-live="polite" aria-atomic="true">
+        <img key={stage.id} src="/escapehatch-mascot.webp" alt="" width={48} height={48} className="tutorial-scene-avatar h-12 w-12" />
         <h3 className="mt-2 font-display text-3xl">{stage.title}</h3>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">{stage.detail}</p>
         </div>

@@ -1,7 +1,7 @@
 import { useOpportunityDocuments } from './opportunity-documents';
 import { ApplicationPuzzle } from './application-puzzle';
 import { ApplicationOutcome } from './application-outcome';
-import { recordedApplication, nextIndeedPosting, nextIndeedApplication, type OutcomeBinding } from '@/lib/post-application-continuation';
+import { recordedApplication, nextIndeedPosting, nextIndeedApplication, isActiveApplicationBinding, type OutcomeBinding } from '@/lib/post-application-continuation';
 import { allowsAutomaticRecommendation, evaluateOpportunityFit } from '@/lib/opportunity-fit';
 import { useRecommendationWorkMode } from './use-recommendation-work-mode';
 import { isLockedIndeedPosting, lockedIndeedPostingKeys } from '@/lib/indeed-posting-identity';
@@ -500,9 +500,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     if (!autoPrepareRequested || busy || documents.loading || documents.intakePending || !browserOpen) return;
     const binding = autoPrepareRequested;
     setAutoPrepareRequested(null);
-    if (binding.opportunityId !== selectedOpportunityId || binding.applicationUrl !== url ||
-        !applications.some(item => item.id === binding.opportunityId && item.url === binding.applicationUrl &&
-          (item.status === 'saved' || item.status === 'preparing') && !item.submissionEvidence && !item.reconciliationConflict)) {
+    if (!isActiveApplicationBinding(binding, { opportunityId: selectedOpportunityId, applicationUrl: url }, applications)) {
       setMessage('Automatic preparation cancelled: the original opportunity changed.'); return;
     }
     if (!documents.canAutoPrepare) { setMessage('Automatic preparation paused: save the résumé and complete its required review.'); return; }
@@ -513,9 +511,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     if (!pendingAfterLogin || !authCheckpoint?.canResume || needsOpportunityConfirmation || busy || !browserOpen) return;
     const binding = pendingAfterLogin;
     setPendingAfterLogin(null);
-    if (binding.opportunityId !== selectedOpportunityId || binding.applicationUrl !== url ||
-        !applications.some(item => item.id === binding.opportunityId && item.url === binding.applicationUrl &&
-          (item.status === 'saved' || item.status === 'preparing') && !item.submissionEvidence && !item.reconciliationConflict)) return;
+    if (!isActiveApplicationBinding(binding, { opportunityId: selectedOpportunityId, applicationUrl: url }, applications)) return;
     // Same scoped launch: guarded resume must succeed before preparation can continue.
     // The host still controls verified effects, required fields and final Submit.
     void run('resume', false, true);

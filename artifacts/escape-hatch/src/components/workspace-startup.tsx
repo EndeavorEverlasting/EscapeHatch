@@ -172,7 +172,7 @@ export function WorkspaceStartup({ children }: { children: ReactNode }) {
   </aside> : null;
   if (ready) return <>{syntheticNotice}{managed && <><aside className="fixed bottom-3 left-3 z-50 max-w-[min(24rem,calc(100vw-1.5rem))] rounded-lg border border-border bg-card/95 px-3 py-2 text-xs shadow-lg backdrop-blur-md lg:left-[260px]" role={blocked.current ? 'alert' : 'status'}>{message}</aside>{!containerWorkspace && <ExtensionWorkspaceStatus />}</>}{children}</>;
   return <>{syntheticNotice}<main className="mx-auto max-w-2xl px-6 py-16">
-    <p className="text-primary">EscapeHatch · Your private workspace</p>
+    <div className="flex items-center gap-3"><img src="/escapehatch-mascot.webp" alt="" width={56} height={56} data-testid="startup-recovery-avatar" className="h-14 w-14 shrink-0" /><div><p className="text-primary">EscapeHatch · Your private workspace</p><p className="mt-1 text-sm text-muted-foreground">I will help you recover or create a workspace before you continue. Your existing data stays protected.</p></div></div>
     <h1 className="my-5 font-display text-4xl">{needsContext ? 'Bring your work with you.' : conflicts ? 'Review your saved copies.' : 'Recover your workspace.'}</h1>
     <p role="status" className="mb-6 leading-relaxed">{message}</p>
     <div className="flex flex-wrap gap-4">

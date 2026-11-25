@@ -12,14 +12,21 @@ export function recordedApplication(binding: OutcomeBinding | null, applications
 }
 
 /** Only saved, actionable, distinct postings; never route through a survey or a redirect. */
-export function nextIndeedPosting(applications: readonly Application[], completedId: string, mode: RecommendationWorkMode = 'any') {
+export function nextIndeedApplication(applications: readonly Application[], completedId: string, mode: RecommendationWorkMode = 'any'): Application | null {
   const actionable = (item: Application) => (item.status === 'saved' || item.status === 'preparing') &&
     !item.submissionEvidence && !item.reconciliationConflict && item.id !== completedId;
   const locked = lockedIndeedPostingKeys(applications.filter(item => !actionable(item)).map(item => item.url));
   for (const item of applications) {
     if (!actionable(item) || isLockedIndeedPosting(item.url, locked) || !allowsAutomaticRecommendation(item, mode)) continue;
     const url = directIndeedPostingUrl(item.url);
-    if (url) return { url, company: item.company, role: item.role };
+    if (url) return item;
   }
   return null;
+}
+
+/** External links are a projection of the same candidate used for managed dispatch. */
+export function nextIndeedPosting(applications: readonly Application[], completedId: string, mode: RecommendationWorkMode = 'any') {
+  const item = nextIndeedApplication(applications, completedId, mode);
+  const url = item && directIndeedPostingUrl(item.url);
+  return item && url ? { url, company: item.company, role: item.role } : null;
 }

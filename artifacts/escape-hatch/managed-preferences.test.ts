@@ -458,3 +458,59 @@ test('newly recognized historical question memory survives parsing but is not au
   const review = savedAnswerReviewRows(parsed);
   assert.equal(review.find(row => row.id === 'discovered:' + normalized)?.reusable, false);
 });
+
+
+test('optional communications default to decline without implying consent or overriding saved preferences', () => {
+  const sms = 'marketing.recruiting_sms_opt_in';
+  const updates = 'marketing.recruiting_updates_opt_in';
+  const disclosure = 'By selecting Yes, I consent to receive informational recruiting related text messages from Example Employer at the mobile number provided. Message and data rates may apply. Selecting No will not remove me from consideration for the position.';
+  const prefs = emptyPreferences();
+  assert.equal(matchQuestion(disclosure), sms);
+  assert.equal(reusableValue(sms, prefs), 'No');
+  assert.equal(reusableValue(updates, prefs), 'No');
+  assert.equal(matchQuestion('Would you like to receive promotional communications?'), updates);
+  assert.deepEqual(prefs.preferences, {});
+  assert.equal(reusableValue(sms, parsePreferences(prefs)!), 'No');
+  assert.equal(matchQuestion(disclosure.replace('will not remove', 'will remove')), null);
+  assert.equal(matchQuestion(disclosure + ' I agree to the terms of employment.'), null);
+  assert.equal(matchQuestion(disclosure + ' I authorize a background check.'), null);
+  assert.equal(matchQuestion('I consent to processing my personal data for this application'), null);
+  assert.equal(reusableValue('talent_community.marketing_consent', prefs), null);
+  prefs.preferences[updates] = { scope: 'profile_preference', source: 'user', value: 'Yes', updated_at: prefs.exported_at };
+  assert.equal(reusableValue(updates, prefs), 'Yes');
+  assert.equal(reusableValue(sms, prefs), 'No');
+  prefs.preferences[sms] = { scope: 'profile_preference', source: 'user', value: 'Maybe', updated_at: prefs.exported_at };
+  assert.equal(reusableValue(sms, prefs), null);
+});
+
+test('optional communications fill only binary choices, preserve manual choices, and do not submit', async () => {
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  try {
+    const page = await browser.newPage();
+    await page.setContent(`<form onsubmit="window.submitted = true; return false">
+      <fieldset><legend>By selecting Yes, I consent to receive informational recruiting related text messages from Example Employer. Selecting No will not remove me from consideration for the position.</legend>
+        <label><input id="sms-y" type="radio" name="sms" value="y">Yes</label>
+        <label><input id="sms-n" type="radio" name="sms" value="n">No</label></fieldset>
+      <label>Would you like to receive promotional communications?<select id="promo"><option value="">Choose</option><option value="y">Yes</option><option value="n">No</option></select></label>
+      <label>I consent to processing my personal data for this application<input id="legal" type="checkbox" required></label>
+      <button type="submit">Submit</button></form>`);
+    const prefs = emptyPreferences();
+    const result = await fillSavedPreferences(page, prefs);
+    assert.ok(result.filled.includes('marketing.recruiting_sms_opt_in'));
+    assert.equal(await page.locator('#sms-n').isChecked(), true);
+    assert.equal(await page.locator('#promo').inputValue(), 'n');
+    assert.equal(await page.locator('#legal').isChecked(), false);
+    await page.locator('#sms-y').check();
+    await page.locator('#promo').selectOption('y');
+    await fillSavedPreferences(page, prefs);
+    assert.equal(await page.locator('#sms-y').isChecked(), true);
+    assert.equal(await page.locator('#promo').inputValue(), 'y');
+    assert.equal(await page.evaluate(() => (window as unknown as { submitted?: boolean }).submitted), undefined);
+    await page.setContent(`<label>Would you like to receive promotional communications?<input id="freeform"></label>`);
+    await fillSavedPreferences(page, prefs);
+    assert.equal(await page.locator('#freeform').inputValue(), '');
+    await page.setContent(`<label>Would you like to receive promotional communications?<select id="ambiguous"><option value="">Choose</option><option value="y">Yes</option><option value="n">No</option><option value="m">Maybe</option></select></label>`);
+    await fillSavedPreferences(page, prefs);
+    assert.equal(await page.locator('#ambiguous').inputValue(), '');
+  } finally { await browser.close(); }
+});

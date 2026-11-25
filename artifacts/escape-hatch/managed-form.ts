@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { matchQuestion, normalizeQuestion, discoveredValue, optionMatches, reusableValue, isRoutineApplicantPrivacyAcknowledgement, roleQuestionKey, type Preferences } from './src/lib/application-preferences.ts';
+import { matchQuestion, normalizeQuestion, discoveredValue, optionMatches, reusableValue, isRoutineApplicantPrivacyAcknowledgement, isOptionalCommunicationsPreference, roleQuestionKey, type Preferences } from './src/lib/application-preferences.ts';
 import { assertEmployerFacingDocumentUrl } from './src/lib/employer-facing-document-url.ts';
 
 export type FillOutcome = { filled: string[]; skipped: string[] };
@@ -178,6 +178,10 @@ export async function fillSavedPreferences(page: Page, preferences: Preferences,
     if (['hidden', 'file', 'password', 'submit', 'button', 'reset'].includes(descriptor.type)) continue;
     if (ids[index].length !== 1) { result.skipped.push('unmapped_or_ambiguous'); continue; }
     const id = ids[index][0];
+    const communications = isOptionalCommunicationsPreference(id);
+    if (communications && !['radio', 'toggle', 'select'].includes(descriptor.type)) {
+      result.skipped.push(id + ':unsupported_consent_control'); continue;
+    }
     if (preferences.optional_omissions?.includes(id) && !await control.evaluate(element => {
       const field = element as HTMLInputElement;
       const labelText = Array.from(field.labels || []).map(label => label.textContent || '').join(' ');
@@ -206,6 +210,13 @@ export async function fillSavedPreferences(page: Page, preferences: Preferences,
       // Prefer the actual tel control only when present; multiple tel controls still fail closed.
       if (id === 'identity.phone' && peers.some(i => descriptors[i].type === 'tel')) peers = peers.filter(i => descriptors[i].type === 'tel');
       if (!peers.includes(index)) continue;
+      // A decline is safe only on a uniquely identified binary opt-in.
+      if (communications && descriptor.type !== 'select' &&
+          (peers.length !== 2 || peers.some(i => descriptors[i].type !== descriptor.type ||
+            !/^(yes|no)$/.test(normalizeQuestion(descriptors[i].option))) ||
+            new Set(peers.map(i => normalizeQuestion(descriptors[i].option))).size !== 2)) {
+        result.skipped.push(id + ':ambiguous_communications_options'); continue;
+      }
       if (descriptor.type === 'toggle') {
         if (peers.length !== 2 || peers.some(i => descriptors[i].type !== 'toggle') ||
             new Set(peers.map(i => descriptors[i].option.toLowerCase())).size !== 2 ||
@@ -253,6 +264,13 @@ export async function fillSavedPreferences(page: Page, preferences: Preferences,
           }
         } else if (descriptor.type === 'select') {
           const options = await control.evaluate(element => Array.from((element as HTMLSelectElement).options).map(e => ({ text: e.textContent || '', value: e.value, disabled: e.disabled })));
+          if (communications) {
+            const choices = options.filter(o => !o.disabled && o.value.trim());
+            if (choices.length !== 2 || choices.some(o => !/^(yes|no)$/.test(normalizeQuestion(o.text))) ||
+                new Set(choices.map(o => normalizeQuestion(o.text))).size !== 2) {
+              result.skipped.push(id + ':ambiguous_communications_options'); continue;
+            }
+          }
           const matches = options.filter(o => !o.disabled && optionMatches(value, o.text));
           if (matches.length !== 1) { result.skipped.push(id + ':option_mismatch'); continue; }
           await control.selectOption(matches[0].value, { timeout: 2500 });

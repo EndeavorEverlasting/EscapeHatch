@@ -131,3 +131,27 @@ test('Today puzzle uses inspectable local slots, not an invented employer readin
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect(first).toHaveCSS('animation-name', 'none');
 });
+
+test('avatar walks independent opportunity decision scenes and persists the chosen application', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => localStorage.setItem('escape-hatch-applications', JSON.stringify([{ id: 'decision-guide', company: 'Synthetic', role: 'Engineer', url: 'https://example.invalid/job', status: 'saved', priority: 'normal', notes: 'EscapeHatch rubric v2: on_site; remote_only; unacceptable; unknown; undecided; unknown', nextAction: '', updatedAt: '2026-01-01T00:00:00Z' }])));
+  await page.goto('/applications?opportunityId=decision-guide');
+  const guide = page.getByTestId('opportunity-decision-guide');
+  await expect(guide).toHaveAttribute('data-scene', 'MATCH_REVIEW');
+  await expect(guide.getByTestId('decision-avatar')).toBeVisible();
+  await expect(guide).toContainText('Work arrangement: mismatch');
+  await guide.getByRole('button', { name: 'Next step' }).click();
+  await expect(guide).toHaveAttribute('data-scene', 'JOB_DESIRE');
+  await guide.getByLabel('Job desire').selectOption('do_not_want');
+  await guide.getByRole('button', { name: 'Next step' }).click();
+  await expect(guide).toHaveAttribute('data-scene', 'APPLICATION_DECISION');
+  await guide.getByLabel('Application decision').selectOption('apply');
+  await guide.getByLabel('Application purpose').selectOption('interview_practice');
+  await expect(guide.getByRole('link', { name: 'Prepare this application' })).toHaveAttribute('href', '/assist?opportunityId=decision-guide');
+  await page.reload();
+  await guide.getByRole('button', { name: 'Next step' }).click();
+  await expect(guide.getByLabel('Job desire')).toHaveValue('do_not_want');
+  await guide.getByRole('button', { name: 'Next step' }).click();
+  await expect(guide.getByLabel('Application decision')).toHaveValue('apply');
+  await expect(guide.getByLabel('Application purpose')).toHaveValue('interview_practice');
+});

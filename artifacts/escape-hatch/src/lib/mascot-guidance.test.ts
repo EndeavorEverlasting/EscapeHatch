@@ -74,3 +74,16 @@ test('avatar choices persist independently of matching and do not follow a chang
   assert.equal(applyApplicationDetails(record, { ...record, url: 'https://example.invalid/other' }, record.updatedAt).opportunityDecision, undefined);
   assert.deepEqual(applyApplicationDetails(record, record, record.updatedAt).opportunityDecision, choice);
 });
+
+import { selectNextHomeApplication, mergeTrackerIntoApplications, type TrackerSnapshot, trackerRowToApplication } from './tracker-bridge.ts';
+test('explicit avatar choices survive same-opportunity tracker refresh and route ahead of recommendations', () => {
+  const row = { sheetRow: 3, company: 'Example', role: 'Analyst', applyUrl: job.url, status: 'Ready to Apply', appliedCheckbox: false, priority: 'Low', notes: 'EscapeHatch rubric v2: on_site; remote_only; unacceptable; unknown; undecided; unknown' };
+  const imported = trackerRowToApplication(row, job.updatedAt);
+  const choice = { jobDesire: 'do_not_want', applicationDecision: 'apply', purpose: 'interview_practice' } as const;
+  const selected = { ...imported, opportunityDecision: choice };
+  const refreshed = mergeTrackerIntoApplications([selected], { applications: [row], capturedAtUtc: job.updatedAt } as TrackerSnapshot)[0];
+  assert.deepEqual(refreshed.opportunityDecision, choice);
+  assert.equal(refreshed.notes, imported.notes);
+  assert.equal(selectNextHomeApplication(job, [job, refreshed])?.id, refreshed.id);
+  assert.equal(selectNextHomeApplication(null, [{ ...refreshed, status: 'applied' }]), null);
+});

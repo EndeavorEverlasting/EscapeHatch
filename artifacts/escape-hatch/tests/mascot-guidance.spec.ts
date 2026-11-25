@@ -135,8 +135,7 @@ test('Today puzzle uses inspectable local slots, not an invented employer readin
 test('avatar walks independent opportunity decision scenes and persists the chosen application', async ({ page }) => {
   await page.goto('/');
   await page.evaluate(() => localStorage.setItem('escape-hatch-applications', JSON.stringify([{ id: 'decision-guide', company: 'Synthetic', role: 'Engineer', url: 'https://example.invalid/job', status: 'saved', priority: 'normal', notes: 'EscapeHatch rubric v2: on_site; remote_only; unacceptable; unknown; undecided; unknown', nextAction: '', updatedAt: '2026-01-01T00:00:00Z' }])));
-  await page.goto('/applications');
-  await page.getByTestId('button-expand-application-decision-guide').click();
+  await page.goto('/applications?opportunityId=decision-guide');
   const guide = page.getByTestId('opportunity-decision-guide');
   await expect(guide).toHaveAttribute('data-scene', 'MATCH_REVIEW');
   await expect(guide.getByTestId('decision-avatar')).toBeVisible();
@@ -150,7 +149,6 @@ test('avatar walks independent opportunity decision scenes and persists the chos
   await guide.getByLabel('Application purpose').selectOption('interview_practice');
   await expect(guide.getByRole('link', { name: 'Prepare this application' })).toHaveAttribute('href', '/assist?opportunityId=decision-guide');
   await page.reload();
-  await page.getByTestId('button-expand-application-decision-guide').click();
   await guide.getByRole('button', { name: 'Next step' }).click();
   await expect(guide.getByLabel('Job desire')).toHaveValue('do_not_want');
   await guide.getByRole('button', { name: 'Next step' }).click();

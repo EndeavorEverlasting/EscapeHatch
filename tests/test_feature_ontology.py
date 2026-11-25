@@ -94,6 +94,24 @@ class FeatureOntologyTests(unittest.TestCase):
         with self.assertRaisesRegex(OntologyError, "implementation links"):
             self.check(journey=candidate)
 
+    def test_tutorial_voice_cannot_be_disconnected(self):
+        candidate = deepcopy(self.journey)
+        candidate["scenes"][0]["avatar_guide"]["voice_paths"].remove(candidate["tutorial_voice"]["single_owner"])
+        with self.assertRaisesRegex(OntologyError, "unmapped voice binding"):
+            self.check(journey=candidate)
+
+    def test_missing_supplemental_surface_fails(self):
+        candidate = deepcopy(self.journey)
+        candidate["supplemental_guides"].pop()
+        with self.assertRaisesRegex(OntologyError, "startup or recorded-outcome"):
+            self.check(journey=candidate)
+
+    def test_voice_default_cannot_drift(self):
+        candidate = deepcopy(self.journey)
+        candidate["tutorial_voice"]["default_enabled"] = False
+        with self.assertRaisesRegex(OntologyError, "voice policy"):
+            self.check(journey=candidate)
+
     def test_no_runtime_proof_inflation(self):
         candidate = deepcopy(self.journey)
         candidate["scenes"][0]["avatar_guide"]["native_runtime_proof"] = "certified"

@@ -21,6 +21,8 @@ COVERAGE = {
 }
 ROLES = {"source", "test", "contract", "fixture", "asset", "documentation", "evidence"}
 KINDS = {"active_cockpit", "workspace_preview", "startup_recovery"}
+VOICE = "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx"
+VOICE_ROOT = "artifacts/escape-hatch/src/main.tsx"
 
 class OntologyError(ValueError):
     pass
@@ -102,6 +104,22 @@ def validate(ontology, journey, tracked, read_text, exists):
     absent = sorted(path for path in tracked if not exists(path))
     require(not absent, "tracked paths absent from snapshot: " + ", ".join(absent))
 
+    voice = journey.get("tutorial_voice")
+    require(voice == {
+        "default_enabled": True, "storage_key": "escapehatch.tutorial-voice.v1",
+        "copy_authority": "public_canonical_scene_and_stop_text_only",
+        "single_owner": VOICE, "root_owner": VOICE_ROOT, "runtime_proof": "not_certified",
+    }, "tutorial voice policy, persistence or proof boundary drift")
+    require(owners.get(VOICE) == "journey-guidance" and owners.get(VOICE_ROOT) == "cockpit-ui",
+            "single voice controller or root is not mapped")
+    voice_source = read_text(VOICE)
+    require("application-journey-scenes.v1.json" in voice_source and
+            "registry.tutorial_voice.storage_key" in voice_source and
+            "registry.tutorial_voice.default_enabled" in voice_source and
+            "registry.scenes.find" in voice_source and "registry.supplemental_guides.find" in voice_source and
+            "speechSynthesis" in voice_source and "TutorialVoiceProvider" in read_text(VOICE_ROOT),
+            "voice controller must consume canonical guidance and one mounted provider")
+
     def check_links(row, label):
         ids = unique_strings(row.get("feature_ids"), f"feature links for {label}")
         require(ids <= feature_ids and "journey-guidance" in ids, f"dangling or missing journey feature link: {label}")
@@ -116,6 +134,12 @@ def validate(ontology, journey, tracked, read_text, exists):
         # Structural bindings are not runtime certification. No promotion by map alone.
         require(guide.get("native_runtime_proof") == "not_certified",
                 f"runtime certification requires separate evidence, not this ontology: {label}")
+        voice_paths = unique_strings(guide.get("voice_paths"), f"voice links for {label}")
+        require({VOICE, VOICE_ROOT} <= voice_paths and all(owners.get(literal(p)) in ids for p in voice_paths),
+                f"unmapped voice binding: {label}")
+        for path in voice_paths - {VOICE, VOICE_ROOT}:
+            require("useTutorialGuidance" in read_text(path) or "TutorialVoiceControl" in read_text(path),
+                    f"missing voice consumer: {label}: {path}")
         surfaces = guide.get("surfaces")
         require(isinstance(surfaces, list) and bool(surfaces), f"missing avatar surface: {label}")
         seen = set()
@@ -150,8 +174,18 @@ def validate(ontology, journey, tracked, read_text, exists):
                 f"guide stop must use canonical detail/action: {row['id']}")
         require(row.get("host_scene") is None or row["host_scene"] in scene_ids,
                 f"unknown host scene: {row['id']}")
+    supplemental = journey.get("supplemental_guides")
+    require(isinstance(supplemental, list), "missing supplemental guides")
+    supplemental_ids = unique_strings([s.get("id") for s in supplemental], "supplemental guide IDs")
+    require({"workspace-startup", "recorded-outcome"} <= supplemental_ids,
+            "startup or recorded-outcome guide missing")
+    for row in supplemental:
+        check_links(row, "supplemental:" + row["id"])
+        require(row["avatar_guide"]["copy_owner"] == "detail" and
+                row["avatar_guide"]["next_action_owner"] == "action" and row.get("detail") and row.get("action"),
+                f"supplemental guide must use canonical detail/action: {row['id']}")
     return {"tracked": len(tracked), "mapped": len(owners), "unmapped": 0,
-            "stale": 0, "features": len(feature_ids), "scenes": len(scene_ids), "guide_stops": len(stops)}
+            "stale": 0, "features": len(feature_ids), "scenes": len(scene_ids), "guide_stops": len(stops), "supplemental_guides": len(supplemental_ids)}
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)

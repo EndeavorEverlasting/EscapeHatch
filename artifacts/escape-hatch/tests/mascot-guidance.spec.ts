@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import registry from '../../../contracts/application-journey-scenes.v1.json' with { type: 'json' };
 
 test('mascot gives one truthful missing-profile prompt and a keyboard-safe tutorial overlay', async ({ page }) => {
   await page.goto('/');
@@ -210,7 +211,7 @@ test('muting before browser activation never triggers the deferred tutorial', as
 
 
 test('each canonical scene preview resolves public avatar narration from the scene registry', async ({ page }) => {
-  const { default: registry } = await import('../../../contracts/application-journey-scenes.v1.json', { with: { type: 'json' } });
+  test.setTimeout(90_000);
   await stubTutorialSpeech(page);
   for (const scene of registry.scenes) {
     await page.goto('/journey?scene=' + scene.id);

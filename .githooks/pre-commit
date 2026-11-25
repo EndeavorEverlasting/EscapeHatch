@@ -9,8 +9,10 @@ cleanup() {
 trap cleanup EXIT HUP INT TERM
 
 git -C "$repo" checkout-index --all --prefix="$snapshot/"
+git -C "$repo" ls-files --cached -z > "$snapshot/.feature-ontology-index"
 (
   cd "$snapshot"
+  python scripts/validate_feature_ontology.py --inventory "$snapshot/.feature-ontology-index"
   python scripts/validate_governance.py
   python scripts/validate_product_version.py
   python scripts/validate_repository_promotion.py

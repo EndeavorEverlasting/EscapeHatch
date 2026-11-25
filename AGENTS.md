@@ -16,6 +16,10 @@ Every writing sprint must declare its lane, mission, owned scope, forbidden scop
 ### One writer per branch
 A branch has one active writer at a time. Parallel agents must use separate branches or worktrees with explicit owned and forbidden scope. Never overwrite or silently absorb separately owned work.
 
+### Exact feature ownership and scene coverage
+
+Before changing tracked files, consult `harness/contracts/feature-ontology.v1.json` and maintain exact literal path ownership in the same change. No unmapped, stale, duplicate or wildcard source entries are permitted. Keep the canonical `contracts/application-journey-scenes.v1.json` feature links, implementation paths and avatar guide surfaces aligned with code. Run `python scripts/validate_feature_ontology.py` and `python tests/test_feature_ontology.py`; structural coverage does not certify native or audible runtime behavior.
+
 ### Reuse before replacing
 Search for existing contracts, helpers, schemas, validators, scripts, naming conventions, and documentation before creating new ones. Repair or extend the canonical owner when one exists; do not create competing sources of truth.
 

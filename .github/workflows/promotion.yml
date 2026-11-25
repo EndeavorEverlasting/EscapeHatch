@@ -76,6 +76,12 @@ jobs:
       # DAG: cheapest-to-strongest — structural -> lint -> unit -> integration -> build -> harness-e2e -> app-e2e -> release -> promotion
       - name: Validate governance (structural)
         run: python scripts/validate_governance.py
+      - name: Validate zero-unmapped feature ontology (structural)
+        run: python scripts/validate_feature_ontology.py
+      - name: Validate canonical journey scene integrity (structural)
+        run: python scripts/validate_application_journey.py
+      - name: Test feature ontology (unit)
+        run: python tests/test_feature_ontology.py
       - name: Validate repository promotion policy (structural)
         run: python scripts/validate_repository_promotion.py
       - name: Validate product version (structural)

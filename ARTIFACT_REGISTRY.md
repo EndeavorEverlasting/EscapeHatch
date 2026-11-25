@@ -21,6 +21,9 @@ This file is the canonical registry for durable EscapeHatch artifacts. A plausib
 
 | Artifact | Path | Policy | Update trigger | Validation |
 | --- | --- | --- | --- | --- |
+| Feature ontology | `harness/contracts/feature-ontology.v1.json` | exact primary owner for each tracked file; no wildcard or unmapped paths | every source addition, rename, deletion or feature change | `python scripts/validate_feature_ontology.py` |
+| Feature ontology validator | `scripts/validate_feature_ontology.py` | tracked; rejects missing, stale, duplicate paths and disconnected scene/guide bindings | ontology or scene contract changes | `python scripts/validate_feature_ontology.py` |
+| Feature ontology regression | `tests/test_feature_ontology.py` | tracked adversarial ownership/scene checks | validator behavior changes | `python tests/test_feature_ontology.py` |
 | Installation lifecycle owner | `scripts/windows/EscapeHatch-Install.ps1` | tracked; preserves user-owned resources | install/bootstrap/remove behavior | `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/windows/Test-EscapeHatch-Install.ps1` |
 | Install adapter | `Install-EscapeHatch.cmd` | tracked thin entrypoint | installation owner changes | installer safety suite |
 | Uninstall adapter | `Uninstall-EscapeHatch.cmd` | tracked preservation-first entrypoint | installation owner changes | installer safety suite |

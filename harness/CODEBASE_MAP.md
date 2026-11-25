@@ -6,6 +6,8 @@ EscapeHatch has canonical governance, an operational harness, a portable career-
 
 ## Structure
 
+The [machine-readable feature ontology](contracts/feature-ontology.v1.json) is the exact path-to-feature map. Every Git-tracked path has one primary feature owner; feature anchors identify concrete implementation or authority entrypoints. The [application journey contract](../contracts/application-journey-scenes.v1.json) links each scene and guide stop to those features, implementation paths and avatar surfaces. This prose map is a navigation overview, not a second coverage registry. Run `python scripts/validate_feature_ontology.py` and `python tests/test_feature_ontology.py` before promotion. Scene bindings prove structural coverage only; native installation and audible speech require separately observed runtime evidence.
+
 | Path | Purpose |
 | --- | --- |
 | `AGENTS.md` | Canonical repository-wide agent governance. Do not create a competing authority. |

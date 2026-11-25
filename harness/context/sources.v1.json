@@ -144,6 +144,27 @@
         "application"
       ],
       "owner": "skills/application-form-mapping/SKILL.md"
+    },
+    "feature_ontology": {
+      "path": "harness/contracts/feature-ontology.v1.json",
+      "mode": "outline",
+      "authority": 3,
+      "triggers": [
+        "harness",
+        "context",
+        "application",
+        "runtime"
+      ],
+      "owner": "harness/contracts/feature-ontology.v1.json"
+    },
+    "application_journey": {
+      "path": "contracts/application-journey-scenes.v1.json",
+      "mode": "outline",
+      "authority": 3,
+      "triggers": [
+        "application"
+      ],
+      "owner": "contracts/application-journey-scenes.v1.json"
     }
   },
   "lanes": [

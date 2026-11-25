@@ -24,6 +24,15 @@ jobs:
       - name: Validate governance
         run: python scripts/validate_governance.py
 
+      - name: Validate zero-unmapped feature ontology
+        run: python scripts/validate_feature_ontology.py
+
+      - name: Test feature ontology adversarial controls
+        run: python tests/test_feature_ontology.py
+
+      - name: Validate canonical journey scene integrity
+        run: python scripts/validate_application_journey.py
+
       - name: Validate self-contained agent context boundary
         run: python scripts/validate_agent_context_boundaries.py
 

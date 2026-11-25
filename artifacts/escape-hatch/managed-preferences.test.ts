@@ -458,3 +458,12 @@ test('newly recognized historical question memory survives parsing but is not au
   const review = savedAnswerReviewRows(parsed);
   assert.equal(review.find(row => row.id === 'discovered:' + normalized)?.reusable, false);
 });
+
+test('remote-only policy survives preference parsing without changing other users or form answers', () => {
+  const prior = syntheticPreferences();
+  assert.equal(parsePreferences(prior)?.recommendation_work_mode, undefined);
+  const remote = parsePreferences({ ...prior, recommendation_work_mode: 'remote_only' });
+  assert.equal(remote?.recommendation_work_mode, 'remote_only');
+  assert.deepEqual(remote?.preferences, prior.preferences);
+  assert.equal(parsePreferences({ ...prior, recommendation_work_mode: 'hybrid' }), null);
+});

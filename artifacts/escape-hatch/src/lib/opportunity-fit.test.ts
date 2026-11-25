@@ -40,5 +40,7 @@ test('tracker projection and both recommendation selectors exclude practice with
   assert.equal(a.priority, 'low');
   assert.equal(selectNextHomeApplication(a, [a, b]), b);
   assert.equal(selectNextHomeApplication(a, [a]), null);
+  const conflict = trackerRowToApplication({ ...remote, workMode: 'In person' }, '2026-01-01');
+  assert.equal(selectNextHomeApplication(conflict, [conflict]), null);
   assert.equal(trackerRowToApplication({ ...row, status: 'Submitted', appliedCheckbox: true }, '2026-01-01').status, 'applied');
 });

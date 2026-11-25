@@ -3,7 +3,7 @@
  * Never invents counts. Never treats Applied? checkbox alone as Submitted proof.
  */
 import type { Application, ApplicationStatus, Priority } from './storage';
-import { rubricAllowsRecommendation, mergeRubricNotes } from './opportunity-fit.ts';
+import { rubricAllowsRecommendation, mergeRubricNotes, readOpportunityRubric, normalizeWorkMode } from './opportunity-fit.ts';
 import { applicationEventUrl } from './application-events.ts';
 import { lockedIndeedPostingKeys, isLockedIndeedPosting } from './indeed-posting-identity.ts';
 import { parseEmailApplication, type EmailApplication } from './email-application.ts';
@@ -194,6 +194,10 @@ export function trackerRowToApplication(row: TrackerRow, capturedAt?: string): A
   const safeStatus = recruiterLed && (status === 'saved' || status === 'preparing')
     ? 'applied'
     : row.appliedCheckbox && status === 'saved' ? 'preparing' : status;
+  const rubricInput = readOpportunityRubric(row.notes);
+  const observedMode = normalizeWorkMode(row.workMode);
+  const projectedNotes = rubricInput && rubricInput !== 'invalid' && observedMode !== 'unknown' && observedMode !== rubricInput.workMode
+    ? [row.notes, 'EscapeHatch rubric conflict: tracker work mode differs'].join('\n') : row.notes;
   const packageBits = [
     row.resumePdf ? 'Resume PDF linked' : 'Resume PDF missing',
     row.resumeDoc ? 'Resume Doc linked' : null,
@@ -219,7 +223,7 @@ export function trackerRowToApplication(row: TrackerRow, capturedAt?: string): A
       row.followUp ? `Follow-up: ${row.followUp}` : null,
       row.talentCommunityStatus ? `Talent community: ${row.talentCommunityStatus}${row.talentCommunityConfirmedOn ? ' · ' + row.talentCommunityConfirmedOn : ''} (not job-submission state)` : null,
       row.internalEmployerProfileStatus ? `Internal employer profile: ${row.internalEmployerProfileStatus} (independent of talent community)` : null,
-      row.notes || null,
+      projectedNotes || null,
     ].filter(Boolean).join('\n'),
     nextAction: row.nextAction?.trim() ||
       (recruiterLed && (safeStatus === 'applied' || safeStatus === 'follow_up')

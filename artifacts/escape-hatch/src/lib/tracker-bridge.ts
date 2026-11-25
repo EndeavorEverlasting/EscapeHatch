@@ -3,7 +3,7 @@
  * Never invents counts. Never treats Applied? checkbox alone as Submitted proof.
  */
 import type { Application, ApplicationStatus, Priority } from './storage';
-import { applicationPreparationRank, mergeRubricNotes, readOpportunityRubric, normalizeWorkMode } from './opportunity-fit.ts';
+import { localApplicationPreparationRank, applicationPreparationRank, mergeRubricNotes, readOpportunityRubric, normalizeWorkMode } from './opportunity-fit.ts';
 import { applicationEventUrl } from './application-events.ts';
 import { lockedIndeedPostingKeys, isLockedIndeedPosting } from './indeed-posting-identity.ts';
 import { parseEmailApplication, type EmailApplication } from './email-application.ts';
@@ -265,6 +265,7 @@ export function mergeTrackerIntoApplications(
       ...(prior.submissionEvidence ? { submissionEvidence: prior.submissionEvidence } : {}),
       ...(prior.events ? { events: prior.events } : {}),
       ...(prior.jobDescription !== undefined ? { jobDescription: prior.jobDescription } : {}),
+      ...(prior.opportunityDecision && prior.url === item.url && prior.company === item.company && prior.role === item.role ? { opportunityDecision: prior.opportunityDecision } : {}),
       notes: prior.notes.includes('local edit') ? mergeRubricNotes(prior.notes, item.notes) : item.notes,
       nextAction: prior.nextAction && (preserveProgress || prior.updatedAt > item.updatedAt) ? prior.nextAction : item.nextAction,
     });
@@ -340,10 +341,10 @@ export function selectNextHomeApplication(
     (item.status === 'saved' || item.status === 'preparing') &&
     !item.submissionEvidence && !item.reconciliationConflict;
   const locked = lockedIndeedPostingKeys(existing.filter(item => !actionable(item)).map(item => item.url));
-  const eligible = (item: Application) => actionable(item) && applicationPreparationRank(item.notes) !== null && !isLockedIndeedPosting(item.url, locked);
+  const eligible = (item: Application) => actionable(item) && localApplicationPreparationRank(item.notes, item.opportunityDecision) !== null && !isLockedIndeedPosting(item.url, locked);
   const reconciled = suggested ? existing.find(item => item.id === suggested.id) || suggested : null;
-  if (reconciled && eligible(reconciled) && applicationPreparationRank(reconciled.notes) === 0) return reconciled;
-  const explicitlySelected = existing.find(item => eligible(item) && applicationPreparationRank(item.notes) === 0);
+  if (reconciled && eligible(reconciled) && localApplicationPreparationRank(reconciled.notes, reconciled.opportunityDecision) === 0) return reconciled;
+  const explicitlySelected = existing.find(item => eligible(item) && localApplicationPreparationRank(item.notes, item.opportunityDecision) === 0);
   if (explicitlySelected) return explicitlySelected;
   if (reconciled && eligible(reconciled)) return reconciled;
   return existing.find(item => eligible(item) && item.nextAction.trim()) ||

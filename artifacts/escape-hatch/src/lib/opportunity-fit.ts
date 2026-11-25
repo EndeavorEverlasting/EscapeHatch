@@ -110,3 +110,33 @@ export function mergeRubricNotes(local: string, provider: string): string {
   if (!incoming.length) return local;
   return [...local.split(/\r?\n/).filter(line => !line.startsWith('EscapeHatch rubric ')), ...incoming].join('\n');
 }
+
+export const EMPTY_OPPORTUNITY_DECISION: OpportunityDecision = {
+  jobDesire: 'unknown', applicationDecision: 'undecided', purpose: 'unknown',
+};
+
+export function parseOpportunityDecision(value: unknown): OpportunityDecision | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const v = value as Record<string, unknown>;
+  if (Object.keys(v).length !== 3 || !['want', 'do_not_want', 'unknown'].includes(String(v.jobDesire)) ||
+      !['apply', 'do_not_apply', 'undecided'].includes(String(v.applicationDecision)) ||
+      !['career', 'interview_practice', 'unknown'].includes(String(v.purpose)) ||
+      [v.jobDesire, v.applicationDecision, v.purpose].some(x => typeof x !== 'string')) return null;
+  return { jobDesire: v.jobDesire as OpportunityDecision['jobDesire'], applicationDecision: v.applicationDecision as OpportunityDecision['applicationDecision'], purpose: v.purpose as OpportunityDecision['purpose'] };
+}
+
+export function effectiveOpportunityDecision(notes?: string, local?: OpportunityDecision): OpportunityDecision {
+  if (local) return local;
+  const v = readOpportunityRubric(notes);
+  return v && v !== 'invalid' ? { jobDesire: v.jobDesire, applicationDecision: v.applicationDecision, purpose: v.purpose } : { ...EMPTY_OPPORTUNITY_DECISION };
+}
+
+/** Local user choice is persisted separately from the provider match evidence. */
+export function localApplicationPreparationRank(notes?: string, local?: OpportunityDecision): 0 | 1 | null {
+  if (!local) return applicationPreparationRank(notes);
+  if (local.applicationDecision === 'apply') return 0;
+  if (local.applicationDecision === 'do_not_apply' || local.jobDesire === 'do_not_want' || local.purpose === 'interview_practice') return null;
+  const rubric = readOpportunityRubric(notes);
+  if (rubric === 'invalid') return null;
+  return !rubric || evaluateOpportunityRubric(rubric).eligibility === 'eligible' ? 1 : null;
+}

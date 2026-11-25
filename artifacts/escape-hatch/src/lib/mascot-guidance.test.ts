@@ -57,3 +57,20 @@ test('focused current employer opens matching puzzle even when profile gaps rema
   const submitted = projectMascotGuidance(emptyProfile, [focused], { ...focused, status: 'applied' });
   assert.equal(submitted.href, '/profile');
 });
+
+import { effectiveOpportunityDecision, localApplicationPreparationRank, evaluateOpportunityRubric, parseOpportunityDecision } from './opportunity-fit.ts';
+import { parseApplicationsStorage } from './storage';
+import { applyApplicationDetails } from './application-events.ts';
+test('avatar choices persist independently of matching and do not follow a changed opportunity', () => {
+  const notes = 'EscapeHatch rubric v2: on_site; remote_only; unacceptable; unknown; undecided; unknown';
+  const choice = { jobDesire: 'do_not_want', applicationDecision: 'apply', purpose: 'interview_practice' } as const;
+  const record = { ...job, notes, opportunityDecision: choice };
+  assert.deepEqual(parseApplicationsStorage([record])?.[0].opportunityDecision, choice);
+  assert.equal(localApplicationPreparationRank(notes, choice), 0);
+  assert.equal(localApplicationPreparationRank(notes, { ...choice, applicationDecision: 'do_not_apply' }), null);
+  assert.equal(effectiveOpportunityDecision(notes, choice).jobDesire, 'do_not_want');
+  assert.equal(evaluateOpportunityRubric({workMode:'on_site', preference:'remote_only', commute:'unacceptable'}).eligibility, 'incompatible');
+  assert.equal(parseOpportunityDecision({ ...choice, score: 100 }), null);
+  assert.equal(applyApplicationDetails(record, { ...record, url: 'https://example.invalid/other' }, record.updatedAt).opportunityDecision, undefined);
+  assert.deepEqual(applyApplicationDetails(record, record, record.updatedAt).opportunityDecision, choice);
+});

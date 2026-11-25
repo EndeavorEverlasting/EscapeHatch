@@ -4,6 +4,14 @@ import { directIndeedPostingUrl, isLockedIndeedPosting, lockedIndeedPostingKeys 
 
 export type OutcomeBinding = { opportunityId: string; applicationUrl: string };
 
+/** A pending workflow may act only on its original, still-actionable saved job. */
+export function isActiveApplicationBinding(binding: OutcomeBinding, selected: OutcomeBinding, applications: readonly Application[]): boolean {
+  return binding.opportunityId === selected.opportunityId && binding.applicationUrl === selected.applicationUrl &&
+    applications.some(item => item.id === binding.opportunityId && item.url === binding.applicationUrl &&
+      (item.status === 'saved' || item.status === 'preparing') && !item.submissionEvidence && !item.reconciliationConflict);
+}
+
+
 /** A lost browser observation cannot undo an applied record; a new binding supersedes the old one. */
 export function recordedApplication(binding: OutcomeBinding | null, applications: readonly Application[]): Application | null {
   if (!binding) return null;

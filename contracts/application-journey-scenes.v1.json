@@ -21,6 +21,22 @@
         "action": "Read installation and setup guide",
         "location": "Setup",
         "operator_only": false
+      },
+      "feature_ids": [
+        "journey-guidance",
+        "installation-runtime"
+      ],
+      "avatar_guide": {
+        "copy_owner": "coach_prompt",
+        "next_action_owner": "wayfinding.action",
+        "surfaces": [
+          {
+            "path": "artifacts/escape-hatch/src/components/journey-atlas.tsx",
+            "marker": "journey-branch-preview",
+            "kind": "workspace_preview"
+          }
+        ],
+        "native_runtime_proof": "not_certified"
       }
     },
     {
@@ -41,6 +57,22 @@
         "action": "See setup requirements",
         "location": "Setup",
         "operator_only": false
+      },
+      "feature_ids": [
+        "journey-guidance",
+        "installation-runtime"
+      ],
+      "avatar_guide": {
+        "copy_owner": "coach_prompt",
+        "next_action_owner": "wayfinding.action",
+        "surfaces": [
+          {
+            "path": "artifacts/escape-hatch/src/components/journey-atlas.tsx",
+            "marker": "journey-branch-preview",
+            "kind": "workspace_preview"
+          }
+        ],
+        "native_runtime_proof": "not_certified"
       }
     },
     {
@@ -60,6 +92,22 @@
         "action": "Review installation choices",
         "location": "Setup",
         "operator_only": true
+      },
+      "feature_ids": [
+        "journey-guidance",
+        "installation-runtime"
+      ],
+      "avatar_guide": {
+        "copy_owner": "coach_prompt",
+        "next_action_owner": "wayfinding.action",
+        "surfaces": [
+          {
+            "path": "artifacts/escape-hatch/src/components/journey-atlas.tsx",
+            "marker": "journey-branch-preview",
+            "kind": "workspace_preview"
+          }
+        ],
+        "native_runtime_proof": "not_certified"
       }
     },
     {
@@ -79,6 +127,23 @@
         "action": "Check the setup checklist",
         "location": "Setup",
         "operator_only": false
+      },
+      "feature_ids": [
+        "journey-guidance",
+        "installation-runtime",
+        "workspace-identity"
+      ],
+      "avatar_guide": {
+        "copy_owner": "coach_prompt",
+        "next_action_owner": "wayfinding.action",
+        "surfaces": [
+          {
+            "path": "artifacts/escape-hatch/src/components/journey-atlas.tsx",
+            "marker": "journey-branch-preview",
+            "kind": "workspace_preview"
+          }
+        ],
+        "native_runtime_proof": "not_certified"
       }
     },
     {
@@ -97,6 +162,23 @@
         "action": "Open Today",
         "location": "Workspace",
         "operator_only": false
+      },
+      "feature_ids": [
+        "journey-guidance",
+        "workspace-identity",
+        "cockpit-ui"
+      ],
+      "avatar_guide": {
+        "copy_owner": "coach_prompt",
+        "next_action_owner": "wayfinding.action",
+        "surfaces": [
+          {
+            "path": "artifacts/escape-hatch/src/components/guided-start.tsx",
+            "marker": "mascot-tutorial-avatar",
+            "kind": "active_cockpit"
+          }
+        ],
+        "native_runtime_proof": "not_certified"
       }
     },
     {
@@ -117,6 +199,27 @@
         "action": "Find or add an opportunity",
         "location": "Workspace",
         "operator_only": false
+      },
+      "feature_ids": [
+        "journey-guidance",
+        "opportunity-tracking"
+      ],
+      "avatar_guide": {
+        "copy_owner": "coach_prompt",
+        "next_action_owner": "wayfinding.action",
+        "surfaces": [
+          {
+            "path": "artifacts/escape-hatch/src/components/workspace-journey-guide.tsx",
+            "marker": "workspace-journey-guide",
+            "kind": "active_cockpit"
+          },
+          {
+            "path": "artifacts/escape-hatch/src/components/managed-browser-assist.tsx",
+            "marker": "application-journey-coach",
+            "kind": "active_cockpit"
+          }
+        ],
+        "native_runtime_proof": "not_certified"
       }
     },
     {
@@ -137,6 +240,30 @@
         "action": "Review reusable identity details",
         "location": "Workspace",
         "operator_only": false
+      },
+      "feature_ids": [
+        "journey-guidance",
+        "workspace-identity",
+        "career-sources",
+        "application-preferences",
+        "application-documents"
+      ],
+      "avatar_guide": {
+        "copy_owner": "coach_prompt",
+        "next_action_owner": "wayfinding.action",
+        "surfaces": [
+          {
+            "path": "artifacts/escape-hatch/src/components/workspace-journey-guide.tsx",
+            "marker": "workspace-journey-guide",
+            "kind": "active_cockpit"
+          },
+          {
+            "path": "artifacts/escape-hatch/src/components/managed-browser-assist.tsx",
+            "marker": "application-journey-coach",
+            "kind": "active_cockpit"
+          }
+        ],
+        "native_runtime_proof": "not_certified"
       }
     },
     {
@@ -156,6 +283,28 @@
         "action": "Open browser assist",
         "location": "Workspace and employer browser",
         "operator_only": false
+      },
+      "feature_ids": [
+        "journey-guidance",
+        "managed-application",
+        "browser-extension"
+      ],
+      "avatar_guide": {
+        "copy_owner": "coach_prompt",
+        "next_action_owner": "wayfinding.action",
+        "surfaces": [
+          {
+            "path": "artifacts/escape-hatch/src/components/managed-browser-assist.tsx",
+            "marker": "application-journey-coach",
+            "kind": "active_cockpit"
+          },
+          {
+            "path": "artifacts/escape-hatch/src/components/journey-atlas.tsx",
+            "marker": "journey-branch-preview",
+            "kind": "workspace_preview"
+          }
+        ],
+        "native_runtime_proof": "not_certified"
       }
     },
     {
@@ -174,6 +323,28 @@
         "action": "See employer sign-in instructions",
         "location": "Employer browser",
         "operator_only": true
+      },
+      "feature_ids": [
+        "journey-guidance",
+        "managed-application",
+        "browser-extension"
+      ],
+      "avatar_guide": {
+        "copy_owner": "coach_prompt",
+        "next_action_owner": "wayfinding.action",
+        "surfaces": [
+          {
+            "path": "artifacts/escape-hatch/src/components/managed-browser-assist.tsx",
+            "marker": "application-journey-coach",
+            "kind": "active_cockpit"
+          },
+          {
+            "path": "artifacts/escape-hatch/src/components/journey-atlas.tsx",
+            "marker": "journey-branch-preview",
+            "kind": "workspace_preview"
+          }
+        ],
+        "native_runtime_proof": "not_certified"
       }
     },
     {
@@ -194,6 +365,27 @@
         "action": "Check whether the same form returned",
         "location": "Workspace and employer browser",
         "operator_only": false
+      },
+      "feature_ids": [
+        "journey-guidance",
+        "managed-application"
+      ],
+      "avatar_guide": {
+        "copy_owner": "coach_prompt",
+        "next_action_owner": "wayfinding.action",
+        "surfaces": [
+          {
+            "path": "artifacts/escape-hatch/src/components/managed-browser-assist.tsx",
+            "marker": "application-journey-coach",
+            "kind": "active_cockpit"
+          },
+          {
+            "path": "artifacts/escape-hatch/src/components/journey-atlas.tsx",
+            "marker": "journey-branch-preview",
+            "kind": "workspace_preview"
+          }
+        ],
+        "native_runtime_proof": "not_certified"
       }
     },
     {
@@ -213,6 +405,29 @@
         "action": "Inspect and prepare the form",
         "location": "Workspace and employer browser",
         "operator_only": false
+      },
+      "feature_ids": [
+        "journey-guidance",
+        "managed-application",
+        "application-documents",
+        "application-preferences"
+      ],
+      "avatar_guide": {
+        "copy_owner": "coach_prompt",
+        "next_action_owner": "wayfinding.action",
+        "surfaces": [
+          {
+            "path": "artifacts/escape-hatch/src/components/managed-browser-assist.tsx",
+            "marker": "application-journey-coach",
+            "kind": "active_cockpit"
+          },
+          {
+            "path": "artifacts/escape-hatch/src/components/journey-atlas.tsx",
+            "marker": "journey-branch-preview",
+            "kind": "workspace_preview"
+          }
+        ],
+        "native_runtime_proof": "not_certified"
       }
     },
     {
@@ -231,6 +446,28 @@
         "action": "Review the pending decision",
         "location": "Employer browser",
         "operator_only": true
+      },
+      "feature_ids": [
+        "journey-guidance",
+        "managed-application",
+        "application-preferences"
+      ],
+      "avatar_guide": {
+        "copy_owner": "coach_prompt",
+        "next_action_owner": "wayfinding.action",
+        "surfaces": [
+          {
+            "path": "artifacts/escape-hatch/src/components/managed-browser-assist.tsx",
+            "marker": "application-journey-coach",
+            "kind": "active_cockpit"
+          },
+          {
+            "path": "artifacts/escape-hatch/src/components/journey-atlas.tsx",
+            "marker": "journey-branch-preview",
+            "kind": "workspace_preview"
+          }
+        ],
+        "native_runtime_proof": "not_certified"
       }
     },
     {
@@ -251,6 +488,28 @@
         "action": "Review before your own Submit",
         "location": "Employer browser",
         "operator_only": true
+      },
+      "feature_ids": [
+        "journey-guidance",
+        "submission-evidence",
+        "managed-application"
+      ],
+      "avatar_guide": {
+        "copy_owner": "coach_prompt",
+        "next_action_owner": "wayfinding.action",
+        "surfaces": [
+          {
+            "path": "artifacts/escape-hatch/src/components/managed-browser-assist.tsx",
+            "marker": "application-journey-coach",
+            "kind": "active_cockpit"
+          },
+          {
+            "path": "artifacts/escape-hatch/src/components/journey-atlas.tsx",
+            "marker": "journey-branch-preview",
+            "kind": "workspace_preview"
+          }
+        ],
+        "native_runtime_proof": "not_certified"
       }
     },
     {
@@ -270,6 +529,29 @@
         "action": "See checkpoint and recovery",
         "location": "Workspace and employer browser",
         "operator_only": false
+      },
+      "feature_ids": [
+        "journey-guidance",
+        "managed-application",
+        "workspace-identity",
+        "network-recovery"
+      ],
+      "avatar_guide": {
+        "copy_owner": "coach_prompt",
+        "next_action_owner": "wayfinding.action",
+        "surfaces": [
+          {
+            "path": "artifacts/escape-hatch/src/components/managed-browser-assist.tsx",
+            "marker": "application-journey-coach",
+            "kind": "active_cockpit"
+          },
+          {
+            "path": "artifacts/escape-hatch/src/components/journey-atlas.tsx",
+            "marker": "journey-branch-preview",
+            "kind": "workspace_preview"
+          }
+        ],
+        "native_runtime_proof": "not_certified"
       }
     }
   ],
@@ -666,5 +948,6 @@
     "context_readiness": false,
     "conflict_policy": "preserve_divergent_nonempty_pointers",
     "empty_semantics": "absence_default_not_forget_authority"
-  }
+  },
+  "feature_ontology": "harness/contracts/feature-ontology.v1.json"
 }

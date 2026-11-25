@@ -1,3 +1,4 @@
+import { allowsAutomaticRecommendation, type RecommendationWorkMode } from './opportunity-fit.ts';
 import type { Application } from './storage.ts';
 import { directIndeedPostingUrl, isLockedIndeedPosting, lockedIndeedPostingKeys } from './indeed-posting-identity.ts';
 
@@ -11,12 +12,12 @@ export function recordedApplication(binding: OutcomeBinding | null, applications
 }
 
 /** Only saved, actionable, distinct postings; never route through a survey or a redirect. */
-export function nextIndeedPosting(applications: readonly Application[], completedId: string) {
+export function nextIndeedPosting(applications: readonly Application[], completedId: string, mode: RecommendationWorkMode = 'any') {
   const actionable = (item: Application) => (item.status === 'saved' || item.status === 'preparing') &&
     !item.submissionEvidence && !item.reconciliationConflict && item.id !== completedId;
   const locked = lockedIndeedPostingKeys(applications.filter(item => !actionable(item)).map(item => item.url));
   for (const item of applications) {
-    if (!actionable(item) || isLockedIndeedPosting(item.url, locked)) continue;
+    if (!actionable(item) || isLockedIndeedPosting(item.url, locked) || !allowsAutomaticRecommendation(item, mode)) continue;
     const url = directIndeedPostingUrl(item.url);
     if (url) return { url, company: item.company, role: item.role };
   }

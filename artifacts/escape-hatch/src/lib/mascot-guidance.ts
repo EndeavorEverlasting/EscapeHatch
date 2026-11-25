@@ -1,4 +1,5 @@
 import type { Application, Profile } from './storage';
+import { effectiveOpportunityDecision } from './opportunity-fit.ts';
 
 type ReusableProfileKey = 'first_name' | 'last_name' | 'email' | 'phone' | 'city' | 'region' | 'country' | 'linkedin_url';
 type ProfilePiece = { key: ReusableProfileKey; label: string; essential: boolean };
@@ -32,11 +33,22 @@ export function projectMascotGuidance(profile: Profile, applications: readonly A
   const missing = REUSABLE_PROFILE_PIECES.filter(piece => !profile[piece.key].trim());
   const essentialMissing = missing.filter(piece => piece.essential);
   const profileCount = REUSABLE_PROFILE_PIECES.length - missing.length;
-  const hasOpportunity = applications.some(item => !['applied', 'closed'].includes(item.status));
-  if (focusOpportunity && focusOpportunity.url && !['applied', 'closed'].includes(focusOpportunity.status)) {
+  const isActive = (item: Application) => (item.status === 'saved' || item.status === 'preparing') && !item.submissionEvidence && !item.reconciliationConflict;
+  const hasOpportunity = applications.some(isActive);
+  if (focusOpportunity && focusOpportunity.url && isActive(focusOpportunity)) {
     const contactReminder = essentialMissing.length
       ? ` Your local profile still needs ${essentialMissing.map(piece => piece.label.toLowerCase()).join(', ')}; review those details before filling.`
       : missing.length ? ' A missing optional profile detail does not block preparing this job. Inspect the employer form to verify its required fields.' : ' Inspect the employer form to verify its actual required fields.';
+    const decision = effectiveOpportunityDecision(focusOpportunity.notes, focusOpportunity.opportunityDecision);
+    if (decision.applicationDecision !== 'apply') {
+      return {
+        profileCount, profileTotal: REUSABLE_PROFILE_PIECES.length, missing, essentialMissing, hasOpportunity,
+        nextStep: 1, eyebrow: 'Your opportunity decision',
+        message: `Chirp! ${focusOpportunity.company} — ${focusOpportunity.role}: review the match, decide whether you want the job, then choose whether to apply.${contactReminder}`,
+        action: 'Review match and decisions',
+        href: `/applications?opportunityId=${encodeURIComponent(focusOpportunity.id)}`,
+      };
+    }
     return {
       profileCount, profileTotal: REUSABLE_PROFILE_PIECES.length, missing, essentialMissing, hasOpportunity,
       nextStep: 2, eyebrow: 'Your selected application',
@@ -67,7 +79,7 @@ export function projectMascotGuidance(profile: Profile, applications: readonly A
       action: `Review ${missing[0].label.toLowerCase()}`, href: '/profile' };
   }
   return { profileCount, profileTotal: REUSABLE_PROFILE_PIECES.length, missing, essentialMissing, hasOpportunity,
-    nextStep: 2, eyebrow: 'Ready for the next puzzle piece',
-    message: 'Chirp! Your reusable profile checklist is filled. Inspect this employer form to see what it actually requires.',
-    action: 'Open application assist', href: '/assist' };
+    nextStep: 1, eyebrow: 'Ready for the next puzzle piece',
+    message: 'Chirp! Your reusable profile checklist is filled. Choose an opportunity and review its match and decisions before inspecting the employer form.',
+    action: 'Choose an opportunity', href: '/applications' };
 }

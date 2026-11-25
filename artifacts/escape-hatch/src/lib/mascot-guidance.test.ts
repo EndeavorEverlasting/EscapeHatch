@@ -39,8 +39,8 @@ test('closed/applied opportunities do not masquerade as active; filled profile n
   assert.equal(done.profileCount, 8);
   assert.equal(done.missing.length, 0);
   const current = projectMascotGuidance(complete, [job]);
-  assert.equal(current.nextStep, 2);
-  assert.equal(current.href, '/assist');
+  assert.equal(current.nextStep, 1);
+  assert.equal(current.href, '/applications');
   assert.match(current.message, /employer form/);
   assert.doesNotMatch(current.message, /ready to submit/i);
 });
@@ -50,9 +50,9 @@ test('focused current employer opens matching puzzle even when profile gaps rema
   const guidance = projectMascotGuidance(emptyProfile, [focused], focused);
   assert.match(guidance.message, /Current Employer/);
   assert.match(guidance.message, /review those details before filling/);
-  assert.equal(guidance.href, '/assist?opportunityId=tracker-38');
-  assert.equal(guidance.action, 'Assemble this application');
-  assert.equal(guidance.nextStep, 2);
+  assert.equal(guidance.href, '/applications?opportunityId=tracker-38');
+  assert.equal(guidance.action, 'Review match and decisions');
+  assert.equal(guidance.nextStep, 1);
   assert.doesNotMatch(guidance.message, /submitted|ready to submit/i);
   const submitted = projectMascotGuidance(emptyProfile, [focused], { ...focused, status: 'applied' });
   assert.equal(submitted.href, '/profile');
@@ -86,4 +86,20 @@ test('explicit avatar choices survive same-opportunity tracker refresh and route
   assert.equal(refreshed.notes, imported.notes);
   assert.equal(selectNextHomeApplication(job, [job, refreshed])?.id, refreshed.id);
   assert.equal(selectNextHomeApplication(null, [{ ...refreshed, status: 'applied' }]), null);
+});
+
+test('avatar primary action routes undecided, declined and deliberately selected opportunities without changing match', () => {
+  const notes = 'EscapeHatch rubric v2: on_site; remote_only; unacceptable; do_not_want; undecided; interview_practice';
+  const focused = { ...job, notes };
+  const choice = { jobDesire: 'do_not_want', applicationDecision: 'apply', purpose: 'interview_practice' } as const;
+  assert.equal(projectMascotGuidance(complete, [focused], focused).href, '/applications?opportunityId=example');
+  const declined = { ...focused, opportunityDecision: { ...choice, applicationDecision: 'do_not_apply' as const } };
+  assert.equal(projectMascotGuidance(complete, [declined], declined).href, '/applications?opportunityId=example');
+  const selected = { ...focused, opportunityDecision: choice };
+  const guidance = projectMascotGuidance(complete, [selected], selected);
+  assert.equal(guidance.href, '/assist?opportunityId=example');
+  assert.equal(guidance.nextStep, 2);
+  assert.equal(selected.notes, notes);
+  assert.equal(projectMascotGuidance(complete, [selected], { ...selected, status: 'follow_up' }).href, '/applications');
+  assert.equal(projectMascotGuidance(complete, [selected], { ...selected, reconciliationConflict: 'opportunity_url_changed' }).href, '/applications');
 });

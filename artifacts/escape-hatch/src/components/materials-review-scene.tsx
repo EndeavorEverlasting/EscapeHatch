@@ -78,13 +78,13 @@ export function MaterialsReviewScene({ applications }: { applications: Applicati
           <a href={email.postingUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold text-primary underline">Verify the posting instructions</a>
         </section>}
 
-        {!email && <div className="mascot-guidance mt-5 flex items-center gap-3 rounded-xl border border-primary/25 bg-primary/5 p-3">
-          <img src="/escapehatch-mascot.webp" alt="" width={40} height={40} className="h-10 w-10 shrink-0" />
+        <div className="mascot-guidance mt-5 flex items-center gap-3 rounded-xl border border-primary/25 bg-primary/5 p-3">
+          <img src="/escapehatch-mascot.webp" alt="" width={40} height={40} className="tutorial-scene-avatar h-10 w-10 shrink-0" />
           <div>
-            <p className="text-sm leading-6 text-muted-foreground">{guide.detail}</p>
-            {guide.host_scene && <Link href={journeyAtlasHref(guide.host_scene, opportunityId)} className="inline-flex min-h-11 items-center text-xs font-semibold text-primary underline underline-offset-4">Your journey</Link>}
+            <p className="text-sm leading-6 text-muted-foreground">{email ? "Review the exact PDFs for this opportunity. You decide whether and when to send them in your mail client." : guide.detail}</p>
+            {!email && guide.host_scene && <Link href={journeyAtlasHref(guide.host_scene, opportunityId)} className="inline-flex min-h-11 items-center text-xs font-semibold text-primary underline underline-offset-4">Your journey</Link>}
           </div>
-        </div>}
+        </div>
         {requestedId && !selected && <p role="status" className="mt-3 text-sm">This opportunity is unavailable. Choose an open opportunity to review its materials.</p>}
         <ol className="mt-6 grid gap-3 sm:grid-cols-2" aria-label="Document seal status">
           {status.slots.map(slot => {

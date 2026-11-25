@@ -37,7 +37,9 @@
     "operator_report": "harness/reports/CURRENT_STATE.md",
     "application_operator_report": "harness/reports/APPLICATION_FORM_AUTOMATION_STATE.md",
     "lua_design_constraints": "harness/constraints/LUA_EMBEDDING.md",
-    "ci_workflow": ".github/workflows/harness.yml"
+    "ci_workflow": ".github/workflows/harness.yml",
+    "feature_ontology": "harness/contracts/feature-ontology.v1.json",
+    "feature_ontology_validator": "scripts/validate_feature_ontology.py"
   },
   "validation_order": [
     "python scripts/validate_governance.py",
@@ -49,6 +51,8 @@
     "python scripts/validate_resume_presentation.py",
     "python scripts/validate_resume_presentation_visual.py",
     "python scripts/validate_resume_visual_spike.py",
+    "python scripts/validate_feature_ontology.py",
+    "python tests/test_feature_ontology.py",
     "python scripts/validate_harness.py",
     "python scripts/validate_career_state.py",
     "python scripts/validate_local_runtime_lifecycle.py",

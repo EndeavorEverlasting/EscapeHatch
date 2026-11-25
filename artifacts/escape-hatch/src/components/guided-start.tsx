@@ -49,7 +49,7 @@ export function GuidedStart({ profile, recovery, applications, focusOpportunity 
     <div className="max-w-2xl"><h2 className="font-display text-3xl sm:text-4xl">{guidance.essentialMissing.length ? 'Start with what you already have.' : focusOpportunity ? 'Make your next move tangible.' : 'Your next application starts here.'}</h2>
       <p className="mt-3 text-sm leading-6 text-muted-foreground">Your sources become reviewed facts. Each opportunity becomes its own workbench. You stay in control of what reaches an employer.</p></div>
     <div className="mascot-guidance mt-5 flex flex-col gap-4 rounded-2xl border border-primary/25 bg-primary/5 p-4 sm:flex-row sm:items-center sm:p-5" data-testid="mascot-guidance">
-      <img src="/escapehatch-mascot.webp" alt="" aria-hidden="true" decoding="async" width={100} height={100} className="mascot-guidance-art h-20 w-20 shrink-0 self-start object-contain sm:h-24 sm:w-24" data-testid="mascot-tutorial-avatar" />
+      <img src="/escapehatch-mascot.webp" alt="" aria-hidden="true" decoding="async" width={100} height={100} className="tutorial-scene-avatar mascot-guidance-art h-20 w-20 shrink-0 self-start object-contain sm:h-24 sm:w-24" data-testid="mascot-tutorial-avatar" />
       <div className="min-w-0 flex-1">
         <p className="font-mono-app text-[10px] font-bold uppercase tracking-[.15em] text-primary">{guidance.eyebrow}</p>
         <p className="mt-1 text-sm font-semibold leading-6" data-testid="mascot-chirp-message">{guidance.message}</p>
@@ -76,7 +76,7 @@ export function GuidedStart({ profile, recovery, applications, focusOpportunity 
     <details className="mt-4 text-sm"><summary className="min-h-11 cursor-pointer py-3 font-bold">How does EscapeHatch work?</summary><p className="max-w-2xl leading-6 text-muted-foreground">{containerWorkspace ? 'Add career sources and review the details you want to reuse. Save the job in Applications, then open its posting to complete the employer form in your browser.' : 'You can add career sources before saving a job. Nothing from a dropped file is approved until you review it. In Application Assist, choose a saved opportunity and inspect its current form to see what it asks for. Save and review the exact documents for that job, then prepare the form. Sign-in, sensitive declarations, and final Submit stay with you. Revisit this guide from Today at any time.'}</p></details>
     <DialogContent aria-describedby="mascot-tutorial-description" className="max-w-xl" data-testid="mascot-tutorial-overlay">
         <div className="flex items-center gap-4 pr-6">
-          <img src="/escapehatch-mascot.webp" alt="" aria-hidden="true" decoding="async" width={72} height={72} className="h-16 w-16 shrink-0 object-contain" data-testid="mascot-overlay-avatar" />
+          <img src="/escapehatch-mascot.webp" alt="" aria-hidden="true" decoding="async" width={72} height={72} className="tutorial-scene-avatar h-16 w-16 shrink-0 object-contain" data-testid="mascot-overlay-avatar" />
           <div><p className="font-mono-app text-[10px] uppercase tracking-widest text-primary">EscapeHatch guide</p><DialogTitle className="mt-1 font-display text-2xl">Your next puzzle pieces</DialogTitle></div>
         </div>
         <DialogDescription id="mascot-tutorial-description">These are reusable local profile details, not a claim about a particular employer's requirements. Nothing is submitted from this guide.</DialogDescription>

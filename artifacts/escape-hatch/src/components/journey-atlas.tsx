@@ -39,7 +39,7 @@ export function JourneyAtlas({ applications }: { applications: Application[] }) 
 
     {preview && <section aria-labelledby="journey-preview-title" className="journey-atlas-inspection rounded-2xl border border-primary/25 bg-card p-5 sm:p-7" data-testid="journey-branch-preview">
       <div className="flex items-start gap-3">
-        <img src="/escapehatch-mascot.webp" alt="" width={48} height={48} className="h-12 w-12 shrink-0" />
+        <img key={preview.id} src="/escapehatch-mascot.webp" alt="" width={48} height={48} className="tutorial-scene-avatar h-12 w-12 shrink-0" />
         <div className="min-w-0" aria-live="polite" aria-atomic="true">
           <p className="text-xs font-semibold text-primary">{preview.location}{preview.operatorOnly && ' · You decide'}</p>
           <h2 id="journey-preview-title" ref={previewHeading} tabIndex={-1} className="mt-1 font-display text-2xl">{preview.title}</h2>
@@ -74,6 +74,7 @@ export function JourneyAtlas({ applications }: { applications: Application[] }) 
       </ol>
       <div id="journey-scene-inspection" className="journey-atlas-inspection mt-5 rounded-2xl border border-primary/20 bg-primary/5 p-5" data-testid="journey-selected-step">
         <div aria-live="polite" aria-atomic="true">
+        <img key={stage.id} src="/escapehatch-mascot.webp" alt="" width={48} height={48} className="tutorial-scene-avatar h-12 w-12" />
         <h3 className="mt-2 font-display text-3xl">{stage.title}</h3>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">{stage.detail}</p>
         </div>

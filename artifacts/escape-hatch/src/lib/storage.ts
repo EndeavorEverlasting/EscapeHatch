@@ -40,6 +40,7 @@ export type Application = {
   notes: string;
   nextAction: string;
   jobDescription?: string;
+  workMode?: string;
   submissionEvidence?: SubmissionEvidence;
   events?: ApplicationEvent[];
   reconciliationConflict?: 'opportunity_url_changed';
@@ -135,7 +136,7 @@ export function parseAnswersStorage(value: unknown): AnswerSnippet[] | null {
 export function parseApplicationsStorage(value: unknown): Application[] | null {
   if (!Array.isArray(value)) return null;
   const applications = value.map((item) => {
-    if (!isRecord(item) || !hasOnlyKeys(item, ['id', 'company', 'role', 'url', 'emailApplication', 'status', 'priority', 'notes', 'nextAction', 'updatedAt', 'jobDescription', 'submissionEvidence', 'events', 'reconciliationConflict'])) return null;
+    if (!isRecord(item) || !hasOnlyKeys(item, ['id', 'company', 'role', 'url', 'emailApplication', 'status', 'priority', 'notes', 'nextAction', 'updatedAt', 'jobDescription', 'workMode', 'submissionEvidence', 'events', 'reconciliationConflict'])) return null;
     if (item.reconciliationConflict !== undefined && item.reconciliationConflict !== 'opportunity_url_changed') return null;
     const submissionEvidence = item.submissionEvidence === undefined ? undefined : parseSubmissionEvidence(item.submissionEvidence);
     if (submissionEvidence === null) return null;
@@ -148,6 +149,7 @@ export function parseApplicationsStorage(value: unknown): Application[] | null {
     if (!isText(item.status) || !applicationStatuses.includes(item.status as ApplicationStatus)) return null;
     if (!isText(item.priority) || !priorities.includes(item.priority as Priority)) return null;
     if (!isText(item.notes) || !isText(item.nextAction) || !isDateString(item.updatedAt)) return null;
+    if (item.workMode !== undefined && (typeof item.workMode !== 'string' || item.workMode.length > 512)) return null;
     if (item.jobDescription !== undefined && (typeof item.jobDescription !== 'string' || item.jobDescription.length > 30000)) return null;
     return { ...item, ...(emailApplication ? { emailApplication } : {}), ...(submissionEvidence ? { submissionEvidence } : {}), ...(events ? { events } : {}) } as Application;
   });

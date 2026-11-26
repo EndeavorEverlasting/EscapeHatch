@@ -125,7 +125,7 @@ test('all guided answers have explicit extension projection approval paths', () 
   for (const protectedId of ['eeo.gender', 'attestation.truth_accuracy', 'legal.non_compete_blocking'])
     assert.ok(!SAFE_ANSWER_IDS.includes(protectedId as typeof SAFE_ANSWER_IDS[number]));
 });
- 
+
 test('managed career records, not duplicate preference scalars, determine reusable coverage', () => {
   const preferences = emptyPreferences();
   const when = '2026-11-25T00:00:00Z';

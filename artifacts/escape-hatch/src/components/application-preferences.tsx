@@ -94,6 +94,27 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
       if (requestVersion !== loadVersion.current) return false; // ignore stale overlapping fetches
       setStore(meta);
       setSavedData(parsed); setReady(true);
+      // Reuse reviewed private answers already on disk when resuming an
+      // incomplete quiz. Do not overwrite an in-progress operator input.
+      setQuiz(current => {
+        const prior: Partial<BootstrapQuiz> = {
+          firstName: parsed.preferences['identity.first_name']?.value,
+          lastName: parsed.preferences['identity.last_name']?.value,
+          email: parsed.preferences['identity.email']?.value,
+          phone: parsed.preferences['identity.phone']?.value,
+          city: parsed.preferences['identity.city']?.value,
+          region: parsed.preferences['identity.region']?.value,
+          country: parsed.preferences['identity.country']?.value,
+          linkedIn: parsed.preferences['identity.linkedin']?.value,
+          workMode: parsed.recommendation_work_mode,
+        };
+        let changed = false;
+        const merged = { ...current };
+        for (const key of ['firstName', 'lastName', 'email', 'phone', 'city', 'region', 'country', 'linkedIn', 'workMode'] as const) {
+          if (!merged[key] && prior[key]) { merged[key] = prior[key]!; changed = true; }
+        }
+        return changed ? merged : current;
+      });
       // A person can edit while a background refresh is pending. A disk read
       // may refresh the review snapshot but must never replace those edits.
       if (!canReplaceEditorFromDisk(requestVersion, loadVersion.current, priorEdits, editVersion.current)) {
@@ -162,7 +183,7 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
   return <section className="mb-6 rounded-2xl border border-border bg-card p-5" data-testid="application-preferences">
     <h2 className="font-display text-2xl">Reusable application answers</h2>
     <p className="mt-2 max-w-prose text-sm leading-6 text-muted-foreground">Save your own answers once. Leave unknown facts blank. Review the employer form before submitting. Agreements and certifications stay manual.</p>
-    {ready && !savedData.preferences['identity.first_name'] && !savedData.preferences['identity.email'] && (
+    {ready && (!savedData.preferences['identity.first_name'] || !savedData.preferences['identity.last_name'] || !savedData.preferences['identity.email'] || !savedData.recommendation_work_mode) && (
       <section className="mt-4 rounded-xl border border-primary/40 bg-primary/[0.04] p-4" aria-label="First-run application quiz" data-testid="bootstrap-application-quiz">
         <div className="flex items-center gap-3"><img src="/escapehatch-mascot.webp" alt="" aria-hidden="true" width={56} height={56} className="h-14 w-14 shrink-0 object-contain" /><h3 className="font-display text-xl">Chirp! First-time application setup</h3></div>
         <p className="mt-1 text-sm text-muted-foreground">Step {quizStep + 1} of 2. Answer these once; EscapeHatch will reuse only your saved, explicit answers when preparing employer forms. Skip anything you do not know.</p>

@@ -345,7 +345,9 @@
         "artifacts/escape-hatch/src/components/sources-page.tsx",
         "artifacts/escape-hatch/src/lib/storage.ts",
         "artifacts/escape-hatch/src/lib/application-preferences.ts",
-        "artifacts/escape-hatch/opportunity-documents.ts"
+        "artifacts/escape-hatch/opportunity-documents.ts",
+        "artifacts/escape-hatch/src/lib/bootstrap-quiz.ts",
+        "artifacts/escape-hatch/src/components/application-preferences.tsx"
       ]
     },
     {

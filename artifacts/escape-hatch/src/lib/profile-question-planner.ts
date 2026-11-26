@@ -34,7 +34,7 @@ export const PROFILE_DISCOVERY_QUESTIONS: readonly DiscoveryQuestion[] = [
   { id: 'talent_community.primary_areas', label: 'Professional areas of interest', why: 'Approved areas of interest help guide future opportunities.', group: 'career', reuseWeight: 5, estimatedSeconds: 35, privacyPenalty: 0 },
   { id: 'availability.willing_to_travel', label: 'Willingness to travel', why: 'Your travel preference can narrow unsuitable opportunities.', group: 'mobility', reuseWeight: 5, estimatedSeconds: 12, privacyPenalty: 0 },
   { id: 'availability.willing_to_relocate', label: 'Willingness to relocate', why: 'Your relocation preference can prevent unwanted recommendations.', group: 'mobility', reuseWeight: 5, estimatedSeconds: 12, privacyPenalty: 0 },
-  { id: 'identity.metro_area', label: 'Preferred metro area', why: 'Your chosen search region can help distinguish remote and local roles.', group: 'mobility', reuseWeight: 4, estimatedSeconds: 20, privacyPenalty: 0 },
+  { id: 'identity.metro_area', label: 'Current residential metro area', why: 'Enter where you currently live, not your preferred work location. Employer residence fields must never reuse a job-search preference.', group: 'mobility', reuseWeight: 4, estimatedSeconds: 20, privacyPenalty: 0 },
 ] as const;
 
 export type DiscoveryCandidate = DiscoveryQuestion & { marginalValuePerMinute: number };
@@ -91,4 +91,25 @@ export function validateDiscoveryAnswer(question: DiscoveryQuestion, rawValue: s
     } catch { return 'Enter a complete HTTPS link.'; }
   }
   return null;
+}
+
+/**
+ * A guided answer is committed independently of unrelated full-editor drafts.
+ * Merge only confirmed saved facts back into the visible editor, preserving all
+ * other unsaved answers, opt-outs and pending removals.
+ */
+export function reconcileGuidedReadback(editor: Preferences, persisted: Preferences,
+  confirmedIds: readonly string[], pendingRemovals: readonly string[]) {
+  const preferences = { ...editor.preferences };
+  for (const id of confirmedIds) {
+    if (!preferences[id] && persisted.preferences[id]) preferences[id] = persisted.preferences[id];
+  }
+  return {
+    editor: {
+      ...editor, preferences,
+      recommendation_work_mode: editor.recommendation_work_mode ?? persisted.recommendation_work_mode,
+      require_document_review: editor.require_document_review ?? persisted.require_document_review,
+    } satisfies Preferences,
+    removedQuestions: pendingRemovals.filter(id => !confirmedIds.includes(id)),
+  };
 }

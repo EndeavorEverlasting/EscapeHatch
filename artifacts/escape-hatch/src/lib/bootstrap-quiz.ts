@@ -29,6 +29,27 @@ export const BOOTSTRAP_QUESTION_IDS = [
   'identity.country', 'identity.linkedin',
 ] as const;
 
+/**
+ * Saved private answers outrank workspace defaults. The first asynchronous
+ * private-store hydration must not erase known workspace contact values.
+ * This is an editor-only projection; it never writes or authorizes submission.
+ */
+export function hydrateBootstrapQuiz(saved: Preferences, current: BootstrapQuiz, workspace: Partial<BootstrapQuiz> = {}): BootstrapQuiz {
+  const from = (id: string, key: Exclude<keyof BootstrapQuiz, 'workMode'>) =>
+    saved.preferences[id]?.value || current[key]?.trim() || workspace[key]?.trim() || '';
+  return {
+    firstName: from('identity.first_name', 'firstName'),
+    lastName: from('identity.last_name', 'lastName'),
+    email: from('identity.email', 'email'),
+    phone: from('identity.phone', 'phone'),
+    city: from('identity.city', 'city'),
+    region: from('identity.region', 'region'),
+    country: from('identity.country', 'country'),
+    linkedIn: from('identity.linkedin', 'linkedIn'),
+    workMode: saved.recommendation_work_mode || current.workMode || workspace.workMode || '',
+  };
+}
+
 export function bootstrapQuizError(quiz: BootstrapQuiz): string | null {
   if (!quiz.firstName.trim() || !quiz.lastName.trim() || !quiz.email.trim())
     return 'Enter your first name, last name and email. Other profile fields may be left blank.';

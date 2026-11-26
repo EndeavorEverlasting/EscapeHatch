@@ -16,7 +16,7 @@ export function CareerRecords({ profile, setProfile, opportunity, setApplication
   const [posting, setPosting] = useState({ id: '', text: '' });
   const provenance = () => ({ source: 'user' as const, label: 'Reviewed career record', capturedAt: new Date().toISOString() });
   const inputClass = 'mt-1 block w-full rounded border border-input bg-background p-2';
-  return <section className="mb-6 rounded-2xl border border-border bg-card p-5" data-testid="career-records">
+  return <section id="career-records" className="mb-6 rounded-2xl border border-border bg-card p-5" data-testid="career-records">
     <h2 className="font-display text-2xl">Reusable work and education</h2>
     <p>Keep your responsibilities separate from the employer posting. Choose one reviewed record of each kind for filling. Repeated or ambiguous employer sections stay manual.</p>
     <label className="block my-3">Load work and education drafts from résumé (.txt or .pdf)

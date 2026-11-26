@@ -1,4 +1,5 @@
 import { questions, type Preferences } from './application-preferences.ts';
+import type { AssistProfile } from './assist-contract.ts';
 
 /**
  * Relative, configurable engineering weights, NOT measured ATS probabilities.
@@ -14,6 +15,7 @@ export type DiscoveryQuestion = {
   reuseWeight: number;
   estimatedSeconds: number;
   privacyPenalty: number;
+  recordOwner?: 'work' | 'education';
   multiline?: boolean;
   url?: boolean;
 };
@@ -23,13 +25,13 @@ export const PROFILE_DISCOVERY_QUESTIONS: readonly DiscoveryQuestion[] = [
   { id: 'identity.preferred_name', label: 'Preferred name (optional)', why: 'Some employers offer a separate preferred-name field.', group: 'identity', reuseWeight: 3, estimatedSeconds: 15, privacyPenalty: 0 },
   { id: 'identity.professional_title', label: 'Professional title', why: 'Your reviewed professional title can be reused without inventing job history.', group: 'career', reuseWeight: 8, estimatedSeconds: 30, privacyPenalty: 0 },
   { id: 'identity.job_title', label: 'Target job title', why: 'A target title helps tailor preparation, but is not proof of a qualification.', group: 'career', reuseWeight: 5, estimatedSeconds: 25, privacyPenalty: 0 },
-  { id: 'experience.company', label: 'Reviewed employer name', why: 'Previously reviewed experience can fill matching employer fields.', group: 'career', reuseWeight: 7, estimatedSeconds: 30, privacyPenalty: 1 },
-  { id: 'experience.title', label: 'Reviewed position title', why: 'A verified past title can support multiple applications.', group: 'career', reuseWeight: 7, estimatedSeconds: 25, privacyPenalty: 0 },
-  { id: 'experience.description', label: 'Reviewed experience summary', why: 'A factual work summary may support repeated short-answer fields.', group: 'career', reuseWeight: 7, estimatedSeconds: 110, privacyPenalty: 1, multiline: true },
+  { id: 'experience.company', label: 'Reviewed employer name', why: 'Previously reviewed experience can fill matching employer fields.', group: 'career', recordOwner: 'work', reuseWeight: 7, estimatedSeconds: 30, privacyPenalty: 1 },
+  { id: 'experience.title', label: 'Reviewed position title', why: 'A verified past title can support multiple applications.', group: 'career', recordOwner: 'work', reuseWeight: 7, estimatedSeconds: 25, privacyPenalty: 0 },
+  { id: 'experience.description', label: 'Reviewed experience summary', why: 'A factual work summary may support repeated short-answer fields.', group: 'career', recordOwner: 'work', reuseWeight: 7, estimatedSeconds: 110, privacyPenalty: 1, multiline: true },
   { id: 'education.highest_completed_level', label: 'Highest completed education', why: 'A reviewed education level may answer recurring eligibility questions.', group: 'education', reuseWeight: 7, estimatedSeconds: 25, privacyPenalty: 0 },
-  { id: 'education.institution', label: 'Education institution', why: 'A verified school name can be reused on applicable forms.', group: 'education', reuseWeight: 6, estimatedSeconds: 30, privacyPenalty: 0 },
-  { id: 'education.credential', label: 'Completed credential or degree', why: 'A verified credential can be reused without inflating qualifications.', group: 'education', reuseWeight: 6, estimatedSeconds: 30, privacyPenalty: 0 },
-  { id: 'education.field_of_study', label: 'Field of study', why: 'A verified field of study is frequently requested alongside education.', group: 'education', reuseWeight: 5, estimatedSeconds: 25, privacyPenalty: 0 },
+  { id: 'education.institution', label: 'Education institution', why: 'A verified school name can be reused on applicable forms.', group: 'education', recordOwner: 'education', reuseWeight: 6, estimatedSeconds: 30, privacyPenalty: 0 },
+  { id: 'education.credential', label: 'Completed credential or degree', why: 'A verified credential can be reused without inflating qualifications.', group: 'education', recordOwner: 'education', reuseWeight: 6, estimatedSeconds: 30, privacyPenalty: 0 },
+  { id: 'education.field_of_study', label: 'Field of study', why: 'A verified field of study is frequently requested alongside education.', group: 'education', recordOwner: 'education', reuseWeight: 5, estimatedSeconds: 25, privacyPenalty: 0 },
   { id: 'talent_community.spoken_languages', label: 'Spoken languages', why: 'Languages you explicitly confirm may be reused in talent profiles.', group: 'career', reuseWeight: 4, estimatedSeconds: 30, privacyPenalty: 0 },
   { id: 'talent_community.primary_areas', label: 'Professional areas of interest', why: 'Approved areas of interest help guide future opportunities.', group: 'career', reuseWeight: 5, estimatedSeconds: 35, privacyPenalty: 0 },
   { id: 'availability.willing_to_travel', label: 'Willingness to travel', why: 'Your travel preference can narrow unsuitable opportunities.', group: 'mobility', reuseWeight: 5, estimatedSeconds: 12, privacyPenalty: 0 },
@@ -47,7 +49,35 @@ export type DiscoveryPlan = {
   skippedThisVisit: number;
 };
 
-export function projectProfileDiscovery(data: Preferences, skippedIds: readonly string[] = []): DiscoveryPlan {
+/**
+ * Work and education facts are owned by the selected reviewed career record.
+ * Scalar preferences cannot prove readiness because managed Fill discards them.
+ */
+export function reviewedCareerDiscoveryValue(profile: AssistProfile | undefined, id: string): string | null {
+  if (!profile) return null;
+  if (id.startsWith('experience.')) {
+    const records = profile.experience.filter(record => record?.id === profile.selectedExperienceId);
+    if (records.length !== 1 || !['user', 'resume', 'import'].includes(records[0].provenance?.source || '')) return null;
+    const record = records[0];
+    const value = id === 'experience.company' ? record.company :
+      id === 'experience.title' ? record.title :
+      id === 'experience.description' && Array.isArray(record.bullets) &&
+        record.bullets.every(part => typeof part === 'string') ? record.bullets.join('\n') : '';
+    return typeof value === 'string' && value.trim() ? value.trim() : null;
+  }
+  if (id.startsWith('education.')) {
+    const records = profile.education.filter(record => record?.id === profile.selectedEducationId);
+    if (records.length !== 1 || !['user', 'resume', 'import'].includes(records[0].provenance?.source || '')) return null;
+    const record = records[0];
+    const value = id === 'education.institution' ? record.institution :
+      id === 'education.credential' ? record.credential :
+      id === 'education.field_of_study' ? record.fieldOfStudy : '';
+    return typeof value === 'string' && value.trim() ? value.trim() : null;
+  }
+  return null;
+}
+
+export function projectProfileDiscovery(data: Preferences, skippedIds: readonly string[] = [], careerProfile?: AssistProfile): DiscoveryPlan {
   const canonical = new Map(questions.map(question => [question.id, question]));
   const eligible = PROFILE_DISCOVERY_QUESTIONS.filter(question => {
     const owner = canonical.get(question.id);
@@ -55,12 +85,16 @@ export function projectProfileDiscovery(data: Preferences, skippedIds: readonly 
       owner.automation_policy === 'fill_if_explicit_preference' &&
       owner.confirmation_policy === 'until_changed';
   });
-  const answered = eligible.filter(question => Boolean(data.preferences[question.id]?.value.trim()));
+  const isAnswered = (question: DiscoveryQuestion) =>
+    question.recordOwner
+      ? Boolean(reviewedCareerDiscoveryValue(careerProfile, question.id))
+      : Boolean(data.preferences[question.id]?.value.trim());
+  const answered = eligible.filter(isAnswered);
   const skipped = new Set(skippedIds);
   const groupAnswers = new Map<string, number>();
   for (const question of answered) groupAnswers.set(question.group, (groupAnswers.get(question.group) || 0) + 1);
   const pending: DiscoveryCandidate[] = eligible
-    .filter(question => !data.preferences[question.id]?.value.trim() && !skipped.has(question.id))
+    .filter(question => !isAnswered(question) && !skipped.has(question.id))
     .map(question => ({
       ...question,
       marginalValuePerMinute: 60 * question.reuseWeight /

@@ -4,6 +4,9 @@ import { readFileSync } from 'node:fs';
 import { SAFE_ANSWER_IDS } from './extension-pairing.ts';
 import taxonomy from '../../../../harness/contracts/application-form-taxonomy.v1.json' with { type: 'json' };
 import { emptyPreferences, type Preferences } from './application-preferences.ts';
+import { emptyAssistProfile } from './assist-contract.ts';
+import { emptyProfile } from './storage.ts';
+import { withCareerPreferences } from '../../career-preferences.ts';
 import { PROFILE_DISCOVERY_QUESTIONS, projectProfileDiscovery, validateDiscoveryAnswer, reconcileGuidedReadback } from './profile-question-planner.ts';
 
 test('every discovery field has one canonical non-protected reusable owner', () => {
@@ -47,9 +50,14 @@ test('skip is session-only, preserves answers and never masquerades as progress'
   assert.equal(skipped.skippedThisVisit, 1);
   assert.notEqual(skipped.next?.id, first.next?.id);
   assert.equal(projectProfileDiscovery(data).next?.id, first.next?.id);
-  const full: Preferences = { ...data, preferences: Object.fromEntries(PROFILE_DISCOVERY_QUESTIONS.map(q =>
+  const full: Preferences = { ...data, preferences: Object.fromEntries(PROFILE_DISCOVERY_QUESTIONS.filter(q => !q.recordOwner).map(q =>
     [q.id, { scope: 'profile_preference' as const, source: 'user' as const, value: 'Confirmed', updated_at: '2026-11-25T00:00:00Z' }])) };
-  const finished = projectProfileDiscovery(full);
+  const career = emptyAssistProfile(emptyProfile);
+  career.experience = [{ id: 'work', company: 'Example', title: 'Engineer', dates: '2020-2025', location: 'Remote', bullets: ['Built software'], provenance: { source: 'user', label: 'Reviewed work', capturedAt: '2026-11-25T00:00:00Z' } }];
+  career.education = [{ id: 'school', institution: 'Example University', credential: 'BS', fieldOfStudy: 'Computing', dates: '2015-2019', details: '', provenance: { source: 'user', label: 'Reviewed school', capturedAt: '2026-11-25T00:00:00Z' } }];
+  career.selectedExperienceId = 'work';
+  career.selectedEducationId = 'school';
+  const finished = projectProfileDiscovery(full, [], career);
   assert.equal(finished.reusableCoveragePercent, 100);
   assert.equal(finished.remaining, 0);
   assert.equal(finished.next, null);
@@ -116,4 +124,28 @@ test('all guided answers have explicit extension projection approval paths', () 
   }
   for (const protectedId of ['eeo.gender', 'attestation.truth_accuracy', 'legal.non_compete_blocking'])
     assert.ok(!SAFE_ANSWER_IDS.includes(protectedId as typeof SAFE_ANSWER_IDS[number]));
+});
+
+test('managed career records, not duplicate preference scalars, determine reusable coverage', () => {
+  const preferences = emptyPreferences();
+  const when = '2026-11-25T00:00:00Z';
+  for (const id of ['experience.company', 'experience.title', 'experience.description', 'education.institution', 'education.credential', 'education.field_of_study'])
+    preferences.preferences[id] = { scope: 'profile_preference', source: 'user', value: 'Unreviewed', updated_at: when };
+  const noRecord = projectProfileDiscovery(preferences);
+  assert.equal(noRecord.answered, 0);
+  const career = emptyAssistProfile(emptyProfile);
+  career.experience = [{ id: 'one', company: 'Example Inc', title: 'IT Lead', dates: '2020-2026', location: 'Remote', bullets: ['Led delivery'], provenance: { source: 'user', label: 'Reviewed', capturedAt: when } }];
+  career.education = [{ id: 'two', institution: 'Example College', credential: 'BS', fieldOfStudy: 'CS', dates: '2010-2014', details: '', provenance: { source: 'user', label: 'Reviewed', capturedAt: when } }];
+  assert.equal(projectProfileDiscovery(preferences, [], career).answered, 0, 'unselected records do not prove current answers');
+  career.selectedExperienceId = 'one';
+  career.selectedEducationId = 'two';
+  const guided = projectProfileDiscovery(preferences, [], career);
+  assert.equal(guided.answered, 6);
+  const projected = withCareerPreferences(preferences, career, 'Engineer');
+  assert.equal(projected.preferences['experience.company']?.value, 'Example Inc');
+  assert.equal(projected.preferences['education.institution']?.value, 'Example College');
+  assert.equal(projected.preferences['education.field_of_study']?.value, 'CS');
+  assert.notEqual(projected.preferences['experience.company']?.value, 'Unreviewed');
+  const unselected = withCareerPreferences(preferences, { ...career, selectedExperienceId: undefined, selectedEducationId: undefined }, 'Engineer');
+  assert.equal(unselected.preferences['experience.company'], undefined);
 });

@@ -93,3 +93,25 @@ test('partially reviewed private answers prefill missing-essential quiz without 
   await quiz.getByRole('button', { name: 'Continue to work preferences' }).click();
   await expect(quiz.getByLabel('Which jobs should EscapeHatch recommend?')).toHaveValue('any');
 });
+
+test('workspace contact defaults survive deferred private-store hydration on the profile route', async ({ page }) => {
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/__escapehatch/managed-assist/preferences', async route => {
+    if (route.request().method() !== 'GET') return route.fulfill({ status: 404, body: '{}' });
+    await gate;
+    return route.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify({ ok: true, preferences: fixture(), store: { exists: false, source: 'synthetic', preferenceStore: 'synthetic-private-store' } }) });
+  });
+  await page.goto('/profile');
+  await page.getByTestId('input-first-name').fill('Workspace');
+  await page.getByTestId('input-last-name').fill('Applicant');
+  await page.getByTestId('input-profile-email').fill('workspace@example.test');
+  await page.getByTestId('button-save-profile').click();
+  release();
+  const quiz = page.getByTestId('bootstrap-application-quiz');
+  await expect(quiz).toBeVisible();
+  await expect(quiz.getByLabel('First name')).toHaveValue('Workspace');
+  await expect(quiz.getByLabel('Last name')).toHaveValue('Applicant');
+  await expect(quiz.getByLabel('Email')).toHaveValue('workspace@example.test');
+});

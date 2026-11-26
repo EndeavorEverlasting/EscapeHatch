@@ -3,7 +3,7 @@ import test from 'node:test';
 import taxonomy from '../../../../harness/contracts/application-form-taxonomy.v1.json' with { type: 'json' };
 import scenes from '../../../../contracts/application-journey-scenes.v1.json' with { type: 'json' };
 import { emptyPreferences, parsePreferences, reusableValue } from './application-preferences.ts';
-import { applyBootstrapQuiz, bootstrapQuizError, BOOTSTRAP_QUESTION_IDS, emptyBootstrapQuiz } from './bootstrap-quiz.ts';
+import { applyBootstrapQuiz, bootstrapQuizError, BOOTSTRAP_QUESTION_IDS, emptyBootstrapQuiz, hydrateBootstrapQuiz } from './bootstrap-quiz.ts';
 
 const synthetic = () => ({
   ...emptyBootstrapQuiz(),
@@ -74,4 +74,20 @@ test('unknown legal, EEO and consent answers never appear in the quiz handoff', 
   assert.ok(Object.keys(proposed.preferences).every(id => BOOTSTRAP_QUESTION_IDS.includes(id as (typeof BOOTSTRAP_QUESTION_IDS)[number])));
   assert.equal(proposed.application_privacy_acknowledgement_enabled, false);
   assert.equal(proposed.preferences['employment.sponsorship_required'], undefined);
+});
+
+test('private hydration preserves workspace fields not present on disk and prioritizes reviewed values', () => {
+  const stored = emptyPreferences();
+  stored.preferences['identity.email'] = { scope: 'profile_preference', source: 'user', value: 'reviewed@example.test', updated_at: '2026-11-25T12:00:00Z' };
+  stored.recommendation_work_mode = 'remote_only';
+  const workspace = { firstName: 'Workspace', lastName: 'Person', email: 'workspace@example.test', city: 'New York' };
+  const initial = { ...emptyBootstrapQuiz(), firstName: 'Workspace', email: 'workspace@example.test' };
+  const result = hydrateBootstrapQuiz(stored, initial, workspace);
+  assert.equal(result.firstName, 'Workspace');
+  assert.equal(result.lastName, 'Person');
+  assert.equal(result.email, 'reviewed@example.test');
+  assert.equal(result.city, 'New York');
+  assert.equal(result.workMode, 'remote_only');
+  assert.deepEqual(stored.preferences['identity.first_name'], undefined);
+  assert.equal(hydrateBootstrapQuiz(emptyPreferences(), emptyBootstrapQuiz(), {}).firstName, '');
 });

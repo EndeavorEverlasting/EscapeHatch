@@ -167,7 +167,10 @@ export function deriveOpportunityType(notes?: string, trackerWorkMode?: string):
 /** Discovery policy, not the mathematical match computation. */
 export function rubricAllowsRecommendation(notes?: string, trackerWorkMode?: string): boolean {
   const input = readOpportunityRubric(notes);
-  if (deriveOpportunityType(notes, trackerWorkMode).type === 'learning' || readRequirementAssessment(notes) === 'invalid') return false;
+  const classification = deriveOpportunityType(notes, trackerWorkMode);
+  const requirements = readRequirementAssessment(notes);
+  if (classification.type === 'learning' || requirements === 'invalid' ||
+      (requirements !== null && classification.type !== 'career')) return false;
   if (input === null) return true; // existing records are not silently reclassified
   if (input === 'invalid') return false;
   const observed = normalizeWorkMode(trackerWorkMode);
@@ -223,7 +226,8 @@ export function localApplicationPreparationRank(notes?: string, local?: Opportun
   if (local.applicationDecision === 'do_not_apply' || local.jobDesire === 'do_not_want' || local.purpose === 'interview_practice') return null;
   const rubric = readOpportunityRubric(notes);
   const classification = deriveOpportunityType(notes, trackerWorkMode);
-  if (rubric === 'invalid' || classification.type === 'learning' || classification.reasons.includes('INVALID_MATCH_EVIDENCE') || classification.reasons.includes('WORK_MODE_CONFLICT')) return null;
+  if (rubric === 'invalid' || classification.type === 'learning' || classification.reasons.includes('INVALID_MATCH_EVIDENCE') || classification.reasons.includes('WORK_MODE_CONFLICT') ||
+      (readRequirementAssessment(notes) !== null && classification.type !== 'career')) return null;
   return !rubric || evaluateOpportunityRubric(rubric).eligibility === 'eligible' ? 1 : null;
 }
 

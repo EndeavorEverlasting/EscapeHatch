@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { emptyPreferences, parsePreferences, questions, roleQuestionKey, preferenceChoices, expandProfessionalTitles, suggestProfessionalTitles, type Preferences } from '@/lib/application-preferences';
 import { applyBootstrapQuiz, bootstrapQuizError, emptyBootstrapQuiz, type BootstrapQuiz } from '@/lib/bootstrap-quiz';
+import { ProfileDiscoveryCoach } from '@/components/profile-discovery-coach';
 import { savedAnswerReviewRows, unrecognizedSavedAnswerCount, hasTalentCommunityAnswers, talentCommunityAnswerHandoff, canReplaceEditorFromDisk } from '@/lib/answer-transparency';
 
 const API = '/__escapehatch/managed-assist/preferences';
@@ -107,13 +108,13 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
     })();
     return () => { cancelled = true; };
   }, [refresh, ready]);
-  async function save(clear = false, candidate: Preferences = data) {
+  async function save(clear = false, candidate: Preferences = data, removed = removedQuestions) {
     setBusy(true);
     try {
       const response = await fetch(API + (clear ? '/clear' : ''), {
         method: 'POST', credentials: 'same-origin',
         headers: { 'content-type': 'application/json', 'x-escapehatch-operator-action': 'confirmed' },
-        body: JSON.stringify(clear ? {} : { preferences: { ...candidate, exported_at: new Date().toISOString() }, removedQuestions }),
+        body: JSON.stringify(clear ? {} : { preferences: { ...candidate, exported_at: new Date().toISOString() }, removedQuestions: removed }),
       });
       if (!response.ok) throw new Error();
       const readbackOk = await load();
@@ -147,7 +148,7 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
     <p className="mt-2 max-w-prose text-sm leading-6 text-muted-foreground">Save your own answers once. Leave unknown facts blank. Review the employer form before submitting. Agreements and certifications stay manual.</p>
     {ready && !savedData.preferences['identity.first_name'] && !savedData.preferences['identity.email'] && (
       <section className="mt-4 rounded-xl border border-primary/40 bg-primary/[0.04] p-4" aria-label="First-run application quiz" data-testid="bootstrap-application-quiz">
-        <h3 className="font-display text-xl">First-time application setup</h3>
+        <div className="flex items-center gap-3"><img src="/escapehatch-mascot.webp" alt="" aria-hidden="true" width={56} height={56} className="h-14 w-14 shrink-0 object-contain" /><h3 className="font-display text-xl">Chirp! First-time application setup</h3></div>
         <p className="mt-1 text-sm text-muted-foreground">Step {quizStep + 1} of 2. Answer these once; EscapeHatch will reuse only your saved, explicit answers when preparing employer forms. Skip anything you do not know.</p>
         {quizStep === 0 ? (
           <>
@@ -205,6 +206,26 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
         <p className="mt-2 text-xs text-muted-foreground">You can instead use the full answer editor below. Existing saved answers are never silently overwritten by this quiz.</p>
       </section>
     )}
+
+    {ready && <ProfileDiscoveryCoach saved={savedData} busy={busy} onSave={(id, answer) => {
+      const owner = questions.find(question => question.id === id);
+      if (!owner || owner.answer_scope !== 'profile' || owner.automation_policy !== 'fill_if_explicit_preference' || owner.confirmation_policy !== 'until_changed') {
+        setMessage('This question cannot be saved as a reusable profile answer.'); return;
+      }
+      if (data.preferences[id]?.value) {
+        setMessage('This answer is already in your editor. Review that answer before replacing it.'); return;
+      }
+      const staged: Preferences = {
+        ...data,
+        preferences: { ...data.preferences, [id]: { scope: 'profile_preference', source: 'user',
+          value: answer.trim(), updated_at: new Date().toISOString() } },
+      };
+      if (!parsePreferences(staged)) { setMessage('The new answer failed profile validation; nothing was saved.'); return; }
+      const stillRemoved = removedQuestions.filter(questionId => questionId !== id);
+      setRemovedQuestions(stillRemoved);
+      setData(staged); markEdited();
+      void save(false, staged, stillRemoved);
+    }} />}
 
     <aside className="preference-store-rail mt-4 border-l-4 border-primary/70 bg-primary/[0.04] py-3 pl-4 pr-3" aria-label="Shared EscapeHatch profile location" data-testid="preference-store-rail">
       <p className="text-sm font-semibold text-foreground">Shared profile on this computer</p>

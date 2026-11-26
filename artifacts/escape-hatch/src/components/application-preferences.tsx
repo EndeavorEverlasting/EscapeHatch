@@ -186,13 +186,13 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
       setMessage(error instanceof Error ? error.message : 'Guided save failed. Existing answers and unfinished edits are preserved.');
     } finally { setBusy(false); }
   }
-  async function save(clear = false, candidate: Preferences = data, removed = removedQuestions) {
+  async function save(clear = false, candidate: Preferences = data) {
     setBusy(true);
     try {
       const response = await fetch(API + (clear ? '/clear' : ''), {
         method: 'POST', credentials: 'same-origin',
         headers: { 'content-type': 'application/json', 'x-escapehatch-operator-action': 'confirmed' },
-        body: JSON.stringify(clear ? {} : { preferences: { ...candidate, exported_at: new Date().toISOString() }, removedQuestions: removed }),
+        body: JSON.stringify(clear ? {} : { preferences: { ...candidate, exported_at: new Date().toISOString() }, removedQuestions }),
       });
       if (!response.ok) throw new Error();
       const readbackOk = await load();

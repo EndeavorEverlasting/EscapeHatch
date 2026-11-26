@@ -6,6 +6,7 @@ test('mascot gives one truthful missing-profile prompt and a keyboard-safe tutor
   await expect(page.getByTestId('mascot-chirp-message')).toContainText('first name');
   await expect(page.getByTestId('mascot-profile-progress')).toContainText('0 of 8');
   await expect(page.getByTestId('mascot-next-action')).toHaveAttribute('href', '/profile');
+  await expect(page.getByTestId('mascot-first-run-quiz')).toHaveAttribute('href', '/assist');
   await expect(page.getByTestId('button-mascot-chirp')).toHaveAccessibleName('Play optional chick chirp');
   await page.getByTestId('button-mascot-puzzle').click();
   const overlay = page.getByTestId('mascot-tutorial-overlay');

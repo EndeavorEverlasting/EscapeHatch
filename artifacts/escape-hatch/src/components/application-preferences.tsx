@@ -38,7 +38,7 @@ function preferenceFieldLabel(id: string, fallback: string) {
   if (id === 'identity.linkedin') return 'LinkedIn profile';
   return fallback;
 }
-export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '', reviewedExperience = '', refresh = 0, onEdit }: { onLoad?: (data: Preferences) => void; currentRole?: string; currentPosting?: string; reviewedExperience?: string; refresh?: number; onEdit?: () => void }) {
+export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '', reviewedExperience = '', refresh = 0, onEdit, bootstrapDefaults }: { onLoad?: (data: Preferences) => void; currentRole?: string; currentPosting?: string; reviewedExperience?: string; refresh?: number; onEdit?: () => void; bootstrapDefaults?: Partial<BootstrapQuiz> }) {
   const [data, setData] = useState<Preferences>(emptyPreferences);
   // Separate the durable disk snapshot from unsaved edits in the form below.
   const [savedData, setSavedData] = useState<Preferences>(emptyPreferences);
@@ -47,6 +47,22 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
   const [newTitle, setNewTitle] = useState('');
   const [quiz, setQuiz] = useState<BootstrapQuiz>(emptyBootstrapQuiz);
   const [quizStep, setQuizStep] = useState<0 | 1>(0);
+  // Prefill from the existing local workspace *only in the editor*. The operator
+  // explicitly confirms Save before these values enter the reusable private file.
+  useEffect(() => {
+    if (!bootstrapDefaults) return;
+    setQuiz(current => {
+      let changed = false;
+      const next = { ...current };
+      for (const key of ['firstName', 'lastName', 'email', 'phone', 'city', 'region', 'country', 'linkedIn'] as const) {
+        const candidate = bootstrapDefaults[key]?.trim();
+        if (!next[key] && candidate) { next[key] = candidate; changed = true; }
+      }
+      return changed ? next : current;
+    });
+  }, [bootstrapDefaults?.firstName, bootstrapDefaults?.lastName, bootstrapDefaults?.email,
+      bootstrapDefaults?.phone, bootstrapDefaults?.city, bootstrapDefaults?.region,
+      bootstrapDefaults?.country, bootstrapDefaults?.linkedIn]);
   const [message, setMessage] = useState('Loading saved preferences…');
   const [store, setStore] = useState<PreferenceStoreMeta | null>(null);
   const [ready, setReady] = useState(false);

@@ -855,6 +855,18 @@
           "role": "source"
         },
         {
+          "path": "artifacts/escape-hatch/src/lib/bootstrap-quiz.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/bootstrap-quiz.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/bootstrap-quiz.spec.ts",
+          "role": "test"
+        },
+        {
           "path": "docs/agent/ANSWER_MEMORY_COMPLETION_HANDOFF.md",
           "role": "documentation"
         },

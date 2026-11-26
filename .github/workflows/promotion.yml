@@ -355,6 +355,14 @@ jobs:
               exit 1
             fi
           fi
+          # A PR's .base.sha can remain at its original commit even after
+          # refs/heads/main advances. Verify the ACTUAL target branch, not
+          # only the PR metadata, before trusting candidate-only CI.
+          live_default_sha=$(gh api repos/${{ github.repository }}/git/ref/heads/main --jq '.object.sha')
+          if [ -z "$live_default_sha" ] || [ "$live_default_sha" != "$base_sha" ]; then
+            echo "STALE_BASE: validated_base=$base_sha live_main=$live_default_sha — rebuild and revalidate against current main"
+            exit 1
+          fi
           # Stale/moved candidate blocks at final provider re-read
           current_head=$(gh api repos/${{ github.repository }}/pulls/${pr} --jq '.head.sha' 2>&1 || echo "")
           current_base=$(gh api repos/${{ github.repository }}/pulls/${pr} --jq '.base.sha' 2>&1 || echo "")
@@ -397,9 +405,22 @@ jobs:
             echo "STALE_CANDIDATE: PR head/base changed during browser validation"
             exit 1
           fi
+          refreshed_main_sha=$(gh api repos/${{ github.repository }}/git/ref/heads/main --jq '.object.sha')
+          if [ -z "$refreshed_main_sha" ] || [ "$refreshed_main_sha" != "$base_sha" ]; then
+            echo "STALE_BASE: target main changed during browser validation; rebuild before merge"
+            exit 1
+          fi
           # Existing structural/harness guard remains supplemental. Browser proof is
           # enforced by the real provider-backed verify-browser command above.
           python scripts/promotion_guard.py check --candidate-sha "$expected_head_sha" --base-sha "$base_sha" --pr "$pr" --target main
+          # Final live-base observation immediately before the provider merge.
+          # Expected head SHA alone does not protect the target branch from
+          # intervening commits or independently merged feature-map changes.
+          final_main_sha=$(gh api repos/${{ github.repository }}/git/ref/heads/main --jq '.object.sha')
+          if [ -z "$final_main_sha" ] || [ "$final_main_sha" != "$base_sha" ]; then
+            echo "STALE_BASE: current main moved after acceptance; no merge"
+            exit 1
+          fi
           # Compare-and-set merge via provider API with expected head SHA
           echo "All gates green for $expected_head_sha — proceeding to provider merge with compare-and-set"
           if gh api --method PUT repos/${{ github.repository }}/pulls/${pr}/merge -f commit_title="Merge PR #${pr}" -f commit_message="promotion: merge candidate ${expected_head_sha}" -f sha="$expected_head_sha" -f merge_method=merge > /tmp/merge-response.json 2>&1; then

@@ -1,4 +1,4 @@
-import { allowsAutomaticRecommendation, type RecommendationWorkMode } from './opportunity-fit.ts';
+import { allowsRankedPreparation, type RecommendationWorkMode } from './opportunity-fit.ts';
 /**
  * Deterministic Google/local tracker projection into EscapeHatch applications.
  * Never invents counts. Never treats Applied? checkbox alone as Submitted proof.
@@ -282,8 +282,8 @@ export function selectNextActionableOpportunity(snapshot: TrackerSnapshot, mode:
     isSubmittedLocked(row) || normalizeStatus(row.status, row.appliedCheckbox) === 'closed' || row.appliedCheckbox
   ).map(row => row.applyUrl));
   const ready = snapshot.applications.filter((row) => {
-    if (!allowsAutomaticRecommendation(row, mode)) return false;
-    if (applicationPreparationRank(row.notes, row.workMode) === null || !/^ready to apply$/i.test(row.status.trim()) || row.appliedCheckbox || isLockedIndeedPosting(row.applyUrl, locked)) return false;
+    const preparationRank = applicationPreparationRank(row.notes, row.workMode);
+    if (!allowsRankedPreparation(preparationRank, row, mode) || !/^ready to apply$/i.test(row.status.trim()) || row.appliedCheckbox || isLockedIndeedPosting(row.applyUrl, locked)) return false;
     try {
       const url = new URL(row.applyUrl);
       return url.protocol === 'https:' && url.hostname.includes('.') &&
@@ -345,10 +345,11 @@ export function selectNextHomeApplication(
     (item.status === 'saved' || item.status === 'preparing') &&
     !item.submissionEvidence && !item.reconciliationConflict;
   const locked = lockedIndeedPostingKeys(existing.filter(item => !actionable(item)).map(item => item.url));
-  const eligible = (item: Application) => actionable(item) && localApplicationPreparationRank(item.notes, item.opportunityDecision) !== null && !isLockedIndeedPosting(item.url, locked) && allowsAutomaticRecommendation(item, mode);
+  const preparationRank = (item: Application) => localApplicationPreparationRank(item.notes, item.opportunityDecision, item.workMode);
+  const eligible = (item: Application) => actionable(item) && !isLockedIndeedPosting(item.url, locked) && allowsRankedPreparation(preparationRank(item), item, mode);
   const reconciled = suggested ? existing.find(item => item.id === suggested.id) || suggested : null;
-  if (reconciled && eligible(reconciled) && localApplicationPreparationRank(reconciled.notes, reconciled.opportunityDecision) === 0) return reconciled;
-  const explicitlySelected = existing.find(item => eligible(item) && localApplicationPreparationRank(item.notes, item.opportunityDecision) === 0);
+  if (reconciled && eligible(reconciled) && preparationRank(reconciled) === 0) return reconciled;
+  const explicitlySelected = existing.find(item => eligible(item) && preparationRank(item) === 0);
   if (explicitlySelected) return explicitlySelected;
   if (reconciled && eligible(reconciled)) return reconciled;
   return existing.find(item => eligible(item) && item.nextAction.trim()) ||

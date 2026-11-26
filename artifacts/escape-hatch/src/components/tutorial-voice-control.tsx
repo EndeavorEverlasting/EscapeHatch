@@ -35,7 +35,9 @@ function narrationFor(target?: Target): PublicGuidance {
   const stop = target.kind === 'stop' ? registry.guide_stops.find(row => row.id === target.id) : getWorkspaceGuide(target.id);
   if (!stop) return emptyGuidance;
   const guide = getJourneyStop(stop.id, containerWorkspace);
-  return { label: guide.title, narration: guide.title + '. ' + guide.detail + ' ' + guide.action + '.' };
+  // Materials can represent email-only applications; do not narrate a browser-only action.
+  const includeAction = target.kind !== 'route' || target.id !== '/materials';
+  return { label: guide.title, narration: guide.title + '. ' + guide.detail + (includeAction ? ' ' + guide.action + '.' : '') };
 }
 
 function readEnabled(): boolean {

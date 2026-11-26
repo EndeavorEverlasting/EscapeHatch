@@ -1251,7 +1251,7 @@
       "id": "materials",
       "route": "/materials",
       "title": "Review role documents",
-      "detail": "Review the exact PDFs for this job. Return to Browser assist when you’re ready to continue with the same opportunity.",
+      "detail": "Review the exact PDFs for this job, then continue using the next action for this opportunity.",
       "action": "Return to Browser assist",
       "next": "assist",
       "badge": "Apply",

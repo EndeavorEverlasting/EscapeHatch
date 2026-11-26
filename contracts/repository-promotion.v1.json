@@ -147,6 +147,21 @@
         "blocking": "REQUIRED"
       },
       {
+        "id": "feature-ontology-structure",
+        "category": "structural/schema/format",
+        "owner": "scripts/validate_feature_ontology.py",
+        "command": "python scripts/validate_feature_ontology.py",
+        "inputs": [
+          "Git tracked inventory",
+          "harness/contracts/feature-ontology.v1.json",
+          "contracts/application-journey-scenes.v1.json"
+        ],
+        "outputs": [
+          "FEATURE_ONTOLOGY PASS/FAIL"
+        ],
+        "blocking": "REQUIRED"
+      },
+      {
         "id": "product-version-structure",
         "category": "structural/schema/format",
         "owner": "scripts/validate_product_version.py",

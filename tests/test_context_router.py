@@ -35,6 +35,18 @@ class ContextRoutingTests(unittest.TestCase):
         self.assertEqual({s["id"] for s in value["selected"]}, {"governance", "harness_skill"})
         self.assertLess(value["candidate_payload_bytes"], value["baseline_unconditional_bytes"])
 
+    def test_ontology_demand_load_does_not_bloat_application_or_runtime(self):
+        receipt = router.select(BASE, "feature map", "ontology")
+        self.assertIn("feature_ontology", {row["id"] for row in receipt["selected"]})
+        self.assertIn("application_journey", {row["id"] for row in receipt["selected"]})
+        self.assertIn("journey-guidance", next(row["payload"] for row in receipt["selected"] if row["id"] == "feature_ontology"))
+        self.assertLessEqual(receipt["candidate_payload_bytes"], 32768)
+        router.verify_receipt(BASE, receipt)
+        for task, lane in (("prepare application staples", "application"), ("Windows startup", "runtime")):
+            result = router.select(BASE, task, lane)
+            self.assertNotIn("feature_ontology", {row["id"] for row in result["selected"]})
+            self.assertLessEqual(result["candidate_payload_bytes"], 32768)
+
     def test_application_preserves_parent_and_governance(self):
         result = router.select(self.root, "prepare ATS application", "auto", 50000)
         self.assertEqual(result["lane"], "application")

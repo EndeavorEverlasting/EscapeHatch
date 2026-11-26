@@ -39,6 +39,10 @@ test('first-run quiz saves reusable answers to managed private preference endpoi
       writes++;
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, preferences: persisted }) });
     }
+    if (routePath === '/__escapehatch/managed-assist/preferences/clear' && request.method() === 'POST') {
+      persisted = fixture();
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
+    }
     if (request.method() === 'POST' && /(?:submit|prepare|upload)/.test(routePath)) submissions++;
     return route.fulfill({ status: 404, contentType: 'application/json', body: '{"ok":false,"error":"synthetic_no_backend"}' });
   });
@@ -59,6 +63,14 @@ test('first-run quiz saves reusable answers to managed private preference endpoi
   expect(persisted.recommendation_work_mode).toBe('remote_only');
   expect(persisted.require_document_review).toBe(true);
   expect(persisted.preferences['attestation.truth_accuracy']).toBeUndefined();
+  expect(submissions).toBe(0);
+
+  // Explicit Clear must erase the staged React quiz as well as the private disk snapshot.
+  await page.getByRole('button', { name: 'Clear Preferences' }).click();
+  await page.getByRole('button', { name: 'Confirm clear' }).click();
+  await expect(quiz).toBeVisible();
+  await expect(quiz.getByLabel('First name')).toHaveValue('');
+  await expect(quiz.getByLabel('Email')).toHaveValue('');
   expect(submissions).toBe(0);
 });
 

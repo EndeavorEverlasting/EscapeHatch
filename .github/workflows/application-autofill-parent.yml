@@ -10,6 +10,12 @@ on:
       - scripts/validate_application_autofill_parent.py
       - tests/test_application_autofill_parent.py
       - .github/workflows/application-autofill-parent.yml
+      - artifacts/escape-hatch/src/lib/bootstrap-quiz.ts
+      - artifacts/escape-hatch/src/lib/profile-question-planner.ts
+      - artifacts/escape-hatch/src/components/application-preferences.tsx
+      - artifacts/escape-hatch/src/App.tsx
+      - artifacts/escape-hatch/src/components/profile-discovery-coach.tsx
+      - harness/contracts/application-form-taxonomy.v1.json
   push:
     branches: [main]
   workflow_dispatch:
@@ -28,5 +34,7 @@ jobs:
         run: python scripts/validate_application_autofill_parent.py
       - name: Reject false closure claims
         run: python -m unittest discover -s tests -p test_application_autofill_parent.py -v
+      - name: Preserve onboarding and application journey boundaries
+        run: python scripts/validate_application_journey.py
       - name: Existing harness floor
         run: python scripts/validate_harness.py

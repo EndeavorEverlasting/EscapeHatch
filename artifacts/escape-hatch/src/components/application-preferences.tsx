@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { emptyPreferences, parsePreferences, questions, roleQuestionKey, preferenceChoices, expandProfessionalTitles, suggestProfessionalTitles, type Preferences } from '@/lib/application-preferences';
-import { applyBootstrapQuiz, bootstrapQuizError, emptyBootstrapQuiz, type BootstrapQuiz } from '@/lib/bootstrap-quiz';
+import { applyBootstrapQuiz, bootstrapQuizError, emptyBootstrapQuiz, BOOTSTRAP_QUESTION_IDS, type BootstrapQuiz } from '@/lib/bootstrap-quiz';
+import { ProfileDiscoveryCoach } from '@/components/profile-discovery-coach';
+import { reconcileGuidedReadback } from '@/lib/profile-question-planner';
 import { savedAnswerReviewRows, unrecognizedSavedAnswerCount, hasTalentCommunityAnswers, talentCommunityAnswerHandoff, canReplaceEditorFromDisk } from '@/lib/answer-transparency';
 
 const API = '/__escapehatch/managed-assist/preferences';
@@ -37,7 +39,7 @@ function preferenceFieldLabel(id: string, fallback: string) {
   if (id === 'identity.linkedin') return 'LinkedIn profile';
   return fallback;
 }
-export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '', reviewedExperience = '', refresh = 0, onEdit }: { onLoad?: (data: Preferences) => void; currentRole?: string; currentPosting?: string; reviewedExperience?: string; refresh?: number; onEdit?: () => void }) {
+export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '', reviewedExperience = '', refresh = 0, onEdit, bootstrapDefaults }: { onLoad?: (data: Preferences) => void; currentRole?: string; currentPosting?: string; reviewedExperience?: string; refresh?: number; onEdit?: () => void; bootstrapDefaults?: Partial<BootstrapQuiz> }) {
   const [data, setData] = useState<Preferences>(emptyPreferences);
   // Separate the durable disk snapshot from unsaved edits in the form below.
   const [savedData, setSavedData] = useState<Preferences>(emptyPreferences);
@@ -47,6 +49,22 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
   const [quiz, setQuiz] = useState<BootstrapQuiz>(emptyBootstrapQuiz);
   const [quizStep, setQuizStep] = useState<0 | 1>(0);
   const quizInitialized = useRef(false);
+  // Prefill from the existing local workspace *only in the editor*. The operator
+  // explicitly confirms Save before these values enter the reusable private file.
+  useEffect(() => {
+    if (!bootstrapDefaults) return;
+    setQuiz(current => {
+      let changed = false;
+      const next = { ...current };
+      for (const key of ['firstName', 'lastName', 'email', 'phone', 'city', 'region', 'country', 'linkedIn'] as const) {
+        const candidate = bootstrapDefaults[key]?.trim();
+        if (!next[key] && candidate) { next[key] = candidate; changed = true; }
+      }
+      return changed ? next : current;
+    });
+  }, [bootstrapDefaults?.firstName, bootstrapDefaults?.lastName, bootstrapDefaults?.email,
+      bootstrapDefaults?.phone, bootstrapDefaults?.city, bootstrapDefaults?.region,
+      bootstrapDefaults?.country, bootstrapDefaults?.linkedIn]);
   const [message, setMessage] = useState('Loading saved preferences…');
   const [store, setStore] = useState<PreferenceStoreMeta | null>(null);
   const [ready, setReady] = useState(false);
@@ -121,6 +139,44 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
     })();
     return () => { cancelled = true; };
   }, [refresh, ready]);
+  async function saveGuided(candidate: Preferences, confirmedIds: readonly string[]) {
+    if (!parsePreferences(candidate) || !confirmedIds.length || confirmedIds.some(id => !candidate.preferences[id]?.value)) {
+      setMessage('Guided answers failed validation. Nothing was saved.'); return;
+    }
+    // The guided path intentionally starts from savedData, NOT the full editor.
+    // Empty removals prevent unrelated unsaved decisions from being committed.
+    setBusy(true);
+    try {
+      const response = await fetch(API, {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'content-type': 'application/json', 'x-escapehatch-operator-action': 'confirmed' },
+        body: JSON.stringify({
+          preferences: { ...candidate, exported_at: new Date().toISOString() },
+          removedQuestions: [],
+        }),
+      });
+      if (!response.ok) throw new Error('Guided save was rejected.');
+      const check = await fetch(API, { credentials: 'same-origin', cache: 'no-store' });
+      if (!check.ok) throw new Error('The guided save could not be read back.');
+      const json = await check.json();
+      const parsed = parsePreferences(json.preferences);
+      if (!parsed || confirmedIds.some(id => parsed.preferences[id]?.value !== candidate.preferences[id]?.value) ||
+          (candidate.recommendation_work_mode && parsed.recommendation_work_mode !== candidate.recommendation_work_mode))
+        throw new Error('The confirmed guided answers did not match disk readback.');
+      const meta = json.store && typeof json.store.preferenceStore === 'string'
+        ? { dataHome: String(json.store.dataHome || ''), preferenceStore: String(json.store.preferenceStore),
+            source: String(json.store.source || 'platform_default'), exists: json.store.exists === true } : null;
+      if (meta) setStore(meta);
+      setSavedData(parsed);
+      setData(current => reconcileGuidedReadback(current, parsed, confirmedIds, removedQuestions).editor);
+      setRemovedQuestions(current => reconcileGuidedReadback(data, parsed, confirmedIds, current).removedQuestions);
+      onLoad?.(parsed);
+      window.dispatchEvent(new Event('escapehatch-recommendation-policy-changed'));
+      setMessage('Guided answers saved and verified in the private profile. Other unfinished editor changes remain unsaved.');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Guided save failed. Existing answers and unfinished edits are preserved.');
+    } finally { setBusy(false); }
+  }
   async function save(clear = false, candidate: Preferences = data) {
     setBusy(true);
     try {
@@ -166,9 +222,9 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
   return <section className="mb-6 rounded-2xl border border-border bg-card p-5" data-testid="application-preferences">
     <h2 className="font-display text-2xl">Reusable application answers</h2>
     <p className="mt-2 max-w-prose text-sm leading-6 text-muted-foreground">Save your own answers once. Leave unknown facts blank. Review the employer form before submitting. Agreements and certifications stay manual.</p>
-    {ready && ['identity.first_name', 'identity.last_name', 'identity.email'].some(id => !savedData.preferences[id]?.value) && (
+    {ready && (['identity.first_name', 'identity.last_name', 'identity.email'].some(id => !savedData.preferences[id]?.value) || !savedData.recommendation_work_mode) && (
       <section className="mt-4 rounded-xl border border-primary/40 bg-primary/[0.04] p-4" aria-label="First-run application quiz" data-testid="bootstrap-application-quiz">
-        <h3 className="font-display text-xl">First-time application setup</h3>
+        <div className="flex items-center gap-3"><img src="/escapehatch-mascot.webp" alt="" aria-hidden="true" width={56} height={56} className="h-14 w-14 shrink-0 object-contain" /><h3 className="font-display text-xl">Chirp! First-time application setup</h3></div>
         <p className="mt-1 text-sm text-muted-foreground">Step {quizStep + 1} of 2. Answer these once; EscapeHatch will reuse only your saved, explicit answers when preparing employer forms. Skip anything you do not know.</p>
         {quizStep === 0 ? (
           <>
@@ -212,10 +268,9 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
               <button type="button" className="rounded bg-primary px-4 py-2 text-primary-foreground" disabled={busy}
                 onClick={() => {
                   try {
-                    const staged = applyBootstrapQuiz(data, quiz);
-                    setData(staged);
-                    markEdited();
-                    void save(false, staged);
+                    const staged = applyBootstrapQuiz(savedData, quiz);
+                    const confirmedIds = BOOTSTRAP_QUESTION_IDS.filter(id => !!staged.preferences[id]?.value);
+                    void saveGuided(staged, confirmedIds);
                   } catch (error) {
                     setMessage(error instanceof Error ? error.message : 'Review your answers and try again.');
                   }
@@ -226,6 +281,24 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
         <p className="mt-2 text-xs text-muted-foreground">You can instead use the full answer editor below. Existing saved answers are never silently overwritten by this quiz.</p>
       </section>
     )}
+
+    {ready && <ProfileDiscoveryCoach saved={savedData} busy={busy} onSave={(id, answer) => {
+      const owner = questions.find(question => question.id === id);
+      if (!owner || owner.answer_scope !== 'profile' || owner.automation_policy !== 'fill_if_explicit_preference' || owner.confirmation_policy !== 'until_changed') {
+        setMessage('This question cannot be saved as a reusable profile answer.'); return;
+      }
+      if (data.preferences[id]?.value) {
+        setMessage('This answer is already in your editor. Review that answer before replacing it.'); return;
+      }
+      const staged: Preferences = {
+        ...savedData,
+        preferences: { ...savedData.preferences, [id]: { scope: 'profile_preference', source: 'user',
+          value: answer.trim(), updated_at: new Date().toISOString() } },
+      };
+      const valid = parsePreferences(staged);
+      if (!valid) { setMessage('The new answer failed profile validation; nothing was saved.'); return; }
+      void saveGuided(valid, [id]);
+    }} />}
 
     <aside className="preference-store-rail mt-4 border-l-4 border-primary/70 bg-primary/[0.04] py-3 pl-4 pr-3" aria-label="Shared EscapeHatch profile location" data-testid="preference-store-rail">
       <p className="text-sm font-semibold text-foreground">Shared profile on this computer</p>

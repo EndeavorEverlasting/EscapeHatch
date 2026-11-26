@@ -92,7 +92,7 @@ function knownAnswers(preferences: Preferences): ReviewItem[] {
     const question = questions.find(q => q.id === id);
     const entry = preferences.preferences[id];
     const value = reusableValue(id, preferences);
-    if (!question || question.answer_scope !== 'profile' || question.sensitivity !== 'personal' ||
+    if (!question || question.answer_scope !== 'profile' || !['personal', 'employment'].includes(question.sensitivity) ||
       entry?.source !== 'user' || entry.scope !== 'profile_preference' || !value) return [];
     return [{ id, label: question.aliases[0], value }];
   });

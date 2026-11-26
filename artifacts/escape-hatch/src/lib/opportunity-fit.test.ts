@@ -97,3 +97,20 @@ test('reviewed mandatory requirements drive classification; unknown is not non-m
   assert.equal(deriveOpportunityType(mergeRubricNotes(note('met'), marker('unmet'))).type, 'learning');
   assert.equal(deriveOpportunityType(mergeRubricNotes(note('unmet'), base)).type, 'learning');
 });
+
+test('remote-only discovery never vetoes a chosen practice application, and duplicate locks still win', () => {
+  const row: TrackerRow = { sheetRow: 52, company: 'Synthetic practice', role: 'Engineer', status: 'Ready to Apply', appliedCheckbox: false, priority: 'Low', applyUrl: 'https://example.com/practice', workMode: 'On-site', notes: practice };
+  const app = trackerRowToApplication(row, '2026-01-01');
+  assert.equal(selectNextActionableOpportunity({ applications: [row] } as TrackerSnapshot, 'remote_only'), row);
+  assert.equal(selectNextHomeApplication(app, [app], 'remote_only'), app);
+  const unchosen = { ...row, notes: practice.replace('; apply;', '; undecided;') };
+  assert.equal(selectNextActionableOpportunity({ applications: [unchosen] } as TrackerSnapshot, 'remote_only'), null);
+  const unchosenApp = trackerRowToApplication(unchosen, '2026-01-01');
+  assert.equal(selectNextHomeApplication(unchosenApp, [unchosenApp], 'remote_only'), null);
+  const submitted = { ...row, status: 'Submitted', appliedCheckbox: true };
+  assert.equal(selectNextActionableOpportunity({ applications: [submitted] } as TrackerSnapshot, 'remote_only'), null);
+  const submittedApp = trackerRowToApplication(submitted, '2026-01-01');
+  assert.equal(selectNextHomeApplication(submittedApp, [submittedApp], 'remote_only'), null);
+  const conflicting = { ...app, notes: career, workMode: 'On-site', opportunityDecision: { jobDesire: 'want', applicationDecision: 'undecided', purpose: 'career' } as const };
+  assert.equal(selectNextHomeApplication(conflicting, [conflicting]), null);
+});

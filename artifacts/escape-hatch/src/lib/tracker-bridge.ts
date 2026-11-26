@@ -1,8 +1,10 @@
+import { allowsAutomaticRecommendation, type RecommendationWorkMode } from './opportunity-fit.ts';
 /**
  * Deterministic Google/local tracker projection into EscapeHatch applications.
  * Never invents counts. Never treats Applied? checkbox alone as Submitted proof.
  */
 import type { Application, ApplicationStatus, Priority } from './storage';
+import { localApplicationPreparationRank, applicationPreparationRank, mergeRubricNotes, readOpportunityRubric, normalizeWorkMode } from './opportunity-fit.ts';
 import { applicationEventUrl } from './application-events.ts';
 import { lockedIndeedPostingKeys, isLockedIndeedPosting } from './indeed-posting-identity.ts';
 import { parseEmailApplication, type EmailApplication } from './email-application.ts';
@@ -193,6 +195,10 @@ export function trackerRowToApplication(row: TrackerRow, capturedAt?: string): A
   const safeStatus = recruiterLed && (status === 'saved' || status === 'preparing')
     ? 'applied'
     : row.appliedCheckbox && status === 'saved' ? 'preparing' : status;
+  const rubricInput = readOpportunityRubric(row.notes);
+  const observedMode = normalizeWorkMode(row.workMode);
+  const projectedNotes = rubricInput && rubricInput !== 'invalid' && observedMode !== 'unknown' && observedMode !== rubricInput.workMode && rubricInput.applicationDecision !== 'apply'
+    ? [row.notes, 'EscapeHatch rubric conflict: tracker work mode differs'].join('\n') : row.notes;
   const packageBits = [
     row.resumePdf ? 'Resume PDF linked' : 'Resume PDF missing',
     row.resumeDoc ? 'Resume Doc linked' : null,
@@ -205,6 +211,7 @@ export function trackerRowToApplication(row: TrackerRow, capturedAt?: string): A
     company: row.company,
     role: row.role,
     url: row.applyUrl,
+    ...(typeof row.workMode === 'string' && row.workMode.length <= 512 && row.workMode.trim() ? { workMode: row.workMode } : {}),
     ...(emailApplication ? { emailApplication } : {}),
     status: safeStatus,
     priority: normalizePriority(row.priority),
@@ -218,7 +225,7 @@ export function trackerRowToApplication(row: TrackerRow, capturedAt?: string): A
       row.followUp ? `Follow-up: ${row.followUp}` : null,
       row.talentCommunityStatus ? `Talent community: ${row.talentCommunityStatus}${row.talentCommunityConfirmedOn ? ' · ' + row.talentCommunityConfirmedOn : ''} (not job-submission state)` : null,
       row.internalEmployerProfileStatus ? `Internal employer profile: ${row.internalEmployerProfileStatus} (independent of talent community)` : null,
-      row.notes || null,
+      projectedNotes || null,
     ].filter(Boolean).join('\n'),
     nextAction: row.nextAction?.trim() ||
       (recruiterLed && (safeStatus === 'applied' || safeStatus === 'follow_up')
@@ -260,21 +267,23 @@ export function mergeTrackerIntoApplications(
       ...(prior.submissionEvidence ? { submissionEvidence: prior.submissionEvidence } : {}),
       ...(prior.events ? { events: prior.events } : {}),
       ...(prior.jobDescription !== undefined ? { jobDescription: prior.jobDescription } : {}),
-      notes: prior.notes.includes('local edit') ? prior.notes : item.notes,
+      ...(prior.opportunityDecision && prior.url === item.url && prior.company === item.company && prior.role === item.role ? { opportunityDecision: prior.opportunityDecision } : {}),
+      notes: prior.notes.includes('local edit') ? mergeRubricNotes(prior.notes, item.notes) : item.notes,
       nextAction: prior.nextAction && (preserveProgress || prior.updatedAt > item.updatedAt) ? prior.nextAction : item.nextAction,
     });
   }
   return [...byId.values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
-export function selectNextActionableOpportunity(snapshot: TrackerSnapshot): TrackerRow | null {
+export function selectNextActionableOpportunity(snapshot: TrackerSnapshot, mode: RecommendationWorkMode = 'any'): TrackerRow | null {
   // Prefer the latest high-priority Ready entry, not a hard-coded old employer.
   // This is a suggestion only; user selection and existing sessions remain authoritative.
   const locked = lockedIndeedPostingKeys(snapshot.applications.filter(row =>
     isSubmittedLocked(row) || normalizeStatus(row.status, row.appliedCheckbox) === 'closed' || row.appliedCheckbox
   ).map(row => row.applyUrl));
   const ready = snapshot.applications.filter((row) => {
-    if (!/^ready to apply$/i.test(row.status.trim()) || row.appliedCheckbox || isLockedIndeedPosting(row.applyUrl, locked)) return false;
+    if (!allowsAutomaticRecommendation(row, mode)) return false;
+    if (applicationPreparationRank(row.notes, row.workMode) === null || !/^ready to apply$/i.test(row.status.trim()) || row.appliedCheckbox || isLockedIndeedPosting(row.applyUrl, locked)) return false;
     try {
       const url = new URL(row.applyUrl);
       return url.protocol === 'https:' && url.hostname.includes('.') &&
@@ -283,7 +292,7 @@ export function selectNextActionableOpportunity(snapshot: TrackerSnapshot): Trac
   });
   const rank = (priority: string) => /^high$/i.test(priority.trim()) ? 0 :
     /^medium$/i.test(priority.trim()) ? 1 : 2;
-  ready.sort((a, b) => rank(a.priority) - rank(b.priority) || b.sheetRow - a.sheetRow);
+  ready.sort((a, b) => applicationPreparationRank(a.notes, a.workMode)! - applicationPreparationRank(b.notes, b.workMode)! || rank(a.priority) - rank(b.priority) || b.sheetRow - a.sheetRow);
   return ready[0] || null;
 }
 
@@ -330,13 +339,17 @@ export function connectionFromSnapshot(
 export function selectNextHomeApplication(
   suggested: Application | null,
   existing: readonly Application[],
+  mode: RecommendationWorkMode = 'any',
 ): Application | null {
   const actionable = (item: Application) =>
     (item.status === 'saved' || item.status === 'preparing') &&
     !item.submissionEvidence && !item.reconciliationConflict;
   const locked = lockedIndeedPostingKeys(existing.filter(item => !actionable(item)).map(item => item.url));
-  const eligible = (item: Application) => actionable(item) && !isLockedIndeedPosting(item.url, locked);
+  const eligible = (item: Application) => actionable(item) && localApplicationPreparationRank(item.notes, item.opportunityDecision) !== null && !isLockedIndeedPosting(item.url, locked) && allowsAutomaticRecommendation(item, mode);
   const reconciled = suggested ? existing.find(item => item.id === suggested.id) || suggested : null;
+  if (reconciled && eligible(reconciled) && localApplicationPreparationRank(reconciled.notes, reconciled.opportunityDecision) === 0) return reconciled;
+  const explicitlySelected = existing.find(item => eligible(item) && localApplicationPreparationRank(item.notes, item.opportunityDecision) === 0);
+  if (explicitlySelected) return explicitlySelected;
   if (reconciled && eligible(reconciled)) return reconciled;
   return existing.find(item => eligible(item) && item.nextAction.trim()) ||
     existing.find(eligible) || null;

@@ -707,12 +707,24 @@
           "role": "source"
         },
         {
+          "path": "artifacts/escape-hatch/src/components/opportunity-decision-guide.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/use-recommendation-work-mode.ts",
+          "role": "source"
+        },
+        {
           "path": "artifacts/escape-hatch/src/lib/indeed-posting-identity.test.ts",
           "role": "test"
         },
         {
           "path": "artifacts/escape-hatch/src/lib/indeed-posting-identity.ts",
           "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/opportunity-fit.test.ts",
+          "role": "test"
         },
         {
           "path": "artifacts/escape-hatch/src/lib/opportunity-fit.ts",
@@ -757,6 +769,10 @@
         {
           "path": "artifacts/escape-hatch/tracker-writeback.ts",
           "role": "source"
+        },
+        {
+          "path": "docs/agent/OPPORTUNITY_RUBRIC_V1.md",
+          "role": "documentation"
         },
         {
           "path": "docs/agent/P04_JOB_BOARD_APPLICATION_PLATFORMS_2026-10-28.md",

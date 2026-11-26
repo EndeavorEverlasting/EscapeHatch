@@ -1050,10 +1050,6 @@
         "career-sources",
         "cockpit-ui"
       ],
-      "implementation_paths": [
-        "artifacts/escape-hatch/src/components/sources-page.tsx",
-        "artifacts/escape-hatch/src/lib/source-bridge.ts"
-      ],
       "avatar_guide": {
         "copy_owner": "detail",
         "next_action_owner": "action",
@@ -1076,7 +1072,11 @@
           "artifacts/escape-hatch/src/App.tsx",
           "artifacts/escape-hatch/src/components/journey-atlas.tsx"
         ]
-      }
+      },
+      "implementation_paths": [
+        "artifacts/escape-hatch/src/components/sources-page.tsx",
+        "artifacts/escape-hatch/src/lib/source-bridge.ts"
+      ]
     },
     {
       "id": "profile",
@@ -1092,10 +1092,6 @@
         "cockpit-ui",
         "workspace-identity"
       ],
-      "implementation_paths": [
-        "artifacts/escape-hatch/src/App.tsx",
-        "artifacts/escape-hatch/src/lib/storage.ts"
-      ],
       "avatar_guide": {
         "copy_owner": "detail",
         "next_action_owner": "action",
@@ -1118,7 +1114,11 @@
           "artifacts/escape-hatch/src/App.tsx",
           "artifacts/escape-hatch/src/components/journey-atlas.tsx"
         ]
-      }
+      },
+      "implementation_paths": [
+        "artifacts/escape-hatch/src/App.tsx",
+        "artifacts/escape-hatch/src/lib/storage.ts"
+      ]
     },
     {
       "id": "answers",
@@ -1134,10 +1134,6 @@
         "application-preferences",
         "cockpit-ui"
       ],
-      "implementation_paths": [
-        "artifacts/escape-hatch/src/components/application-preferences.tsx",
-        "artifacts/escape-hatch/src/lib/application-preferences.ts"
-      ],
       "avatar_guide": {
         "copy_owner": "detail",
         "next_action_owner": "action",
@@ -1160,7 +1156,11 @@
           "artifacts/escape-hatch/src/App.tsx",
           "artifacts/escape-hatch/src/components/journey-atlas.tsx"
         ]
-      }
+      },
+      "implementation_paths": [
+        "artifacts/escape-hatch/src/components/application-preferences.tsx",
+        "artifacts/escape-hatch/src/lib/application-preferences.ts"
+      ]
     },
     {
       "id": "applications",
@@ -1176,10 +1176,6 @@
         "cockpit-ui",
         "opportunity-tracking"
       ],
-      "implementation_paths": [
-        "artifacts/escape-hatch/src/App.tsx",
-        "artifacts/escape-hatch/tracker-refresh.ts"
-      ],
       "avatar_guide": {
         "copy_owner": "detail",
         "next_action_owner": "action",
@@ -1202,7 +1198,11 @@
           "artifacts/escape-hatch/src/App.tsx",
           "artifacts/escape-hatch/src/components/journey-atlas.tsx"
         ]
-      }
+      },
+      "implementation_paths": [
+        "artifacts/escape-hatch/src/App.tsx",
+        "artifacts/escape-hatch/tracker-refresh.ts"
+      ]
     },
     {
       "id": "assist",
@@ -1217,10 +1217,6 @@
         "journey-guidance",
         "managed-application",
         "cockpit-ui"
-      ],
-      "implementation_paths": [
-        "artifacts/escape-hatch/src/components/managed-browser-assist.tsx",
-        "artifacts/escape-hatch/browser-assist-control.ts"
       ],
       "avatar_guide": {
         "copy_owner": "detail",
@@ -1245,7 +1241,11 @@
           "artifacts/escape-hatch/src/components/journey-atlas.tsx",
           "artifacts/escape-hatch/src/components/managed-browser-assist.tsx"
         ]
-      }
+      },
+      "implementation_paths": [
+        "artifacts/escape-hatch/src/components/managed-browser-assist.tsx",
+        "artifacts/escape-hatch/browser-assist-control.ts"
+      ]
     },
     {
       "id": "materials",
@@ -1260,10 +1260,6 @@
         "journey-guidance",
         "application-documents",
         "cockpit-ui"
-      ],
-      "implementation_paths": [
-        "artifacts/escape-hatch/src/components/materials-review-scene.tsx",
-        "artifacts/escape-hatch/opportunity-documents.ts"
       ],
       "avatar_guide": {
         "copy_owner": "detail",
@@ -1287,7 +1283,11 @@
           "artifacts/escape-hatch/src/App.tsx",
           "artifacts/escape-hatch/src/components/journey-atlas.tsx"
         ]
-      }
+      },
+      "implementation_paths": [
+        "artifacts/escape-hatch/src/components/materials-review-scene.tsx",
+        "artifacts/escape-hatch/opportunity-documents.ts"
+      ]
     },
     {
       "id": "review",
@@ -1304,10 +1304,6 @@
         "submission-evidence",
         "cockpit-ui"
       ],
-      "implementation_paths": [
-        "artifacts/escape-hatch/src/components/managed-browser-assist.tsx",
-        "artifacts/escape-hatch/application-submission-policy.ts"
-      ],
       "avatar_guide": {
         "copy_owner": "detail",
         "next_action_owner": "action",
@@ -1331,7 +1327,11 @@
           "artifacts/escape-hatch/src/components/journey-atlas.tsx",
           "artifacts/escape-hatch/src/components/managed-browser-assist.tsx"
         ]
-      }
+      },
+      "implementation_paths": [
+        "artifacts/escape-hatch/src/components/managed-browser-assist.tsx",
+        "artifacts/escape-hatch/application-submission-policy.ts"
+      ]
     }
   ],
   "resume_persistence": {
@@ -1354,6 +1354,62 @@
     "conflict_policy": "preserve_divergent_nonempty_pointers",
     "empty_semantics": "absence_default_not_forget_authority"
   },
+  "opportunity_decision_scenes": [
+    {
+      "id": "MATCH_REVIEW",
+      "parent_scene": "OPPORTUNITY_INTAKE",
+      "title": "Review the match",
+      "coach_prompt": "Chirp! Matching uses evidence, not whether you want the job. Review the work arrangement and available evidence before making your own choice.",
+      "next": "JOB_DESIRE",
+      "owner": "opportunity-fit",
+      "avatar": true,
+      "feature_ids": [
+        "opportunity-tracking",
+        "cockpit-ui"
+      ],
+      "implementation_paths": [
+        "artifacts/escape-hatch/src/components/opportunity-decision-guide.tsx",
+        "artifacts/escape-hatch/src/lib/opportunity-fit.ts",
+        "artifacts/escape-hatch/src/App.tsx"
+      ]
+    },
+    {
+      "id": "JOB_DESIRE",
+      "parent_scene": "OPPORTUNITY_INTAKE",
+      "title": "Do you want this job?",
+      "coach_prompt": "Chirp! Wanting the job is separate from matching it. You can want it, not want it, or be unsure.",
+      "next": "APPLICATION_DECISION",
+      "owner": "opportunityDecision.jobDesire",
+      "avatar": true,
+      "feature_ids": [
+        "opportunity-tracking",
+        "cockpit-ui"
+      ],
+      "implementation_paths": [
+        "artifacts/escape-hatch/src/components/opportunity-decision-guide.tsx",
+        "artifacts/escape-hatch/src/lib/opportunity-fit.ts",
+        "artifacts/escape-hatch/src/App.tsx"
+      ]
+    },
+    {
+      "id": "APPLICATION_DECISION",
+      "parent_scene": "OPPORTUNITY_INTAKE",
+      "title": "Do you want to apply?",
+      "coach_prompt": "Chirp! You can apply even when you do not want the job, including for interview practice. Your decision does not change the match or authorize submission.",
+      "next": "PREREQUISITES",
+      "owner": "opportunityDecision.applicationDecision",
+      "avatar": true,
+      "feature_ids": [
+        "opportunity-tracking",
+        "cockpit-ui"
+      ],
+      "implementation_paths": [
+        "artifacts/escape-hatch/src/components/opportunity-decision-guide.tsx",
+        "artifacts/escape-hatch/src/lib/opportunity-fit.ts",
+        "artifacts/escape-hatch/src/App.tsx"
+      ]
+    }
+  ],
   "feature_ontology": "harness/contracts/feature-ontology.v1.json",
   "supplemental_guides": [
     {

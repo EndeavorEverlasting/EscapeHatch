@@ -112,6 +112,21 @@ class FeatureOntologyTests(unittest.TestCase):
         with self.assertRaisesRegex(OntologyError, "voice policy"):
             self.check(journey=candidate)
 
+
+    def test_every_opportunity_decision_has_semantic_owner(self):
+        result = self.check()
+        self.assertEqual(result["decision_scenes"], 3)
+        candidate = deepcopy(self.journey)
+        del candidate["opportunity_decision_scenes"][0]["implementation_paths"]
+        with self.assertRaisesRegex(OntologyError, "implementation links for decision"):
+            self.check(journey=candidate)
+
+    def test_unowned_decision_implementation_fails(self):
+        candidate = deepcopy(self.journey)
+        candidate["opportunity_decision_scenes"][0]["implementation_paths"] = ["AGENTS.md"]
+        with self.assertRaisesRegex(OntologyError, "outside linked features"):
+            self.check(journey=candidate)
+
     def test_no_runtime_proof_inflation(self):
         candidate = deepcopy(self.journey)
         candidate["scenes"][0]["avatar_guide"]["native_runtime_proof"] = "certified"

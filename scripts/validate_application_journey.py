@@ -54,6 +54,15 @@ def validate(contract: dict, root: Path = ROOT) -> None:
         if scene.get("terminal_submit_automated") is not False:
             raise SceneContractError("automated terminal submit forbidden")
     validate_wayfinding(scenes, contract.get("guide_stops", []), ids)
+    decision_scenes = contract.get('opportunity_decision_scenes', [])
+    if [(x.get('id'), x.get('next'), x.get('owner')) for x in decision_scenes] != [('MATCH_REVIEW', 'JOB_DESIRE', 'opportunity-fit'), ('JOB_DESIRE', 'APPLICATION_DECISION', 'opportunityDecision.jobDesire'), ('APPLICATION_DECISION', 'PREREQUISITES', 'opportunityDecision.applicationDecision')]:
+        raise SceneContractError('opportunity decision scene ownership or order drift')
+    if any(x.get('parent_scene') != 'OPPORTUNITY_INTAKE' or x.get('avatar') is not True or not x.get('coach_prompt') for x in decision_scenes):
+        raise SceneContractError('decision scene avatar guidance missing')
+    guide = (root / 'artifacts/escape-hatch/src/components/opportunity-decision-guide.tsx').read_text(encoding='utf-8')
+    app = (root / 'artifacts/escape-hatch/src/App.tsx').read_text(encoding='utf-8')
+    if 'opportunity_decision_scenes' not in guide or '<OpportunityDecisionGuide' not in app:
+        raise SceneContractError('decision scene registry not wired to application UI')
     transitions = contract.get("transitions", [])
     if any(not isinstance(edge.get("guide_when"), str) or not edge["guide_when"].strip()
            for edge in transitions):

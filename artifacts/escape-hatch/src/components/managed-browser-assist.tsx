@@ -2,8 +2,9 @@ import { useOpportunityDocuments } from './opportunity-documents';
 import { ApplicationPuzzle } from './application-puzzle';
 import { ApplicationOutcome } from './application-outcome';
 import { useTutorialGuidance } from './tutorial-voice-control';
-import { recordedApplication, nextIndeedPosting, type OutcomeBinding } from '@/lib/post-application-continuation';
-import { evaluateOpportunityFit } from '@/lib/opportunity-fit';
+import { recordedApplication, nextIndeedPosting, nextIndeedApplication, isActiveApplicationBinding, reconcileLiveWorkplaceContradiction, type LiveWorkplaceContradictionState, type OutcomeBinding } from '@/lib/post-application-continuation';
+import { allowsAutomaticRecommendation, evaluateOpportunityFit } from '@/lib/opportunity-fit';
+import { useRecommendationWorkMode } from './use-recommendation-work-mode';
 import { isLockedIndeedPosting, lockedIndeedPostingKeys } from '@/lib/indeed-posting-identity';
 import type { CurrentApplicationPage } from '@/lib/application-puzzle';
 import { isLeverApplicationForm } from '@/lib/application-puzzle';
@@ -53,6 +54,9 @@ type ServerResponse = {
   needsOpportunityConfirmation?: boolean;
   currentPage?: CurrentApplicationPage | null;
   error?: string;
+  code?: string;
+  workplaceState?: string;
+  contradicted?: boolean;
   filled?: string[];
   evidenceSummary?: string;
   networkDiagnosis?: { code: 'VPN_INTERFERENCE_SUSPECTED' | 'NETWORK_FAILURE_UNATTRIBUTED' | 'NAVIGATION_FAILURE_UNCLASSIFIED'; causeVerified: false; vpnCandidateDetected: boolean } | null;
@@ -75,6 +79,18 @@ type ServerResponse = {
   trackerSync?: { state: string; pending: number; synced: number; authRequired: number; conflicts: number; retryRequired: number };
 };
 
+class ManagedAssistError extends Error {
+  code?: string;
+  workplaceState?: string;
+  contradicted?: boolean;
+  constructor(message: string, details?: { code?: string; workplaceState?: string; contradicted?: boolean }) {
+    super(message);
+    this.code = details?.code;
+    this.workplaceState = details?.workplaceState;
+    this.contradicted = details?.contradicted;
+  }
+}
+
 async function request(endpoint: string, body?: object): Promise<ServerResponse> {
   const response = await fetch(API + endpoint, body ? {
     method: 'POST',
@@ -83,7 +99,13 @@ async function request(endpoint: string, body?: object): Promise<ServerResponse>
     body: JSON.stringify(body),
   } : { credentials: 'same-origin' });
   const json = await response.json() as ServerResponse;
-  if (!response.ok || !json.ok) throw new Error(json.error || 'Local browser action failed.');
+  if (!response.ok || !json.ok) {
+    throw new ManagedAssistError(json.error || 'Local browser action failed.', {
+      code: json.code,
+      workplaceState: json.workplaceState,
+      contradicted: json.contradicted,
+    });
+  }
   return json;
 }
 
@@ -93,6 +115,7 @@ const titles: Record<string, string> = {
   application_open_review_required: 'Application opened — sign in if requested',
   application_restored_review_required: 'Existing application recovered — review entered answers',
   application_form_open_review_required: 'Application form opened — ready to fill',
+  workplace_review_required: 'Workplace eligibility withheld — review or continue',
   browser_open_navigation_unverified: 'Chrome opened — verify the URL manually',
   fields_filled_review_required: 'Verified fields read back — review the page',
   fields_partially_filled_review_required: 'Some fields verified — other fields need review',
@@ -140,18 +163,21 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const [url, setUrl] = useState('');
   const [selectedOpportunityId, setSelectedOpportunityId] = useState('');
   const [dismissedOutcomeId, setDismissedOutcomeId] = useState('');
+  const [nextDispatch, setNextDispatch] = useState<(OutcomeBinding & { completedId: string }) | null>(null);
+  const workplaceRejectedIds = useRef<Set<string>>(new Set());
   const operatorSelected = useRef(false);
   const [savedJourney, setSavedJourney] = useState(() => readStoredValue(getLocalStorage(), JOURNEY_RESUME_KEY, EMPTY_JOURNEY_RESUME, parseJourneyResume));
   const autoLaunchAttempted = useRef(false);
   const [explicitLaunchId] = useState(() => consumeManagedLaunchIntent(window.sessionStorage));
+  const recommendationMode = useRecommendationWorkMode();
   const [verifiedNextReadyId, setVerifiedNextReadyId] = useState<string | null>(null);
   const [trackerChecked, setTrackerChecked] = useState(false);
   const [runtimeChecked, setRuntimeChecked] = useState(false);
   const documents = useOpportunityDocuments(selectedOpportunityId, url);
-  const [autoPrepareRequested, setAutoPrepareRequested] = useState(false);
+  const [autoPrepareRequested, setAutoPrepareRequested] = useState<OutcomeBinding | null>(null);
   const [status, setStatus] = useState('idle');
   const [authCheckpoint, setAuthCheckpoint] = useState<AuthCheckpoint | null>(null);
-  const [pendingAfterLogin, setPendingAfterLogin] = useState(false);
+  const [pendingAfterLogin, setPendingAfterLogin] = useState<OutcomeBinding | null>(null);
   const [needsOpportunityConfirmation, setNeedsOpportunityConfirmation] = useState(false);
   const [observedPageUrl, setObservedPageUrl] = useState('');
   const [emailDraft, setEmailDraft] = useState('');
@@ -225,9 +251,17 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   });
 
   useEffect(() => {
+    if (recommendationMode === null) {
+      setVerifiedNextReadyId(null);
+      setTrackerChecked(false);
+      return;
+    }
+    const mode = recommendationMode;
     let active = true;
     // Direct /assist shares Home's provider-bound read-only refresh; stale data never
     // authorizes an automatic browser launch. Preserve the prior snapshot on failure.
+    setVerifiedNextReadyId(null);
+    setTrackerChecked(false);
     async function hydrateTracker() {
       try {
         const response = await fetch('/__escapehatch/tracker/status', { credentials: 'same-origin' });
@@ -238,7 +272,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         const snapshot = parseTrackerSnapshot(current.snapshot);
         if (!snapshot || connectionFromSnapshot(snapshot).status !== 'CONNECTED') return;
         setApplications((existing) => mergeTrackerIntoApplications(existing, snapshot));
-        const next = selectNextActionableOpportunity(snapshot);
+        const next = selectNextActionableOpportunity(snapshot, mode);
         if (next?.applyUrl && !isSubmittedLocked(next)) setVerifiedNextReadyId(trackerOpportunityId(next));
       } catch {
         // Local selection remains available. Failed authorization/refresh never
@@ -249,7 +283,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     }
     void hydrateTracker();
     return () => { active = false; };
-  }, [setApplications]);
+  }, [setApplications, recommendationMode]);
 
   useEffect(() => {
     if (operatorSelected.current || browserOpen) return;
@@ -258,7 +292,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     const requested = applications.find((item) => item.id === requestedId && permitted(item));
     // Align the default selection to Home's fresh, validated tracker candidate.
     // Do not silently choose the first stale Ready entry when order changes.
-    const ready = applications.find((item) => permitted(item) &&
+    const ready = applications.find((item) => recommendationMode !== null && allowsAutomaticRecommendation(item, recommendationMode) && permitted(item) &&
       item.id === verifiedNextReadyId &&
       /provider status:\s*ready to apply/i.test(item.notes) &&
       /Applied\? unchecked/i.test(item.notes));
@@ -274,7 +308,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       setSelectedOpportunityId(next.id);
       setUrl(next.url);
     }
-  }, [applications, browserOpen, savedJourney, verifiedNextReadyId]);
+  }, [applications, browserOpen, savedJourney, verifiedNextReadyId, recommendationMode]);
 
   useEffect(() => {
     let active = true;
@@ -428,7 +462,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   }
 
   useEffect(() => {
-    if (!explicitLaunchId || autoLaunchAttempted.current || !trackerChecked || !runtimeChecked) return;
+    if (!explicitLaunchId || autoLaunchAttempted.current || !trackerChecked || !runtimeChecked || recommendationMode === null) return;
     const queryId = new URLSearchParams(window.location.search).get('opportunityId');
     if (queryId !== explicitLaunchId || verifiedNextReadyId !== explicitLaunchId) {
       autoLaunchAttempted.current = true;
@@ -441,6 +475,11 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       setMessage('Automatic launch stopped: no active matching opportunity was available.');
       return;
     }
+    if (!allowsAutomaticRecommendation(selected, recommendationMode)) {
+      autoLaunchAttempted.current = true;
+      setMessage('Automatic launch withheld: workplace eligibility does not match your saved recommendation policy. Manual selection remains available.');
+      return;
+    }
     // Selection is populated in a separate effect. Never launch a stale or other employer URL.
     if (selectedOpportunityId !== selected.id || url !== selected.url) return;
     if (operatorSelected.current) {
@@ -449,8 +488,21 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       return;
     }
     autoLaunchAttempted.current = true;
-    void run('launch');
-  }, [applications, explicitLaunchId, runtimeChecked, trackerChecked, selectedOpportunityId, url, verifiedNextReadyId]);
+    void run('launch', true);
+  }, [applications, explicitLaunchId, runtimeChecked, trackerChecked, selectedOpportunityId, url, verifiedNextReadyId, recommendationMode]);
+
+  useEffect(() => {
+    if (!nextDispatch || busy || documents.loading || documents.intakePending || recommendationMode === null || !runtimeChecked) return;
+    const candidate = nextIndeedApplication(applications, nextDispatch.completedId, recommendationMode);
+    if (!candidate || candidate.id !== nextDispatch.opportunityId || candidate.url !== nextDispatch.applicationUrl ||
+        candidate.id !== selectedOpportunityId || candidate.url !== url) {
+      setNextDispatch(null);
+      setMessage('Next application changed before dispatch. Review the current selection.');
+      return;
+    }
+    setNextDispatch(null);
+    void run('launch', true);
+  }, [nextDispatch, busy, documents.loading, documents.intakePending, recommendationMode, runtimeChecked, applications, selectedOpportunityId, url]);
 
   useEffect(() => {
     if (!recordMilitary || !browserOpen) return;
@@ -474,18 +526,25 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   }, [recordMilitary, browserOpen]);
 
   useEffect(() => {
-    if (!autoPrepareRequested || busy || documents.loading || !browserOpen) return;
-    setAutoPrepareRequested(false);
+    if (!autoPrepareRequested || busy || documents.loading || documents.intakePending || !browserOpen) return;
+    const binding = autoPrepareRequested;
+    setAutoPrepareRequested(null);
+    if (!isActiveApplicationBinding(binding, { opportunityId: selectedOpportunityId, applicationUrl: url }, applications)) {
+      setMessage('Automatic preparation cancelled: the original opportunity changed.'); return;
+    }
     if (!documents.canAutoPrepare) { setMessage('Automatic preparation paused: save the résumé and complete its required review.'); return; }
     void run('prepare');
-  }, [autoPrepareRequested, busy, documents.loading, documents.canAutoPrepare, browserOpen]);
+  }, [autoPrepareRequested, busy, documents.loading, documents.intakePending, documents.canAutoPrepare, browserOpen, selectedOpportunityId, url, applications]);
 
   useEffect(() => {
     if (!pendingAfterLogin || !authCheckpoint?.canResume || needsOpportunityConfirmation || busy || !browserOpen) return;
-    // A prior explicit Launch authorizes only the guarded Fill, not navigation or Submit.
-    setPendingAfterLogin(false);
-    void run('resume');
-  }, [pendingAfterLogin, authCheckpoint?.canResume, needsOpportunityConfirmation, busy, browserOpen]);
+    const binding = pendingAfterLogin;
+    setPendingAfterLogin(null);
+    if (!isActiveApplicationBinding(binding, { opportunityId: selectedOpportunityId, applicationUrl: url }, applications)) return;
+    // Same scoped launch: guarded resume must succeed before preparation can continue.
+    // The host still controls verified effects, required fields and final Submit.
+    void run('resume', false, true);
+  }, [pendingAfterLogin, authCheckpoint?.canResume, needsOpportunityConfirmation, busy, browserOpen, selectedOpportunityId, url, applications]);
 
   async function checkSignIn() {
     try {
@@ -499,7 +558,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
     }
   }
 
-  async function run(action: 'launch' | 'fill' | 'attach' | 'prepare' | 'resume') {
+  async function run(action: 'launch' | 'fill' | 'attach' | 'prepare' | 'resume', automaticRecommendation = false, continuePreparation = false) {
     setBusy(true);
     setMessage('');
     try {
@@ -511,7 +570,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         if (locked.some(item => item.url === url) || isLockedIndeedPosting(url, lockedIndeedPostingKeys(locked.map(item => item.url)))) {
           throw new Error('This opportunity is already applied or closed. Do not reapply.');
         }
-        body = { url, opportunityId: opportunity?.id || '', employerName: opportunity?.company || '' };
+        body = { url, opportunityId: opportunity?.id || '', employerName: opportunity?.company || '', ...(automaticRecommendation ? { automaticRecommendation: true } : {}) };
       } else if (action === 'fill' || action === 'resume') {
         if (currentPage && (url !== currentPage.applicationUrl || currentPage.opportunityId &&
             (currentPage.opportunityId !== selectedOpportunityId || !applications.some(item =>
@@ -579,11 +638,12 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         setBrowserOpen(true);
         const launchedOpportunity = applications.find(item => item.id === selectedOpportunityId && item.url === url);
         if (launchedOpportunity) rememberOpportunity(launchedOpportunity);
+        const binding = launchedOpportunity ? { opportunityId: launchedOpportunity.id, applicationUrl: launchedOpportunity.url } : null;
+        const loginBinding = binding ?? (url ? { opportunityId: '', applicationUrl: url } : null);
         setPendingAfterLogin(result.authCheckpoint?.phase === 'AUTH_HANDOFF' ||
-          result.authCheckpoint?.phase === 'SESSION_ORIGIN_CHANGED');
-        // A previously reviewed exact PDF is already authorized for staging:
-        // don't make the operator press Fill and Attach again after launch.
-        if (launchedApplicationForm && documents.canAutoPrepare) setAutoPrepareRequested(true);
+          result.authCheckpoint?.phase === 'SESSION_ORIGIN_CHANGED' ? loginBinding : null);
+        // The effect revalidates the exact job and reviewed materials before preparing.
+        if (launchedApplicationForm && binding && documents.canAutoPrepare) setAutoPrepareRequested(binding);
         setPreparation(null);
         setApplications((items) => {
           const existing = items.find((item) => item.id === selectedOpportunityId && item.url === url);
@@ -592,6 +652,9 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
             : item);
           return items; // A custom URL never creates an unverified employer ledger record.
         });
+      }
+      if (action === 'resume' && continuePreparation && result.authCheckpoint?.canResume && selectedOpportunityId) {
+        setAutoPrepareRequested({ opportunityId: selectedOpportunityId, applicationUrl: url });
       }
       if (action === 'fill' || action === 'resume' || action === 'launch') {
         await request('/questions', {}).then(() => setPreferencesRefresh(value => value + 1)).catch(() => {});
@@ -625,7 +688,37 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         );
       }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Action failed.');
+      if (action === 'launch' && automaticRecommendation && error instanceof ManagedAssistError &&
+          error.code === 'workplace_eligibility_rejected' && error.contradicted &&
+          (error.workplaceState === 'non_remote_workplace' || error.workplaceState === 'required_commute')) {
+        const workplaceState: LiveWorkplaceContradictionState = error.workplaceState;
+        if (selectedOpportunityId) workplaceRejectedIds.current.add(selectedOpportunityId);
+        const reconciled = reconcileLiveWorkplaceContradiction(
+          applications,
+          { opportunityId: selectedOpportunityId, applicationUrl: url },
+          workplaceState,
+          new Date().toISOString(),
+          workplaceRejectedIds.current,
+        );
+        if (reconciled.updated) setApplications(reconciled.applications);
+        setStatus('workplace_review_required');
+        if (reconciled.next) {
+          operatorSelected.current = false;
+          setSelectedOpportunityId(reconciled.next.id);
+          setUrl(reconciled.next.url);
+          setNextDispatch({
+            opportunityId: reconciled.next.id,
+            applicationUrl: reconciled.next.url,
+            completedId: selectedOpportunityId,
+          });
+          setMessage('Skipped posting after live workplace check (' + workplaceState + '). Advancing to next remote-confirmed job: ' + reconciled.next.company + ' — ' + reconciled.next.role + '.');
+        } else {
+          setNextDispatch(null);
+          setMessage('Skipped posting after live workplace check (' + workplaceState + '). No other remote-confirmed opportunities remain.');
+        }
+      } else {
+        setMessage(error instanceof Error ? error.message : 'Action failed.');
+      }
     } finally {
       setBusy(false);
     }
@@ -634,7 +727,8 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const handleUrl = (event: ChangeEvent<HTMLInputElement>) => {
     operatorSelected.current = true;
     setSelectedOpportunityId('');
-    setPendingAfterLogin(false);
+    setNextDispatch(null);
+    setPendingAfterLogin(null);
     setUrl(event.target.value);
   };
   const button = 'inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50';
@@ -652,8 +746,23 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       listenerStatus.submission?.state === 'CONFIRMED' && receipt?.opportunityId === completedApplication.id &&
       submissionMatchesApplication(receipt, completedApplication.url);
     return <ApplicationOutcome application={completedApplication} receiptCaptured={Boolean(captured)}
-      nextPosting={nextIndeedPosting(applications, completedApplication.id)}
+      nextPosting={recommendationMode === null ? null : nextIndeedPosting(applications, completedApplication.id, recommendationMode)}
+      onPrepareNext={() => {
+        if (recommendationMode === null) return;
+        const candidate = nextIndeedApplication(applications, completedApplication.id, recommendationMode);
+        if (!candidate) return;
+        operatorSelected.current = true;
+        autoLaunchAttempted.current = true;
+        setPendingAfterLogin(null);
+        setAutoPrepareRequested(null);
+        setPreparation(null);
+        setDismissedOutcomeId(completedApplication.id);
+        setSelectedOpportunityId(candidate.id);
+        setUrl(candidate.url);
+        setNextDispatch({ opportunityId: candidate.id, applicationUrl: candidate.url, completedId: completedApplication.id });
+      }}
       onChooseAnother={() => {
+        setNextDispatch(null);
         setDismissedOutcomeId(completedApplication.id);
         operatorSelected.current = true;
         setSelectedOpportunityId(''); setUrl(''); setContinuityError(''); setMessage('Choose a saved job to prepare next. The previous employer tab stays open.');
@@ -687,8 +796,9 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
                 onChange={(event) => {
                   const opportunity = applications.find((item) => item.id === event.target.value);
                   operatorSelected.current = true;
+                  setNextDispatch(null);
                   setSelectedOpportunityId(opportunity?.id || '');
-                  setPendingAfterLogin(false);
+                  setPendingAfterLogin(null);
                   setUrl(opportunity?.url || '');
                   rememberOpportunity(opportunity);
                 }}>
@@ -795,9 +905,9 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
         opportunityId={selectedOpportunityId || undefined}
         url={url.trim() || undefined}
         refresh={formObservation?.revision ?? 0}
-        disabled={busy || autoPrepareRequested}
+        disabled={busy || Boolean(autoPrepareRequested)}
       />
-      <ApplicationPuzzle opportunity={applications.find(item => item.id === selectedOpportunityId)} url={url} documents={documents} disabled={busy || autoPrepareRequested} refresh={formObservation} currentPage={currentPage} onBypass={() => { if (browserOpen) setAutoPrepareRequested(true); }} />
+      <ApplicationPuzzle opportunity={applications.find(item => item.id === selectedOpportunityId)} url={url} documents={documents} disabled={busy || Boolean(autoPrepareRequested)} refresh={formObservation} currentPage={currentPage} onBypass={() => { if (browserOpen && selectedOpportunityId) setAutoPrepareRequested({ opportunityId: selectedOpportunityId, applicationUrl: url }); }} />
       <div className="mt-5 rounded-xl bg-secondary/55 p-4">
         <div className="flex items-center gap-2 text-sm font-bold"><CheckCircle2 className="text-primary" size={16} />
           {titles[status] || status.replaceAll('_', ' ')}

@@ -164,6 +164,20 @@ def validate(ontology, journey, tracked, read_text, exists):
                 row["avatar_guide"]["next_action_owner"] == "wayfinding.action" and
                 row.get("coach_prompt") and row.get("wayfinding", {}).get("action"),
                 f"scene guide must use canonical copy/action: {row['id']}")
+
+    decisions = journey.get("opportunity_decision_scenes")
+    require(isinstance(decisions, list) and bool(decisions), "missing canonical opportunity decision stages")
+    unique_strings([d.get("id") for d in decisions], "opportunity decision IDs")
+    for decision in decisions:
+        label = "decision:" + decision["id"]
+        linked = unique_strings(decision.get("feature_ids"), "feature links for " + label)
+        require({"opportunity-tracking", "cockpit-ui"} <= linked and linked <= feature_ids,
+                "dangling or missing opportunity decision features: " + label)
+        implementations = unique_strings(decision.get("implementation_paths"), "implementation links for " + label)
+        require(all(owners.get(literal(path)) in linked for path in implementations),
+                "decision implementation outside linked features: " + label)
+        require(decision.get("avatar") is True and isinstance(decision.get("coach_prompt"), str)
+                and bool(decision["coach_prompt"].strip()), "missing decision avatar coaching: " + label)
     stops = journey.get("guide_stops")
     require(isinstance(stops, list) and bool(stops), "missing workspace guide stops")
     unique_strings([s.get("id") for s in stops], "guide stop IDs")
@@ -185,7 +199,7 @@ def validate(ontology, journey, tracked, read_text, exists):
                 row["avatar_guide"]["next_action_owner"] == "action" and row.get("detail") and row.get("action"),
                 f"supplemental guide must use canonical detail/action: {row['id']}")
     return {"tracked": len(tracked), "mapped": len(owners), "unmapped": 0,
-            "stale": 0, "features": len(feature_ids), "scenes": len(scene_ids), "guide_stops": len(stops), "supplemental_guides": len(supplemental_ids)}
+            "stale": 0, "features": len(feature_ids), "scenes": len(scene_ids), "decision_scenes": len(decisions), "guide_stops": len(stops), "supplemental_guides": len(supplemental_ids)}
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)

@@ -93,7 +93,7 @@ test('partially reviewed private answers prefill missing-essential quiz without 
   await quiz.getByRole('button', { name: 'Continue to work preferences' }).click();
   await expect(quiz.getByLabel('Which jobs should EscapeHatch recommend?')).toHaveValue('any');
 });
- 
+
 test('workspace contact defaults survive deferred private-store hydration on the profile route', async ({ page }) => {
   let release!: () => void;
   const gate = new Promise<void>(resolve => { release = resolve; });

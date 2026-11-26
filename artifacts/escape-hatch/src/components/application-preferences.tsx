@@ -130,6 +130,13 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
         body: JSON.stringify(clear ? {} : { preferences: { ...candidate, exported_at: new Date().toISOString() }, removedQuestions }),
       });
       if (!response.ok) throw new Error();
+      if (clear) {
+        // A confirmed clear must erase staged quiz values in this mounted
+        // editor too; never repopulate deleted private answers on first-run.
+        quizInitialized.current = true;
+        setQuiz(emptyBootstrapQuiz());
+        setQuizStep(0);
+      }
       const readbackOk = await load();
       if (!readbackOk) {
         setMessage('Save request completed, but profile readback was not verified. Your editor state is preserved; retry refresh before relying on it.');

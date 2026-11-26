@@ -3,7 +3,7 @@ import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import taxonomy from '../../../../harness/contracts/application-form-taxonomy.v1.json' with { type: 'json' };
 import { emptyPreferences, type Preferences } from './application-preferences.ts';
-import { PROFILE_DISCOVERY_QUESTIONS, projectProfileDiscovery, validateDiscoveryAnswer } from './profile-question-planner.ts';
+import { PROFILE_DISCOVERY_QUESTIONS, projectProfileDiscovery, validateDiscoveryAnswer, reconcileGuidedReadback } from './profile-question-planner.ts';
 
 test('every discovery field has one canonical non-protected reusable owner', () => {
   const owned = new Map(taxonomy.questions.map(q => [q.id, q]));
@@ -72,4 +72,38 @@ test('avatar coach is reachable from the actual profile route and existing assis
   assert.match(managed, /<ApplicationPreferences/);
   assert.match(preferences, /<ProfileDiscoveryCoach/);
   assert.match(preferences, /bootstrapDefaults/);
+});
+
+test('guided save merges only confirmed facts without persisting unrelated editor drafts', () => {
+  const persisted = emptyPreferences();
+  persisted.preferences['identity.website'] = {
+    scope: 'profile_preference', source: 'user', value: 'https://example.test/portfolio',
+    updated_at: '2026-11-25T12:00:00Z',
+  };
+  const unsaved = emptyPreferences();
+  unsaved.preferences['identity.phone'] = {
+    scope: 'profile_preference', source: 'user', value: '555-0100',
+    updated_at: '2026-11-25T12:01:00Z',
+  };
+  unsaved.optional_omissions = ['identity.pronouns'];
+  const result = reconcileGuidedReadback(unsaved, persisted, ['identity.website'], ['identity.website', 'identity.phone']);
+  assert.equal(result.editor.preferences['identity.website']?.value, 'https://example.test/portfolio');
+  assert.equal(result.editor.preferences['identity.phone']?.value, '555-0100');
+  assert.deepEqual(result.editor.optional_omissions, ['identity.pronouns']);
+  assert.deepEqual(result.removedQuestions, ['identity.phone']);
+  assert.equal(persisted.preferences['identity.phone'], undefined);
+  assert.equal(unsaved.preferences['identity.website'], undefined);
+  const differentDraft: Preferences = { ...unsaved, preferences: {
+    ...unsaved.preferences,
+    'identity.website': { scope: 'profile_preference', source: 'user',
+      value: 'https://draft.example.test/', updated_at: '2026-11-25T12:02:00Z' },
+  } };
+  const kept = reconcileGuidedReadback(differentDraft, persisted, ['identity.website'], []);
+  assert.equal(kept.editor.preferences['identity.website']?.value, 'https://draft.example.test/');
+});
+
+test('the residential metro question never teaches a search-location answer as residence', () => {
+  const metro = PROFILE_DISCOVERY_QUESTIONS.find(question => question.id === 'identity.metro_area');
+  assert.equal(metro?.label, 'Current residential metro area');
+  assert.match(metro?.why || '', /currently live/);
 });

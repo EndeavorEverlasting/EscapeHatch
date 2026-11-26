@@ -62,14 +62,6 @@
           "role": "documentation"
         },
         {
-          "path": "LICENSE",
-          "role": "source"
-        },
-        {
-          "path": "VERSION",
-          "role": "source"
-        },
-        {
           "path": "contracts/p82-evidence-class.v1.json",
           "role": "contract"
         },
@@ -126,10 +118,6 @@
           "role": "documentation"
         },
         {
-          "path": "harness/WORKFLOWS.md",
-          "role": "documentation"
-        },
-        {
           "path": "harness/constraints/LUA_EMBEDDING.md",
           "role": "documentation"
         },
@@ -158,8 +146,16 @@
           "role": "contract"
         },
         {
+          "path": "harness/WORKFLOWS.md",
+          "role": "documentation"
+        },
+        {
           "path": "harness/workflows/APPLICATION_STAPLES.md",
           "role": "documentation"
+        },
+        {
+          "path": "LICENSE",
+          "role": "source"
         },
         {
           "path": "scripts/apply_replit_migration.py",
@@ -230,15 +226,15 @@
           "role": "documentation"
         },
         {
-          "path": "tests/test_context_router.py",
-          "role": "test"
-        },
-        {
           "path": "tests/test_context_router_escalation.py",
           "role": "test"
         },
         {
           "path": "tests/test_context_router_mission.py",
+          "role": "test"
+        },
+        {
+          "path": "tests/test_context_router.py",
           "role": "test"
         },
         {
@@ -256,6 +252,10 @@
         {
           "path": "tests/test_repository_promotion.py",
           "role": "test"
+        },
+        {
+          "path": "VERSION",
+          "role": "source"
         }
       ]
     },
@@ -279,6 +279,30 @@
           "role": "source"
         },
         {
+          "path": "artifacts/escape-hatch/companion-package.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/container-server.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/playwright.bootstrap.config.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/runtime-control.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/runtime-control.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/container-launch.browser.mjs",
+          "role": "test"
+        },
+        {
           "path": "Close-EscapeHatch.cmd",
           "role": "source"
         },
@@ -287,8 +311,40 @@
           "role": "source"
         },
         {
+          "path": "contracts/application-companion.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "contracts/local-runtime-lifecycle.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "contracts/windows-node-runtime.v1.json",
+          "role": "contract"
+        },
+        {
           "path": "Dockerfile",
           "role": "source"
+        },
+        {
+          "path": "docs/agent/P04_ZERO_SHUTTLE_ACTIVE_APPLICATION_LAUNCH_2026-10-28.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/WINDOWS_RUNTIME_LIFECYCLE.md",
+          "role": "documentation"
+        },
+        {
+          "path": "fixtures/application-companion.v1.example.json",
+          "role": "fixture"
+        },
+        {
+          "path": "fixtures/local-runtime-lifecycle.v1.example.json",
+          "role": "fixture"
         },
         {
           "path": "Get-EscapeHatch.cmd",
@@ -317,74 +373,6 @@
         {
           "path": "Launch-EscapeHatch.ps1",
           "role": "source"
-        },
-        {
-          "path": "Status-EscapeHatch.cmd",
-          "role": "source"
-        },
-        {
-          "path": "Status-EscapeHatch.ps1",
-          "role": "source"
-        },
-        {
-          "path": "Uninstall-EscapeHatch.cmd",
-          "role": "source"
-        },
-        {
-          "path": "artifacts/escape-hatch/companion-package.ts",
-          "role": "source"
-        },
-        {
-          "path": "artifacts/escape-hatch/container-server.ts",
-          "role": "source"
-        },
-        {
-          "path": "artifacts/escape-hatch/playwright.bootstrap.config.ts",
-          "role": "source"
-        },
-        {
-          "path": "artifacts/escape-hatch/runtime-control.test.ts",
-          "role": "test"
-        },
-        {
-          "path": "artifacts/escape-hatch/runtime-control.ts",
-          "role": "source"
-        },
-        {
-          "path": "artifacts/escape-hatch/tests/container-launch.browser.mjs",
-          "role": "test"
-        },
-        {
-          "path": "contracts/application-companion.v1.json",
-          "role": "contract"
-        },
-        {
-          "path": "contracts/local-runtime-lifecycle.v1.json",
-          "role": "contract"
-        },
-        {
-          "path": "contracts/windows-node-runtime.v1.json",
-          "role": "contract"
-        },
-        {
-          "path": "docs/WINDOWS_RUNTIME_LIFECYCLE.md",
-          "role": "documentation"
-        },
-        {
-          "path": "docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md",
-          "role": "documentation"
-        },
-        {
-          "path": "docs/agent/P04_ZERO_SHUTTLE_ACTIVE_APPLICATION_LAUNCH_2026-10-28.md",
-          "role": "documentation"
-        },
-        {
-          "path": "fixtures/application-companion.v1.example.json",
-          "role": "fixture"
-        },
-        {
-          "path": "fixtures/local-runtime-lifecycle.v1.example.json",
-          "role": "fixture"
         },
         {
           "path": "scripts/container/Launch.ps1",
@@ -431,6 +419,14 @@
           "role": "source"
         },
         {
+          "path": "Status-EscapeHatch.cmd",
+          "role": "source"
+        },
+        {
+          "path": "Status-EscapeHatch.ps1",
+          "role": "source"
+        },
+        {
           "path": "tests/test_container_desktop_entry.py",
           "role": "test"
         },
@@ -447,6 +443,10 @@
           "role": "test"
         },
         {
+          "path": "tests/windows/fixtures/foreign-listener.mjs",
+          "role": "source"
+        },
+        {
           "path": "tests/windows/Test-EscapeHatch-Install.ps1",
           "role": "test"
         },
@@ -459,7 +459,7 @@
           "role": "test"
         },
         {
-          "path": "tests/windows/fixtures/foreign-listener.mjs",
+          "path": "Uninstall-EscapeHatch.cmd",
           "role": "source"
         }
       ]
@@ -787,12 +787,13 @@
     {
       "id": "application-preferences",
       "title": "Reusable answers and consent",
-      "description": "Question taxonomy, scoped preferences, answer review, consent, and the onboarding quiz that records reviewed reusable answers without creating a second private profile.",
+      "description": "Question taxonomy, scoped preferences, answer review, consent, and bootstrap/profile-question planning that collects reviewed reusable answers without a second private profile.",
       "anchors": [
         "harness/contracts/application-form-taxonomy.v1.json",
         "artifacts/escape-hatch/src/lib/application-preferences.ts",
         "artifacts/escape-hatch/preference-file.ts",
-        "artifacts/escape-hatch/src/lib/bootstrap-quiz.ts"
+        "artifacts/escape-hatch/src/lib/bootstrap-quiz.ts",
+        "artifacts/escape-hatch/src/lib/profile-question-planner.ts"
       ],
       "files": [
         {
@@ -861,6 +862,14 @@
         },
         {
           "path": "artifacts/escape-hatch/src/lib/bootstrap-quiz.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/profile-question-planner.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/profile-question-planner.ts",
           "role": "source"
         },
         {
@@ -1012,11 +1021,11 @@
           "role": "source"
         },
         {
-          "path": "scripts/validate_resume_presentation.py",
+          "path": "scripts/validate_resume_presentation_visual.py",
           "role": "source"
         },
         {
-          "path": "scripts/validate_resume_presentation_visual.py",
+          "path": "scripts/validate_resume_presentation.py",
           "role": "source"
         },
         {
@@ -1232,6 +1241,10 @@
           "role": "contract"
         },
         {
+          "path": "docs/agent/P04_REVIEWED_LEVER_APPLICATION.md",
+          "role": "documentation"
+        },
+        {
           "path": "docs/APPLICATION_ASSIST_AMBIENT_COMPANION_PLAN.md",
           "role": "documentation"
         },
@@ -1244,20 +1257,16 @@
           "role": "documentation"
         },
         {
-          "path": "docs/MANAGED_BROWSER_ASSIST.md",
-          "role": "documentation"
-        },
-        {
-          "path": "docs/agent/P04_REVIEWED_LEVER_APPLICATION.md",
-          "role": "documentation"
-        },
-        {
           "path": "docs/design/ESCAPE_HATCH_AUTH_SYNC_HANDOFF_2026-11-03.md",
           "role": "documentation"
         },
         {
           "path": "docs/design/prototypes/auth-sync-handoff.html",
           "role": "source"
+        },
+        {
+          "path": "docs/MANAGED_BROWSER_ASSIST.md",
+          "role": "documentation"
         },
         {
           "path": "fixtures/application-assist-demo.html",
@@ -1456,11 +1465,11 @@
           "role": "source"
         },
         {
-          "path": "scripts/windows/submission-sync-silent-launch.cjs",
+          "path": "scripts/windows/submission_sync_silent_host.py",
           "role": "source"
         },
         {
-          "path": "scripts/windows/submission_sync_silent_host.py",
+          "path": "scripts/windows/submission-sync-silent-launch.cjs",
           "role": "source"
         },
         {
@@ -1490,7 +1499,8 @@
         "artifacts/escape-hatch/src/lib/application-journey-projection.ts",
         "artifacts/escape-hatch/src/components/journey-atlas.tsx",
         "artifacts/escape-hatch/src/components/guided-start.tsx",
-        "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx"
+        "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx",
+        "artifacts/escape-hatch/src/components/profile-discovery-coach.tsx"
       ],
       "files": [
         {
@@ -1507,6 +1517,10 @@
         },
         {
           "path": "artifacts/escape-hatch/src/components/journey-atlas.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/profile-discovery-coach.tsx",
           "role": "source"
         },
         {
@@ -1834,11 +1848,11 @@
           "role": "contract"
         },
         {
-          "path": "docs/APPLICATION_ASSIST_SESSION.md",
+          "path": "docs/agent/P04_ONE_DOWNLOAD_EXTENSION_AND_PRIVATE_PROFILE_BOOTSTRAP_2026-10-28.md",
           "role": "documentation"
         },
         {
-          "path": "docs/agent/P04_ONE_DOWNLOAD_EXTENSION_AND_PRIVATE_PROFILE_BOOTSTRAP_2026-10-28.md",
+          "path": "docs/APPLICATION_ASSIST_SESSION.md",
           "role": "documentation"
         },
         {
@@ -1850,19 +1864,19 @@
           "role": "source"
         },
         {
-          "path": "tests/test_application_assist_modality.mjs",
-          "role": "test"
-        },
-        {
           "path": "tests/test_application_assist_modality_contract.py",
           "role": "test"
         },
         {
-          "path": "tests/test_application_assist_session.mjs",
+          "path": "tests/test_application_assist_modality.mjs",
           "role": "test"
         },
         {
           "path": "tests/test_application_assist_session_contract.py",
+          "role": "test"
+        },
+        {
+          "path": "tests/test_application_assist_session.mjs",
           "role": "test"
         },
         {
@@ -1923,10 +1937,6 @@
         {
           "path": "android/application-assist-spike/src/main/kotlin/com/escapehatch/assist/spike/QuietNotificationPresence.kt",
           "role": "source"
-        },
-        {
-          "path": "android/application-assist/README.md",
-          "role": "documentation"
         },
         {
           "path": "android/application-assist/app/build.gradle.kts",
@@ -2011,6 +2021,10 @@
         {
           "path": "android/application-assist/gradlew.bat",
           "role": "source"
+        },
+        {
+          "path": "android/application-assist/README.md",
+          "role": "documentation"
         },
         {
           "path": "android/application-assist/settings.gradle.kts",
@@ -2874,94 +2888,6 @@
       ],
       "files": [
         {
-          "path": "Outputs/prompt-parallel-dispatch/manifest.blocked.json",
-          "role": "evidence"
-        },
-        {
-          "path": "Outputs/prompt-parallel-dispatch/manifest.json",
-          "role": "evidence"
-        },
-        {
-          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-application-assist-autopilot-20260923/manifest.json",
-          "role": "evidence"
-        },
-        {
-          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-companion-artwork-20261104/manifest.json",
-          "role": "evidence"
-        },
-        {
-          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-companion-artwork-20261104/native-execution-receipt.json",
-          "role": "evidence"
-        },
-        {
-          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-job-boards-20261028/manifest.json",
-          "role": "evidence"
-        },
-        {
-          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-journey-w1-20261104/manifest.json",
-          "role": "evidence"
-        },
-        {
-          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-journey-w1-20261104/native-execution-receipt.json",
-          "role": "evidence"
-        },
-        {
-          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-master-resume-routing-20261105/manifest.json",
-          "role": "evidence"
-        },
-        {
-          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-one-download-profile-20261028/manifest.json",
-          "role": "evidence"
-        },
-        {
-          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-private-answer-sync-20261027/manifest.json",
-          "role": "evidence"
-        },
-        {
-          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-profile-puzzle-20261103/manifest.json",
-          "role": "evidence"
-        },
-        {
-          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-profile-puzzle-20261103/native-execution-receipt.json",
-          "role": "evidence"
-        },
-        {
-          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-resume-graph-20261028/manifest.json",
-          "role": "evidence"
-        },
-        {
-          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-secure-device-sync-20261103/manifest.json",
-          "role": "evidence"
-        },
-        {
-          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-secure-device-sync-20261103/receipt.json",
-          "role": "evidence"
-        },
-        {
-          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-submission-outcomes-20261028/manifest.json",
-          "role": "evidence"
-        },
-        {
-          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-ten-puzzle-postmerge-20261106/manifest.json",
-          "role": "evidence"
-        },
-        {
-          "path": "Outputs/prompt-parallel-dispatch/runs/hosted-finish-line-20261028/manifest.json",
-          "role": "evidence"
-        },
-        {
-          "path": "Outputs/prompt-parallel-dispatch/runs/hosted-finish-line-20261028/receipt.json",
-          "role": "evidence"
-        },
-        {
-          "path": "Outputs/prompt-parallel-dispatch/runs/reviewed-lever-application/manifest.json",
-          "role": "evidence"
-        },
-        {
-          "path": "README.md",
-          "role": "documentation"
-        },
-        {
           "path": "artifacts/escape-hatch/BRAND_IDENTITY.md",
           "role": "documentation"
         },
@@ -3006,11 +2932,11 @@
           "role": "documentation"
         },
         {
-          "path": "docs/plans/P04-CONTEXT-OWNER-ISOLATION-20261028.md",
+          "path": "docs/plans/index.md",
           "role": "documentation"
         },
         {
-          "path": "docs/plans/index.md",
+          "path": "docs/plans/P04-CONTEXT-OWNER-ISOLATION-20261028.md",
           "role": "documentation"
         },
         {
@@ -3506,15 +3432,11 @@
           "role": "documentation"
         },
         {
-          "path": "harness/reports/APPLICATION_FORM_AUTOMATION_STATE.md",
-          "role": "evidence"
-        },
-        {
-          "path": "harness/reports/CURRENT_STATE.md",
-          "role": "evidence"
-        },
-        {
           "path": "harness/reports/android-assist-presence-spike-receipt.v1.json",
+          "role": "evidence"
+        },
+        {
+          "path": "harness/reports/APPLICATION_FORM_AUTOMATION_STATE.md",
           "role": "evidence"
         },
         {
@@ -3523,6 +3445,10 @@
         },
         {
           "path": "harness/reports/application-source-ux-p04-dispatch.v1.json",
+          "role": "evidence"
+        },
+        {
+          "path": "harness/reports/CURRENT_STATE.md",
           "role": "evidence"
         },
         {
@@ -3564,6 +3490,94 @@
         {
           "path": "harness/reports/submission-sync-pythonw-host-live-cert-20261102.json",
           "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/manifest.blocked.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-application-assist-autopilot-20260923/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-companion-artwork-20261104/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-companion-artwork-20261104/native-execution-receipt.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-job-boards-20261028/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-journey-w1-20261104/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-journey-w1-20261104/native-execution-receipt.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-master-resume-routing-20261105/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-one-download-profile-20261028/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-private-answer-sync-20261027/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-profile-puzzle-20261103/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-profile-puzzle-20261103/native-execution-receipt.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-resume-graph-20261028/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-secure-device-sync-20261103/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-secure-device-sync-20261103/receipt.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-submission-outcomes-20261028/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-ten-puzzle-postmerge-20261106/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/hosted-finish-line-20261028/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/hosted-finish-line-20261028/receipt.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/reviewed-lever-application/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "README.md",
+          "role": "documentation"
         }
       ]
     }

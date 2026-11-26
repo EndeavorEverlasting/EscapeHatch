@@ -271,6 +271,10 @@ def validate_manifest_and_workflow() -> None:
         "merge-base --is-ancestor",
         "gh api",
         "candidate_head_sha",
+        "git merge-tree --write-tree",
+        "validate_feature_ontology.py --tree",
+        "MERGE_TREE_ONTOLOGY_PASS",
+        "STALE_MERGE_BASE",
     ]
     missing = [m for m in required_markers if m not in text]
     if missing:

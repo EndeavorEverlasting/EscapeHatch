@@ -41,7 +41,7 @@ export function bootstrapQuizError(quiz: BootstrapQuiz): string | null {
   if (quiz.linkedIn.trim()) {
     try {
       const url = new URL(quiz.linkedIn.trim());
-      if (url.protocol !== 'https:' || !['linkedin.com', 'www.linkedin.com'].includes(url.hostname))
+      if (url.protocol !== 'https:' || url.username || url.password || !['linkedin.com', 'www.linkedin.com'].includes(url.hostname))
         return 'Use an HTTPS LinkedIn profile URL, or leave it blank.';
     } catch { return 'Use an HTTPS LinkedIn profile URL, or leave it blank.'; }
   }

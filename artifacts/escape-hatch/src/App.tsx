@@ -86,6 +86,7 @@ import {
 import { applyAcceptedResumeImport, extractResumeText, getAcceptedResumeContactPatch, parseResumeText, type ResumeImport } from '@/lib/resume-import';
 import { initialSession, parseAssistSessionStatus, type AssistSession } from '@/lib/assist-session';
 import { ManagedBrowserAssist } from '@/components/managed-browser-assist';
+import { ApplicationPreferences } from '@/components/application-preferences';
 import { RecoveredAnswers, useRecoveredAnswers } from '@/components/recovered-answers';
 import { GuidedStart } from '@/components/guided-start';
 import { JourneyAtlas } from '@/components/journey-atlas';
@@ -865,6 +866,15 @@ function ProfilePage({
       </div>
       <aside className="h-fit rounded-2xl border border-border bg-secondary/55 p-5 sm:p-6 lg:sticky lg:top-8"><div className="flex items-center justify-between"><p className="font-mono-app text-[10px] uppercase tracking-[.16em] text-muted-foreground">readiness</p><span className="font-mono-app text-sm text-primary">{completion}%</span></div><div className="mt-4 h-2 overflow-hidden rounded-full bg-background"><div className="h-full rounded-full bg-accent transition-all duration-500" style={{ width: `${Math.max(completion, 2)}%` }} /></div><p className="mt-5 text-sm leading-6 text-muted-foreground">{completion < 100 ? 'A few essentials make copying details into a form much faster.' : 'Everything essential is in place. Nice work.'}</p><div className="mt-6 border-t border-border pt-5"><div className="flex gap-3"><ShieldCheck size={17} className="mt-0.5 shrink-0 text-primary" /><p className="text-xs leading-5 text-muted-foreground"><strong className="text-foreground">Private by design.</strong> Your profile stays private on this computer. Export a backup whenever you need one.</p></div></div></aside>
     </form>
+    <section aria-label="Pre-application profile questions" data-testid="profile-prerequisites">
+      <ApplicationPreferences
+        bootstrapDefaults={{
+          firstName: draft.first_name, lastName: draft.last_name, email: draft.email,
+          phone: draft.phone, city: draft.city, region: draft.region,
+          country: draft.country, linkedIn: draft.linkedin_url,
+        }}
+      />
+    </section>
     <section className="mt-5 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-7" data-testid="draft-recovery-settings">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div>

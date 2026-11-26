@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import taxonomy from '../../../../harness/contracts/application-form-taxonomy.v1.json' with { type: 'json' };
-import { emptyPreferences } from './application-preferences.ts';
+import { emptyPreferences, type Preferences } from './application-preferences.ts';
 import { PROFILE_DISCOVERY_QUESTIONS, projectProfileDiscovery, validateDiscoveryAnswer } from './profile-question-planner.ts';
 
 test('every discovery field has one canonical non-protected reusable owner', () => {
@@ -45,8 +45,8 @@ test('skip is session-only, preserves answers and never masquerades as progress'
   assert.equal(skipped.skippedThisVisit, 1);
   assert.notEqual(skipped.next?.id, first.next?.id);
   assert.equal(projectProfileDiscovery(data).next?.id, first.next?.id);
-  const full = { ...data, preferences: Object.fromEntries(PROFILE_DISCOVERY_QUESTIONS.map(q =>
-    [q.id, { scope: 'profile_preference', source: 'user', value: 'Confirmed', updated_at: '2026-11-25T00:00:00Z' }])) };
+  const full: Preferences = { ...data, preferences: Object.fromEntries(PROFILE_DISCOVERY_QUESTIONS.map(q =>
+    [q.id, { scope: 'profile_preference' as const, source: 'user' as const, value: 'Confirmed', updated_at: '2026-11-25T00:00:00Z' }])) };
   const finished = projectProfileDiscovery(full);
   assert.equal(finished.reusableCoveragePercent, 100);
   assert.equal(finished.remaining, 0);
@@ -55,9 +55,9 @@ test('skip is session-only, preserves answers and never masquerades as progress'
 
 test('reject empty, overlong and unsafe URL answers without making claims', () => {
   const website = PROFILE_DISCOVERY_QUESTIONS.find(q => q.id === 'identity.website')!;
-  assert.match(validateDiscoveryAnswer(website, ''), /Enter/);
-  assert.match(validateDiscoveryAnswer(website, 'https://name:password@example.org'), /without credentials/);
-  assert.match(validateDiscoveryAnswer(website, 'http://example.org'), /HTTPS/);
+  assert.match(validateDiscoveryAnswer(website, '') || '', /Enter/);
+  assert.match(validateDiscoveryAnswer(website, 'https://name:password@example.org') || '', /without credentials/);
+  assert.match(validateDiscoveryAnswer(website, 'http://example.org') || '', /HTTPS/);
   assert.equal(validateDiscoveryAnswer(website, 'https://example.org/portfolio'), null);
-  assert.match(validateDiscoveryAnswer(website, 'a'.repeat(513)), /513/);
+  assert.match(validateDiscoveryAnswer(website, 'a'.repeat(513)) || '', /513/);
 });

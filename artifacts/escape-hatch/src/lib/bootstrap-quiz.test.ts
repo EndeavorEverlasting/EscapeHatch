@@ -22,6 +22,9 @@ test('bootstrap IDs belong to reusable, explicitly approved application taxonomy
     assert.equal(entry?.answer_scope, 'profile', id);
   }
   assert.ok(scenes.scenes.some(scene => scene.id === 'PREREQUISITES'));
+  assert.deepEqual([...BOOTSTRAP_QUESTION_IDS], taxonomy.bootstrap_quiz.question_ids);
+  assert.equal(taxonomy.bootstrap_quiz.scene_id, 'PREREQUISITES');
+  assert.equal(taxonomy.bootstrap_quiz.submission, 'operator_only');
 });
 
 test('invalid or incomplete quiz is not silently treated as ready to fill', () => {

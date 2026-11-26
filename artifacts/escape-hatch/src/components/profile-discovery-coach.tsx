@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
 import { projectProfileDiscovery, validateDiscoveryAnswer } from '@/lib/profile-question-planner';
 import type { Preferences } from '@/lib/application-preferences';
+import type { AssistProfile } from '@/lib/assist-contract';
 
-export function ProfileDiscoveryCoach({ saved, busy, onSave }: {
+export function ProfileDiscoveryCoach({ saved, busy, onSave, careerProfile }: {
   saved: Preferences;
   busy: boolean;
+  careerProfile?: AssistProfile;
   onSave: (id: string, answer: string) => void;
 }) {
   const [skipped, setSkipped] = useState<string[]>([]);
   const [answer, setAnswer] = useState('');
   const [error, setError] = useState('');
-  const plan = projectProfileDiscovery(saved, skipped);
+  const plan = projectProfileDiscovery(saved, skipped, careerProfile);
   const next = plan.next;
   useEffect(() => { setAnswer(''); setError(''); }, [next?.id]);
   return <section className="mt-4 rounded-xl border border-primary/30 bg-primary/[0.04] p-4" aria-label="Guided profile discovery" data-testid="profile-discovery-coach">
@@ -28,6 +30,13 @@ export function ProfileDiscoveryCoach({ saved, busy, onSave }: {
     {next ? <div className="mt-3" key={next.id}>
       <p className="text-sm font-semibold">Chirp! Next question: {next.label}</p>
       <p className="mt-1 text-sm text-muted-foreground">{next.why}</p>
+      {next.recordOwner ? <div className="mt-3">
+        <p className="text-sm text-muted-foreground">Career facts are reviewed in the selected {next.recordOwner === 'work' ? 'work' : 'education'} record, not in a separate answer cache. This prevents an answer from appearing reusable when managed Fill cannot use it.</p>
+        <div className="mt-3 flex flex-wrap gap-3">
+          <a href="/assist#career-records" className="rounded bg-primary px-4 py-2 text-primary-foreground font-semibold">Open reviewed career records</a>
+          <button type="button" disabled={busy} className="rounded border border-border px-4 py-2" onClick={() => setSkipped(current => [...new Set([...current, next.id])])}>Skip for now</button>
+        </div>
+      </div> : <>
       <label className="mt-3 block text-sm" htmlFor="profile-discovery-answer">Your answer (only if you can confirm it)</label>
       {next.multiline
         ? <textarea id="profile-discovery-answer" rows={3} maxLength={512} value={answer} disabled={busy}
@@ -44,6 +53,7 @@ export function ProfileDiscoveryCoach({ saved, busy, onSave }: {
           Skip for now
         </button>
       </div>
+      </>}
     </div> : <p className="mt-3 text-sm">{plan.skippedThisVisit ? 'You have reviewed the remaining questions for this visit.' : 'You have answered the available reusable questions.'} You can always edit these answers below.</p>}
     {plan.skippedThisVisit > 0 && <button type="button" disabled={busy} className="mt-3 text-sm font-semibold text-primary underline"
       onClick={() => setSkipped([])}>Revisit {plan.skippedThisVisit} skipped question{plan.skippedThisVisit === 1 ? '' : 's'}</button>}

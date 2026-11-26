@@ -749,6 +749,7 @@ function HomePage({ profile, answers, assistProfile, applications, setApplicatio
 
 function ProfilePage({
   profile,
+  assistProfile,
   answers,
   applications,
   setProfile,
@@ -759,6 +760,7 @@ function ProfilePage({
   setDraftRecoverySeconds,
 }: {
   profile: Profile;
+  assistProfile: AssistProfile;
   answers: AnswerSnippet[];
   applications: Application[];
   setProfile: React.Dispatch<React.SetStateAction<Profile>>;
@@ -868,6 +870,7 @@ function ProfilePage({
     </form>
     <section aria-label="Pre-application profile questions" data-testid="profile-prerequisites">
       <ApplicationPreferences
+        careerProfile={assistProfile}
         bootstrapDefaults={{
           firstName: draft.first_name, lastName: draft.last_name, email: draft.email,
           phone: draft.phone, city: draft.city, region: draft.region,
@@ -1550,7 +1553,7 @@ function Router() {
     setApplications(workspace.applications);
     return persisted;
   };
-  return <AppShell profile={profile}><Switch><Route path="/"><HomePage profile={profile} answers={answers} assistProfile={assistProfile} applications={applications} setApplications={setApplications} /></Route><Route path="/journey"><JourneyAtlas applications={applications} /></Route><Route path="/profile"><ProfilePage profile={profile} answers={answers} applications={applications} setProfile={setProfile} setAnswers={setAnswers} setApplications={setApplications} onRestoreWorkspace={restoreWorkspace} draftRecoverySeconds={draftRecoverySeconds} setDraftRecoverySeconds={setDraftRecoverySeconds} /></Route><Route path="/answers"><AnswersPage assistProfile={assistProfile} profile={profile} answers={answers} setAnswers={setAnswers} dismissedDraft={dismissedAnswerDraft} setDismissedDraft={setDismissedAnswerDraft} draftExpiryAnnouncement={answerDraftExpiryAnnouncement} onDraftStarted={() => setAnswerDraftExpiryAnnouncement('')} draftRecoverySeconds={answerDraftRecoverySeconds} draftRecoveryWindowSeconds={draftRecoverySeconds} /></Route><Route path="/applications"><ApplicationsPage applications={applications} setApplications={setApplications} dismissedDraft={dismissedApplicationDraft} setDismissedDraft={setDismissedApplicationDraft} draftExpiryAnnouncement={applicationDraftExpiryAnnouncement} onDraftStarted={() => setApplicationDraftExpiryAnnouncement('')} draftRecoverySeconds={applicationDraftRecoverySeconds} draftRecoveryWindowSeconds={draftRecoverySeconds} /></Route><Route path="/sources"><SourcesPage profile={profile} assistProfile={assistProfile} applications={applications} sourceBindings={sourceBindings} onApprove={(value) => { persistSourceApproval(getLocalStorage(), value); setProfile(value.profile); setAssistProfile(value.assist); setSourceBindings(value.bindings); }} onForget={() => setSourceBindings([])} /></Route><Route path="/materials">{containerWorkspace ? <PageIntro eyebrow="Application materials" title="Attach files on the employer’s site." description={containerMaterialsHelp} action={<Link href="/applications" className="inline-flex min-h-11 items-center font-bold text-primary underline">Open Applications</Link>} /> : <MaterialsReviewScene applications={applications} />}</Route><Route path="/assist"><AssistPage assistProfile={assistProfile} setAssistProfile={setAssistProfile} sourceBindings={sourceBindings} profile={profile} answers={answers} applications={applications} setProfile={setProfile} setAnswers={setAnswers} setApplications={setApplications} /></Route><Route component={NotFoundPage} /></Switch></AppShell>;
+  return <AppShell profile={profile}><Switch><Route path="/"><HomePage profile={profile} answers={answers} assistProfile={assistProfile} applications={applications} setApplications={setApplications} /></Route><Route path="/journey"><JourneyAtlas applications={applications} /></Route><Route path="/profile"><ProfilePage profile={profile} assistProfile={assistProfile} answers={answers} applications={applications} setProfile={setProfile} setAnswers={setAnswers} setApplications={setApplications} onRestoreWorkspace={restoreWorkspace} draftRecoverySeconds={draftRecoverySeconds} setDraftRecoverySeconds={setDraftRecoverySeconds} /></Route><Route path="/answers"><AnswersPage assistProfile={assistProfile} profile={profile} answers={answers} setAnswers={setAnswers} dismissedDraft={dismissedAnswerDraft} setDismissedDraft={setDismissedAnswerDraft} draftExpiryAnnouncement={answerDraftExpiryAnnouncement} onDraftStarted={() => setAnswerDraftExpiryAnnouncement('')} draftRecoverySeconds={answerDraftRecoverySeconds} draftRecoveryWindowSeconds={draftRecoverySeconds} /></Route><Route path="/applications"><ApplicationsPage applications={applications} setApplications={setApplications} dismissedDraft={dismissedApplicationDraft} setDismissedDraft={setDismissedApplicationDraft} draftExpiryAnnouncement={applicationDraftExpiryAnnouncement} onDraftStarted={() => setApplicationDraftExpiryAnnouncement('')} draftRecoverySeconds={applicationDraftRecoverySeconds} draftRecoveryWindowSeconds={draftRecoverySeconds} /></Route><Route path="/sources"><SourcesPage profile={profile} assistProfile={assistProfile} applications={applications} sourceBindings={sourceBindings} onApprove={(value) => { persistSourceApproval(getLocalStorage(), value); setProfile(value.profile); setAssistProfile(value.assist); setSourceBindings(value.bindings); }} onForget={() => setSourceBindings([])} /></Route><Route path="/materials">{containerWorkspace ? <PageIntro eyebrow="Application materials" title="Attach files on the employer’s site." description={containerMaterialsHelp} action={<Link href="/applications" className="inline-flex min-h-11 items-center font-bold text-primary underline">Open Applications</Link>} /> : <MaterialsReviewScene applications={applications} />}</Route><Route path="/assist"><AssistPage assistProfile={assistProfile} setAssistProfile={setAssistProfile} sourceBindings={sourceBindings} profile={profile} answers={answers} applications={applications} setProfile={setProfile} setAnswers={setAnswers} setApplications={setApplications} /></Route><Route component={NotFoundPage} /></Switch></AppShell>;
 }
 
 function RoutedErrorBoundary({ children }: { children: ReactNode }) {

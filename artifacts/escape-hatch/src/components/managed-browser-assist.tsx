@@ -1008,7 +1008,7 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
       </p>
     </section>
     {runtimeChecked && <ApplicationSubmissionSetting />}
-    <section aria-label="Reusable application knowledge"><ApplicationPreferences currentRole={applications.find(item => item.id === selectedOpportunityId)?.role} currentPosting={applications.find(item => item.id === selectedOpportunityId)?.jobDescription || ''} reviewedExperience={assistProfile.experience.filter(item => item.id === assistProfile.selectedExperienceId).map(item => item.title + ' ' + item.bullets.join(' ')).join(' ')} refresh={preferencesRefresh} onEdit={() => setRecordMilitary(false)} onLoad={data => setProfile(current => {
+    <section aria-label="Reusable application knowledge"><ApplicationPreferences careerProfile={assistProfile} currentRole={applications.find(item => item.id === selectedOpportunityId)?.role} currentPosting={applications.find(item => item.id === selectedOpportunityId)?.jobDescription || ''} reviewedExperience={assistProfile.experience.filter(item => item.id === assistProfile.selectedExperienceId).map(item => item.title + ' ' + item.bullets.join(' ')).join(' ')} refresh={preferencesRefresh} onEdit={() => setRecordMilitary(false)} onLoad={data => setProfile(current => {
       const next = { ...current };
       for (const key of Object.keys(current) as (keyof Profile)[]) {
         const id = 'identity.' + (key === 'linkedin_url' ? 'linkedin' : key === 'name_prefix' ? 'title' : key);

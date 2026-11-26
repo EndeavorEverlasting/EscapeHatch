@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { emptyPreferences, parsePreferences, questions, roleQuestionKey, preferenceChoices, expandProfessionalTitles, suggestProfessionalTitles, type Preferences } from '@/lib/application-preferences';
-import { applyBootstrapQuiz, bootstrapQuizError, emptyBootstrapQuiz, BOOTSTRAP_QUESTION_IDS, type BootstrapQuiz } from '@/lib/bootstrap-quiz';
+import { applyBootstrapQuiz, bootstrapQuizError, emptyBootstrapQuiz, hydrateBootstrapQuiz, BOOTSTRAP_QUESTION_IDS, type BootstrapQuiz } from '@/lib/bootstrap-quiz';
+import type { AssistProfile } from '@/lib/assist-contract';
 import { ProfileDiscoveryCoach } from '@/components/profile-discovery-coach';
-import { reconcileGuidedReadback } from '@/lib/profile-question-planner';
+import { reconcileGuidedReadback, PROFILE_DISCOVERY_QUESTIONS } from '@/lib/profile-question-planner';
 import { savedAnswerReviewRows, unrecognizedSavedAnswerCount, hasTalentCommunityAnswers, talentCommunityAnswerHandoff, canReplaceEditorFromDisk } from '@/lib/answer-transparency';
 
 const API = '/__escapehatch/managed-assist/preferences';
@@ -39,7 +40,7 @@ function preferenceFieldLabel(id: string, fallback: string) {
   if (id === 'identity.linkedin') return 'LinkedIn profile';
   return fallback;
 }
-export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '', reviewedExperience = '', refresh = 0, onEdit, bootstrapDefaults }: { onLoad?: (data: Preferences) => void; currentRole?: string; currentPosting?: string; reviewedExperience?: string; refresh?: number; onEdit?: () => void; bootstrapDefaults?: Partial<BootstrapQuiz> }) {
+export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '', reviewedExperience = '', refresh = 0, onEdit, bootstrapDefaults, careerProfile }: { onLoad?: (data: Preferences) => void; currentRole?: string; currentPosting?: string; reviewedExperience?: string; refresh?: number; onEdit?: () => void; bootstrapDefaults?: Partial<BootstrapQuiz>; careerProfile?: AssistProfile }) {
   const [data, setData] = useState<Preferences>(emptyPreferences);
   // Separate the durable disk snapshot from unsaved edits in the form below.
   const [savedData, setSavedData] = useState<Preferences>(emptyPreferences);
@@ -107,14 +108,7 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
       // Subsequent background refreshes must not overwrite in-progress inputs.
       if (!quizInitialized.current) {
         quizInitialized.current = true;
-        const answer = (id: string) => parsed.preferences[id]?.value || '';
-        setQuiz({
-          firstName: answer('identity.first_name'), lastName: answer('identity.last_name'),
-          email: answer('identity.email'), phone: answer('identity.phone'),
-          city: answer('identity.city'), region: answer('identity.region'),
-          country: answer('identity.country'), linkedIn: answer('identity.linkedin'),
-          workMode: parsed.recommendation_work_mode || '',
-        });
+        setQuiz(current => hydrateBootstrapQuiz(parsed, current, bootstrapDefaults));
       }
       setMessage(meta?.exists
         ? 'Shared EscapeHatch profile found on this computer. Reused across browsers until you edit or clear it.'
@@ -282,7 +276,10 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
       </section>
     )}
 
-    {ready && <ProfileDiscoveryCoach saved={savedData} busy={busy} onSave={(id, answer) => {
+    {ready && <ProfileDiscoveryCoach saved={savedData} careerProfile={careerProfile} busy={busy} onSave={(id, answer) => {
+      if (PROFILE_DISCOVERY_QUESTIONS.some(question => question.id === id && question.recordOwner)) {
+        setMessage('Work and education facts must be reviewed through Career Records.'); return;
+      }
       const owner = questions.find(question => question.id === id);
       if (!owner || owner.answer_scope !== 'profile' || owner.automation_policy !== 'fill_if_explicit_preference' || owner.confirmation_policy !== 'until_changed') {
         setMessage('This question cannot be saved as a reusable profile answer.'); return;

@@ -127,6 +127,38 @@ class FeatureOntologyTests(unittest.TestCase):
         with self.assertRaisesRegex(OntologyError, "outside linked features"):
             self.check(journey=candidate)
 
+    def test_first_run_quiz_maps_to_canonical_profile_and_prerequisites(self):
+        # The quiz was merged after the original ontology and must never be
+        # left outside the exact-path and scene-contract release floor.
+        feature = next(f for f in self.ontology["features"]
+                       if f["id"] == "application-preferences")
+        mapped = {row["path"]: row["role"] for row in feature["files"]}
+        for path, role in {
+            "artifacts/escape-hatch/src/lib/bootstrap-quiz.ts": "source",
+            "artifacts/escape-hatch/src/lib/bootstrap-quiz.test.ts": "test",
+            "artifacts/escape-hatch/tests/bootstrap-quiz.spec.ts": "test",
+        }.items():
+            self.assertEqual(mapped.get(path), role)
+            self.assertIn(path, self.tracked)
+        scene = next(s for s in self.journey["scenes"]
+                     if s["id"] == "PREREQUISITES")
+        self.assertIn("application-preferences", scene["feature_ids"])
+        for path in (
+            "artifacts/escape-hatch/src/lib/bootstrap-quiz.ts",
+            "artifacts/escape-hatch/src/components/application-preferences.tsx",
+        ):
+            self.assertIn(path, scene["implementation_paths"])
+        taxonomy = load_json(ROOT / "harness/contracts/application-form-taxonomy.v1.json")
+        self.assertEqual(taxonomy["bootstrap_quiz"]["scene_id"], "PREREQUISITES")
+        self.assertEqual(taxonomy["bootstrap_quiz"]["submission"], "operator_only")
+        questions = {item["id"]: item for item in taxonomy["questions"]}
+        self.assertEqual(len(taxonomy["bootstrap_quiz"]["question_ids"]), 8)
+        for question_id in taxonomy["bootstrap_quiz"]["question_ids"]:
+            question = questions[question_id]
+            self.assertEqual(question["answer_scope"], "profile")
+            self.assertEqual(question["automation_policy"], "fill_if_explicit_preference")
+            self.assertEqual(question["confirmation_policy"], "until_changed")
+
     def test_no_runtime_proof_inflation(self):
         candidate = deepcopy(self.journey)
         candidate["scenes"][0]["avatar_guide"]["native_runtime_proof"] = "certified"

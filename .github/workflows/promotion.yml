@@ -397,6 +397,32 @@ jobs:
             echo "STALE_CANDIDATE: PR head/base changed during browser validation"
             exit 1
           fi
+          # Check the actual prospective integration tree, not the PR's previously
+          # green head. An unrelated PR can add new unowned paths on main while
+          # this candidate is queued. The candidate must rebase/revalidate.
+          git fetch origin main --prune
+          live_main_sha=$(git rev-parse origin/main)
+          if [ "$live_main_sha" != "$refreshed_base" ]; then
+            echo "STALE_MERGE_BASE: current main $live_main_sha != PR base $refreshed_base"
+            exit 1
+          fi
+          if ! preview_tree=$(git merge-tree --write-tree "$live_main_sha" "$expected_head_sha"); then
+            echo "MERGE_TREE_CONFLICT: cannot prove prospective integration tree"
+            exit 1
+          fi
+          if [[ ! "$preview_tree" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "MERGE_TREE_UNRESOLVED: expected exact tree SHA, got $preview_tree"
+            exit 1
+          fi
+          python scripts/validate_feature_ontology.py --tree "$preview_tree"
+          echo "MERGE_TREE_ONTOLOGY_PASS tree=$preview_tree base=$live_main_sha head=$expected_head_sha"
+          # GitHub's PR merge endpoint CAS binds the head only, not the base.
+          # Re-read the base immediately before mutation to narrow the race.
+          provider_main_sha=$(gh api repos/${{ github.repository }}/git/ref/heads/main --jq '.object.sha')
+          if [ "$provider_main_sha" != "$live_main_sha" ]; then
+            echo "STALE_MERGE_BASE: main advanced after synthetic tree validation"
+            exit 1
+          fi
           # Existing structural/harness guard remains supplemental. Browser proof is
           # enforced by the real provider-backed verify-browser command above.
           python scripts/promotion_guard.py check --candidate-sha "$expected_head_sha" --base-sha "$base_sha" --pr "$pr" --target main

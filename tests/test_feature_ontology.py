@@ -1,12 +1,15 @@
 """Regression checks for strict source ownership and linked avatar scenes."""
 from copy import deepcopy
 from pathlib import Path
+import os
+import subprocess
 import sys
+import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-from validate_feature_ontology import MAP, SCENES, OntologyError, inventory, load_json, validate
+from validate_feature_ontology import MAP, SCENES, OntologyError, inventory, load_json, validate, validate_tree
 
 class FeatureOntologyTests(unittest.TestCase):
     @classmethod
@@ -28,6 +31,31 @@ class FeatureOntologyTests(unittest.TestCase):
         self.assertEqual(result["unmapped"], 0)
         self.assertEqual(result["stale"], 0)
         self.assertEqual(result["scenes"], len(self.journey["scenes"]))
+
+
+    def test_exact_head_tree_uses_committed_feature_ontology(self):
+        tree = subprocess.check_output(["git", "-C", str(ROOT), "rev-parse", "HEAD^{tree}"]).decode().strip()
+        result = validate_tree(ROOT, tree)
+        self.assertEqual(result["mapped"], len(self.tracked))
+        self.assertEqual(result["unmapped"], 0)
+
+    def test_prospective_merge_tree_rejects_unowned_addition(self):
+        """A branch can be green before main changes; the merged tree must still fail."""
+        with tempfile.TemporaryDirectory() as temporary:
+            env = {**os.environ, "GIT_INDEX_FILE": str(Path(temporary) / "git-index")}
+            git = ["git", "-C", str(ROOT)]
+            subprocess.check_call(git + ["read-tree", "HEAD"], env=env)
+            blob = subprocess.check_output(git + ["hash-object", "-w", "--stdin"],
+                                           input=b"synthetic candidate with new unowned path").decode().strip()
+            subprocess.check_call(git + ["update-index", "--add", "--cacheinfo",
+                                         "100644", blob, "scripts/unmapped-during-merge"], env=env)
+            merged_tree = subprocess.check_output(git + ["write-tree"], env=env).decode().strip()
+            with self.assertRaisesRegex(OntologyError, "unmapped=1"):
+                validate_tree(ROOT, merged_tree)
+
+    def test_tree_lookup_must_use_exact_object_id(self):
+        with self.assertRaisesRegex(OntologyError, "exact Git object SHA"):
+            validate_tree(ROOT, "HEAD")
 
     def test_unknown_file_in_already_mapped_directory(self):
         with self.assertRaisesRegex(OntologyError, "unmapped=1"):

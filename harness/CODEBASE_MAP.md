@@ -218,12 +218,22 @@ Port occupancy is evidence, not process identity. FOREIGN_CONFLICT never kills a
 - Preference-cache policy: `harness/contracts/application-preference-cache.v1.json`
 - Lua design input: `harness/constraints/LUA_EMBEDDING.md`
 
+## Feature ownership and exact merge admission
+
+- Canonical ownership: `harness/contracts/feature-ontology.v1.json`. Every Git-tracked path has exactly one **literal** primary feature owner; an unowned, duplicated or deleted path is a failure, not a miscellaneous category.
+- First-run quiz and profile-question planner: `artifacts/escape-hatch/src/lib/bootstrap-quiz.ts`, `artifacts/escape-hatch/src/lib/profile-question-planner.ts`, and their tests belong to **application-preferences**. The visible profile-discovery coach `artifacts/escape-hatch/src/components/profile-discovery-coach.tsx` remains owned by **application-preferences** on merged `main`; the common journey registry remains a separate authority. They reuse existing private answer/taxonomy authority, not a second applicant profile.
+- Head/tree proof: `python scripts/validate_feature_ontology.py` checks the index; `python scripts/validate_feature_ontology.py --tree "$(git rev-parse HEAD^{tree})"` checks exact committed tree bytes. `tests/test_feature_ontology.py` includes a synthetic integration tree with an extra unowned path as a negative control.
+- Promotion protection: `.github/workflows/promotion.yml` must validate the **prospective merge tree** against the latest `main` before GitHub's actual merge. A green head/earlier base does not prove that a later combination still covers every file. Retain the separate browser, consent, submission and live-host proof gates.
+- Governance limitation: GitHub's merge API binds the expected PR head, not the latest base. A provider-enforced merge queue or required protected status on the resulting merge commit is stronger; never report one as configured without provider readback.
+
 ## Validation commands
 
 Run from repository root:
 
 ```text
 python scripts/validate_governance.py
+python scripts/validate_feature_ontology.py
+python tests/test_feature_ontology.py
 python scripts/validate_product_version.py
 python scripts/validate_repository_promotion.py
 python scripts/validate_application_harness.py

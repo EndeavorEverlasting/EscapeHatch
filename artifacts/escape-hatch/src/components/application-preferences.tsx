@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { emptyPreferences, parsePreferences, questions, roleQuestionKey, preferenceChoices, expandProfessionalTitles, suggestProfessionalTitles, type Preferences } from '@/lib/application-preferences';
-import { applyBootstrapQuiz, bootstrapQuizError, emptyBootstrapQuiz, type BootstrapQuiz } from '@/lib/bootstrap-quiz';
+import { applyBootstrapQuiz, bootstrapQuizError, emptyBootstrapQuiz, BOOTSTRAP_QUESTION_IDS, type BootstrapQuiz } from '@/lib/bootstrap-quiz';
 import { ProfileDiscoveryCoach } from '@/components/profile-discovery-coach';
+import { reconcileGuidedReadback } from '@/lib/profile-question-planner';
 import { savedAnswerReviewRows, unrecognizedSavedAnswerCount, hasTalentCommunityAnswers, talentCommunityAnswerHandoff, canReplaceEditorFromDisk } from '@/lib/answer-transparency';
 
 const API = '/__escapehatch/managed-assist/preferences';
@@ -147,6 +148,44 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
     })();
     return () => { cancelled = true; };
   }, [refresh, ready]);
+  async function saveGuided(candidate: Preferences, confirmedIds: readonly string[]) {
+    if (!parsePreferences(candidate) || !confirmedIds.length || confirmedIds.some(id => !candidate.preferences[id]?.value)) {
+      setMessage('Guided answers failed validation. Nothing was saved.'); return;
+    }
+    // The guided path intentionally starts from savedData, NOT the full editor.
+    // Empty removals prevent unrelated unsaved decisions from being committed.
+    setBusy(true);
+    try {
+      const response = await fetch(API, {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'content-type': 'application/json', 'x-escapehatch-operator-action': 'confirmed' },
+        body: JSON.stringify({
+          preferences: { ...candidate, exported_at: new Date().toISOString() },
+          removedQuestions: [],
+        }),
+      });
+      if (!response.ok) throw new Error('Guided save was rejected.');
+      const check = await fetch(API, { credentials: 'same-origin', cache: 'no-store' });
+      if (!check.ok) throw new Error('The guided save could not be read back.');
+      const json = await check.json();
+      const parsed = parsePreferences(json.preferences);
+      if (!parsed || confirmedIds.some(id => parsed.preferences[id]?.value !== candidate.preferences[id]?.value) ||
+          (candidate.recommendation_work_mode && parsed.recommendation_work_mode !== candidate.recommendation_work_mode))
+        throw new Error('The confirmed guided answers did not match disk readback.');
+      const meta = json.store && typeof json.store.preferenceStore === 'string'
+        ? { dataHome: String(json.store.dataHome || ''), preferenceStore: String(json.store.preferenceStore),
+            source: String(json.store.source || 'platform_default'), exists: json.store.exists === true } : null;
+      if (meta) setStore(meta);
+      setSavedData(parsed);
+      setData(current => reconcileGuidedReadback(current, parsed, confirmedIds, removedQuestions).editor);
+      setRemovedQuestions(current => reconcileGuidedReadback(data, parsed, confirmedIds, current).removedQuestions);
+      onLoad?.(parsed);
+      window.dispatchEvent(new Event('escapehatch-recommendation-policy-changed'));
+      setMessage('Guided answers saved and verified in the private profile. Other unfinished editor changes remain unsaved.');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Guided save failed. Existing answers and unfinished edits are preserved.');
+    } finally { setBusy(false); }
+  }
   async function save(clear = false, candidate: Preferences = data, removed = removedQuestions) {
     setBusy(true);
     try {
@@ -231,10 +270,9 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
               <button type="button" className="rounded bg-primary px-4 py-2 text-primary-foreground" disabled={busy}
                 onClick={() => {
                   try {
-                    const staged = applyBootstrapQuiz(data, quiz);
-                    setData(staged);
-                    markEdited();
-                    void save(false, staged);
+                    const staged = applyBootstrapQuiz(savedData, quiz);
+                    const confirmedIds = BOOTSTRAP_QUESTION_IDS.filter(id => !!staged.preferences[id]?.value);
+                    void saveGuided(staged, confirmedIds);
                   } catch (error) {
                     setMessage(error instanceof Error ? error.message : 'Review your answers and try again.');
                   }
@@ -255,15 +293,13 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
         setMessage('This answer is already in your editor. Review that answer before replacing it.'); return;
       }
       const staged: Preferences = {
-        ...data,
-        preferences: { ...data.preferences, [id]: { scope: 'profile_preference', source: 'user',
+        ...savedData,
+        preferences: { ...savedData.preferences, [id]: { scope: 'profile_preference', source: 'user',
           value: answer.trim(), updated_at: new Date().toISOString() } },
       };
-      if (!parsePreferences(staged)) { setMessage('The new answer failed profile validation; nothing was saved.'); return; }
-      const stillRemoved = removedQuestions.filter(questionId => questionId !== id);
-      setRemovedQuestions(stillRemoved);
-      setData(staged); markEdited();
-      void save(false, staged, stillRemoved);
+      const valid = parsePreferences(staged);
+      if (!valid) { setMessage('The new answer failed profile validation; nothing was saved.'); return; }
+      void saveGuided(valid, [id]);
     }} />}
 
     <aside className="preference-store-rail mt-4 border-l-4 border-primary/70 bg-primary/[0.04] py-3 pl-4 pr-3" aria-label="Shared EscapeHatch profile location" data-testid="preference-store-rail">

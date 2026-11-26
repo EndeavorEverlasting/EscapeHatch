@@ -217,11 +217,17 @@ export function effectiveOpportunityDecision(notes?: string, local?: Opportunity
 }
 
 /** Local user choice is persisted separately from the provider match evidence. */
-export function localApplicationPreparationRank(notes?: string, local?: OpportunityDecision): 0 | 1 | null {
-  if (!local) return applicationPreparationRank(notes);
+export function localApplicationPreparationRank(notes?: string, local?: OpportunityDecision, trackerWorkMode?: string): 0 | 1 | null {
+  if (!local) return applicationPreparationRank(notes, trackerWorkMode);
   if (local.applicationDecision === 'apply') return 0;
   if (local.applicationDecision === 'do_not_apply' || local.jobDesire === 'do_not_want' || local.purpose === 'interview_practice') return null;
   const rubric = readOpportunityRubric(notes);
-  if (rubric === 'invalid' || readRequirementAssessment(notes) === 'invalid' || deriveOpportunityType(notes).type === 'learning') return null;
+  const classification = deriveOpportunityType(notes, trackerWorkMode);
+  if (rubric === 'invalid' || classification.type === 'learning' || classification.reasons.includes('INVALID_MATCH_EVIDENCE') || classification.reasons.includes('WORK_MODE_CONFLICT')) return null;
   return !rubric || evaluateOpportunityRubric(rubric).eligibility === 'eligible' ? 1 : null;
+}
+
+/** Explicit selection authorizes preparation, not submission; workplace filtering applies only to discovery. */
+export function allowsRankedPreparation(rank: 0 | 1 | null, evidence: WorkplaceEvidence, mode: RecommendationWorkMode): boolean {
+  return rank === 0 || (rank === 1 && allowsAutomaticRecommendation(evidence, mode));
 }

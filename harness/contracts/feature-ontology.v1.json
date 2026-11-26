@@ -1,1 +1,3570 @@
-{"schema":"escapehatch/feature-ontology/v1","coverage":{"inventory":"all_git_tracked_paths","ownership":"exactly_one_primary_feature","unmapped_allowed":0,"stale_allowed":0,"selectors":"literal_paths_only"},"scene_authority":"contracts/application-journey-scenes.v1.json","features":[{"id":"repository-governance","title":"Repository governance and ontology","description":"Agent routing, ownership, validation, release promotion.","anchors":["AGENTS.md","harness/CODEBASE_MAP.md","scripts/validate_harness.py","contracts/repository-promotion.v1.json","scripts/validate_feature_ontology.py"],"files":[{"path":".githooks/pre-commit","role":"source"},{"path":".githooks/pre-push","role":"source"},{"path":".github/workflows/context-routing.yml","role":"source"},{"path":".github/workflows/harness.yml","role":"source"},{"path":".github/workflows/promotion.yml","role":"source"},{"path":".github/workflows/web-cockpit.yml","role":"source"},{"path":".gitignore","role":"source"},{"path":"AGENTS.md","role":"documentation"},{"path":"ARTIFACT_REGISTRY.md","role":"documentation"},{"path":"CHANGELOG.md","role":"documentation"},{"path":"LICENSE","role":"source"},{"path":"VERSION","role":"source"},{"path":"contracts/p82-evidence-class.v1.json","role":"contract"},{"path":"contracts/product-release.v1.json","role":"contract"},{"path":"contracts/repository-promotion.v1.json","role":"contract"},{"path":"docs/APPLICATION_SOURCE_INTEGRATED_UX_P04_P82_2026-10-18.md","role":"documentation"},{"path":"docs/migrations/REPLIT_TRANSFER_2026-09-20.md","role":"documentation"},{"path":"fixtures/p82-neg-device-cannot-prove-browser.json","role":"fixture"},{"path":"fixtures/p82-neg-host-cannot-prove-policy.json","role":"fixture"},{"path":"fixtures/p82-neg-play-not-universal.json","role":"fixture"},{"path":"fixtures/p82-neg-target-as-achieved.json","role":"fixture"},{"path":"fixtures/p82-pos-combined-evidence.json","role":"fixture"},{"path":"fixtures/p82-pos-honest-blocked.json","role":"fixture"},{"path":"fixtures/p82-proof-inflation.negative.json","role":"fixture"},{"path":"fixtures/p82-proof-inflation.positive-keep.json","role":"fixture"},{"path":"harness/CODEBASE_MAP.md","role":"documentation"},{"path":"harness/WORKFLOWS.md","role":"documentation"},{"path":"harness/constraints/LUA_EMBEDDING.md","role":"documentation"},{"path":"harness/context/README.md","role":"documentation"},{"path":"harness/context/sources.v1.json","role":"contract"},{"path":"harness/contracts/agent-context-boundaries.v1.json","role":"contract"},{"path":"harness/contracts/feature-ontology.v1.json","role":"contract"},{"path":"harness/contracts/p04-conditional-checkpoint-dispatch.v1.json","role":"contract"},{"path":"harness/manifest.v1.json","role":"contract"},{"path":"harness/workflows/APPLICATION_STAPLES.md","role":"documentation"},{"path":"scripts/apply_replit_migration.py","role":"source"},{"path":"scripts/context_router.py","role":"source"},{"path":"scripts/p82_evidence.py","role":"source"},{"path":"scripts/product_version.py","role":"source"},{"path":"scripts/promotion_guard.py","role":"source"},{"path":"scripts/replit-plan-sync/task-plan-sync.test.ts","role":"test"},{"path":"scripts/replit-plan-sync/task-plan-sync.ts","role":"source"},{"path":"scripts/validate_agent_context_boundaries.py","role":"source"},{"path":"scripts/validate_application_harness.py","role":"source"},{"path":"scripts/validate_feature_ontology.py","role":"source"},{"path":"scripts/validate_governance.py","role":"source"},{"path":"scripts/validate_harness.py","role":"source"},{"path":"scripts/validate_p82_evidence.py","role":"source"},{"path":"scripts/validate_product_version.py","role":"source"},{"path":"scripts/validate_replit_transfer.py","role":"source"},{"path":"scripts/validate_repository_promotion.py","role":"source"},{"path":"skills/harness-operations/SKILL.md","role":"documentation"},{"path":"tests/test_context_router.py","role":"test"},{"path":"tests/test_context_router_escalation.py","role":"test"},{"path":"tests/test_context_router_mission.py","role":"test"},{"path":"tests/test_feature_ontology.py","role":"test"},{"path":"tests/test_p82_evidence.py","role":"test"},{"path":"tests/test_product_version.py","role":"test"},{"path":"tests/test_repository_promotion.py","role":"test"}]},{"id":"installation-runtime","title":"Installation and local runtime","description":"Installation, launcher, runtime identity, packaging and safe process lifecycle.","anchors":["Get-EscapeHatch.cmd","scripts/windows/EscapeHatch-Install.ps1","scripts/windows/EscapeHatch-Runtime.ps1","contracts/local-runtime-lifecycle.v1.json"],"files":[{"path":".dockerignore","role":"source"},{"path":".github/workflows/windows-preview-package.yml","role":"source"},{"path":"Close-EscapeHatch.cmd","role":"source"},{"path":"Close-EscapeHatch.ps1","role":"source"},{"path":"Dockerfile","role":"source"},{"path":"Get-EscapeHatch.cmd","role":"source"},{"path":"Hey, press me, click me.cmd","role":"source"},{"path":"Hey, press me, click me.command","role":"source"},{"path":"Hey, press me, click me.desktop","role":"source"},{"path":"Install-EscapeHatch.cmd","role":"source"},{"path":"Launch-EscapeHatch.cmd","role":"source"},{"path":"Launch-EscapeHatch.ps1","role":"source"},{"path":"Status-EscapeHatch.cmd","role":"source"},{"path":"Status-EscapeHatch.ps1","role":"source"},{"path":"Uninstall-EscapeHatch.cmd","role":"source"},{"path":"artifacts/escape-hatch/companion-package.ts","role":"source"},{"path":"artifacts/escape-hatch/container-server.ts","role":"source"},{"path":"artifacts/escape-hatch/playwright.bootstrap.config.ts","role":"source"},{"path":"artifacts/escape-hatch/runtime-control.test.ts","role":"test"},{"path":"artifacts/escape-hatch/runtime-control.ts","role":"source"},{"path":"artifacts/escape-hatch/tests/container-launch.browser.mjs","role":"test"},{"path":"contracts/application-companion.v1.json","role":"contract"},{"path":"contracts/local-runtime-lifecycle.v1.json","role":"contract"},{"path":"contracts/windows-node-runtime.v1.json","role":"contract"},{"path":"docs/WINDOWS_RUNTIME_LIFECYCLE.md","role":"documentation"},{"path":"docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md","role":"documentation"},{"path":"docs/agent/P04_ZERO_SHUTTLE_ACTIVE_APPLICATION_LAUNCH_2026-10-28.md","role":"documentation"},{"path":"fixtures/application-companion.v1.example.json","role":"fixture"},{"path":"fixtures/local-runtime-lifecycle.v1.example.json","role":"fixture"},{"path":"scripts/container/Launch.ps1","role":"source"},{"path":"scripts/container/launch.sh","role":"source"},{"path":"scripts/container/smoke.sh","role":"source"},{"path":"scripts/package_windows_preview.py","role":"source"},{"path":"scripts/preinstall.js","role":"source"},{"path":"scripts/resolve_repo.ps1","role":"source"},{"path":"scripts/validate_application_companion.py","role":"source"},{"path":"scripts/validate_local_runtime_lifecycle.py","role":"source"},{"path":"scripts/windows/EscapeHatch-Install.ps1","role":"source"},{"path":"scripts/windows/EscapeHatch-Runtime.ps1","role":"source"},{"path":"scripts/windows/EscapeHatch-Toolchain.ps1","role":"source"},{"path":"tests/test_container_desktop_entry.py","role":"test"},{"path":"tests/test_escapehatch_installer_source_delivery.py","role":"test"},{"path":"tests/test_escapehatch_launch_frontdoor.py","role":"test"},{"path":"tests/test_windows_preview_package.py","role":"test"},{"path":"tests/windows/Test-EscapeHatch-Install.ps1","role":"test"},{"path":"tests/windows/Test-EscapeHatch-Runtime-PortDiscovery.ps1","role":"test"},{"path":"tests/windows/Test-EscapeHatch-Runtime.ps1","role":"test"},{"path":"tests/windows/fixtures/foreign-listener.mjs","role":"source"}]},{"id":"workspace-identity","title":"Private workspace and identity","description":"Workspace recovery, private persistence, profile and owner boundaries.","anchors":["artifacts/escape-hatch/src/components/workspace-startup.tsx","artifacts/escape-hatch/workspace-file.ts","artifacts/escape-hatch/src/lib/storage.ts"],"files":[{"path":".github/workflows/career-state.yml","role":"source"},{"path":".github/workflows/private-profile-sync-security.yml","role":"source"},{"path":"artifacts/escape-hatch/src/components/application-identity-warning.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/workspace-startup.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/lib/context-owner-boundary.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/storage.test.ts","role":"test"},{"path":"artifacts/escape-hatch/src/lib/storage.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/workspace-bootstrap.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/workspace-owner-binding.ts","role":"source"},{"path":"artifacts/escape-hatch/tests/persistence.spec.ts","role":"test"},{"path":"artifacts/escape-hatch/tests/standalone-startup.spec.ts","role":"test"},{"path":"artifacts/escape-hatch/tests/workspace-startup.spec.ts","role":"test"},{"path":"artifacts/escape-hatch/user-data.ts","role":"source"},{"path":"artifacts/escape-hatch/workspace-bootstrap.test.ts","role":"test"},{"path":"artifacts/escape-hatch/workspace-control.ts","role":"source"},{"path":"artifacts/escape-hatch/workspace-file.ts","role":"source"},{"path":"artifacts/escape-hatch/workspace-owner-file.test.ts","role":"test"},{"path":"artifacts/escape-hatch/workspace-owner-file.ts","role":"source"},{"path":"contracts/career-state.v1.schema.json","role":"contract"},{"path":"docs/agent/CONTEXT_BOUNDARY_AND_PRIVATE_PROFILE_HANDOFF_2026-10-31.md","role":"documentation"},{"path":"docs/agent/EMPLOYER_PROFILE_MILESTONES_2026-11-03.md","role":"documentation"},{"path":"docs/agent/P04_SECURE_MULTIDEVICE_PROFILE_SYNC_2026-11-03.md","role":"documentation"},{"path":"fixtures/career-state.v1.example.json","role":"fixture"},{"path":"scripts/resolve_escapehatch_user_data.py","role":"source"},{"path":"scripts/validate_career_state.py","role":"source"},{"path":"tests/test_native_profile_bridge.mjs","role":"test"},{"path":"tests/test_native_profile_browser.mjs","role":"test"}]},{"id":"career-sources","title":"Career sources and records","description":"Approved source import, records and provenance.","anchors":["artifacts/escape-hatch/src/components/sources-page.tsx","scripts/career_source_directory.py","harness/contracts/application-source-integration.v1.json"],"files":[{"path":".github/workflows/application-source-integration.yml","role":"source"},{"path":".github/workflows/career-source-directory.yml","role":"source"},{"path":"artifacts/escape-hatch/document-source-import.test.ts","role":"test"},{"path":"artifacts/escape-hatch/import-context.ts","role":"source"},{"path":"artifacts/escape-hatch/src/components/artifact-dropzone.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/career-records.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/career-source-status.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/sources-page.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/lib/source-bridge.test.ts","role":"test"},{"path":"artifacts/escape-hatch/src/lib/source-bridge.ts","role":"source"},{"path":"artifacts/escape-hatch/tests/sources.spec.ts","role":"test"},{"path":"contracts/career-claim-fidelity.v1.json","role":"contract"},{"path":"docs/CAREER_ARTIFACT_PROPAGATION_HARNESS.md","role":"documentation"},{"path":"docs/CAREER_SOURCE_DIRECTORY.md","role":"documentation"},{"path":"fixtures/career-artifact-propagation.v1.example.json","role":"fixture"},{"path":"fixtures/career-claim-fidelity.v1.example.json","role":"fixture"},{"path":"harness/contracts/application-source-integration.v1.json","role":"contract"},{"path":"harness/contracts/career-artifact-propagation.v1.json","role":"contract"},{"path":"scripts/career_source_directory.py","role":"source"},{"path":"scripts/validate_application_source_integration.py","role":"source"},{"path":"scripts/validate_career_artifact_propagation.py","role":"source"},{"path":"scripts/validate_career_claim_fidelity.py","role":"source"},{"path":"tests/test_application_source_integration.py","role":"test"},{"path":"tests/test_career_source_directory.py","role":"test"}]},{"id":"opportunity-tracking","title":"Opportunity discovery and tracking","description":"Job identity, fit, queue, tracker and opportunity binding.","anchors":["artifacts/escape-hatch/tracker-refresh.ts","artifacts/escape-hatch/src/lib/opportunity-fit.ts","artifacts/escape-hatch/src/lib/indeed-posting-identity.ts"],"files":[{"path":".github/workflows/application-job-board-assist.yml","role":"source"},{"path":"artifacts/escape-hatch/src/components/opportunity-decision-guide.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/use-recommendation-work-mode.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/indeed-posting-identity.test.ts","role":"test"},{"path":"artifacts/escape-hatch/src/lib/indeed-posting-identity.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/opportunity-fit.test.ts","role":"test"},{"path":"artifacts/escape-hatch/src/lib/opportunity-fit.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/tracker-bridge.test.ts","role":"test"},{"path":"artifacts/escape-hatch/src/lib/tracker-bridge.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/tracker-refresh-client.test.ts","role":"test"},{"path":"artifacts/escape-hatch/src/lib/tracker-refresh-client.ts","role":"source"},{"path":"artifacts/escape-hatch/tests/application-event-identity.spec.ts","role":"test"},{"path":"artifacts/escape-hatch/tracker-control.ts","role":"source"},{"path":"artifacts/escape-hatch/tracker-refresh.test.ts","role":"test"},{"path":"artifacts/escape-hatch/tracker-refresh.ts","role":"source"},{"path":"artifacts/escape-hatch/tracker-writeback.test.ts","role":"test"},{"path":"artifacts/escape-hatch/tracker-writeback.ts","role":"source"},{"path":"docs/agent/OPPORTUNITY_RUBRIC_V1.md","role":"documentation"},{"path":"docs/agent/P04_JOB_BOARD_APPLICATION_PLATFORMS_2026-10-28.md","role":"documentation"},{"path":"fixtures/tracker-snapshot.synthetic.v1.json","role":"fixture"}]},{"id":"application-preferences","title":"Reusable answers and consent","description":"Question taxonomy, scoped preferences, answer review and consent.","anchors":["harness/contracts/application-form-taxonomy.v1.json","artifacts/escape-hatch/src/lib/application-preferences.ts","artifacts/escape-hatch/preference-file.ts"],"files":[{"path":"artifacts/escape-hatch/application-answer-recall.test.ts","role":"test"},{"path":"artifacts/escape-hatch/career-preferences.ts","role":"source"},{"path":"artifacts/escape-hatch/managed-answer-memory.test.ts","role":"test"},{"path":"artifacts/escape-hatch/managed-answer-memory.ts","role":"source"},{"path":"artifacts/escape-hatch/managed-preferences.test.ts","role":"test"},{"path":"artifacts/escape-hatch/preference-file.ts","role":"source"},{"path":"artifacts/escape-hatch/public/puzzles/answer-constellation-v1.png","role":"asset"},{"path":"artifacts/escape-hatch/reviewed-application-answers.ts","role":"source"},{"path":"artifacts/escape-hatch/src/components/application-preferences.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/recovered-answers.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/lib/answer-recovery.test.ts","role":"test"},{"path":"artifacts/escape-hatch/src/lib/answer-recovery.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/answer-transparency.test.ts","role":"test"},{"path":"artifacts/escape-hatch/src/lib/answer-transparency.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/application-preferences.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/bootstrap-quiz.test.ts","role":"test"},{"path":"artifacts/escape-hatch/src/lib/bootstrap-quiz.ts","role":"source"},{"path":"artifacts/escape-hatch/tests/bootstrap-quiz.spec.ts","role":"test"},{"path":"docs/agent/ANSWER_MEMORY_COMPLETION_HANDOFF.md","role":"documentation"},{"path":"docs/agent/P04_PRIVATE_APPLICATION_ANSWER_SYNC_2026-10-27.md","role":"documentation"},{"path":"harness/contracts/application-form-taxonomy.v1.json","role":"contract"},{"path":"harness/contracts/application-preference-cache.v1.json","role":"contract"},{"path":"harness/workflows/APPLICATION_FORM_INTAKE.md","role":"documentation"},{"path":"scripts/runtime/proof-privacy-preference-paired-profile.mjs","role":"source"},{"path":"scripts/runtime/proof-privacy-preference-popup.mjs","role":"source"},{"path":"skills/application-form-mapping/SKILL.md","role":"documentation"},{"path":"tests/test_android_privacy_preference_contract.py","role":"test"}]},{"id":"application-documents","title":"Role documents and resume selection","description":"Role-specific documents, PDF review and resume presentation.","anchors":["artifacts/escape-hatch/opportunity-documents.ts","artifacts/escape-hatch/src/components/materials-review-scene.tsx","contracts/resume-presentation.v1.json"],"files":[{"path":"artifacts/escape-hatch/drive-resume-source.ts","role":"source"},{"path":"artifacts/escape-hatch/opportunity-documents.test.ts","role":"test"},{"path":"artifacts/escape-hatch/opportunity-documents.ts","role":"source"},{"path":"artifacts/escape-hatch/resume-selection-control.test.ts","role":"test"},{"path":"artifacts/escape-hatch/resume-selection-store.test.ts","role":"test"},{"path":"artifacts/escape-hatch/resume-selection-store.ts","role":"source"},{"path":"artifacts/escape-hatch/src/components/materials-review-scene.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/opportunity-documents.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/resume-platform-switcher.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/lib/employer-facing-document-url.test.ts","role":"test"},{"path":"artifacts/escape-hatch/src/lib/employer-facing-document-url.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/materials-review-status.test.ts","role":"test"},{"path":"artifacts/escape-hatch/src/lib/materials-review-status.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/resume-import.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/resume-selection-graph.test.ts","role":"test"},{"path":"artifacts/escape-hatch/src/lib/resume-selection-graph.ts","role":"source"},{"path":"contracts/employer-facing-document-url.v1.json","role":"contract"},{"path":"contracts/resume-presentation-visual.v1.json","role":"contract"},{"path":"contracts/resume-presentation.v1.json","role":"contract"},{"path":"docs/agent/P04_DOMAIN_RESUME_GRAPH_PLATFORM_POLICY_2026-10-28.md","role":"documentation"},{"path":"docs/agent/P04_MASTER_RESUME_APPLICATION_ROUTING_2026-11-05.md","role":"documentation"},{"path":"harness/contracts/resume-selection-graph.v1.json","role":"contract"},{"path":"scripts/audit_resume_docx.py","role":"source"},{"path":"scripts/validate_employer_facing_document_url.py","role":"source"},{"path":"scripts/validate_resume_presentation.py","role":"source"},{"path":"scripts/validate_resume_presentation_visual.py","role":"source"},{"path":"scripts/validate_resume_selection_graph.py","role":"source"},{"path":"scripts/validate_resume_visual_spike.py","role":"source"},{"path":"templates/resume-visual-dynamic/v1/README.md","role":"documentation"},{"path":"templates/resume-visual-dynamic/v1/synthetic-dynamic.tex","role":"source"},{"path":"tests/test_resume_docx_audit.py","role":"test"}]},{"id":"managed-application","title":"Managed employer browser preparation","description":"Session, requirements, fill, authentication, progression and decisions.","anchors":["artifacts/escape-hatch/browser-assist-control.ts","artifacts/escape-hatch/managed-form.ts","artifacts/escape-hatch/src/components/managed-browser-assist.tsx"],"files":[{"path":".github/workflows/application-assist.yml","role":"source"},{"path":".github/workflows/application-autofill-parent.yml","role":"source"},{"path":".github/workflows/application-autopilot-executor.yml","role":"source"},{"path":".github/workflows/managed-browser-assist.yml","role":"source"},{"path":"artifacts/escape-hatch/application-autopilot-executor.test.ts","role":"test"},{"path":"artifacts/escape-hatch/application-autopilot-executor.ts","role":"source"},{"path":"artifacts/escape-hatch/application-navigation-policy.test.ts","role":"test"},{"path":"artifacts/escape-hatch/application-navigation-policy.ts","role":"source"},{"path":"artifacts/escape-hatch/application-requirements.test.ts","role":"test"},{"path":"artifacts/escape-hatch/application-requirements.ts","role":"source"},{"path":"artifacts/escape-hatch/browser-assist-control.test.ts","role":"test"},{"path":"artifacts/escape-hatch/browser-assist-control.ts","role":"source"},{"path":"artifacts/escape-hatch/employer-verification-recovery.test.ts","role":"test"},{"path":"artifacts/escape-hatch/employer-verification-recovery.ts","role":"source"},{"path":"artifacts/escape-hatch/managed-auth-checkpoint.test.ts","role":"test"},{"path":"artifacts/escape-hatch/managed-auth-checkpoint.ts","role":"source"},{"path":"artifacts/escape-hatch/managed-form.ts","role":"source"},{"path":"artifacts/escape-hatch/managed-listeners.test.ts","role":"test"},{"path":"artifacts/escape-hatch/managed-listeners.ts","role":"source"},{"path":"artifacts/escape-hatch/managed-preparation-driver.test.ts","role":"test"},{"path":"artifacts/escape-hatch/managed-preparation-driver.ts","role":"source"},{"path":"artifacts/escape-hatch/managed-prepare-fallback.test.ts","role":"test"},{"path":"artifacts/escape-hatch/managed-prepare-fallback.ts","role":"source"},{"path":"artifacts/escape-hatch/managed-progress-evidence.test.ts","role":"test"},{"path":"artifacts/escape-hatch/managed-progress-evidence.ts","role":"source"},{"path":"artifacts/escape-hatch/prepare-firefox-application.test.ts","role":"test"},{"path":"artifacts/escape-hatch/prepare-firefox-application.ts","role":"source"},{"path":"artifacts/escape-hatch/reviewed-lever-application.ts","role":"source"},{"path":"artifacts/escape-hatch/src/components/application-puzzle.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/managed-browser-assist.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/lib/application-puzzle.test.ts","role":"test"},{"path":"artifacts/escape-hatch/src/lib/application-puzzle.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/assist.test.ts","role":"test"},{"path":"artifacts/escape-hatch/src/lib/email-application.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/managed-launch-intent.ts","role":"source"},{"path":"artifacts/escape-hatch/tests/application-autopilot-executor.spec.ts","role":"test"},{"path":"artifacts/escape-hatch/tests/application-navigation.spec.ts","role":"test"},{"path":"artifacts/escape-hatch/tests/application-requirements-control.spec.ts","role":"test"},{"path":"artifacts/escape-hatch/tests/application-workbench.spec.ts","role":"test"},{"path":"artifacts/escape-hatch/tests/assist.spec.ts","role":"test"},{"path":"artifacts/escape-hatch/tests/host-workflow-recovery.spec.ts","role":"test"},{"path":"artifacts/escape-hatch/tests/managed-browser-assist.spec.ts","role":"test"},{"path":"contracts/application-navigation-authority.v1.json","role":"contract"},{"path":"contracts/career-browser-pid-selection.v1.json","role":"contract"},{"path":"contracts/managed-browser-progression.v1.json","role":"contract"},{"path":"docs/APPLICATION_ASSIST_AMBIENT_COMPANION_PLAN.md","role":"documentation"},{"path":"docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md","role":"documentation"},{"path":"docs/CAREER_BROWSER_PID_SELECTION.md","role":"documentation"},{"path":"docs/MANAGED_BROWSER_ASSIST.md","role":"documentation"},{"path":"docs/agent/P04_REVIEWED_LEVER_APPLICATION.md","role":"documentation"},{"path":"docs/design/ESCAPE_HATCH_AUTH_SYNC_HANDOFF_2026-11-03.md","role":"documentation"},{"path":"docs/design/prototypes/auth-sync-handoff.html","role":"source"},{"path":"fixtures/application-assist-demo.html","role":"fixture"},{"path":"fixtures/application-navigation-ats/adapter-contract.v1.json","role":"fixture"},{"path":"fixtures/application-navigation-ats/server.ts","role":"fixture"},{"path":"fixtures/career-browser-pid-selection.v1.example.json","role":"fixture"},{"path":"harness/contracts/application-autofill-parent.v1.json","role":"contract"},{"path":"scripts/package_application_assist.py","role":"source"},{"path":"scripts/prepare_managed_application.mjs","role":"source"},{"path":"scripts/proof_managed_prepare_synthetic.mjs","role":"source"},{"path":"scripts/validate_application_autofill_parent.py","role":"source"},{"path":"scripts/validate_career_browser_pid_selection.py","role":"source"},{"path":"scripts/windows/EscapeHatch-CareerBrowser-PidSelection.ps1","role":"source"},{"path":"scripts/windows/EscapeHatch-CareerBrowser.ps1","role":"source"},{"path":"scripts/windows/EscapeHatch-Prepare-Application.cmd","role":"source"},{"path":"scripts/windows/EscapeHatch-Prepare-Application.ps1","role":"source"},{"path":"tests/test_application_assist_package.py","role":"test"},{"path":"tests/test_application_autofill_parent.py","role":"test"},{"path":"tests/windows/Test-EscapeHatch-CareerBrowser-PidSelection.ps1","role":"test"}]},{"id":"submission-evidence","title":"Submission authorization and reconciliation","description":"Terminal-action policy, receipt detection and reconciliation.","anchors":["contracts/application-submission-policy.v1.json","artifacts/escape-hatch/managed-submission-observer.ts","artifacts/escape-hatch/src/components/application-outcome.tsx"],"files":[{"path":".github/workflows/submission-sync-silent.yml","role":"source"},{"path":"artifacts/escape-hatch/application-submission-policy.test.ts","role":"test"},{"path":"artifacts/escape-hatch/application-submission-policy.ts","role":"source"},{"path":"artifacts/escape-hatch/lever-attempt-receipts.ts","role":"source"},{"path":"artifacts/escape-hatch/managed-submission-observer.test.ts","role":"test"},{"path":"artifacts/escape-hatch/managed-submission-observer.ts","role":"source"},{"path":"artifacts/escape-hatch/src/components/application-outcome.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/application-submission-setting.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/lib/application-events.test.ts","role":"test"},{"path":"artifacts/escape-hatch/src/lib/application-events.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/post-application-continuation.test.ts","role":"test"},{"path":"artifacts/escape-hatch/src/lib/post-application-continuation.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/submission-reconciliation.test.ts","role":"test"},{"path":"artifacts/escape-hatch/src/lib/submission-reconciliation.ts","role":"source"},{"path":"artifacts/escape-hatch/submission-sync-worker.ts","role":"source"},{"path":"artifacts/escape-hatch/tests/application-outcome.spec.ts","role":"test"},{"path":"artifacts/escape-hatch/tests/indeed-post-application-continuation.spec.ts","role":"test"},{"path":"contracts/agent-complete-application.v1.json","role":"contract"},{"path":"contracts/application-submission-policy.v1.json","role":"contract"},{"path":"contracts/automation-silent-background-consumer.v1.json","role":"contract"},{"path":"contracts/submission-sync-scheduler.v1.json","role":"contract"},{"path":"docs/agent/P04_DELOITTE_LIVE_FORM_CPA_AND_CURSOR_NO_SUBMIT_2026-10-29.md","role":"documentation"},{"path":"docs/agent/P04_SUBMISSION_OUTCOME_LOOP_AND_EXTENSION_MODALITY_2026-10-28.md","role":"documentation"},{"path":"scripts/tests/test_complete_application_duplicate_guard.py","role":"test"},{"path":"scripts/windows/EscapeHatch-AgentCompleteApplication.ps1","role":"source"},{"path":"scripts/windows/EscapeHatch-CompleteApplication.ps1","role":"source"},{"path":"scripts/windows/EscapeHatch-SubmissionSync.ps1","role":"source"},{"path":"scripts/windows/EscapeHatch-TrustedSubmit.ps1","role":"source"},{"path":"scripts/windows/lib/resolve-automation-silent-background.cjs","role":"source"},{"path":"scripts/windows/submission-sync-silent-launch.cjs","role":"source"},{"path":"scripts/windows/submission_sync_silent_host.py","role":"source"},{"path":"tests/test_application_operator_submit.mjs","role":"test"},{"path":"tests/test_automation_silent_background_consumer.py","role":"test"},{"path":"tests/test_submission_sync_silent_contract.py","role":"test"},{"path":"tests/windows/Test-EscapeHatch-CompleteApplication-Guard.ps1","role":"test"}]},{"id":"journey-guidance","title":"Scene graph, avatar and tutorial","description":"Canonical scenes, wayfinding, avatar and puzzle guidance; no employer action authority.","anchors":["contracts/application-journey-scenes.v1.json","artifacts/escape-hatch/src/lib/application-journey-projection.ts","artifacts/escape-hatch/src/components/journey-atlas.tsx","artifacts/escape-hatch/src/components/guided-start.tsx","artifacts/escape-hatch/src/components/tutorial-voice-control.tsx"],"files":[{"path":"artifacts/escape-hatch/public/escapehatch-mascot.webp","role":"asset"},{"path":"artifacts/escape-hatch/src/components/birdsong-control.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/guided-start.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/journey-atlas.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/profile-piece-board.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/profile-puzzle-gallery.css","role":"source"},{"path":"artifacts/escape-hatch/src/components/puzzle-atlas-shelf.css","role":"source"},{"path":"artifacts/escape-hatch/src/components/puzzle-atlas-shelf.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/puzzle-gallery-display.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/tutorial-voice-control.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/workspace-journey-guide.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/lib/application-journey-projection.test.ts","role":"test"},{"path":"artifacts/escape-hatch/src/lib/application-journey-projection.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/journey-wayfinding.test.ts","role":"test"},{"path":"artifacts/escape-hatch/src/lib/journey-wayfinding.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/mascot-guidance.test.ts","role":"test"},{"path":"artifacts/escape-hatch/src/lib/mascot-guidance.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/profile-puzzle-gallery.test.ts","role":"test"},{"path":"artifacts/escape-hatch/src/lib/profile-puzzle-gallery.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/profile-puzzle-gallery.v1.json","role":"source"},{"path":"artifacts/escape-hatch/src/lib/profile-puzzle-projection.test.ts","role":"test"},{"path":"artifacts/escape-hatch/src/lib/profile-puzzle-projection.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/puzzle-atlas.test.ts","role":"test"},{"path":"artifacts/escape-hatch/src/lib/puzzle-atlas.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/puzzle-atlas.v1.json","role":"source"},{"path":"artifacts/escape-hatch/tests/extension-journey-guide.spec.ts","role":"test"},{"path":"artifacts/escape-hatch/tests/journey-wayfinding.spec.ts","role":"test"},{"path":"artifacts/escape-hatch/tests/mascot-guidance.spec.ts","role":"test"},{"path":"artifacts/escape-hatch/tests/profile-puzzle-evidence.spec.ts","role":"test"},{"path":"artifacts/escape-hatch/tests/puzzle-atlas.spec.ts","role":"test"},{"path":"artifacts/escape-hatch/tests/puzzle-gallery-selection.spec.ts","role":"test"},{"path":"artifacts/escape-hatch/tests/puzzle-gallery-slices.spec.ts","role":"test"},{"path":"contracts/application-journey-scenes.v1.json","role":"contract"},{"path":"docs/agent/APPLICATION_JOURNEY_SCENE_SYSTEM_2026-10-25.md","role":"documentation"},{"path":"docs/agent/IDENTITY_HATCH_PUZZLE_GALLERY_LIVE_CERT_2026-11-05.md","role":"documentation"},{"path":"docs/agent/P04_PROFILE_PUZZLE_ATELIER_CONVERGENCE_2026-11-03.md","role":"documentation"},{"path":"docs/GUIDED_APPLICATION_WORKBENCH.md","role":"documentation"},{"path":"scripts/add_profile_puzzle_set.py","role":"source"},{"path":"scripts/add_puzzle_atlas_variation.py","role":"source"},{"path":"scripts/import_puzzle_atlas_art.py","role":"source"},{"path":"scripts/validate_application_journey.py","role":"source"},{"path":"scripts/validate_profile_puzzle_gallery.py","role":"source"},{"path":"scripts/validate_puzzle_atlas.py","role":"source"},{"path":"tests/test_application_journey.py","role":"test"},{"path":"tests/test_extension_journey_guide.mjs","role":"test"}]},{"id":"browser-extension","title":"Browser companion and extension","description":"Extension controls, native admission, employer-page adapters.","anchors":["browser/application-assist/manifest.json","browser/application-assist/assist-core.js","browser/application-assist/journey-guide.js"],"files":[{"path":"artifacts/escape-hatch/extension-host-control.test.ts","role":"test"},{"path":"artifacts/escape-hatch/extension-host-control.ts","role":"source"},{"path":"artifacts/escape-hatch/extension-profile-host.test.ts","role":"test"},{"path":"artifacts/escape-hatch/extension-profile-host.ts","role":"source"},{"path":"artifacts/escape-hatch/native-messaging-host.ts","role":"source"},{"path":"artifacts/escape-hatch/src/components/extension-workspace-status.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/lib/assist-contract.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/assist-policy.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/assist-session.test.ts","role":"test"},{"path":"artifacts/escape-hatch/src/lib/assist-session.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/extension-profile-admission.test.mjs","role":"test"},{"path":"artifacts/escape-hatch/src/lib/extension-profile-admission.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/extension-workspace.test.ts","role":"test"},{"path":"artifacts/escape-hatch/src/lib/extension-workspace.ts","role":"source"},{"path":"browser/application-assist/assist-core.js","role":"source"},{"path":"browser/application-assist/content.js","role":"source"},{"path":"browser/application-assist/escapehatch-mascot.webp","role":"asset"},{"path":"browser/application-assist/icons/mascot-128.png","role":"asset"},{"path":"browser/application-assist/icons/mascot-16.png","role":"asset"},{"path":"browser/application-assist/icons/mascot-32.png","role":"asset"},{"path":"browser/application-assist/icons/mascot-48.png","role":"asset"},{"path":"browser/application-assist/job-board-adapter.js","role":"source"},{"path":"browser/application-assist/journey-guide.js","role":"source"},{"path":"browser/application-assist/manifest.json","role":"source"},{"path":"browser/application-assist/modality.js","role":"source"},{"path":"browser/application-assist/native-profile-bridge.js","role":"source"},{"path":"browser/application-assist/popup.html","role":"source"},{"path":"browser/application-assist/popup.js","role":"source"},{"path":"browser/application-assist/reviewed-form.js","role":"source"},{"path":"browser/application-assist/submission-observer.js","role":"source"},{"path":"browser/application-assist/worker.js","role":"source"},{"path":"browser/firefox-reviewed-fill/fill-known.js","role":"source"},{"path":"browser/firefox-reviewed-fill/manifest.json","role":"source"},{"path":"browser/firefox-reviewed-fill/popup.html","role":"source"},{"path":"browser/firefox-reviewed-fill/popup.js","role":"source"},{"path":"contracts/application-assist-modality.v1.json","role":"contract"},{"path":"contracts/application-assist-session.v1.json","role":"contract"},{"path":"docs/APPLICATION_ASSIST_SESSION.md","role":"documentation"},{"path":"docs/agent/P04_ONE_DOWNLOAD_EXTENSION_AND_PRIVATE_PROFILE_BOOTSTRAP_2026-10-28.md","role":"documentation"},{"path":"scripts/build_extension_icons.py","role":"source"},{"path":"scripts/windows/EscapeHatch-NativeHost.ps1","role":"source"},{"path":"tests/test_application_assist_modality.mjs","role":"test"},{"path":"tests/test_application_assist_modality_contract.py","role":"test"},{"path":"tests/test_application_assist_session.mjs","role":"test"},{"path":"tests/test_application_assist_session_contract.py","role":"test"},{"path":"tests/test_extension_branding_and_board.py","role":"test"},{"path":"tests/test_extension_toolbar_icons.py","role":"test"},{"path":"tests/test_job_board_adapter.mjs","role":"test"},{"path":"tests/test_native_host_registration.py","role":"test"}]},{"id":"mobile-companion","title":"Android companion and presence","description":"Android handoff, notification and mobile presence.","anchors":["android/application-assist/app/src/main/java/com/escapehatch/assist/CompanionActivity.kt","contracts/application-assist-presence-surface.v1.json"],"files":[{"path":"android/application-assist-spike/README.md","role":"documentation"},{"path":"android/application-assist-spike/src/main/AndroidManifest.xml","role":"source"},{"path":"android/application-assist-spike/src/main/kotlin/com/escapehatch/assist/spike/AssistSessionStore.kt","role":"source"},{"path":"android/application-assist-spike/src/main/kotlin/com/escapehatch/assist/spike/BubblePresenceCandidate.kt","role":"source"},{"path":"android/application-assist-spike/src/main/kotlin/com/escapehatch/assist/spike/HandoffIntents.kt","role":"source"},{"path":"android/application-assist-spike/src/main/kotlin/com/escapehatch/assist/spike/OverlayPresenceRejected.kt","role":"source"},{"path":"android/application-assist-spike/src/main/kotlin/com/escapehatch/assist/spike/PresenceSurfaceStateMachine.kt","role":"source"},{"path":"android/application-assist-spike/src/main/kotlin/com/escapehatch/assist/spike/QuietNotificationPresence.kt","role":"source"},{"path":"android/application-assist/README.md","role":"documentation"},{"path":"android/application-assist/app/build.gradle.kts","role":"source"},{"path":"android/application-assist/app/src/debug/AndroidManifest.xml","role":"source"},{"path":"android/application-assist/app/src/debug/res/xml/network_security_config.xml","role":"source"},{"path":"android/application-assist/app/src/main/AndroidManifest.xml","role":"source"},{"path":"android/application-assist/app/src/main/java/com/escapehatch/assist/ApplicantPrivacyPreferenceStore.kt","role":"source"},{"path":"android/application-assist/app/src/main/java/com/escapehatch/assist/AssistSession.kt","role":"source"},{"path":"android/application-assist/app/src/main/java/com/escapehatch/assist/AssistSessionStore.kt","role":"source"},{"path":"android/application-assist/app/src/main/java/com/escapehatch/assist/CompanionActivity.kt","role":"source"},{"path":"android/application-assist/app/src/main/java/com/escapehatch/assist/HandoffIntents.kt","role":"source"},{"path":"android/application-assist/app/src/main/java/com/escapehatch/assist/QuietAssistNotification.kt","role":"source"},{"path":"android/application-assist/app/src/main/res/layout/activity_companion.xml","role":"source"},{"path":"android/application-assist/app/src/main/res/values/strings.xml","role":"source"},{"path":"android/application-assist/app/src/main/res/values/themes.xml","role":"source"},{"path":"android/application-assist/app/src/main/res/xml/network_security_config.xml","role":"source"},{"path":"android/application-assist/app/src/test/java/com/escapehatch/assist/HandoffIntentsTest.kt","role":"test"},{"path":"android/application-assist/build.gradle.kts","role":"source"},{"path":"android/application-assist/gradle.properties","role":"source"},{"path":"android/application-assist/gradle/wrapper/gradle-wrapper.jar","role":"asset"},{"path":"android/application-assist/gradle/wrapper/gradle-wrapper.properties","role":"source"},{"path":"android/application-assist/gradlew","role":"source"},{"path":"android/application-assist/gradlew.bat","role":"source"},{"path":"android/application-assist/settings.gradle.kts","role":"source"},{"path":"artifacts/escape-hatch/src/hooks/use-mobile.tsx","role":"source"},{"path":"contracts/application-assist-presence-surface.v1.json","role":"contract"},{"path":"docs/APPLICATION_ASSIST_ANDROID_CAPABILITY_MATRIX.md","role":"documentation"},{"path":"docs/APPLICATION_ASSIST_MOBILE_M2_P82_PLAN.md","role":"documentation"},{"path":"docs/APPLICATION_ASSIST_MOBILE_PRESENCE_PLAN.md","role":"documentation"},{"path":"fixtures/application-assist-presence-surface.v1.example.json","role":"fixture"},{"path":"scripts/run_android_assist_presence_spike.py","role":"source"},{"path":"scripts/run_eh_m2_experiments.py","role":"source"},{"path":"scripts/validate_application_assist_presence_surface.py","role":"source"},{"path":"tests/test_application_assist_presence_surface.py","role":"test"}]},{"id":"private-sync","title":"Private device synchronization","description":"Encrypted synchronization, pairing, transport and proofs.","anchors":["artifacts/escape-hatch/private-sync-crypto.ts","artifacts/escape-hatch/private-sync-transport.ts","harness/contracts/private-sync-phone-seams.v1.json"],"files":[{"path":"android/application-assist/app/src/main/java/com/escapehatch/assist/sync/AesGcmBox.kt","role":"source"},{"path":"android/application-assist/app/src/main/java/com/escapehatch/assist/sync/AndroidKeystoreSyncVaultKeyRepository.kt","role":"source"},{"path":"android/application-assist/app/src/main/java/com/escapehatch/assist/sync/Base64Url.kt","role":"source"},{"path":"android/application-assist/app/src/main/java/com/escapehatch/assist/sync/CapsuleImportActivity.kt","role":"source"},{"path":"android/application-assist/app/src/main/java/com/escapehatch/assist/sync/HkdfSha256.kt","role":"source"},{"path":"android/application-assist/app/src/main/java/com/escapehatch/assist/sync/JsonCompat.kt","role":"source"},{"path":"android/application-assist/app/src/main/java/com/escapehatch/assist/sync/LanHostMemory.kt","role":"source"},{"path":"android/application-assist/app/src/main/java/com/escapehatch/assist/sync/LanHostProbe.kt","role":"source"},{"path":"android/application-assist/app/src/main/java/com/escapehatch/assist/sync/LanSealedFetch.kt","role":"source"},{"path":"android/application-assist/app/src/main/java/com/escapehatch/assist/sync/PairingImportActivity.kt","role":"source"},{"path":"android/application-assist/app/src/main/java/com/escapehatch/assist/sync/PairingOffer.kt","role":"source"},{"path":"android/application-assist/app/src/main/java/com/escapehatch/assist/sync/PhonePackStore.kt","role":"source"},{"path":"android/application-assist/app/src/main/java/com/escapehatch/assist/sync/PhoneSyncProofReceipt.kt","role":"source"},{"path":"android/application-assist/app/src/main/java/com/escapehatch/assist/sync/PrivateSyncCapsuleImport.kt","role":"source"},{"path":"android/application-assist/app/src/main/java/com/escapehatch/assist/sync/PrivateSyncCrypto.kt","role":"source"},{"path":"android/application-assist/app/src/main/java/com/escapehatch/assist/sync/PrivateSyncException.kt","role":"source"},{"path":"android/application-assist/app/src/main/java/com/escapehatch/assist/sync/PrivateSyncPairingImport.kt","role":"source"},{"path":"android/application-assist/app/src/main/java/com/escapehatch/assist/sync/PrivateSyncSchemas.kt","role":"source"},{"path":"android/application-assist/app/src/main/java/com/escapehatch/assist/sync/SyncEnvelope.kt","role":"source"},{"path":"android/application-assist/app/src/main/java/com/escapehatch/assist/sync/SyncVaultKeyProtector.kt","role":"source"},{"path":"android/application-assist/app/src/main/java/com/escapehatch/assist/sync/SyncVaultKeyRepository.kt","role":"source"},{"path":"android/application-assist/app/src/main/res/layout/activity_capsule_import.xml","role":"source"},{"path":"android/application-assist/app/src/main/res/layout/activity_pairing_import.xml","role":"source"},{"path":"android/application-assist/app/src/test/java/com/escapehatch/assist/sync/InMemorySyncVaultKeyRepository.kt","role":"test"},{"path":"android/application-assist/app/src/test/java/com/escapehatch/assist/sync/LanSealedFetchTest.kt","role":"test"},{"path":"android/application-assist/app/src/test/java/com/escapehatch/assist/sync/PhoneSyncProofReceiptTest.kt","role":"test"},{"path":"android/application-assist/app/src/test/java/com/escapehatch/assist/sync/PrivateSyncCapsuleImportTest.kt","role":"test"},{"path":"android/application-assist/app/src/test/java/com/escapehatch/assist/sync/PrivateSyncCryptoTest.kt","role":"test"},{"path":"android/application-assist/app/src/test/java/com/escapehatch/assist/sync/PrivateSyncPairingImportTest.kt","role":"test"},{"path":"artifacts/escape-hatch/private-sync-after-write.test.ts","role":"test"},{"path":"artifacts/escape-hatch/private-sync-after-write.ts","role":"source"},{"path":"artifacts/escape-hatch/private-sync-carrier.ts","role":"source"},{"path":"artifacts/escape-hatch/private-sync-chain.ts","role":"source"},{"path":"artifacts/escape-hatch/private-sync-cli.ts","role":"source"},{"path":"artifacts/escape-hatch/private-sync-config.test.ts","role":"test"},{"path":"artifacts/escape-hatch/private-sync-config.ts","role":"source"},{"path":"artifacts/escape-hatch/private-sync-crypto.test.ts","role":"test"},{"path":"artifacts/escape-hatch/private-sync-crypto.ts","role":"source"},{"path":"artifacts/escape-hatch/private-sync-device-cross.test.ts","role":"test"},{"path":"artifacts/escape-hatch/private-sync-device.test.ts","role":"test"},{"path":"artifacts/escape-hatch/private-sync-device.ts","role":"source"},{"path":"artifacts/escape-hatch/private-sync-drive-oauth.ts","role":"source"},{"path":"artifacts/escape-hatch/private-sync-drive-transport.ts","role":"source"},{"path":"artifacts/escape-hatch/private-sync-keystore.test.ts","role":"test"},{"path":"artifacts/escape-hatch/private-sync-keystore.ts","role":"source"},{"path":"artifacts/escape-hatch/private-sync-phone-install.test.ts","role":"test"},{"path":"artifacts/escape-hatch/private-sync-phone-install.ts","role":"source"},{"path":"artifacts/escape-hatch/private-sync-phone-lan-server.test.ts","role":"test"},{"path":"artifacts/escape-hatch/private-sync-phone-lan-server.ts","role":"source"},{"path":"artifacts/escape-hatch/private-sync-phone-proof.contract.test.ts","role":"test"},{"path":"artifacts/escape-hatch/private-sync-status-server.ts","role":"source"},{"path":"artifacts/escape-hatch/private-sync-status.test.ts","role":"test"},{"path":"artifacts/escape-hatch/private-sync-status.ts","role":"source"},{"path":"artifacts/escape-hatch/private-sync-transport.test.ts","role":"test"},{"path":"artifacts/escape-hatch/private-sync-transport.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/extension-pairing.ts","role":"source"},{"path":"harness/contracts/private-sync-multidevice-proof.v1.json","role":"contract"},{"path":"harness/contracts/private-sync-phone-pack.v1.json","role":"contract"},{"path":"harness/contracts/private-sync-phone-seams.v1.json","role":"contract"},{"path":"scripts/private-sync-adb-wireless.ps1","role":"source"},{"path":"scripts/private-sync-await-phone-proof.ps1","role":"source"},{"path":"scripts/private-sync-build-android.ps1","role":"source"},{"path":"scripts/private-sync-ensure-lan-firewall.ps1","role":"source"},{"path":"scripts/private-sync-focus-operator-browser.ps1","role":"source"},{"path":"scripts/private-sync-ingest-phone-proof.ps1","role":"source"},{"path":"scripts/private-sync-nord-lan-window.ps1","role":"source"},{"path":"scripts/private-sync-pair-windows-peer.ps1","role":"source"},{"path":"scripts/private-sync-pairing-keepalive.ps1","role":"source"},{"path":"scripts/private-sync-phone-proof.ps1","role":"source"},{"path":"scripts/private-sync-proof-ceiling-report.ps1","role":"source"},{"path":"scripts/private-sync-stage-peer-bundle.ps1","role":"source"},{"path":"scripts/private-sync-stage-phone-pack.ps1","role":"source"},{"path":"scripts/private-sync-start-phone-proof-session.ps1","role":"source"},{"path":"scripts/private-sync-watch-lan-phone.ps1","role":"source"},{"path":"scripts/private-sync-watchdog-phone-session.ps1","role":"source"},{"path":"scripts/validate_private_sync_multidevice_proof.py","role":"source"},{"path":"scripts/validate_private_sync_phone_seams.py","role":"source"},{"path":"scripts/validate_secure_profile_sync_dispatch.py","role":"source"},{"path":"scripts/windows/EscapeHatch-PrivateSyncKey.ps1","role":"source"}]},{"id":"network-recovery","title":"Network and connectivity recovery","description":"Network diagnosis, VPN recovery and temporary LAN permission.","anchors":["artifacts/escape-hatch/network-navigation-diagnosis.ts","artifacts/escape-hatch/vpn-recovery.ts"],"files":[{"path":"artifacts/escape-hatch/network-navigation-diagnosis.test.ts","role":"test"},{"path":"artifacts/escape-hatch/network-navigation-diagnosis.ts","role":"source"},{"path":"artifacts/escape-hatch/vpn-recovery-journal.test.ts","role":"test"},{"path":"artifacts/escape-hatch/vpn-recovery-journal.ts","role":"source"},{"path":"artifacts/escape-hatch/vpn-recovery-preference.test.ts","role":"test"},{"path":"artifacts/escape-hatch/vpn-recovery.test.ts","role":"test"},{"path":"artifacts/escape-hatch/vpn-recovery.ts","role":"source"},{"path":"scripts/Open-PhoneLanNordWindow.cmd","role":"source"},{"path":"scripts/Restore-NordVpn.cmd","role":"source"}]},{"id":"cockpit-ui","title":"Cockpit shared interface","description":"App shell, UI primitives, theme, branding and build entrypoints.","anchors":["artifacts/escape-hatch/src/App.tsx","artifacts/escape-hatch/src/main.tsx","artifacts/escape-hatch/src/index.css"],"files":[{"path":"artifacts/escape-hatch/brand-identity.test.ts","role":"test"},{"path":"artifacts/escape-hatch/browser-test-isolation.test.ts","role":"test"},{"path":"artifacts/escape-hatch/browser-test-isolation.ts","role":"source"},{"path":"artifacts/escape-hatch/components.json","role":"source"},{"path":"artifacts/escape-hatch/index.html","role":"source"},{"path":"artifacts/escape-hatch/package-lock.json","role":"source"},{"path":"artifacts/escape-hatch/package.json","role":"source"},{"path":"artifacts/escape-hatch/playwright.config.ts","role":"source"},{"path":"artifacts/escape-hatch/playwright.preview.config.ts","role":"source"},{"path":"artifacts/escape-hatch/public/favicon.svg","role":"asset"},{"path":"artifacts/escape-hatch/public/puzzles/companion-link-v1.png","role":"asset"},{"path":"artifacts/escape-hatch/public/puzzles/contact-nest-v1.png","role":"asset"},{"path":"artifacts/escape-hatch/public/puzzles/document-vault-v1.png","role":"asset"},{"path":"artifacts/escape-hatch/public/puzzles/education-lantern-v1.png","role":"asset"},{"path":"artifacts/escape-hatch/public/puzzles/experience-ladder-v1.png","role":"asset"},{"path":"artifacts/escape-hatch/public/puzzles/identity-hatch-v1.png","role":"asset"},{"path":"artifacts/escape-hatch/public/puzzles/location-compass-v1.png","role":"asset"},{"path":"artifacts/escape-hatch/public/puzzles/skills-garden-v1.png","role":"asset"},{"path":"artifacts/escape-hatch/public/puzzles/work-passport-v1.png","role":"asset"},{"path":"artifacts/escape-hatch/public/robots.txt","role":"source"},{"path":"artifacts/escape-hatch/src/App.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/error-boundary.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/accordion.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/alert-dialog.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/alert.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/aspect-ratio.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/avatar.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/badge.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/breadcrumb.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/button-group.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/button.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/calendar.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/card.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/carousel.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/chart.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/checkbox.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/collapsible.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/command.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/context-menu.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/dialog.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/drawer.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/dropdown-menu.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/empty.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/field.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/form.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/hover-card.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/input-group.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/input-otp.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/input.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/item.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/kbd.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/label.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/menubar.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/navigation-menu.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/pagination.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/popover.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/progress.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/radio-group.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/resizable.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/scroll-area.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/select.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/separator.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/sheet.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/sidebar.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/skeleton.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/slider.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/sonner.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/spinner.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/switch.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/table.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/tabs.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/textarea.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/toast.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/toaster.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/toggle-group.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/toggle.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/components/ui/tooltip.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/hooks/use-toast.ts","role":"source"},{"path":"artifacts/escape-hatch/src/index.css","role":"source"},{"path":"artifacts/escape-hatch/src/lib/utils.ts","role":"source"},{"path":"artifacts/escape-hatch/src/main.tsx","role":"source"},{"path":"artifacts/escape-hatch/src/pages/not-found.tsx","role":"source"},{"path":"artifacts/escape-hatch/tests/brand-identity.spec.ts","role":"test"},{"path":"artifacts/escape-hatch/tests/validation-focus.spec.ts","role":"test"},{"path":"artifacts/escape-hatch/tsconfig.json","role":"source"},{"path":"artifacts/escape-hatch/vite.config.ts","role":"source"},{"path":"package.json","role":"source"}]},{"id":"community-study","title":"Community and study integrations","description":"Discord, talent community, study guidance and related explicit actions.","anchors":["artifacts/escape-hatch/src/lib/discord-community-flow.ts","scripts/export_study_guidance.py"],"files":[{"path":"artifacts/escape-hatch/src/lib/discord-community-flow.test.ts","role":"test"},{"path":"artifacts/escape-hatch/src/lib/discord-community-flow.ts","role":"source"},{"path":"artifacts/escape-hatch/src/lib/discord-membership-verifier.test.ts","role":"test"},{"path":"artifacts/escape-hatch/src/lib/discord-membership-verifier.ts","role":"source"},{"path":"docs/agent/P04_COGNIZANT_TALENT_COMMUNITY_ZERO_REENTRY_2026-10-31.md","role":"documentation"},{"path":"docs/agent/P04_MICRO1_DISCORD_PLATFORM_MILESTONES_2026-11-06.md","role":"documentation"},{"path":"docs/agent/P04_MICRO1_NETWORK_PROGRESS_AND_DOCUMENT_QA_2026-10-25.md","role":"documentation"},{"path":"scripts/export_study_guidance.py","role":"source"},{"path":"scripts/import_micro1_milestone_eml.py","role":"source"},{"path":"scripts/test_import_micro1_milestone_eml.py","role":"test"},{"path":"scripts/windows/EscapeHatch-Cognizant-TalentCommunity.ps1","role":"source"},{"path":"scripts/windows/EscapeHatch-Discord-Bootstrap.ps1","role":"source"},{"path":"scripts/windows/EscapeHatch-micro1-community.ps1","role":"source"},{"path":"tests/test_study_guidance_export.py","role":"test"},{"path":"tests/windows/Test-EscapeHatch-Discord-Bootstrap.ps1","role":"test"}]},{"id":"product-evidence","title":"Product documentation and historical evidence","description":"Plans and historical evidence; not active implementation authority.","anchors":["harness/reports/CURRENT_STATE.md","docs/plans/recovered-task-export.v1.json"],"files":[{"path":"Outputs/prompt-parallel-dispatch/manifest.blocked.json","role":"evidence"},{"path":"Outputs/prompt-parallel-dispatch/manifest.json","role":"evidence"},{"path":"Outputs/prompt-parallel-dispatch/runs/escapehatch-application-assist-autopilot-20260923/manifest.json","role":"evidence"},{"path":"Outputs/prompt-parallel-dispatch/runs/escapehatch-companion-artwork-20261104/manifest.json","role":"evidence"},{"path":"Outputs/prompt-parallel-dispatch/runs/escapehatch-companion-artwork-20261104/native-execution-receipt.json","role":"evidence"},{"path":"Outputs/prompt-parallel-dispatch/runs/escapehatch-job-boards-20261028/manifest.json","role":"evidence"},{"path":"Outputs/prompt-parallel-dispatch/runs/escapehatch-journey-w1-20261104/manifest.json","role":"evidence"},{"path":"Outputs/prompt-parallel-dispatch/runs/escapehatch-journey-w1-20261104/native-execution-receipt.json","role":"evidence"},{"path":"Outputs/prompt-parallel-dispatch/runs/escapehatch-master-resume-routing-20261105/manifest.json","role":"evidence"},{"path":"Outputs/prompt-parallel-dispatch/runs/escapehatch-one-download-profile-20261028/manifest.json","role":"evidence"},{"path":"Outputs/prompt-parallel-dispatch/runs/escapehatch-private-answer-sync-20261027/manifest.json","role":"evidence"},{"path":"Outputs/prompt-parallel-dispatch/runs/escapehatch-profile-puzzle-20261103/manifest.json","role":"evidence"},{"path":"Outputs/prompt-parallel-dispatch/runs/escapehatch-profile-puzzle-20261103/native-execution-receipt.json","role":"evidence"},{"path":"Outputs/prompt-parallel-dispatch/runs/escapehatch-resume-graph-20261028/manifest.json","role":"evidence"},{"path":"Outputs/prompt-parallel-dispatch/runs/escapehatch-secure-device-sync-20261103/manifest.json","role":"evidence"},{"path":"Outputs/prompt-parallel-dispatch/runs/escapehatch-secure-device-sync-20261103/receipt.json","role":"evidence"},{"path":"Outputs/prompt-parallel-dispatch/runs/escapehatch-submission-outcomes-20261028/manifest.json","role":"evidence"},{"path":"Outputs/prompt-parallel-dispatch/runs/escapehatch-ten-puzzle-postmerge-20261106/manifest.json","role":"evidence"},{"path":"Outputs/prompt-parallel-dispatch/runs/hosted-finish-line-20261028/manifest.json","role":"evidence"},{"path":"Outputs/prompt-parallel-dispatch/runs/hosted-finish-line-20261028/receipt.json","role":"evidence"},{"path":"Outputs/prompt-parallel-dispatch/runs/reviewed-lever-application/manifest.json","role":"evidence"},{"path":"README.md","role":"documentation"},{"path":"artifacts/escape-hatch/BRAND_IDENTITY.md","role":"documentation"},{"path":"artifacts/escape-hatch/README.md","role":"documentation"},{"path":"docs/adr/ADR-20261007-android-assist-presence-v1.md","role":"documentation"},{"path":"docs/agent/B0_TANDEM_CONVERGENCE_2026-10-28.md","role":"documentation"},{"path":"docs/agent/BROADCASTWELL_FIRST_LIVE_APPLICATION_CANARY_2026-10-27.md","role":"documentation"},{"path":"docs/agent/P04_APPLICATION_NETWORK_COMPATIBILITY_2026-10-27.md","role":"documentation"},{"path":"docs/agent/P04_CONDITIONAL_FORM_CHECKPOINT_PROGRESS_2026-10-31.md","role":"documentation"},{"path":"docs/agent/P04_DELOITTE_AGENTIC_AI_ENGINEER_APPLICATION_HANDOFF_2026-10-28.md","role":"documentation"},{"path":"docs/agent/P04_OPERATOR_LIGHT_APPLICATION_SPRINT_2026-10-27.md","role":"documentation"},{"path":"docs/agent/P04_ZERO_FRICTION_APPLICATION_EXECUTION_2026-10-20.md","role":"documentation"},{"path":"docs/agent/TRIFECTA.md","role":"documentation"},{"path":"docs/plans/P04-CONTEXT-OWNER-ISOLATION-20261028.md","role":"documentation"},{"path":"docs/plans/index.md","role":"documentation"},{"path":"docs/plans/recovered-task-export.v1.json","role":"source"},{"path":"docs/plans/task-001-complete-browser-application-assist.md","role":"documentation"},{"path":"docs/plans/task-002-make-profile-changes-safe-to-recover-from.md","role":"documentation"},{"path":"docs/plans/task-003-let-users-back-up-and-restore-their-whole-workspace.md","role":"documentation"},{"path":"docs/plans/task-004-catch-ui-persistence-regressions-before-release.md","role":"documentation"},{"path":"docs/plans/task-005-confirm-the-home-quick-action-stays-applied-after-refresh.md","role":"documentation"},{"path":"docs/plans/task-006-make-sure-empty-answer-and-application-forms-cannot-create-broken-entries.md","role":"documentation"},{"path":"docs/plans/task-007-prevent-saved-entries-from-losing-their-required-details.md","role":"documentation"},{"path":"docs/plans/task-008-explain-which-required-details-are-missing-before-saving.md","role":"documentation"},{"path":"docs/plans/task-009-let-users-undo-accidental-answer-or-application-deletions.md","role":"documentation"},{"path":"docs/plans/task-010-keep-saved-entries-in-sync-across-open-workspace-tabs.md","role":"documentation"},{"path":"docs/plans/task-011-confirm-restored-workspaces-survive-a-refresh.md","role":"documentation"},{"path":"docs/plans/task-012-show-users-what-will-be-replaced-before-restoring-a-workspace.md","role":"documentation"},{"path":"docs/plans/task-013-tell-users-when-a-restored-workspace-cannot-be-saved.md","role":"documentation"},{"path":"docs/plans/task-014-stop-offering-mark-applied-after-an-opportunity-is-already-applied.md","role":"documentation"},{"path":"docs/plans/task-015-confirm-dashboard-counts-stay-accurate-when-opportunities-are-closed.md","role":"documentation"},{"path":"docs/plans/task-016-catch-missing-detail-guidance-regressions-before-shipping.md","role":"documentation"},{"path":"docs/plans/task-017-move-keyboard-focus-to-the-first-missing-detail-after-save.md","role":"documentation"},{"path":"docs/plans/task-018-keep-the-undo-option-available-when-users-briefly-leave-the-list.md","role":"documentation"},{"path":"docs/plans/task-019-confirm-deleted-entries-stop-being-recoverable-after-the-undo-window.md","role":"documentation"},{"path":"docs/plans/task-020-confirm-profile-updates-appear-in-every-open-tab.md","role":"documentation"},{"path":"docs/plans/task-021-warn-before-simultaneous-tab-edits-overwrite-newer-work.md","role":"documentation"},{"path":"docs/plans/task-022-confirm-restored-workspaces-survive-closing-and-reopening-the-browser.md","role":"documentation"},{"path":"docs/plans/task-023-confirm-restoring-multiple-saved-items-keeps-their-full-details-and-order.md","role":"documentation"},{"path":"docs/plans/task-024-verify-cancelling-a-restore-leaves-the-workspace-unchanged.md","role":"documentation"},{"path":"docs/plans/task-025-make-workspace-restore-confirmation-keyboard-accessible.md","role":"documentation"},{"path":"docs/plans/task-026-stop-showing-success-when-browser-storage-rejects-regular-edits.md","role":"documentation"},{"path":"docs/plans/task-027-catch-restore-storage-warnings-before-they-regress.md","role":"documentation"},{"path":"docs/plans/task-028-confirm-the-home-shortcut-chooses-an-actionable-opportunity-when-statuses-are-mi.md","role":"documentation"},{"path":"docs/plans/task-029-let-users-undo-an-accidental-home-status-change.md","role":"documentation"},{"path":"docs/plans/task-030-confirm-reopening-a-closed-opportunity-restores-dashboard-counts.md","role":"documentation"},{"path":"docs/plans/task-031-confirm-mixed-opportunity-statuses-are-split-into-the-right-dashboard-totals.md","role":"documentation"},{"path":"docs/plans/task-032-block-whitespace-only-required-details-before-saving.md","role":"documentation"},{"path":"docs/plans/task-033-keep-saved-entries-safe-after-an-invalid-edit-attempt.md","role":"documentation"},{"path":"docs/plans/task-034-return-keyboard-focus-after-closing-an-entry-form.md","role":"documentation"},{"path":"docs/plans/task-035-let-keyboard-users-close-entry-dialogs-with-escape.md","role":"documentation"},{"path":"docs/plans/task-036-warn-before-restoring-over-newer-workspace-edits.md","role":"documentation"},{"path":"docs/plans/task-037-keep-workspace-data-consistent-if-the-browser-closes-during-restore.md","role":"documentation"},{"path":"docs/plans/task-038-confirm-restoring-an-empty-workspace-clears-saved-entries.md","role":"documentation"},{"path":"docs/plans/task-039-confirm-restored-opportunity-links-remain-available-after-reload.md","role":"documentation"},{"path":"docs/plans/task-040-keep-large-workspace-restore-previews-easy-to-review.md","role":"documentation"},{"path":"docs/plans/task-041-clear-an-old-restore-preview-after-an-invalid-backup-is-selected.md","role":"documentation"},{"path":"docs/plans/task-042-catch-restore-dialog-focus-regressions-before-release.md","role":"documentation"},{"path":"docs/plans/task-043-show-progress-while-a-workspace-backup-is-being-read.md","role":"documentation"},{"path":"docs/plans/task-044-tell-screen-reader-users-when-an-entry-is-saved-or-cancelled.md","role":"documentation"},{"path":"docs/plans/task-045-keep-focus-stable-when-an-edited-opportunity-leaves-the-active-filter.md","role":"documentation"},{"path":"docs/plans/task-046-recover-a-partially-completed-entry-after-accidental-dismissal.md","role":"documentation"},{"path":"docs/plans/task-047-confirm-escape-cancellation-is-announced-without-saving-edits.md","role":"documentation"},{"path":"docs/plans/task-048-confirm-repeated-saves-are-announced-each-time.md","role":"documentation"},{"path":"docs/plans/task-049-keep-focus-stable-when-an-edited-opportunity-leaves-a-search-result.md","role":"documentation"},{"path":"docs/plans/task-050-keep-keyboard-focus-stable-after-deleting-an-opportunity.md","role":"documentation"},{"path":"docs/plans/task-051-confirm-dismissed-drafts-expire-without-stale-recovery-prompts.md","role":"documentation"},{"path":"docs/plans/task-052-keep-separate-answer-and-opportunity-drafts-available-across-view-changes.md","role":"documentation"},{"path":"docs/plans/task-053-tell-users-when-an-unsaved-draft-has-expired.md","role":"documentation"},{"path":"docs/plans/task-054-keep-unfinished-drafts-available-after-a-browser-reload.md","role":"documentation"},{"path":"docs/plans/task-055-confirm-cross-view-draft-recovery-works-from-mobile-navigation.md","role":"documentation"},{"path":"docs/plans/task-056-show-users-how-long-they-have-to-recover-an-unsaved-draft.md","role":"documentation"},{"path":"docs/plans/task-057-tell-users-when-they-discard-an-unsaved-draft.md","role":"documentation"},{"path":"docs/plans/task-058-confirm-discarding-edited-drafts-preserves-saved-entries.md","role":"documentation"},{"path":"docs/plans/task-059-let-users-undo-an-accidental-draft-discard.md","role":"documentation"},{"path":"docs/plans/task-060-confirm-draft-recovery-time-stays-accurate-after-a-tab-is-backgrounded.md","role":"documentation"},{"path":"docs/plans/task-061-let-users-choose-how-long-unsaved-drafts-remain-recoverable.md","role":"documentation"},{"path":"docs/plans/task-062-keep-draft-recovery-accurate-when-users-switch-windows.md","role":"documentation"},{"path":"docs/plans/task-063-confirm-selected-recovery-windows-expire-drafts-on-time.md","role":"documentation"},{"path":"docs/plans/task-064-keep-an-open-draft-notice-consistent-when-its-recovery-setting-changes.md","role":"documentation"},{"path":"docs/plans/task-065-keep-draft-recovery-notices-consistent-across-open-windows.md","role":"documentation"},{"path":"docs/plans/task-066-prevent-system-clock-changes-from-extending-draft-recovery.md","role":"documentation"},{"path":"docs/plans/task-067-confirm-edited-saved-entries-use-the-selected-recovery-deadline.md","role":"documentation"},{"path":"docs/plans/task-068-keep-a-dismissed-draft-s-countdown-accurate-after-the-recovery-setting-changes.md","role":"documentation"},{"path":"docs/plans/task-069-keep-a-draft-s-deadline-steady-through-repeated-recovery-setting-changes.md","role":"documentation"},{"path":"docs/plans/task-070-prevent-expired-drafts-from-returning-after-recovery-settings-change.md","role":"documentation"},{"path":"docs/plans/task-071-catch-recovery-clicks-exactly-at-draft-expiry.md","role":"documentation"},{"path":"docs/plans/task-072-keep-expired-draft-recovery-closed-for-keyboard-users.md","role":"documentation"},{"path":"docs/plans/task-073-keep-draft-expiry-announcements-after-switching-views.md","role":"documentation"},{"path":"docs/plans/task-074-confirm-keyboard-recovery-works-before-the-deadline.md","role":"documentation"},{"path":"docs/plans/task-075-confirm-keyboard-draft-recovery-remains-safe-after-changing-views.md","role":"documentation"},{"path":"docs/plans/task-076-confirm-keyboard-draft-recovery-stays-safe-after-repeated-view-changes.md","role":"documentation"},{"path":"docs/plans/task-077-keep-keyboard-focus-accessible-when-an-expired-draft-notice-disappears.md","role":"documentation"},{"path":"docs/plans/task-078-keep-every-optional-field-when-a-draft-is-recovered-from-the-keyboard.md","role":"documentation"},{"path":"docs/plans/task-079-tell-users-when-keyboard-recovery-has-reopened-their-draft.md","role":"documentation"},{"path":"docs/plans/task-080-confirm-mouse-recovery-also-tells-users-their-draft-reopened.md","role":"documentation"},{"path":"docs/plans/task-081-confirm-mouse-recovery-preserves-every-draft-selection.md","role":"documentation"},{"path":"docs/plans/task-082-confirm-both-keyboard-keys-preserve-optional-draft-fields.md","role":"documentation"},{"path":"docs/plans/task-083-keep-recovered-details-after-saving-and-reloading.md","role":"documentation"},{"path":"docs/plans/task-084-prevent-repeated-keypresses-from-reopening-a-draft-twice.md","role":"documentation"},{"path":"docs/plans/task-085-confirm-recovering-both-draft-types-keeps-each-selection-isolated.md","role":"documentation"},{"path":"docs/plans/task-086-show-saved-opportunity-priority-clearly-in-the-queue.md","role":"documentation"},{"path":"docs/plans/task-087-confirm-home-status-undo-expires-after-its-recovery-window.md","role":"documentation"},{"path":"docs/plans/task-088-confirm-home-undo-restores-every-starting-status-without-losing-details.md","role":"documentation"},{"path":"docs/plans/task-089-keep-blank-optional-opportunity-details-from-creating-empty-labels.md","role":"documentation"},{"path":"docs/plans/task-090-confirm-saved-details-trim-surrounding-whitespace-without-changing-the-text.md","role":"documentation"},{"path":"docs/plans/task-091-undo-an-accidental-workspace-restore.md","role":"documentation"},{"path":"docs/plans/task-092-let-users-review-exactly-what-an-older-backup-will-overwrite.md","role":"documentation"},{"path":"docs/plans/task-093-confirm-expired-edited-drafts-leave-saved-entries-unchanged.md","role":"documentation"},{"path":"docs/plans/task-094-keep-edited-entries-in-place-after-draft-recovery.md","role":"documentation"},{"path":"docs/plans/task-095-keep-multiple-recoverable-drafts-from-replacing-each-other.md","role":"documentation"},{"path":"docs/plans/task-096-make-draft-countdown-announcements-clear-for-screen-readers.md","role":"documentation"},{"path":"docs/plans/task-097-keep-draft-recovery-available-through-browser-back-and-forward-navigation.md","role":"documentation"},{"path":"docs/plans/task-098-keep-keyboard-focus-in-the-form-after-reopening-a-draft.md","role":"documentation"},{"path":"docs/plans/task-099-keep-keyboard-focus-accessible-when-users-discard-an-unsaved-draft.md","role":"documentation"},{"path":"docs/plans/task-100-confirm-the-browser-assistant-never-submits-across-real-application-pages.md","role":"documentation"},{"path":"docs/plans/task-101-support-more-resume-pdf-layouts-without-freezing-local-intake.md","role":"documentation"},{"path":"docs/plans/task-102-keep-an-assist-session-visible-after-the-extension-popup-is-reopened.md","role":"documentation"},{"path":"docs/plans/task-103-confirm-opportunity-drafts-reopen-only-once-after-repeated-keyboard-activation.md","role":"documentation"},{"path":"docs/plans/task-104-keep-draft-notices-available-when-browser-history-passes-through-the-profile.md","role":"documentation"},{"path":"docs/plans/task-105-prevent-recovered-drafts-from-returning-during-repeated-browser-history-traversa.md","role":"documentation"},{"path":"docs/plans/task-106-confirm-cross-origin-navigation-pauses-the-assistant-safely.md","role":"documentation"},{"path":"docs/plans/task-107-keep-reviewed-session-history-after-the-application-tab-reloads.md","role":"documentation"},{"path":"docs/plans/task-108-catch-oversized-or-slow-pdf-decompression-before-it-freezes-resume-intake.md","role":"documentation"},{"path":"docs/plans/task-109-keep-multi-column-resume-text-in-a-readable-order.md","role":"documentation"},{"path":"docs/plans/task-110-confirm-session-recovery-never-changes-saved-milestones.md","role":"documentation"},{"path":"docs/plans/task-111-keep-the-cockpit-current-when-navigation-happens-with-the-popup-closed.md","role":"documentation"},{"path":"docs/plans/task-112-keep-unsaved-profile-edits-through-browser-history.md","role":"documentation"},{"path":"docs/plans/task-113-confirm-expired-draft-announcements-survive-a-page-reload.md","role":"documentation"},{"path":"docs/plans/task-114-preserve-reviewed-resume-edits.md","role":"documentation"},{"path":"docs/plans/task-115-keep-reopened-draft-values-after-a-browser-refresh.md","role":"documentation"},{"path":"docs/plans/task-116-confirm-multiple-reviewed-resume-entries-keep-edits-paired-correctly.md","role":"documentation"},{"path":"docs/plans/task-117-prevent-duplicate-profile-entries-when-the-same-resume-is-reviewed-again.md","role":"documentation"},{"path":"docs/plans/task-118-mirror-project-plans-locally.md","role":"documentation"},{"path":"docs/plans/task-119-keep-supporting-details-separate-for-repeated-employers-or-schools.md","role":"documentation"},{"path":"docs/plans/task-120-keep-imported-education-dates-attached-to-the-right-school.md","role":"documentation"},{"path":"docs/plans/visual-resume-dual-track-reference.v1.md","role":"documentation"},{"path":"docs/task-plan-sync.md","role":"documentation"},{"path":"harness/reports/APPLICATION_FORM_AUTOMATION_STATE.md","role":"evidence"},{"path":"harness/reports/CURRENT_STATE.md","role":"evidence"},{"path":"harness/reports/android-assist-presence-spike-receipt.v1.json","role":"evidence"},{"path":"harness/reports/application-source-ux-p04-agent-handoffs.md","role":"evidence"},{"path":"harness/reports/application-source-ux-p04-dispatch.v1.json","role":"evidence"},{"path":"harness/reports/eh-m1-corrected-proof-ledger.md","role":"evidence"},{"path":"harness/reports/eh-m1-validation-report.md","role":"evidence"},{"path":"harness/reports/eh-m2-p82-experiment-receipt.v1.json","role":"evidence"},{"path":"harness/reports/eh-m2-validation-report.md","role":"evidence"},{"path":"harness/reports/exec2-career-progress-hydration-proof-20261018.md","role":"evidence"},{"path":"harness/reports/integrated-source-bridge-proof-20261018.md","role":"evidence"},{"path":"harness/reports/managed-prepare-synthetic-proof.v1.json","role":"evidence"},{"path":"harness/reports/resume-visual-spike-receipt.v1.json","role":"evidence"},{"path":"harness/reports/reusable-career-records-and-title-selection-20261018.md","role":"evidence"},{"path":"harness/reports/submission-sync-pythonw-host-live-cert-20261102.json","role":"evidence"}]}]}
+{
+  "schema": "escapehatch/feature-ontology/v1",
+  "coverage": {
+    "inventory": "all_git_tracked_paths",
+    "ownership": "exactly_one_primary_feature",
+    "unmapped_allowed": 0,
+    "stale_allowed": 0,
+    "selectors": "literal_paths_only"
+  },
+  "scene_authority": "contracts/application-journey-scenes.v1.json",
+  "features": [
+    {
+      "id": "repository-governance",
+      "title": "Repository governance and ontology",
+      "description": "Agent routing, ownership, validation, release promotion.",
+      "anchors": [
+        "AGENTS.md",
+        "harness/CODEBASE_MAP.md",
+        "scripts/validate_harness.py",
+        "contracts/repository-promotion.v1.json",
+        "scripts/validate_feature_ontology.py"
+      ],
+      "files": [
+        {
+          "path": ".githooks/pre-commit",
+          "role": "source"
+        },
+        {
+          "path": ".githooks/pre-push",
+          "role": "source"
+        },
+        {
+          "path": ".github/workflows/context-routing.yml",
+          "role": "source"
+        },
+        {
+          "path": ".github/workflows/harness.yml",
+          "role": "source"
+        },
+        {
+          "path": ".github/workflows/promotion.yml",
+          "role": "source"
+        },
+        {
+          "path": ".github/workflows/web-cockpit.yml",
+          "role": "source"
+        },
+        {
+          "path": ".gitignore",
+          "role": "source"
+        },
+        {
+          "path": "AGENTS.md",
+          "role": "documentation"
+        },
+        {
+          "path": "ARTIFACT_REGISTRY.md",
+          "role": "documentation"
+        },
+        {
+          "path": "CHANGELOG.md",
+          "role": "documentation"
+        },
+        {
+          "path": "LICENSE",
+          "role": "source"
+        },
+        {
+          "path": "VERSION",
+          "role": "source"
+        },
+        {
+          "path": "contracts/p82-evidence-class.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "contracts/product-release.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "contracts/repository-promotion.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "docs/APPLICATION_SOURCE_INTEGRATED_UX_P04_P82_2026-10-18.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/migrations/REPLIT_TRANSFER_2026-09-20.md",
+          "role": "documentation"
+        },
+        {
+          "path": "fixtures/p82-neg-device-cannot-prove-browser.json",
+          "role": "fixture"
+        },
+        {
+          "path": "fixtures/p82-neg-host-cannot-prove-policy.json",
+          "role": "fixture"
+        },
+        {
+          "path": "fixtures/p82-neg-play-not-universal.json",
+          "role": "fixture"
+        },
+        {
+          "path": "fixtures/p82-neg-target-as-achieved.json",
+          "role": "fixture"
+        },
+        {
+          "path": "fixtures/p82-pos-combined-evidence.json",
+          "role": "fixture"
+        },
+        {
+          "path": "fixtures/p82-pos-honest-blocked.json",
+          "role": "fixture"
+        },
+        {
+          "path": "fixtures/p82-proof-inflation.negative.json",
+          "role": "fixture"
+        },
+        {
+          "path": "fixtures/p82-proof-inflation.positive-keep.json",
+          "role": "fixture"
+        },
+        {
+          "path": "harness/CODEBASE_MAP.md",
+          "role": "documentation"
+        },
+        {
+          "path": "harness/WORKFLOWS.md",
+          "role": "documentation"
+        },
+        {
+          "path": "harness/constraints/LUA_EMBEDDING.md",
+          "role": "documentation"
+        },
+        {
+          "path": "harness/context/README.md",
+          "role": "documentation"
+        },
+        {
+          "path": "harness/context/sources.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "harness/contracts/agent-context-boundaries.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "harness/contracts/feature-ontology.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "harness/contracts/p04-conditional-checkpoint-dispatch.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "harness/manifest.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "harness/workflows/APPLICATION_STAPLES.md",
+          "role": "documentation"
+        },
+        {
+          "path": "scripts/apply_replit_migration.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/context_router.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/p82_evidence.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/product_version.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/promotion_guard.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/replit-plan-sync/task-plan-sync.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "scripts/replit-plan-sync/task-plan-sync.ts",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_agent_context_boundaries.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_application_harness.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_feature_ontology.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_governance.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_harness.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_p82_evidence.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_product_version.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_replit_transfer.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_repository_promotion.py",
+          "role": "source"
+        },
+        {
+          "path": "skills/harness-operations/SKILL.md",
+          "role": "documentation"
+        },
+        {
+          "path": "tests/test_context_router.py",
+          "role": "test"
+        },
+        {
+          "path": "tests/test_context_router_escalation.py",
+          "role": "test"
+        },
+        {
+          "path": "tests/test_context_router_mission.py",
+          "role": "test"
+        },
+        {
+          "path": "tests/test_feature_ontology.py",
+          "role": "test"
+        },
+        {
+          "path": "tests/test_p82_evidence.py",
+          "role": "test"
+        },
+        {
+          "path": "tests/test_product_version.py",
+          "role": "test"
+        },
+        {
+          "path": "tests/test_repository_promotion.py",
+          "role": "test"
+        }
+      ]
+    },
+    {
+      "id": "installation-runtime",
+      "title": "Installation and local runtime",
+      "description": "Installation, launcher, runtime identity, packaging and safe process lifecycle.",
+      "anchors": [
+        "Get-EscapeHatch.cmd",
+        "scripts/windows/EscapeHatch-Install.ps1",
+        "scripts/windows/EscapeHatch-Runtime.ps1",
+        "contracts/local-runtime-lifecycle.v1.json"
+      ],
+      "files": [
+        {
+          "path": ".dockerignore",
+          "role": "source"
+        },
+        {
+          "path": ".github/workflows/windows-preview-package.yml",
+          "role": "source"
+        },
+        {
+          "path": "Close-EscapeHatch.cmd",
+          "role": "source"
+        },
+        {
+          "path": "Close-EscapeHatch.ps1",
+          "role": "source"
+        },
+        {
+          "path": "Dockerfile",
+          "role": "source"
+        },
+        {
+          "path": "Get-EscapeHatch.cmd",
+          "role": "source"
+        },
+        {
+          "path": "Hey, press me, click me.cmd",
+          "role": "source"
+        },
+        {
+          "path": "Hey, press me, click me.command",
+          "role": "source"
+        },
+        {
+          "path": "Hey, press me, click me.desktop",
+          "role": "source"
+        },
+        {
+          "path": "Install-EscapeHatch.cmd",
+          "role": "source"
+        },
+        {
+          "path": "Launch-EscapeHatch.cmd",
+          "role": "source"
+        },
+        {
+          "path": "Launch-EscapeHatch.ps1",
+          "role": "source"
+        },
+        {
+          "path": "Status-EscapeHatch.cmd",
+          "role": "source"
+        },
+        {
+          "path": "Status-EscapeHatch.ps1",
+          "role": "source"
+        },
+        {
+          "path": "Uninstall-EscapeHatch.cmd",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/companion-package.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/container-server.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/playwright.bootstrap.config.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/runtime-control.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/runtime-control.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/container-launch.browser.mjs",
+          "role": "test"
+        },
+        {
+          "path": "contracts/application-companion.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "contracts/local-runtime-lifecycle.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "contracts/windows-node-runtime.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "docs/WINDOWS_RUNTIME_LIFECYCLE.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/WINDOWS_RUNTIME_LIFECYCLE_PLAN.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/agent/P04_ZERO_SHUTTLE_ACTIVE_APPLICATION_LAUNCH_2026-10-28.md",
+          "role": "documentation"
+        },
+        {
+          "path": "fixtures/application-companion.v1.example.json",
+          "role": "fixture"
+        },
+        {
+          "path": "fixtures/local-runtime-lifecycle.v1.example.json",
+          "role": "fixture"
+        },
+        {
+          "path": "scripts/container/Launch.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/container/launch.sh",
+          "role": "source"
+        },
+        {
+          "path": "scripts/container/smoke.sh",
+          "role": "source"
+        },
+        {
+          "path": "scripts/package_windows_preview.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/preinstall.js",
+          "role": "source"
+        },
+        {
+          "path": "scripts/resolve_repo.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_application_companion.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_local_runtime_lifecycle.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/windows/EscapeHatch-Install.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/windows/EscapeHatch-Runtime.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/windows/EscapeHatch-Toolchain.ps1",
+          "role": "source"
+        },
+        {
+          "path": "tests/test_container_desktop_entry.py",
+          "role": "test"
+        },
+        {
+          "path": "tests/test_escapehatch_installer_source_delivery.py",
+          "role": "test"
+        },
+        {
+          "path": "tests/test_escapehatch_launch_frontdoor.py",
+          "role": "test"
+        },
+        {
+          "path": "tests/test_windows_preview_package.py",
+          "role": "test"
+        },
+        {
+          "path": "tests/windows/Test-EscapeHatch-Install.ps1",
+          "role": "test"
+        },
+        {
+          "path": "tests/windows/Test-EscapeHatch-Runtime-PortDiscovery.ps1",
+          "role": "test"
+        },
+        {
+          "path": "tests/windows/Test-EscapeHatch-Runtime.ps1",
+          "role": "test"
+        },
+        {
+          "path": "tests/windows/fixtures/foreign-listener.mjs",
+          "role": "source"
+        }
+      ]
+    },
+    {
+      "id": "workspace-identity",
+      "title": "Private workspace and identity",
+      "description": "Workspace recovery, private persistence, profile and owner boundaries.",
+      "anchors": [
+        "artifacts/escape-hatch/src/components/workspace-startup.tsx",
+        "artifacts/escape-hatch/workspace-file.ts",
+        "artifacts/escape-hatch/src/lib/storage.ts"
+      ],
+      "files": [
+        {
+          "path": ".github/workflows/career-state.yml",
+          "role": "source"
+        },
+        {
+          "path": ".github/workflows/private-profile-sync-security.yml",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/application-identity-warning.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/workspace-startup.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/context-owner-boundary.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/storage.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/storage.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/workspace-bootstrap.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/workspace-owner-binding.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/persistence.spec.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/standalone-startup.spec.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/workspace-startup.spec.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/user-data.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/workspace-bootstrap.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/workspace-control.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/workspace-file.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/workspace-owner-file.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/workspace-owner-file.ts",
+          "role": "source"
+        },
+        {
+          "path": "contracts/career-state.v1.schema.json",
+          "role": "contract"
+        },
+        {
+          "path": "docs/agent/CONTEXT_BOUNDARY_AND_PRIVATE_PROFILE_HANDOFF_2026-10-31.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/agent/EMPLOYER_PROFILE_MILESTONES_2026-11-03.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/agent/P04_SECURE_MULTIDEVICE_PROFILE_SYNC_2026-11-03.md",
+          "role": "documentation"
+        },
+        {
+          "path": "fixtures/career-state.v1.example.json",
+          "role": "fixture"
+        },
+        {
+          "path": "scripts/resolve_escapehatch_user_data.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_career_state.py",
+          "role": "source"
+        },
+        {
+          "path": "tests/test_native_profile_bridge.mjs",
+          "role": "test"
+        },
+        {
+          "path": "tests/test_native_profile_browser.mjs",
+          "role": "test"
+        }
+      ]
+    },
+    {
+      "id": "career-sources",
+      "title": "Career sources and records",
+      "description": "Approved source import, records and provenance.",
+      "anchors": [
+        "artifacts/escape-hatch/src/components/sources-page.tsx",
+        "scripts/career_source_directory.py",
+        "harness/contracts/application-source-integration.v1.json"
+      ],
+      "files": [
+        {
+          "path": ".github/workflows/application-source-integration.yml",
+          "role": "source"
+        },
+        {
+          "path": ".github/workflows/career-source-directory.yml",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/document-source-import.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/import-context.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/artifact-dropzone.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/career-records.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/career-source-status.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/sources-page.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/source-bridge.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/source-bridge.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/sources.spec.ts",
+          "role": "test"
+        },
+        {
+          "path": "contracts/career-claim-fidelity.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "docs/CAREER_ARTIFACT_PROPAGATION_HARNESS.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/CAREER_SOURCE_DIRECTORY.md",
+          "role": "documentation"
+        },
+        {
+          "path": "fixtures/career-artifact-propagation.v1.example.json",
+          "role": "fixture"
+        },
+        {
+          "path": "fixtures/career-claim-fidelity.v1.example.json",
+          "role": "fixture"
+        },
+        {
+          "path": "harness/contracts/application-source-integration.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "harness/contracts/career-artifact-propagation.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "scripts/career_source_directory.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_application_source_integration.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_career_artifact_propagation.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_career_claim_fidelity.py",
+          "role": "source"
+        },
+        {
+          "path": "tests/test_application_source_integration.py",
+          "role": "test"
+        },
+        {
+          "path": "tests/test_career_source_directory.py",
+          "role": "test"
+        }
+      ]
+    },
+    {
+      "id": "opportunity-tracking",
+      "title": "Opportunity discovery and tracking",
+      "description": "Job identity, fit, queue, tracker and opportunity binding.",
+      "anchors": [
+        "artifacts/escape-hatch/tracker-refresh.ts",
+        "artifacts/escape-hatch/src/lib/opportunity-fit.ts",
+        "artifacts/escape-hatch/src/lib/indeed-posting-identity.ts"
+      ],
+      "files": [
+        {
+          "path": ".github/workflows/application-job-board-assist.yml",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/opportunity-decision-guide.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/use-recommendation-work-mode.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/indeed-posting-identity.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/indeed-posting-identity.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/opportunity-fit.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/opportunity-fit.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/tracker-bridge.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/tracker-bridge.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/tracker-refresh-client.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/tracker-refresh-client.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/application-event-identity.spec.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/tracker-control.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/tracker-refresh.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/tracker-refresh.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/tracker-writeback.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/tracker-writeback.ts",
+          "role": "source"
+        },
+        {
+          "path": "docs/agent/OPPORTUNITY_RUBRIC_V1.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/agent/P04_JOB_BOARD_APPLICATION_PLATFORMS_2026-10-28.md",
+          "role": "documentation"
+        },
+        {
+          "path": "fixtures/tracker-snapshot.synthetic.v1.json",
+          "role": "fixture"
+        }
+      ]
+    },
+    {
+      "id": "application-preferences",
+      "title": "Reusable answers and consent",
+      "description": "Question taxonomy, scoped preferences, answer review and consent.",
+      "anchors": [
+        "harness/contracts/application-form-taxonomy.v1.json",
+        "artifacts/escape-hatch/src/lib/application-preferences.ts",
+        "artifacts/escape-hatch/preference-file.ts"
+      ],
+      "files": [
+        {
+          "path": "artifacts/escape-hatch/application-answer-recall.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/career-preferences.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/managed-answer-memory.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/managed-answer-memory.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/managed-preferences.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/preference-file.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/public/puzzles/answer-constellation-v1.png",
+          "role": "asset"
+        },
+        {
+          "path": "artifacts/escape-hatch/reviewed-application-answers.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/application-preferences.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/recovered-answers.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/answer-recovery.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/answer-recovery.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/answer-transparency.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/answer-transparency.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/application-preferences.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/bootstrap-quiz.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/bootstrap-quiz.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/bootstrap-quiz.spec.ts",
+          "role": "test"
+        },
+        {
+          "path": "docs/agent/ANSWER_MEMORY_COMPLETION_HANDOFF.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/agent/P04_PRIVATE_APPLICATION_ANSWER_SYNC_2026-10-27.md",
+          "role": "documentation"
+        },
+        {
+          "path": "harness/contracts/application-form-taxonomy.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "harness/contracts/application-preference-cache.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "harness/workflows/APPLICATION_FORM_INTAKE.md",
+          "role": "documentation"
+        },
+        {
+          "path": "scripts/runtime/proof-privacy-preference-paired-profile.mjs",
+          "role": "source"
+        },
+        {
+          "path": "scripts/runtime/proof-privacy-preference-popup.mjs",
+          "role": "source"
+        },
+        {
+          "path": "skills/application-form-mapping/SKILL.md",
+          "role": "documentation"
+        },
+        {
+          "path": "tests/test_android_privacy_preference_contract.py",
+          "role": "test"
+        }
+      ]
+    },
+    {
+      "id": "application-documents",
+      "title": "Role documents and resume selection",
+      "description": "Role-specific documents, PDF review and resume presentation.",
+      "anchors": [
+        "artifacts/escape-hatch/opportunity-documents.ts",
+        "artifacts/escape-hatch/src/components/materials-review-scene.tsx",
+        "contracts/resume-presentation.v1.json"
+      ],
+      "files": [
+        {
+          "path": "artifacts/escape-hatch/drive-resume-source.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/opportunity-documents.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/opportunity-documents.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/resume-selection-control.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/resume-selection-store.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/resume-selection-store.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/materials-review-scene.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/opportunity-documents.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/resume-platform-switcher.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/employer-facing-document-url.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/employer-facing-document-url.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/materials-review-status.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/materials-review-status.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/resume-import.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/resume-selection-graph.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/resume-selection-graph.ts",
+          "role": "source"
+        },
+        {
+          "path": "contracts/employer-facing-document-url.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "contracts/resume-presentation-visual.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "contracts/resume-presentation.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "docs/agent/P04_DOMAIN_RESUME_GRAPH_PLATFORM_POLICY_2026-10-28.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/agent/P04_MASTER_RESUME_APPLICATION_ROUTING_2026-11-05.md",
+          "role": "documentation"
+        },
+        {
+          "path": "harness/contracts/resume-selection-graph.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "scripts/audit_resume_docx.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_employer_facing_document_url.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_resume_presentation.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_resume_presentation_visual.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_resume_selection_graph.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_resume_visual_spike.py",
+          "role": "source"
+        },
+        {
+          "path": "templates/resume-visual-dynamic/v1/README.md",
+          "role": "documentation"
+        },
+        {
+          "path": "templates/resume-visual-dynamic/v1/synthetic-dynamic.tex",
+          "role": "source"
+        },
+        {
+          "path": "tests/test_resume_docx_audit.py",
+          "role": "test"
+        }
+      ]
+    },
+    {
+      "id": "managed-application",
+      "title": "Managed employer browser preparation",
+      "description": "Session, requirements, fill, authentication, progression and decisions.",
+      "anchors": [
+        "artifacts/escape-hatch/browser-assist-control.ts",
+        "artifacts/escape-hatch/managed-form.ts",
+        "artifacts/escape-hatch/src/components/managed-browser-assist.tsx"
+      ],
+      "files": [
+        {
+          "path": ".github/workflows/application-assist.yml",
+          "role": "source"
+        },
+        {
+          "path": ".github/workflows/application-autofill-parent.yml",
+          "role": "source"
+        },
+        {
+          "path": ".github/workflows/application-autopilot-executor.yml",
+          "role": "source"
+        },
+        {
+          "path": ".github/workflows/managed-browser-assist.yml",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/application-autopilot-executor.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/application-autopilot-executor.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/application-navigation-policy.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/application-navigation-policy.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/application-requirements.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/application-requirements.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/browser-assist-control.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/browser-assist-control.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/employer-verification-recovery.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/employer-verification-recovery.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/managed-auth-checkpoint.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/managed-auth-checkpoint.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/managed-form.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/managed-listeners.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/managed-listeners.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/managed-preparation-driver.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/managed-preparation-driver.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/managed-prepare-fallback.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/managed-prepare-fallback.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/managed-progress-evidence.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/managed-progress-evidence.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/prepare-firefox-application.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/prepare-firefox-application.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/reviewed-lever-application.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/application-puzzle.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/managed-browser-assist.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/application-puzzle.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/application-puzzle.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/assist.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/email-application.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/managed-launch-intent.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/application-autopilot-executor.spec.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/application-navigation.spec.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/application-requirements-control.spec.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/application-workbench.spec.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/assist.spec.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/host-workflow-recovery.spec.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/managed-browser-assist.spec.ts",
+          "role": "test"
+        },
+        {
+          "path": "contracts/application-navigation-authority.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "contracts/career-browser-pid-selection.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "contracts/managed-browser-progression.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "docs/APPLICATION_ASSIST_AMBIENT_COMPANION_PLAN.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/APPLICATION_ASSIST_AUTOPILOT_PLAN.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/CAREER_BROWSER_PID_SELECTION.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/MANAGED_BROWSER_ASSIST.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/agent/P04_REVIEWED_LEVER_APPLICATION.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/design/ESCAPE_HATCH_AUTH_SYNC_HANDOFF_2026-11-03.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/design/prototypes/auth-sync-handoff.html",
+          "role": "source"
+        },
+        {
+          "path": "fixtures/application-assist-demo.html",
+          "role": "fixture"
+        },
+        {
+          "path": "fixtures/application-navigation-ats/adapter-contract.v1.json",
+          "role": "fixture"
+        },
+        {
+          "path": "fixtures/application-navigation-ats/server.ts",
+          "role": "fixture"
+        },
+        {
+          "path": "fixtures/career-browser-pid-selection.v1.example.json",
+          "role": "fixture"
+        },
+        {
+          "path": "harness/contracts/application-autofill-parent.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "scripts/package_application_assist.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/prepare_managed_application.mjs",
+          "role": "source"
+        },
+        {
+          "path": "scripts/proof_managed_prepare_synthetic.mjs",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_application_autofill_parent.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_career_browser_pid_selection.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/windows/EscapeHatch-CareerBrowser-PidSelection.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/windows/EscapeHatch-CareerBrowser.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/windows/EscapeHatch-Prepare-Application.cmd",
+          "role": "source"
+        },
+        {
+          "path": "scripts/windows/EscapeHatch-Prepare-Application.ps1",
+          "role": "source"
+        },
+        {
+          "path": "tests/test_application_assist_package.py",
+          "role": "test"
+        },
+        {
+          "path": "tests/test_application_autofill_parent.py",
+          "role": "test"
+        },
+        {
+          "path": "tests/windows/Test-EscapeHatch-CareerBrowser-PidSelection.ps1",
+          "role": "test"
+        }
+      ]
+    },
+    {
+      "id": "submission-evidence",
+      "title": "Submission authorization and reconciliation",
+      "description": "Terminal-action policy, receipt detection and reconciliation.",
+      "anchors": [
+        "contracts/application-submission-policy.v1.json",
+        "artifacts/escape-hatch/managed-submission-observer.ts",
+        "artifacts/escape-hatch/src/components/application-outcome.tsx"
+      ],
+      "files": [
+        {
+          "path": ".github/workflows/submission-sync-silent.yml",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/application-submission-policy.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/application-submission-policy.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/lever-attempt-receipts.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/managed-submission-observer.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/managed-submission-observer.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/application-outcome.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/application-submission-setting.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/application-events.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/application-events.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/post-application-continuation.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/post-application-continuation.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/submission-reconciliation.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/submission-reconciliation.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/submission-sync-worker.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/application-outcome.spec.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/indeed-post-application-continuation.spec.ts",
+          "role": "test"
+        },
+        {
+          "path": "contracts/agent-complete-application.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "contracts/application-submission-policy.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "contracts/automation-silent-background-consumer.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "contracts/submission-sync-scheduler.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "docs/agent/P04_DELOITTE_LIVE_FORM_CPA_AND_CURSOR_NO_SUBMIT_2026-10-29.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/agent/P04_SUBMISSION_OUTCOME_LOOP_AND_EXTENSION_MODALITY_2026-10-28.md",
+          "role": "documentation"
+        },
+        {
+          "path": "scripts/tests/test_complete_application_duplicate_guard.py",
+          "role": "test"
+        },
+        {
+          "path": "scripts/windows/EscapeHatch-AgentCompleteApplication.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/windows/EscapeHatch-CompleteApplication.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/windows/EscapeHatch-SubmissionSync.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/windows/EscapeHatch-TrustedSubmit.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/windows/lib/resolve-automation-silent-background.cjs",
+          "role": "source"
+        },
+        {
+          "path": "scripts/windows/submission-sync-silent-launch.cjs",
+          "role": "source"
+        },
+        {
+          "path": "scripts/windows/submission_sync_silent_host.py",
+          "role": "source"
+        },
+        {
+          "path": "tests/test_application_operator_submit.mjs",
+          "role": "test"
+        },
+        {
+          "path": "tests/test_automation_silent_background_consumer.py",
+          "role": "test"
+        },
+        {
+          "path": "tests/test_submission_sync_silent_contract.py",
+          "role": "test"
+        },
+        {
+          "path": "tests/windows/Test-EscapeHatch-CompleteApplication-Guard.ps1",
+          "role": "test"
+        }
+      ]
+    },
+    {
+      "id": "journey-guidance",
+      "title": "Scene graph, avatar and tutorial",
+      "description": "Canonical scenes, wayfinding, avatar and puzzle guidance; no employer action authority.",
+      "anchors": [
+        "contracts/application-journey-scenes.v1.json",
+        "artifacts/escape-hatch/src/lib/application-journey-projection.ts",
+        "artifacts/escape-hatch/src/components/journey-atlas.tsx",
+        "artifacts/escape-hatch/src/components/guided-start.tsx",
+        "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx"
+      ],
+      "files": [
+        {
+          "path": "artifacts/escape-hatch/public/escapehatch-mascot.webp",
+          "role": "asset"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/birdsong-control.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/guided-start.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/journey-atlas.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/profile-piece-board.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/profile-puzzle-gallery.css",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/puzzle-atlas-shelf.css",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/puzzle-atlas-shelf.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/puzzle-gallery-display.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/tutorial-voice-control.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/workspace-journey-guide.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/application-journey-projection.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/application-journey-projection.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/journey-wayfinding.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/journey-wayfinding.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/mascot-guidance.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/mascot-guidance.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/profile-puzzle-gallery.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/profile-puzzle-gallery.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/profile-puzzle-gallery.v1.json",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/profile-puzzle-projection.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/profile-puzzle-projection.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/puzzle-atlas.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/puzzle-atlas.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/puzzle-atlas.v1.json",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/extension-journey-guide.spec.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/journey-wayfinding.spec.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/mascot-guidance.spec.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/profile-puzzle-evidence.spec.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/puzzle-atlas.spec.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/puzzle-gallery-selection.spec.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/puzzle-gallery-slices.spec.ts",
+          "role": "test"
+        },
+        {
+          "path": "contracts/application-journey-scenes.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "docs/agent/APPLICATION_JOURNEY_SCENE_SYSTEM_2026-10-25.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/agent/IDENTITY_HATCH_PUZZLE_GALLERY_LIVE_CERT_2026-11-05.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/agent/P04_PROFILE_PUZZLE_ATELIER_CONVERGENCE_2026-11-03.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/GUIDED_APPLICATION_WORKBENCH.md",
+          "role": "documentation"
+        },
+        {
+          "path": "scripts/add_profile_puzzle_set.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/add_puzzle_atlas_variation.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/import_puzzle_atlas_art.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_application_journey.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_profile_puzzle_gallery.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_puzzle_atlas.py",
+          "role": "source"
+        },
+        {
+          "path": "tests/test_application_journey.py",
+          "role": "test"
+        },
+        {
+          "path": "tests/test_extension_journey_guide.mjs",
+          "role": "test"
+        }
+      ]
+    },
+    {
+      "id": "browser-extension",
+      "title": "Browser companion and extension",
+      "description": "Extension controls, native admission, employer-page adapters.",
+      "anchors": [
+        "browser/application-assist/manifest.json",
+        "browser/application-assist/assist-core.js",
+        "browser/application-assist/journey-guide.js"
+      ],
+      "files": [
+        {
+          "path": "artifacts/escape-hatch/extension-host-control.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/extension-host-control.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/extension-profile-host.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/extension-profile-host.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/native-messaging-host.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/extension-workspace-status.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/assist-contract.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/assist-policy.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/assist-session.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/assist-session.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/extension-profile-admission.test.mjs",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/extension-profile-admission.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/extension-workspace.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/extension-workspace.ts",
+          "role": "source"
+        },
+        {
+          "path": "browser/application-assist/assist-core.js",
+          "role": "source"
+        },
+        {
+          "path": "browser/application-assist/content.js",
+          "role": "source"
+        },
+        {
+          "path": "browser/application-assist/escapehatch-mascot.webp",
+          "role": "asset"
+        },
+        {
+          "path": "browser/application-assist/icons/mascot-128.png",
+          "role": "asset"
+        },
+        {
+          "path": "browser/application-assist/icons/mascot-16.png",
+          "role": "asset"
+        },
+        {
+          "path": "browser/application-assist/icons/mascot-32.png",
+          "role": "asset"
+        },
+        {
+          "path": "browser/application-assist/icons/mascot-48.png",
+          "role": "asset"
+        },
+        {
+          "path": "browser/application-assist/job-board-adapter.js",
+          "role": "source"
+        },
+        {
+          "path": "browser/application-assist/journey-guide.js",
+          "role": "source"
+        },
+        {
+          "path": "browser/application-assist/manifest.json",
+          "role": "source"
+        },
+        {
+          "path": "browser/application-assist/modality.js",
+          "role": "source"
+        },
+        {
+          "path": "browser/application-assist/native-profile-bridge.js",
+          "role": "source"
+        },
+        {
+          "path": "browser/application-assist/popup.html",
+          "role": "source"
+        },
+        {
+          "path": "browser/application-assist/popup.js",
+          "role": "source"
+        },
+        {
+          "path": "browser/application-assist/reviewed-form.js",
+          "role": "source"
+        },
+        {
+          "path": "browser/application-assist/submission-observer.js",
+          "role": "source"
+        },
+        {
+          "path": "browser/application-assist/worker.js",
+          "role": "source"
+        },
+        {
+          "path": "browser/firefox-reviewed-fill/fill-known.js",
+          "role": "source"
+        },
+        {
+          "path": "browser/firefox-reviewed-fill/manifest.json",
+          "role": "source"
+        },
+        {
+          "path": "browser/firefox-reviewed-fill/popup.html",
+          "role": "source"
+        },
+        {
+          "path": "browser/firefox-reviewed-fill/popup.js",
+          "role": "source"
+        },
+        {
+          "path": "contracts/application-assist-modality.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "contracts/application-assist-session.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "docs/APPLICATION_ASSIST_SESSION.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/agent/P04_ONE_DOWNLOAD_EXTENSION_AND_PRIVATE_PROFILE_BOOTSTRAP_2026-10-28.md",
+          "role": "documentation"
+        },
+        {
+          "path": "scripts/build_extension_icons.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/windows/EscapeHatch-NativeHost.ps1",
+          "role": "source"
+        },
+        {
+          "path": "tests/test_application_assist_modality.mjs",
+          "role": "test"
+        },
+        {
+          "path": "tests/test_application_assist_modality_contract.py",
+          "role": "test"
+        },
+        {
+          "path": "tests/test_application_assist_session.mjs",
+          "role": "test"
+        },
+        {
+          "path": "tests/test_application_assist_session_contract.py",
+          "role": "test"
+        },
+        {
+          "path": "tests/test_extension_branding_and_board.py",
+          "role": "test"
+        },
+        {
+          "path": "tests/test_extension_toolbar_icons.py",
+          "role": "test"
+        },
+        {
+          "path": "tests/test_job_board_adapter.mjs",
+          "role": "test"
+        },
+        {
+          "path": "tests/test_native_host_registration.py",
+          "role": "test"
+        }
+      ]
+    },
+    {
+      "id": "mobile-companion",
+      "title": "Android companion and presence",
+      "description": "Android handoff, notification and mobile presence.",
+      "anchors": [
+        "android/application-assist/app/src/main/java/com/escapehatch/assist/CompanionActivity.kt",
+        "contracts/application-assist-presence-surface.v1.json"
+      ],
+      "files": [
+        {
+          "path": "android/application-assist-spike/README.md",
+          "role": "documentation"
+        },
+        {
+          "path": "android/application-assist-spike/src/main/AndroidManifest.xml",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist-spike/src/main/kotlin/com/escapehatch/assist/spike/AssistSessionStore.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist-spike/src/main/kotlin/com/escapehatch/assist/spike/BubblePresenceCandidate.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist-spike/src/main/kotlin/com/escapehatch/assist/spike/HandoffIntents.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist-spike/src/main/kotlin/com/escapehatch/assist/spike/OverlayPresenceRejected.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist-spike/src/main/kotlin/com/escapehatch/assist/spike/PresenceSurfaceStateMachine.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist-spike/src/main/kotlin/com/escapehatch/assist/spike/QuietNotificationPresence.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/README.md",
+          "role": "documentation"
+        },
+        {
+          "path": "android/application-assist/app/build.gradle.kts",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/debug/AndroidManifest.xml",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/debug/res/xml/network_security_config.xml",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/AndroidManifest.xml",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/java/com/escapehatch/assist/ApplicantPrivacyPreferenceStore.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/java/com/escapehatch/assist/AssistSession.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/java/com/escapehatch/assist/AssistSessionStore.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/java/com/escapehatch/assist/CompanionActivity.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/java/com/escapehatch/assist/HandoffIntents.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/java/com/escapehatch/assist/QuietAssistNotification.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/res/layout/activity_companion.xml",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/res/values/strings.xml",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/res/values/themes.xml",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/res/xml/network_security_config.xml",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/test/java/com/escapehatch/assist/HandoffIntentsTest.kt",
+          "role": "test"
+        },
+        {
+          "path": "android/application-assist/build.gradle.kts",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/gradle.properties",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/gradle/wrapper/gradle-wrapper.jar",
+          "role": "asset"
+        },
+        {
+          "path": "android/application-assist/gradle/wrapper/gradle-wrapper.properties",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/gradlew",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/gradlew.bat",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/settings.gradle.kts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/hooks/use-mobile.tsx",
+          "role": "source"
+        },
+        {
+          "path": "contracts/application-assist-presence-surface.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "docs/APPLICATION_ASSIST_ANDROID_CAPABILITY_MATRIX.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/APPLICATION_ASSIST_MOBILE_M2_P82_PLAN.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/APPLICATION_ASSIST_MOBILE_PRESENCE_PLAN.md",
+          "role": "documentation"
+        },
+        {
+          "path": "fixtures/application-assist-presence-surface.v1.example.json",
+          "role": "fixture"
+        },
+        {
+          "path": "scripts/run_android_assist_presence_spike.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/run_eh_m2_experiments.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_application_assist_presence_surface.py",
+          "role": "source"
+        },
+        {
+          "path": "tests/test_application_assist_presence_surface.py",
+          "role": "test"
+        }
+      ]
+    },
+    {
+      "id": "private-sync",
+      "title": "Private device synchronization",
+      "description": "Encrypted synchronization, pairing, transport and proofs.",
+      "anchors": [
+        "artifacts/escape-hatch/private-sync-crypto.ts",
+        "artifacts/escape-hatch/private-sync-transport.ts",
+        "harness/contracts/private-sync-phone-seams.v1.json"
+      ],
+      "files": [
+        {
+          "path": "android/application-assist/app/src/main/java/com/escapehatch/assist/sync/AesGcmBox.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/java/com/escapehatch/assist/sync/AndroidKeystoreSyncVaultKeyRepository.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/java/com/escapehatch/assist/sync/Base64Url.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/java/com/escapehatch/assist/sync/CapsuleImportActivity.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/java/com/escapehatch/assist/sync/HkdfSha256.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/java/com/escapehatch/assist/sync/JsonCompat.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/java/com/escapehatch/assist/sync/LanHostMemory.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/java/com/escapehatch/assist/sync/LanHostProbe.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/java/com/escapehatch/assist/sync/LanSealedFetch.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/java/com/escapehatch/assist/sync/PairingImportActivity.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/java/com/escapehatch/assist/sync/PairingOffer.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/java/com/escapehatch/assist/sync/PhonePackStore.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/java/com/escapehatch/assist/sync/PhoneSyncProofReceipt.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/java/com/escapehatch/assist/sync/PrivateSyncCapsuleImport.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/java/com/escapehatch/assist/sync/PrivateSyncCrypto.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/java/com/escapehatch/assist/sync/PrivateSyncException.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/java/com/escapehatch/assist/sync/PrivateSyncPairingImport.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/java/com/escapehatch/assist/sync/PrivateSyncSchemas.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/java/com/escapehatch/assist/sync/SyncEnvelope.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/java/com/escapehatch/assist/sync/SyncVaultKeyProtector.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/java/com/escapehatch/assist/sync/SyncVaultKeyRepository.kt",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/res/layout/activity_capsule_import.xml",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/main/res/layout/activity_pairing_import.xml",
+          "role": "source"
+        },
+        {
+          "path": "android/application-assist/app/src/test/java/com/escapehatch/assist/sync/InMemorySyncVaultKeyRepository.kt",
+          "role": "test"
+        },
+        {
+          "path": "android/application-assist/app/src/test/java/com/escapehatch/assist/sync/LanSealedFetchTest.kt",
+          "role": "test"
+        },
+        {
+          "path": "android/application-assist/app/src/test/java/com/escapehatch/assist/sync/PhoneSyncProofReceiptTest.kt",
+          "role": "test"
+        },
+        {
+          "path": "android/application-assist/app/src/test/java/com/escapehatch/assist/sync/PrivateSyncCapsuleImportTest.kt",
+          "role": "test"
+        },
+        {
+          "path": "android/application-assist/app/src/test/java/com/escapehatch/assist/sync/PrivateSyncCryptoTest.kt",
+          "role": "test"
+        },
+        {
+          "path": "android/application-assist/app/src/test/java/com/escapehatch/assist/sync/PrivateSyncPairingImportTest.kt",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/private-sync-after-write.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/private-sync-after-write.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/private-sync-carrier.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/private-sync-chain.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/private-sync-cli.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/private-sync-config.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/private-sync-config.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/private-sync-crypto.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/private-sync-crypto.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/private-sync-device-cross.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/private-sync-device.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/private-sync-device.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/private-sync-drive-oauth.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/private-sync-drive-transport.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/private-sync-keystore.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/private-sync-keystore.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/private-sync-phone-install.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/private-sync-phone-install.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/private-sync-phone-lan-server.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/private-sync-phone-lan-server.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/private-sync-phone-proof.contract.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/private-sync-status-server.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/private-sync-status.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/private-sync-status.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/private-sync-transport.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/private-sync-transport.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/extension-pairing.ts",
+          "role": "source"
+        },
+        {
+          "path": "harness/contracts/private-sync-multidevice-proof.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "harness/contracts/private-sync-phone-pack.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "harness/contracts/private-sync-phone-seams.v1.json",
+          "role": "contract"
+        },
+        {
+          "path": "scripts/private-sync-adb-wireless.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/private-sync-await-phone-proof.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/private-sync-build-android.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/private-sync-ensure-lan-firewall.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/private-sync-focus-operator-browser.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/private-sync-ingest-phone-proof.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/private-sync-nord-lan-window.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/private-sync-pair-windows-peer.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/private-sync-pairing-keepalive.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/private-sync-phone-proof.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/private-sync-proof-ceiling-report.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/private-sync-stage-peer-bundle.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/private-sync-stage-phone-pack.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/private-sync-start-phone-proof-session.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/private-sync-watch-lan-phone.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/private-sync-watchdog-phone-session.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_private_sync_multidevice_proof.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_private_sync_phone_seams.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/validate_secure_profile_sync_dispatch.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/windows/EscapeHatch-PrivateSyncKey.ps1",
+          "role": "source"
+        }
+      ]
+    },
+    {
+      "id": "network-recovery",
+      "title": "Network and connectivity recovery",
+      "description": "Network diagnosis, VPN recovery and temporary LAN permission.",
+      "anchors": [
+        "artifacts/escape-hatch/network-navigation-diagnosis.ts",
+        "artifacts/escape-hatch/vpn-recovery.ts"
+      ],
+      "files": [
+        {
+          "path": "artifacts/escape-hatch/network-navigation-diagnosis.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/network-navigation-diagnosis.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/vpn-recovery-journal.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/vpn-recovery-journal.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/vpn-recovery-preference.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/vpn-recovery.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/vpn-recovery.ts",
+          "role": "source"
+        },
+        {
+          "path": "scripts/Open-PhoneLanNordWindow.cmd",
+          "role": "source"
+        },
+        {
+          "path": "scripts/Restore-NordVpn.cmd",
+          "role": "source"
+        }
+      ]
+    },
+    {
+      "id": "cockpit-ui",
+      "title": "Cockpit shared interface",
+      "description": "App shell, UI primitives, theme, branding and build entrypoints.",
+      "anchors": [
+        "artifacts/escape-hatch/src/App.tsx",
+        "artifacts/escape-hatch/src/main.tsx",
+        "artifacts/escape-hatch/src/index.css"
+      ],
+      "files": [
+        {
+          "path": "artifacts/escape-hatch/brand-identity.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/browser-test-isolation.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/browser-test-isolation.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/components.json",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/index.html",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/package-lock.json",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/package.json",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/playwright.config.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/playwright.preview.config.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/public/favicon.svg",
+          "role": "asset"
+        },
+        {
+          "path": "artifacts/escape-hatch/public/puzzles/companion-link-v1.png",
+          "role": "asset"
+        },
+        {
+          "path": "artifacts/escape-hatch/public/puzzles/contact-nest-v1.png",
+          "role": "asset"
+        },
+        {
+          "path": "artifacts/escape-hatch/public/puzzles/document-vault-v1.png",
+          "role": "asset"
+        },
+        {
+          "path": "artifacts/escape-hatch/public/puzzles/education-lantern-v1.png",
+          "role": "asset"
+        },
+        {
+          "path": "artifacts/escape-hatch/public/puzzles/experience-ladder-v1.png",
+          "role": "asset"
+        },
+        {
+          "path": "artifacts/escape-hatch/public/puzzles/identity-hatch-v1.png",
+          "role": "asset"
+        },
+        {
+          "path": "artifacts/escape-hatch/public/puzzles/location-compass-v1.png",
+          "role": "asset"
+        },
+        {
+          "path": "artifacts/escape-hatch/public/puzzles/skills-garden-v1.png",
+          "role": "asset"
+        },
+        {
+          "path": "artifacts/escape-hatch/public/puzzles/work-passport-v1.png",
+          "role": "asset"
+        },
+        {
+          "path": "artifacts/escape-hatch/public/robots.txt",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/App.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/error-boundary.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/accordion.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/alert-dialog.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/alert.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/aspect-ratio.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/avatar.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/badge.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/breadcrumb.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/button-group.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/button.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/calendar.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/card.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/carousel.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/chart.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/checkbox.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/collapsible.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/command.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/context-menu.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/dialog.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/drawer.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/dropdown-menu.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/empty.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/field.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/form.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/hover-card.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/input-group.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/input-otp.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/input.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/item.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/kbd.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/label.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/menubar.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/navigation-menu.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/pagination.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/popover.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/progress.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/radio-group.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/resizable.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/scroll-area.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/select.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/separator.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/sheet.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/sidebar.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/skeleton.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/slider.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/sonner.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/spinner.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/switch.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/table.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/tabs.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/textarea.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/toast.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/toaster.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/toggle-group.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/toggle.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/components/ui/tooltip.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/hooks/use-toast.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/index.css",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/utils.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/main.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/pages/not-found.tsx",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/brand-identity.spec.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/validation-focus.spec.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/tsconfig.json",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/vite.config.ts",
+          "role": "source"
+        },
+        {
+          "path": "package.json",
+          "role": "source"
+        }
+      ]
+    },
+    {
+      "id": "community-study",
+      "title": "Community and study integrations",
+      "description": "Discord, talent community, study guidance and related explicit actions.",
+      "anchors": [
+        "artifacts/escape-hatch/src/lib/discord-community-flow.ts",
+        "scripts/export_study_guidance.py"
+      ],
+      "files": [
+        {
+          "path": "artifacts/escape-hatch/src/lib/discord-community-flow.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/discord-community-flow.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/discord-membership-verifier.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/discord-membership-verifier.ts",
+          "role": "source"
+        },
+        {
+          "path": "docs/agent/P04_COGNIZANT_TALENT_COMMUNITY_ZERO_REENTRY_2026-10-31.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/agent/P04_MICRO1_DISCORD_PLATFORM_MILESTONES_2026-11-06.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/agent/P04_MICRO1_NETWORK_PROGRESS_AND_DOCUMENT_QA_2026-10-25.md",
+          "role": "documentation"
+        },
+        {
+          "path": "scripts/export_study_guidance.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/import_micro1_milestone_eml.py",
+          "role": "source"
+        },
+        {
+          "path": "scripts/test_import_micro1_milestone_eml.py",
+          "role": "test"
+        },
+        {
+          "path": "scripts/windows/EscapeHatch-Cognizant-TalentCommunity.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/windows/EscapeHatch-Discord-Bootstrap.ps1",
+          "role": "source"
+        },
+        {
+          "path": "scripts/windows/EscapeHatch-micro1-community.ps1",
+          "role": "source"
+        },
+        {
+          "path": "tests/test_study_guidance_export.py",
+          "role": "test"
+        },
+        {
+          "path": "tests/windows/Test-EscapeHatch-Discord-Bootstrap.ps1",
+          "role": "test"
+        }
+      ]
+    },
+    {
+      "id": "product-evidence",
+      "title": "Product documentation and historical evidence",
+      "description": "Plans and historical evidence; not active implementation authority.",
+      "anchors": [
+        "harness/reports/CURRENT_STATE.md",
+        "docs/plans/recovered-task-export.v1.json"
+      ],
+      "files": [
+        {
+          "path": "Outputs/prompt-parallel-dispatch/manifest.blocked.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-application-assist-autopilot-20260923/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-companion-artwork-20261104/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-companion-artwork-20261104/native-execution-receipt.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-job-boards-20261028/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-journey-w1-20261104/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-journey-w1-20261104/native-execution-receipt.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-master-resume-routing-20261105/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-one-download-profile-20261028/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-private-answer-sync-20261027/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-profile-puzzle-20261103/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-profile-puzzle-20261103/native-execution-receipt.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-resume-graph-20261028/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-secure-device-sync-20261103/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-secure-device-sync-20261103/receipt.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-submission-outcomes-20261028/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/escapehatch-ten-puzzle-postmerge-20261106/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/hosted-finish-line-20261028/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/hosted-finish-line-20261028/receipt.json",
+          "role": "evidence"
+        },
+        {
+          "path": "Outputs/prompt-parallel-dispatch/runs/reviewed-lever-application/manifest.json",
+          "role": "evidence"
+        },
+        {
+          "path": "README.md",
+          "role": "documentation"
+        },
+        {
+          "path": "artifacts/escape-hatch/BRAND_IDENTITY.md",
+          "role": "documentation"
+        },
+        {
+          "path": "artifacts/escape-hatch/README.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/adr/ADR-20261007-android-assist-presence-v1.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/agent/B0_TANDEM_CONVERGENCE_2026-10-28.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/agent/BROADCASTWELL_FIRST_LIVE_APPLICATION_CANARY_2026-10-27.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/agent/P04_APPLICATION_NETWORK_COMPATIBILITY_2026-10-27.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/agent/P04_CONDITIONAL_FORM_CHECKPOINT_PROGRESS_2026-10-31.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/agent/P04_DELOITTE_AGENTIC_AI_ENGINEER_APPLICATION_HANDOFF_2026-10-28.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/agent/P04_OPERATOR_LIGHT_APPLICATION_SPRINT_2026-10-27.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/agent/P04_ZERO_FRICTION_APPLICATION_EXECUTION_2026-10-20.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/agent/TRIFECTA.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/P04-CONTEXT-OWNER-ISOLATION-20261028.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/index.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/recovered-task-export.v1.json",
+          "role": "source"
+        },
+        {
+          "path": "docs/plans/task-001-complete-browser-application-assist.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-002-make-profile-changes-safe-to-recover-from.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-003-let-users-back-up-and-restore-their-whole-workspace.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-004-catch-ui-persistence-regressions-before-release.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-005-confirm-the-home-quick-action-stays-applied-after-refresh.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-006-make-sure-empty-answer-and-application-forms-cannot-create-broken-entries.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-007-prevent-saved-entries-from-losing-their-required-details.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-008-explain-which-required-details-are-missing-before-saving.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-009-let-users-undo-accidental-answer-or-application-deletions.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-010-keep-saved-entries-in-sync-across-open-workspace-tabs.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-011-confirm-restored-workspaces-survive-a-refresh.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-012-show-users-what-will-be-replaced-before-restoring-a-workspace.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-013-tell-users-when-a-restored-workspace-cannot-be-saved.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-014-stop-offering-mark-applied-after-an-opportunity-is-already-applied.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-015-confirm-dashboard-counts-stay-accurate-when-opportunities-are-closed.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-016-catch-missing-detail-guidance-regressions-before-shipping.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-017-move-keyboard-focus-to-the-first-missing-detail-after-save.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-018-keep-the-undo-option-available-when-users-briefly-leave-the-list.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-019-confirm-deleted-entries-stop-being-recoverable-after-the-undo-window.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-020-confirm-profile-updates-appear-in-every-open-tab.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-021-warn-before-simultaneous-tab-edits-overwrite-newer-work.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-022-confirm-restored-workspaces-survive-closing-and-reopening-the-browser.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-023-confirm-restoring-multiple-saved-items-keeps-their-full-details-and-order.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-024-verify-cancelling-a-restore-leaves-the-workspace-unchanged.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-025-make-workspace-restore-confirmation-keyboard-accessible.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-026-stop-showing-success-when-browser-storage-rejects-regular-edits.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-027-catch-restore-storage-warnings-before-they-regress.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-028-confirm-the-home-shortcut-chooses-an-actionable-opportunity-when-statuses-are-mi.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-029-let-users-undo-an-accidental-home-status-change.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-030-confirm-reopening-a-closed-opportunity-restores-dashboard-counts.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-031-confirm-mixed-opportunity-statuses-are-split-into-the-right-dashboard-totals.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-032-block-whitespace-only-required-details-before-saving.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-033-keep-saved-entries-safe-after-an-invalid-edit-attempt.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-034-return-keyboard-focus-after-closing-an-entry-form.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-035-let-keyboard-users-close-entry-dialogs-with-escape.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-036-warn-before-restoring-over-newer-workspace-edits.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-037-keep-workspace-data-consistent-if-the-browser-closes-during-restore.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-038-confirm-restoring-an-empty-workspace-clears-saved-entries.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-039-confirm-restored-opportunity-links-remain-available-after-reload.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-040-keep-large-workspace-restore-previews-easy-to-review.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-041-clear-an-old-restore-preview-after-an-invalid-backup-is-selected.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-042-catch-restore-dialog-focus-regressions-before-release.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-043-show-progress-while-a-workspace-backup-is-being-read.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-044-tell-screen-reader-users-when-an-entry-is-saved-or-cancelled.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-045-keep-focus-stable-when-an-edited-opportunity-leaves-the-active-filter.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-046-recover-a-partially-completed-entry-after-accidental-dismissal.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-047-confirm-escape-cancellation-is-announced-without-saving-edits.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-048-confirm-repeated-saves-are-announced-each-time.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-049-keep-focus-stable-when-an-edited-opportunity-leaves-a-search-result.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-050-keep-keyboard-focus-stable-after-deleting-an-opportunity.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-051-confirm-dismissed-drafts-expire-without-stale-recovery-prompts.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-052-keep-separate-answer-and-opportunity-drafts-available-across-view-changes.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-053-tell-users-when-an-unsaved-draft-has-expired.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-054-keep-unfinished-drafts-available-after-a-browser-reload.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-055-confirm-cross-view-draft-recovery-works-from-mobile-navigation.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-056-show-users-how-long-they-have-to-recover-an-unsaved-draft.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-057-tell-users-when-they-discard-an-unsaved-draft.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-058-confirm-discarding-edited-drafts-preserves-saved-entries.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-059-let-users-undo-an-accidental-draft-discard.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-060-confirm-draft-recovery-time-stays-accurate-after-a-tab-is-backgrounded.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-061-let-users-choose-how-long-unsaved-drafts-remain-recoverable.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-062-keep-draft-recovery-accurate-when-users-switch-windows.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-063-confirm-selected-recovery-windows-expire-drafts-on-time.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-064-keep-an-open-draft-notice-consistent-when-its-recovery-setting-changes.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-065-keep-draft-recovery-notices-consistent-across-open-windows.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-066-prevent-system-clock-changes-from-extending-draft-recovery.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-067-confirm-edited-saved-entries-use-the-selected-recovery-deadline.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-068-keep-a-dismissed-draft-s-countdown-accurate-after-the-recovery-setting-changes.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-069-keep-a-draft-s-deadline-steady-through-repeated-recovery-setting-changes.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-070-prevent-expired-drafts-from-returning-after-recovery-settings-change.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-071-catch-recovery-clicks-exactly-at-draft-expiry.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-072-keep-expired-draft-recovery-closed-for-keyboard-users.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-073-keep-draft-expiry-announcements-after-switching-views.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-074-confirm-keyboard-recovery-works-before-the-deadline.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-075-confirm-keyboard-draft-recovery-remains-safe-after-changing-views.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-076-confirm-keyboard-draft-recovery-stays-safe-after-repeated-view-changes.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-077-keep-keyboard-focus-accessible-when-an-expired-draft-notice-disappears.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-078-keep-every-optional-field-when-a-draft-is-recovered-from-the-keyboard.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-079-tell-users-when-keyboard-recovery-has-reopened-their-draft.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-080-confirm-mouse-recovery-also-tells-users-their-draft-reopened.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-081-confirm-mouse-recovery-preserves-every-draft-selection.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-082-confirm-both-keyboard-keys-preserve-optional-draft-fields.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-083-keep-recovered-details-after-saving-and-reloading.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-084-prevent-repeated-keypresses-from-reopening-a-draft-twice.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-085-confirm-recovering-both-draft-types-keeps-each-selection-isolated.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-086-show-saved-opportunity-priority-clearly-in-the-queue.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-087-confirm-home-status-undo-expires-after-its-recovery-window.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-088-confirm-home-undo-restores-every-starting-status-without-losing-details.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-089-keep-blank-optional-opportunity-details-from-creating-empty-labels.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-090-confirm-saved-details-trim-surrounding-whitespace-without-changing-the-text.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-091-undo-an-accidental-workspace-restore.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-092-let-users-review-exactly-what-an-older-backup-will-overwrite.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-093-confirm-expired-edited-drafts-leave-saved-entries-unchanged.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-094-keep-edited-entries-in-place-after-draft-recovery.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-095-keep-multiple-recoverable-drafts-from-replacing-each-other.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-096-make-draft-countdown-announcements-clear-for-screen-readers.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-097-keep-draft-recovery-available-through-browser-back-and-forward-navigation.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-098-keep-keyboard-focus-in-the-form-after-reopening-a-draft.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-099-keep-keyboard-focus-accessible-when-users-discard-an-unsaved-draft.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-100-confirm-the-browser-assistant-never-submits-across-real-application-pages.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-101-support-more-resume-pdf-layouts-without-freezing-local-intake.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-102-keep-an-assist-session-visible-after-the-extension-popup-is-reopened.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-103-confirm-opportunity-drafts-reopen-only-once-after-repeated-keyboard-activation.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-104-keep-draft-notices-available-when-browser-history-passes-through-the-profile.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-105-prevent-recovered-drafts-from-returning-during-repeated-browser-history-traversa.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-106-confirm-cross-origin-navigation-pauses-the-assistant-safely.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-107-keep-reviewed-session-history-after-the-application-tab-reloads.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-108-catch-oversized-or-slow-pdf-decompression-before-it-freezes-resume-intake.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-109-keep-multi-column-resume-text-in-a-readable-order.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-110-confirm-session-recovery-never-changes-saved-milestones.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-111-keep-the-cockpit-current-when-navigation-happens-with-the-popup-closed.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-112-keep-unsaved-profile-edits-through-browser-history.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-113-confirm-expired-draft-announcements-survive-a-page-reload.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-114-preserve-reviewed-resume-edits.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-115-keep-reopened-draft-values-after-a-browser-refresh.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-116-confirm-multiple-reviewed-resume-entries-keep-edits-paired-correctly.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-117-prevent-duplicate-profile-entries-when-the-same-resume-is-reviewed-again.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-118-mirror-project-plans-locally.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-119-keep-supporting-details-separate-for-repeated-employers-or-schools.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/task-120-keep-imported-education-dates-attached-to-the-right-school.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/plans/visual-resume-dual-track-reference.v1.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/task-plan-sync.md",
+          "role": "documentation"
+        },
+        {
+          "path": "harness/reports/APPLICATION_FORM_AUTOMATION_STATE.md",
+          "role": "evidence"
+        },
+        {
+          "path": "harness/reports/CURRENT_STATE.md",
+          "role": "evidence"
+        },
+        {
+          "path": "harness/reports/android-assist-presence-spike-receipt.v1.json",
+          "role": "evidence"
+        },
+        {
+          "path": "harness/reports/application-source-ux-p04-agent-handoffs.md",
+          "role": "evidence"
+        },
+        {
+          "path": "harness/reports/application-source-ux-p04-dispatch.v1.json",
+          "role": "evidence"
+        },
+        {
+          "path": "harness/reports/eh-m1-corrected-proof-ledger.md",
+          "role": "evidence"
+        },
+        {
+          "path": "harness/reports/eh-m1-validation-report.md",
+          "role": "evidence"
+        },
+        {
+          "path": "harness/reports/eh-m2-p82-experiment-receipt.v1.json",
+          "role": "evidence"
+        },
+        {
+          "path": "harness/reports/eh-m2-validation-report.md",
+          "role": "evidence"
+        },
+        {
+          "path": "harness/reports/exec2-career-progress-hydration-proof-20261018.md",
+          "role": "evidence"
+        },
+        {
+          "path": "harness/reports/integrated-source-bridge-proof-20261018.md",
+          "role": "evidence"
+        },
+        {
+          "path": "harness/reports/managed-prepare-synthetic-proof.v1.json",
+          "role": "evidence"
+        },
+        {
+          "path": "harness/reports/resume-visual-spike-receipt.v1.json",
+          "role": "evidence"
+        },
+        {
+          "path": "harness/reports/reusable-career-records-and-title-selection-20261018.md",
+          "role": "evidence"
+        },
+        {
+          "path": "harness/reports/submission-sync-pythonw-host-live-cert-20261102.json",
+          "role": "evidence"
+        }
+      ]
+    }
+  ]
+}

@@ -86,7 +86,6 @@ import {
 import { applyAcceptedResumeImport, extractResumeText, getAcceptedResumeContactPatch, parseResumeText, type ResumeImport } from '@/lib/resume-import';
 import { initialSession, parseAssistSessionStatus, type AssistSession } from '@/lib/assist-session';
 import { ManagedBrowserAssist } from '@/components/managed-browser-assist';
-import { ApplicationPreferences } from '@/components/application-preferences';
 import { RecoveredAnswers, useRecoveredAnswers } from '@/components/recovered-answers';
 import { GuidedStart } from '@/components/guided-start';
 import { JourneyAtlas } from '@/components/journey-atlas';
@@ -1431,17 +1430,6 @@ function AssistPage({
   return <div>
     {!containerWorkspace && <ManagedBrowserAssist assistProfile={assistProfile} setAssistProfile={setAssistProfile} profile={profile} setProfile={setProfile} applications={applications} setApplications={setApplications} />}
      <PageIntro eyebrow={containerWorkspace ? containerAssistLabel : "Browser assist"} title={containerWorkspace ? "Review your reusable answers." : "Fill the repeatable parts."} description={containerWorkspace ? "Review your reusable answers and career details here. Open the posting from Applications to complete the employer form in your browser." : "Launch an application in managed Chrome above. Review your reusable knowledge here, fill known contact fields, and prepare attachments without installing an extension."} action={<div className="flex flex-wrap justify-end gap-2"><Button variant="outline" type="button" onClick={() => fileRef.current?.click()} data-testid="button-import-resume"><FileUp size={16} /> Import resume</Button><Button variant="outline" type="button" onClick={exportSync} data-testid="button-export-assist-sync"><FileDown size={16} /> Export assist sync</Button><Button variant="outline" type="button" onClick={exportSession} data-testid="button-export-assist-session"><FileDown size={16} /> Export session status</Button><label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm font-bold hover:bg-secondary"><FileUp size={16} /> Import session<input ref={sessionFileRef} type="file" accept="application/json,.json" onChange={importSession} className="hidden" data-testid="input-import-assist-session" /></label><input ref={fileRef} type="file" accept=".pdf,.txt,text/plain,application/pdf" onChange={importResume} className="hidden" data-testid="input-import-resume" /></div>} />
-    {containerWorkspace && <ApplicationPreferences onLoad={data => setProfile(current => {
-      // Hydrate blank cockpit identity fields from the same reviewed private
-      // question store used by managed browser Assist. Never replace edits.
-      const next = { ...current };
-      for (const key of Object.keys(current) as (keyof Profile)[]) {
-        const id = 'identity.' + (key === 'linkedin_url' ? 'linkedin' : key === 'name_prefix' ? 'title' : key);
-        const value = data.preferences[id]?.value;
-        if (!next[key] && value) next[key] = value;
-      }
-      return next;
-    })} />}
     <SourcePackageSummary profile={profile} assistProfile={assistProfile} applications={applications} sourceBindings={sourceBindings} />
     {feedback && <p role="status" aria-live="polite" data-testid="assist-feedback" className="mb-5 rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 text-sm font-bold text-primary">{feedback}</p>}
     <div className="grid gap-5 lg:grid-cols-[1.25fr_.75fr]">

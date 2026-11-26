@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { evaluateOpportunityRubric, evaluateOpportunityFit, skillEvidenceCoverage, normalizeWorkMode, readOpportunityRubric, rubricAllowsRecommendation, applicationPreparationRank, mergeRubricNotes } from './opportunity-fit.ts';
+import { evaluateOpportunityRubric, evaluateOpportunityFit, skillEvidenceCoverage, normalizeWorkMode, readOpportunityRubric, rubricAllowsRecommendation, applicationPreparationRank, mergeRubricNotes, deriveOpportunityType, readRequirementAssessment, localApplicationPreparationRank } from './opportunity-fit.ts';
 import { trackerRowToApplication, selectNextHomeApplication, selectNextActionableOpportunity, type TrackerRow, type TrackerSnapshot } from './tracker-bridge.ts';
 
 const practice = 'EscapeHatch rubric v2: on_site; remote_only; unacceptable; do_not_want; apply; interview_practice';
@@ -64,4 +64,58 @@ test('explicit applications lead the preparation queue independently of match an
   assert.equal(submitted.status, 'applied');
   assert.equal(selectNextHomeApplication(submitted, [submitted]), null);
   assert.equal(selectNextActionableOpportunity({ applications: [{ ...row, appliedCheckbox: true }, remote] } as TrackerSnapshot), remote);
+});
+
+test('learning type is derived from non-match, not desire, purpose or choice', () => {
+  const source = 'EscapeHatch rubric v2: on_site; remote_only; unknown; want; undecided; unknown';
+  assert.deepEqual(deriveOpportunityType(source, 'On-site'), { type: 'learning', reasons: ['REMOTE_REQUIREMENT_MISMATCH'] });
+  for (const desire of ['want', 'do_not_want', 'unknown'])
+    for (const decision of ['apply', 'do_not_apply', 'undecided'])
+      for (const purpose of ['career', 'interview_practice', 'unknown']) {
+        const note = 'EscapeHatch rubric v2: on_site; remote_only; unknown; ' + [desire, decision, purpose].join('; ');
+        assert.equal(deriveOpportunityType(note).type, 'learning');
+        assert.equal(applicationPreparationRank(note), decision === 'apply' ? 0 : null);
+      }
+  assert.equal(deriveOpportunityType(source, 'Remote').type, 'needs_assessment');
+});
+test('reviewed mandatory requirements drive classification; unknown is not non-match', () => {
+  const base = 'EscapeHatch rubric v2: remote; remote_only; unknown; want; undecided; career';
+  const marker = (state: string, complete = true) => 'EscapeHatch requirements v1: ' + JSON.stringify({
+    sourceRef: 'synthetic-posting', complete, requirements: [{ id: 'database', state, evidenceRef: 'synthetic-reviewed-evidence' }],
+  });
+  const note = (state: string, complete = true) => base + '\n' + marker(state, complete);
+  assert.equal(deriveOpportunityType(note('met')).type, 'career');
+  assert.equal(deriveOpportunityType(note('met', false)).type, 'needs_assessment');
+  assert.equal(deriveOpportunityType(note('unknown')).type, 'needs_assessment');
+  assert.equal(rubricAllowsRecommendation(note('unknown')), false);
+  assert.equal(rubricAllowsRecommendation(note('met', false)), false);
+  assert.equal(rubricAllowsRecommendation(note('met')), true);
+  assert.equal(applicationPreparationRank(note('unknown').replace('; undecided;', '; apply;')), 0);
+  assert.equal(localApplicationPreparationRank(note('unknown'), { jobDesire: 'want', applicationDecision: 'undecided', purpose: 'career' }), null);
+  assert.equal(deriveOpportunityType(base).type, 'needs_assessment');
+  assert.deepEqual(deriveOpportunityType(note('unmet')), { type: 'learning', reasons: ['UNMET_REQUIREMENT:database'] });
+  assert.equal(rubricAllowsRecommendation(note('unmet')), false);
+  assert.equal(applicationPreparationRank(note('unmet').replace('; undecided;', '; apply;')), 0);
+  assert.equal(localApplicationPreparationRank(note('unmet'), { jobDesire: 'want', applicationDecision: 'undecided', purpose: 'career' }), null);
+  assert.equal(deriveOpportunityType(base + '\n' + marker('unmet') + '\n' + marker('met')).type, 'needs_assessment');
+  assert.equal(readRequirementAssessment('EscapeHatch requirements v1: {"sourceRef":"synthetic","complete":true,"requirements":[{"id":"db","state":"unmet"}]}'), 'invalid');
+  assert.equal(deriveOpportunityType(mergeRubricNotes(note('met'), marker('unmet'))).type, 'learning');
+  assert.equal(deriveOpportunityType(mergeRubricNotes(note('unmet'), base)).type, 'learning');
+});
+
+test('remote-only discovery never vetoes a chosen practice application, and duplicate locks still win', () => {
+  const row: TrackerRow = { sheetRow: 52, company: 'Synthetic practice', role: 'Engineer', status: 'Ready to Apply', appliedCheckbox: false, priority: 'Low', applyUrl: 'https://example.com/practice', workMode: 'On-site', notes: practice };
+  const app = trackerRowToApplication(row, '2026-01-01');
+  assert.equal(selectNextActionableOpportunity({ applications: [row] } as TrackerSnapshot, 'remote_only'), row);
+  assert.equal(selectNextHomeApplication(app, [app], 'remote_only'), app);
+  const unchosen = { ...row, notes: practice.replace('; apply;', '; undecided;') };
+  assert.equal(selectNextActionableOpportunity({ applications: [unchosen] } as TrackerSnapshot, 'remote_only'), null);
+  const unchosenApp = trackerRowToApplication(unchosen, '2026-01-01');
+  assert.equal(selectNextHomeApplication(unchosenApp, [unchosenApp], 'remote_only'), null);
+  const submitted = { ...row, status: 'Submitted', appliedCheckbox: true };
+  assert.equal(selectNextActionableOpportunity({ applications: [submitted] } as TrackerSnapshot, 'remote_only'), null);
+  const submittedApp = trackerRowToApplication(submitted, '2026-01-01');
+  assert.equal(selectNextHomeApplication(submittedApp, [submittedApp], 'remote_only'), null);
+  const conflicting = { ...app, notes: career, workMode: 'On-site', opportunityDecision: { jobDesire: 'want', applicationDecision: 'undecided', purpose: 'career' } as const };
+  assert.equal(selectNextHomeApplication(conflicting, [conflicting]), null);
 });

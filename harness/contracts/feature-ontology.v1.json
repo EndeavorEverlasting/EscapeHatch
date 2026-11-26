@@ -787,11 +787,12 @@
     {
       "id": "application-preferences",
       "title": "Reusable answers and consent",
-      "description": "Question taxonomy, scoped preferences, answer review and consent.",
+      "description": "Question taxonomy, scoped preferences, answer review, consent, and the onboarding quiz that records reviewed reusable answers without creating a second private profile.",
       "anchors": [
         "harness/contracts/application-form-taxonomy.v1.json",
         "artifacts/escape-hatch/src/lib/application-preferences.ts",
-        "artifacts/escape-hatch/preference-file.ts"
+        "artifacts/escape-hatch/preference-file.ts",
+        "artifacts/escape-hatch/src/lib/bootstrap-quiz.ts"
       ],
       "files": [
         {
@@ -853,6 +854,18 @@
         {
           "path": "artifacts/escape-hatch/src/lib/application-preferences.ts",
           "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/bootstrap-quiz.test.ts",
+          "role": "test"
+        },
+        {
+          "path": "artifacts/escape-hatch/src/lib/bootstrap-quiz.ts",
+          "role": "source"
+        },
+        {
+          "path": "artifacts/escape-hatch/tests/bootstrap-quiz.spec.ts",
+          "role": "test"
         },
         {
           "path": "docs/agent/ANSWER_MEMORY_COMPLETION_HANDOFF.md",

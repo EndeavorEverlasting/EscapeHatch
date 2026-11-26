@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from functools import lru_cache
 import json
 from pathlib import Path, PurePosixPath
 import re
@@ -45,14 +46,52 @@ def unique_strings(values, label):
     require(len(set(values)) == len(values), f"duplicate {label}")
     return set(values)
 
-def load_json(path):
+def parse_json(raw):
     def strict_object(pairs):
         result = {}
         for key, value in pairs:
             require(key not in result, f"duplicate JSON key: {key}")
             result[key] = value
         return result
-    return json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=strict_object)
+    return json.loads(raw, object_pairs_hook=strict_object)
+
+def load_json(path):
+    return parse_json(path.read_text(encoding="utf-8"))
+
+def tree_snapshot(root: Path, tree_sha: str):
+    """Read the *actual prospective merge tree*, without changing the index or worktree."""
+    require(re.fullmatch(r"[0-9a-f]{40,64}", tree_sha) is not None, "tree must be an exact Git object SHA")
+    require((root / ".git").exists(), "Git checkout required for tree validation")
+    git = ["git", "-C", str(root)]
+    require(subprocess.check_output(git + ["cat-file", "-t", tree_sha]).strip() == b"tree",
+            "tree SHA is not a Git tree object")
+    raw = subprocess.check_output(git + ["ls-tree", "-r", "-z", "--full-tree", tree_sha])
+    require(raw.endswith(b"\0") and bool(raw[:-1]), "empty or malformed Git tree listing")
+    entries = {}
+    for record in raw[:-1].split(b"\0"):
+        metadata, sep, raw_path = record.partition(b"\t")
+        require(bool(sep) and bool(raw_path), "malformed Git tree entry")
+        parts = metadata.decode("ascii", errors="strict").split(" ")
+        require(len(parts) == 3 and parts[1] == "blob" and
+                re.fullmatch(r"[0-9a-f]{40,64}", parts[2]) is not None,
+                "non-file or invalid Git tree entry")
+        path = literal(raw_path.decode("utf-8", errors="strict"))
+        require(path not in entries, "duplicate Git tree path: " + path)
+        entries[path] = parts[2]
+    return entries
+
+def validate_tree(root: Path, tree_sha: str):
+    """Fail closed on unmapped paths in a prospective integration result."""
+    entries = tree_snapshot(root, tree_sha)
+    git = ["git", "-C", str(root)]
+
+    @lru_cache(maxsize=96)
+    def tree_text(path):
+        require(path in entries, "missing Git tree file: " + path)
+        return subprocess.check_output(git + ["cat-file", "blob", entries[path]]).decode("utf-8", errors="strict")
+
+    return validate(parse_json(tree_text(MAP)), parse_json(tree_text(SCENES)),
+                    set(entries), tree_text, lambda p: p in entries)
 
 def inventory(root, inventory_file=None):
     # Hooks pass exact Git index/tree inventories for their isolated snapshots.
@@ -205,13 +244,18 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--inventory", type=Path, help="exact NUL-delimited Git index/tree inventory for snapshot hooks")
+    parser.add_argument("--tree", help="exact Git TREE SHA for prospective merge admission; checks all tree blobs and their own ontology")
     args = parser.parse_args()
     root = args.root.resolve()
     try:
-        tracked = inventory(root, args.inventory)
-        result = validate(load_json(root / MAP), load_json(root / SCENES), tracked,
-                          lambda p: (root / p).read_text(encoding="utf-8"),
-                          lambda p: (root / p).is_file())
+        require(not (args.tree and args.inventory), "--tree and --inventory are mutually exclusive")
+        if args.tree:
+            result = validate_tree(root, args.tree)
+        else:
+            tracked = inventory(root, args.inventory)
+            result = validate(load_json(root / MAP), load_json(root / SCENES), tracked,
+                              lambda p: (root / p).read_text(encoding="utf-8"),
+                              lambda p: (root / p).is_file())
     except (OntologyError, OSError, ValueError, TypeError, KeyError, AttributeError, subprocess.SubprocessError) as exc:
         print(f"FEATURE_ONTOLOGY: FAIL: {exc}", file=sys.stderr)
         return 1

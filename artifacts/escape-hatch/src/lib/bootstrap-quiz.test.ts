@@ -33,6 +33,8 @@ test('invalid or incomplete quiz is not silently treated as ready to fill', () =
   assert.match(bootstrapQuizError({ ...synthetic(), workMode: '' }) || '', /remote/);
   assert.match(bootstrapQuizError({ ...synthetic(), firstName: 'x'.repeat(513) }) || '', /512/);
   assert.match(bootstrapQuizError({ ...synthetic(), linkedIn: 'http://linkedin.com/in/example' }) || '', /HTTPS/);
+  assert.match(bootstrapQuizError({ ...synthetic(), linkedIn: 'https://user:secret@linkedin.com/in/example' }) || '', /HTTPS/);
+  assert.throws(() => applyBootstrapQuiz(emptyPreferences(), { ...synthetic(), linkedIn: 'https://user:secret@linkedin.com/in/example' }));
   assert.throws(() => applyBootstrapQuiz(emptyPreferences(), emptyBootstrapQuiz()));
 });
 

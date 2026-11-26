@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import registry from '../../../contracts/application-journey-scenes.v1.json' with { type: 'json' };
 
 test('mascot gives one truthful missing-profile prompt and a keyboard-safe tutorial overlay', async ({ page }) => {
   await page.goto('/');
@@ -6,6 +7,7 @@ test('mascot gives one truthful missing-profile prompt and a keyboard-safe tutor
   await expect(page.getByTestId('mascot-chirp-message')).toContainText('first name');
   await expect(page.getByTestId('mascot-profile-progress')).toContainText('0 of 8');
   await expect(page.getByTestId('mascot-next-action')).toHaveAttribute('href', '/profile');
+  await expect(page.getByTestId('mascot-first-run-quiz')).toHaveAttribute('href', '/assist');
   await expect(page.getByTestId('button-mascot-chirp')).toHaveAccessibleName('Play optional chick chirp');
   await page.getByTestId('button-mascot-puzzle').click();
   const overlay = page.getByTestId('mascot-tutorial-overlay');
@@ -154,4 +156,103 @@ test('avatar walks independent opportunity decision scenes and persists the chos
   await guide.getByRole('button', { name: 'Next step' }).click();
   await expect(guide.getByLabel('Application decision')).toHaveValue('apply');
   await expect(guide.getByLabel('Application purpose')).toHaveValue('interview_practice');
+});
+
+// Instrument only the browser speech API; this proves the application requests
+// narration, not audible output from the host speaker.
+async function stubTutorialSpeech(page: import('@playwright/test').Page, blockFirst = false) {
+  await page.addInitScript(block => {
+    const evidence = { spoken: [] as string[], cancels: 0, attempts: 0 };
+    Object.defineProperty(window, '__tutorialSpeech', { value: evidence });
+    class Utterance {
+      onstart?: () => void;
+      onend?: () => void;
+      onerror?: (event: { error: string }) => void;
+      constructor(public text: string) {}
+    }
+    Object.defineProperty(window, 'SpeechSynthesisUtterance', { configurable: true, value: Utterance });
+    Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: {
+      getVoices: () => [],
+      speak: (utterance: Utterance) => {
+        evidence.attempts++;
+        if (block && evidence.attempts === 1) {
+          utterance.onerror?.({ error: 'not-allowed' });
+          return;
+        }
+        evidence.spoken.push(utterance.text);
+        utterance.onstart?.();
+      },
+      cancel: () => { evidence.cancels++; },
+    } });
+  }, blockFirst);
+}
+
+const voiceEvidence = (page: import('@playwright/test').Page) => page.evaluate(() =>
+  (window as unknown as { __tutorialSpeech: { spoken: string[]; cancels: number; attempts: number } }).__tutorialSpeech);
+
+test('new workspaces speak tutorial automatically, preserve mute across navigation and reload', async ({ page }) => {
+  await stubTutorialSpeech(page);
+  await page.goto('/');
+  const voice = page.getByTestId('button-tutorial-voice');
+  await expect(voice).toHaveAccessibleName('Turn tutorial voice off');
+  await expect(voice).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(async () => (await voiceEvidence(page)).spoken).toEqual([expect.stringContaining('Welcome to EscapeHatch')]);
+  await expect(page.getByTestId('button-birdsong-control')).toHaveAttribute('aria-pressed', 'false');
+  await page.getByTestId('link-sidebar-profile').click();
+  await expect.poll(async () => (await voiceEvidence(page)).spoken.at(-1)).toContain('Build your reusable profile');
+  const beforeMute = await voiceEvidence(page);
+  await voice.click();
+  await expect(voice).toHaveAttribute('aria-pressed', 'false');
+  await expect.poll(async () => (await voiceEvidence(page)).cancels).toBeGreaterThan(beforeMute.cancels);
+  await page.getByTestId('link-sidebar-applications').click();
+  await expect.poll(async () => (await voiceEvidence(page)).spoken.length).toBe(beforeMute.spoken.length);
+  await page.reload();
+  await expect(voice).toHaveAccessibleName('Turn tutorial voice on');
+  expect((await voiceEvidence(page)).spoken).toEqual([]);
+  await voice.click();
+  await expect.poll(async () => (await voiceEvidence(page)).spoken.at(-1)).toContain('Select an opportunity');
+});
+
+test('tutorial retries a blocked initial speech request after a real gesture, without enabling birdsong', async ({ page }) => {
+  await stubTutorialSpeech(page, true);
+  await page.goto('/');
+  await expect(page.getByTestId('tutorial-voice-status')).toContainText('next interaction');
+  await page.getByTestId('mascot-chirp-message').click();
+  await expect.poll(async () => (await voiceEvidence(page)).spoken).toEqual([expect.stringContaining('Welcome to EscapeHatch')]);
+  await expect(page.getByTestId('button-birdsong-control')).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('muting before browser activation never triggers the deferred tutorial', async ({ page }) => {
+  await stubTutorialSpeech(page, true);
+  await page.goto('/');
+  await expect(page.getByTestId('tutorial-voice-status')).toContainText('next interaction');
+  await page.getByTestId('button-tutorial-voice').click();
+  await page.getByTestId('mascot-chirp-message').click();
+  await expect(page.getByTestId('button-tutorial-voice')).toHaveAttribute('aria-pressed', 'false');
+  expect((await voiceEvidence(page)).spoken).toEqual([]);
+  expect((await voiceEvidence(page)).attempts).toBe(1);
+});
+
+
+test('each canonical scene preview resolves public avatar narration from the scene registry', async ({ page }) => {
+  test.setTimeout(90_000);
+  await stubTutorialSpeech(page);
+  for (const scene of registry.scenes) {
+    await page.goto('/journey?scene=' + scene.id);
+    await expect(page.getByTestId('tutorial-voice-avatar')).toBeVisible();
+    await expect(page.getByTestId('tutorial-voice-current')).toHaveText(scene.coach_prompt);
+    await expect.poll(async () => (await voiceEvidence(page)).spoken.at(-1)).toContain(scene.coach_prompt);
+  }
+});
+
+test('changing the active managed scene updates narration without changing the route', async ({ page }) => {
+  await stubTutorialSpeech(page);
+  await page.goto('/assist');
+  const job = page.getByTestId('managed-job-url');
+  await expect(job).toBeVisible();
+  await expect(page.getByTestId('tutorial-voice-current')).toHaveText('Check this job and show me what is missing');
+  await job.fill('https://jobs.example.invalid/application');
+  await expect(page.getByTestId('tutorial-voice-current')).toHaveText('Ask me only for information you cannot verify');
+  await expect.poll(async () => (await voiceEvidence(page)).spoken.at(-1)).toContain('Ask me only for information you cannot verify');
+  await expect(page.getByTestId('button-tutorial-voice')).toHaveAttribute('aria-pressed', 'true');
 });

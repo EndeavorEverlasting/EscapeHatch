@@ -9,6 +9,9 @@ MANIFEST = ROOT / "harness/manifest.v1.json"
 SCHEMA = "escapehatch-harness/v1"
 COMPONENTS = {
     "codebase_map": "harness/CODEBASE_MAP.md",
+    "feature_ontology": "harness/contracts/feature-ontology.v1.json",
+    "feature_ontology_validator": "scripts/validate_feature_ontology.py",
+    "feature_ontology_regression": "tests/test_feature_ontology.py",
     "workflow_specs": "harness/WORKFLOWS.md",
     "artifact_registry": "ARTIFACT_REGISTRY.md",
     "harness_validator": "scripts/validate_harness.py",
@@ -47,6 +50,8 @@ COMPONENTS = {
 }
 VALIDATION_ORDER = [
     "python scripts/validate_governance.py",
+    "python scripts/validate_feature_ontology.py",
+    "python tests/test_feature_ontology.py",
     "python scripts/validate_product_version.py",
     "python scripts/validate_repository_promotion.py",
     "python scripts/validate_application_harness.py",
@@ -73,6 +78,9 @@ MARKERS = {
 }
 REQUIRED_REGISTRY = {
     "Agent governance doctrine": "AGENTS.md",
+    "Feature ontology": "harness/contracts/feature-ontology.v1.json",
+    "Feature ontology validator": "scripts/validate_feature_ontology.py",
+    "Feature ontology regression": "tests/test_feature_ontology.py",
     "Harness manifest": "harness/manifest.v1.json",
     "Codebase map": "harness/CODEBASE_MAP.md",
     "Workflow specs": "harness/WORKFLOWS.md",
@@ -186,7 +194,7 @@ def validate_hooks() -> None:
     for path, text in ((".githooks/pre-commit",pre),(".githooks/pre-push",push)):
         if not text.startswith("#!/bin/sh\nset -eu\n"):
             raise HarnessError(f"{path} must start with #!/bin/sh and set -eu")
-        for token in ("python scripts/validate_governance.py","python scripts/validate_product_version.py","python scripts/validate_repository_promotion.py","python scripts/validate_harness.py"):
+        for token in ("python scripts/validate_feature_ontology.py", "python scripts/validate_governance.py","python scripts/validate_product_version.py","python scripts/validate_repository_promotion.py","python scripts/validate_harness.py"):
             if token not in text:
                 raise HarnessError(f"{path} missing {token}")
         for forbidden in ("chrome://","Start-Process","curl http","Invoke-WebRequest","npm run dev"):
@@ -207,7 +215,7 @@ def validate_resolver() -> None:
 
 def validate_ci() -> None:
     text = read(".github/workflows/harness.yml")
-    for marker in ("name: Harness Validation","push:","pull_request:","name: Validate governance","run: python scripts/validate_governance.py","name: Validate product version","run: python scripts/validate_product_version.py","name: Test product version","run: python tests/test_product_version.py","name: Validate repository promotion","run: python scripts/validate_repository_promotion.py","name: Test promotion guard","run: python tests/test_repository_promotion.py","name: Validate application harness","run: python scripts/validate_application_harness.py","name: Validate employer-facing document URL policy","run: python scripts/validate_employer_facing_document_url.py","name: Validate application companion","run: python scripts/validate_application_companion.py","name: Validate resume presentation","run: python scripts/validate_resume_presentation.py","name: Validate harness","run: python scripts/validate_harness.py","name: Validate career-state contract","run: python scripts/validate_career_state.py","name: Validate local runtime lifecycle","run: python scripts/validate_local_runtime_lifecycle.py","git diff --check","windows-location:","scripts/resolve_repo.ps1 -ResolveOnly","WINDOWS_REPO_ROOT=PASS"):
+    for marker in ("run: python scripts/validate_feature_ontology.py", "run: python tests/test_feature_ontology.py", "name: Harness Validation","push:","pull_request:","name: Validate governance","run: python scripts/validate_governance.py","name: Validate product version","run: python scripts/validate_product_version.py","name: Test product version","run: python tests/test_product_version.py","name: Validate repository promotion","run: python scripts/validate_repository_promotion.py","name: Test promotion guard","run: python tests/test_repository_promotion.py","name: Validate application harness","run: python scripts/validate_application_harness.py","name: Validate employer-facing document URL policy","run: python scripts/validate_employer_facing_document_url.py","name: Validate application companion","run: python scripts/validate_application_companion.py","name: Validate resume presentation","run: python scripts/validate_resume_presentation.py","name: Validate harness","run: python scripts/validate_harness.py","name: Validate career-state contract","run: python scripts/validate_career_state.py","name: Validate local runtime lifecycle","run: python scripts/validate_local_runtime_lifecycle.py","git diff --check","windows-location:","scripts/resolve_repo.ps1 -ResolveOnly","WINDOWS_REPO_ROOT=PASS"):
         if marker not in text:
             raise HarnessError(f"CI missing active marker: {marker}")
     # Promotion workflow must exist and have correct triggers

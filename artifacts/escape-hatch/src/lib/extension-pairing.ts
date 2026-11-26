@@ -6,6 +6,10 @@ export const SAFE_ANSWER_IDS = [
   'identity.professional_title', 'identity.website', 'education.highest_completed_level',
   'education.institution', 'education.credential', 'education.field_of_study',
   'education.dates', 'interview.live_coding_comfort',
+  'identity.job_title', 'experience.company', 'experience.title',
+  'experience.description', 'talent_community.spoken_languages',
+  'talent_community.primary_areas', 'availability.willing_to_travel',
+  'availability.willing_to_relocate', 'identity.metro_area',
 ] as const;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const sha = /^[a-f0-9]{64}$/;

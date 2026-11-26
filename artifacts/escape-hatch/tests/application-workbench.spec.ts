@@ -57,6 +57,8 @@ test('email-only tracker application opens review materials without a managed br
   await expect(page.getByTestId('materials-open-assist')).toHaveCount(0);
   await expect(page.getByRole('checkbox', { name: 'Require my review before document upload' })).toHaveCount(0);
   await expect(page.getByText('Return to Browser assist', { exact: false })).toHaveCount(0);
+  await expect(page.getByTestId('workspace-journey-guide')).toBeVisible();
+  await expect(page.getByTestId('workspace-journey-guide')).toContainText('Review the exact PDFs for this job');
   await expect(page.getByRole('region', { name: 'Opportunity document review' })).toBeVisible();
   await page.getByLabel('Choose résumé PDF', { exact: true }).setInputFiles({
     name: 'synthetic-resume.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\nsynthetic résumé'),

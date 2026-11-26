@@ -144,6 +144,26 @@
         "application"
       ],
       "owner": "skills/application-form-mapping/SKILL.md"
+    },
+    "feature_ontology": {
+      "path": "harness/contracts/feature-ontology.v1.json",
+      "mode": "outline",
+      "authority": 3,
+      "triggers": [
+        "ontology"
+      ],
+      "owner": "harness/contracts/feature-ontology.v1.json",
+      "required": true
+    },
+    "application_journey": {
+      "path": "contracts/application-journey-scenes.v1.json",
+      "mode": "outline",
+      "authority": 3,
+      "triggers": [
+        "ontology"
+      ],
+      "owner": "contracts/application-journey-scenes.v1.json",
+      "required": true
     }
   },
   "lanes": [
@@ -151,7 +171,8 @@
     "harness",
     "context",
     "runtime",
-    "application"
+    "application",
+    "ontology"
   ],
   "external_context": {
     "platform_system": {
@@ -212,6 +233,10 @@
       "repository.read",
       "local.ats.observe",
       "local.artifacts.read"
+    ],
+    "ontology": [
+      "repository.read",
+      "local.validators"
     ]
   },
   "tool_route_status": "ADVISORY_UNTIL_HOST_ENFORCES"

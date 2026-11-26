@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
+import { SAFE_ANSWER_IDS } from './extension-pairing.ts';
 import taxonomy from '../../../../harness/contracts/application-form-taxonomy.v1.json' with { type: 'json' };
 import { emptyPreferences, type Preferences } from './application-preferences.ts';
 import { PROFILE_DISCOVERY_QUESTIONS, projectProfileDiscovery, validateDiscoveryAnswer, reconcileGuidedReadback } from './profile-question-planner.ts';
@@ -106,4 +107,13 @@ test('the residential metro question never teaches a search-location answer as r
   const metro = PROFILE_DISCOVERY_QUESTIONS.find(question => question.id === 'identity.metro_area');
   assert.equal(metro?.label, 'Current residential metro area');
   assert.match(metro?.why || '', /currently live/);
+});
+
+test('all guided answers have explicit extension projection approval paths', () => {
+  for (const question of PROFILE_DISCOVERY_QUESTIONS) {
+    const workspaceProfileIds = ['identity.preferred_name'];
+    assert.ok(workspaceProfileIds.includes(question.id) || SAFE_ANSWER_IDS.includes(question.id as typeof SAFE_ANSWER_IDS[number]), question.id);
+  }
+  for (const protectedId of ['eeo.gender', 'attestation.truth_accuracy', 'legal.non_compete_blocking'])
+    assert.ok(!SAFE_ANSWER_IDS.includes(protectedId as typeof SAFE_ANSWER_IDS[number]));
 });

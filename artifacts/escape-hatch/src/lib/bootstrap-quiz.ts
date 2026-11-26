@@ -41,7 +41,7 @@ export function bootstrapQuizError(quiz: BootstrapQuiz): string | null {
   if (quiz.linkedIn.trim()) {
     try {
       const url = new URL(quiz.linkedIn.trim());
-      if (url.protocol !== 'https:' || !['linkedin.com', 'www.linkedin.com'].includes(url.hostname))
+      if (url.protocol !== 'https:' || url.username || url.password || !['linkedin.com', 'www.linkedin.com'].includes(url.hostname))
         return 'Use an HTTPS LinkedIn profile URL, or leave it blank.';
     } catch { return 'Use an HTTPS LinkedIn profile URL, or leave it blank.'; }
   }
@@ -65,7 +65,7 @@ export function applyBootstrapQuiz(saved: Preferences, quiz: BootstrapQuiz, now 
   };
   const permitted = new Set(questions.filter(q => q.automation_policy === 'fill_if_explicit_preference').map(q => q.id));
   const draft: Preferences = { ...saved, preferences: { ...saved.preferences },
-    recommendation_work_mode: saved.recommendation_work_mode ?? (quiz.workMode || undefined),
+    recommendation_work_mode: saved.recommendation_work_mode ?? (quiz.workMode === 'remote_only' ? 'remote_only' : 'any'),
     require_document_review: saved.require_document_review ?? true,
     exported_at: timestamp,
   };

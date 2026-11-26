@@ -28,9 +28,11 @@ do
   archive=$(mktemp "${TMPDIR:-/tmp}/escapehatch-prepush.XXXXXX.tar")
   git archive --format=tar --output="$archive" "$local_sha"
   tar -xf "$archive" -C "$snapshot"
+  git ls-tree -r -z --name-only "$local_sha" > "$snapshot/.feature-ontology-index"
 
   (
     cd "$snapshot"
+    python scripts/validate_feature_ontology.py --inventory "$snapshot/.feature-ontology-index"
     python scripts/validate_governance.py
     python scripts/validate_product_version.py
     python scripts/validate_repository_promotion.py

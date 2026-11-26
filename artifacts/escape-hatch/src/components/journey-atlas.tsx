@@ -3,6 +3,7 @@ import { Link, useSearch } from 'wouter';
 import { ArrowLeft, ArrowRight, CheckCircle2, Map, Puzzle, ShieldCheck } from 'lucide-react';
 import { JOURNEY_DESTINATIONS, getJourneyStop, getJourneyBranches, containerAssistLabel, journeyAtlasHref, journeyOpportunityHref, projectJourneyWayfinding } from '@/lib/journey-wayfinding';
 import type { Application } from '@/lib/storage';
+import { useTutorialGuidance } from './tutorial-voice-control';
 
 const containerWorkspace = import.meta.env.VITE_ESCAPEHATCH_CONTAINER === '1';
 const tour = JOURNEY_DESTINATIONS.filter(stop => stop.id !== 'materials').map(stop => getJourneyStop(stop.id, containerWorkspace));
@@ -17,6 +18,7 @@ export function JourneyAtlas({ applications }: { applications: Application[] }) 
   const opportunityId = applications.find(item => item.id === requestedId && item.url &&
     !['applied', 'closed'].includes(item.status))?.id;
   const preview = canonicalScenes.find(scene => scene.id === sceneId);
+  useTutorialGuidance(preview ? { kind: 'scene', id: preview.id } : { kind: 'stop', id: stage.id }, 20);
   const previewHeading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     previewHeading.current?.focus();

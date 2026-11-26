@@ -47,6 +47,8 @@ Existing `skills/harness-operations/SKILL.md` and `harness/CODEBASE_MAP.md` are 
 
 ## Task Pickup
 
+**Feature ownership gate:** `python scripts/context_router.py --lane ontology --task 'feature map' --metrics-only` resolves the dedicated demand-load route; retrieve the selected canonical files for exact ownership. Resolve exact paths in `harness/contracts/feature-ontology.v1.json` before editing. Any new, removed or renamed tracked file must update its literal primary owner in the same change; never bulk-auto-admit unknown paths or use directory wildcards. For interface changes also maintain `contracts/application-journey-scenes.v1.json` feature and implementation links, canonical guidance copy/actions and actual avatar surfaces. Run `python scripts/validate_feature_ontology.py`, `python tests/test_feature_ontology.py`, and `python scripts/validate_application_journey.py`. A structurally mapped scene is not proof of visible or audible live behavior.
+
 1. Read `AGENTS.md`, then execute the Model-context selection entrypoint above. Load only the selected full files and navigate outlined files by section; if the router is unavailable or evidence is incomplete, fall back to the established full governance/harness reading procedure rather than dropping required authority.
 2. Resolve durable repository state when platform location matters.
 3. Inspect current branch, relevant history, open PRs, and canonical owners.

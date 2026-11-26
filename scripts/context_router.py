@@ -14,6 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 POLICY_PATH = "harness/context/sources.v1.json"
 LANE_HINTS = {
+    "ontology": ("feature map", "ontology", "scene coverage", "avatar guidance"),
     "application": ("application", "ats", "resume", "cover letter", "employer", "autofill", "puzzle"),
     "runtime": ("launch", "startup", "windows", "bootstrap", "port", "desktop", "installer"),
     "context": ("context", "prompt", "token", "retrieval", "attention", "agent skill"),
@@ -87,6 +88,16 @@ def resolve_lane(task: str, requested: str, policy: dict) -> str:
 def outline(text: str, suffix: str) -> str:
     if suffix == ".json":
         value = json.loads(text)
+        if isinstance(value, dict) and value.get("schema") == "escapehatch/feature-ontology/v1":
+            # Compact semantic navigation, not a second inventory or admission authority.
+            return "Feature owners (read exact paths from the canonical ontology):\n" + "\n".join(
+                f"{feature['id']}: {feature['title']} ({len(feature['files'])} paths)"
+                for feature in value["features"]
+            ) + "\n"
+        if isinstance(value, dict) and value.get("schema") == "escapehatch/application-journey-scenes/v1" and value.get("feature_ontology"):
+            return "Canonical scenes and feature links (retrieve full scene before editing):\n" + "\n".join(
+                row["id"] + ": " + ", ".join(row["feature_ids"]) for row in value["scenes"]
+            ) + "\n"
         return "JSON keys: " + ", ".join(sorted(value) if isinstance(value, dict) else []) + "\n"
     if suffix in (".md", ".markdown"):
         headings = [line.strip() for line in text.splitlines() if re.match(r"^#{1,4} ", line)]

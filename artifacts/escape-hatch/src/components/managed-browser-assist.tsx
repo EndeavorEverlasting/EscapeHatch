@@ -1,6 +1,7 @@
 import { useOpportunityDocuments } from './opportunity-documents';
 import { ApplicationPuzzle } from './application-puzzle';
 import { ApplicationOutcome } from './application-outcome';
+import { useTutorialGuidance } from './tutorial-voice-control';
 import { recordedApplication, nextIndeedPosting, nextIndeedApplication, isActiveApplicationBinding, reconcileLiveWorkplaceContradiction, type LiveWorkplaceContradictionState, type OutcomeBinding } from '@/lib/post-application-continuation';
 import { allowsAutomaticRecommendation, evaluateOpportunityFit } from '@/lib/opportunity-fit';
 import { useRecommendationWorkMode } from './use-recommendation-work-mode';
@@ -736,6 +737,9 @@ export function ManagedBrowserAssist({ profile, setProfile, applications, setApp
   const completedApplication = recordedApplication(currentPage ?? recordedBinding, applications);
   const selectedOpportunity = applications.find(item => item.id === selectedOpportunityId && item.url === url);
   const fit = selectedOpportunity ? evaluateOpportunityFit(assistProfile, selectedOpportunity.jobDescription) : null;
+  useTutorialGuidance(completedApplication && completedApplication.id !== dismissedOutcomeId
+    ? { kind: 'supplemental', id: 'recorded-outcome' }
+    : { kind: 'scene', id: journey.current.id, nextId: journey.next.id }, 30);
   if (completedApplication && completedApplication.id !== dismissedOutcomeId) {
     const receipt = parseSubmissionEvidence(listenerStatus?.submission?.receipt);
     const captured = listenerConnected && listenerStatus?.opportunityId === completedApplication.id &&

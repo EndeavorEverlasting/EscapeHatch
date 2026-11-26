@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
 import taxonomy from '../../../../harness/contracts/application-form-taxonomy.v1.json' with { type: 'json' };
 import { emptyPreferences, type Preferences } from './application-preferences.ts';
 import { PROFILE_DISCOVERY_QUESTIONS, projectProfileDiscovery, validateDiscoveryAnswer } from './profile-question-planner.ts';
@@ -60,4 +61,15 @@ test('reject empty, overlong and unsafe URL answers without making claims', () =
   assert.match(validateDiscoveryAnswer(website, 'http://example.org') || '', /HTTPS/);
   assert.equal(validateDiscoveryAnswer(website, 'https://example.org/portfolio'), null);
   assert.match(validateDiscoveryAnswer(website, 'a'.repeat(513)) || '', /513/);
+});
+
+test('avatar coach is reachable from the actual profile route and existing assist surface', () => {
+  const app = readFileSync(new URL('../App.tsx', import.meta.url), 'utf8');
+  const managed = readFileSync(new URL('../components/managed-browser-assist.tsx', import.meta.url), 'utf8');
+  const preferences = readFileSync(new URL('../components/application-preferences.tsx', import.meta.url), 'utf8');
+  assert.match(app, /<Route path="\\/profile"/);
+  assert.match(app, /<ApplicationPreferences/);
+  assert.match(managed, /<ApplicationPreferences/);
+  assert.match(preferences, /<ProfileDiscoveryCoach/);
+  assert.match(preferences, /bootstrapDefaults/);
 });

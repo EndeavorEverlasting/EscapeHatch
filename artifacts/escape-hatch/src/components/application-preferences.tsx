@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { emptyPreferences, parsePreferences, questions, roleQuestionKey, preferenceChoices, expandProfessionalTitles, suggestProfessionalTitles, type Preferences } from '@/lib/application-preferences';
+import { applyBootstrapQuiz, bootstrapQuizError, emptyBootstrapQuiz, type BootstrapQuiz } from '@/lib/bootstrap-quiz';
 import { savedAnswerReviewRows, unrecognizedSavedAnswerCount, hasTalentCommunityAnswers, talentCommunityAnswerHandoff, canReplaceEditorFromDisk } from '@/lib/answer-transparency';
 
 const API = '/__escapehatch/managed-assist/preferences';
@@ -43,6 +44,8 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
   const [showAllSavedAnswers, setShowAllSavedAnswers] = useState(false);
   const [copyStatus, setCopyStatus] = useState('');
   const [newTitle, setNewTitle] = useState('');
+  const [quiz, setQuiz] = useState<BootstrapQuiz>(emptyBootstrapQuiz);
+  const [quizStep, setQuizStep] = useState<0 | 1>(0);
   const [message, setMessage] = useState('Loading saved preferences…');
   const [store, setStore] = useState<PreferenceStoreMeta | null>(null);
   const [ready, setReady] = useState(false);
@@ -104,13 +107,13 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
     })();
     return () => { cancelled = true; };
   }, [refresh, ready]);
-  async function save(clear = false) {
+  async function save(clear = false, candidate: Preferences = data) {
     setBusy(true);
     try {
       const response = await fetch(API + (clear ? '/clear' : ''), {
         method: 'POST', credentials: 'same-origin',
         headers: { 'content-type': 'application/json', 'x-escapehatch-operator-action': 'confirmed' },
-        body: JSON.stringify(clear ? {} : { preferences: { ...data, exported_at: new Date().toISOString() }, removedQuestions }),
+        body: JSON.stringify(clear ? {} : { preferences: { ...candidate, exported_at: new Date().toISOString() }, removedQuestions }),
       });
       if (!response.ok) throw new Error();
       const readbackOk = await load();
@@ -142,6 +145,67 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
   return <section className="mb-6 rounded-2xl border border-border bg-card p-5" data-testid="application-preferences">
     <h2 className="font-display text-2xl">Reusable application answers</h2>
     <p className="mt-2 max-w-prose text-sm leading-6 text-muted-foreground">Save your own answers once. Leave unknown facts blank. Review the employer form before submitting. Agreements and certifications stay manual.</p>
+    {ready && !savedData.preferences['identity.first_name'] && !savedData.preferences['identity.email'] && (
+      <section className="mt-4 rounded-xl border border-primary/40 bg-primary/[0.04] p-4" aria-label="First-run application quiz" data-testid="bootstrap-application-quiz">
+        <h3 className="font-display text-xl">First-time application setup</h3>
+        <p className="mt-1 text-sm text-muted-foreground">Step {quizStep + 1} of 2. Answer these once; EscapeHatch will reuse only your saved, explicit answers when preparing employer forms. Skip anything you do not know.</p>
+        {quizStep === 0 ? (
+          <>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              {([
+                ['firstName', 'First name', true], ['lastName', 'Last name', true],
+                ['email', 'Email', true], ['phone', 'Phone (optional)', false],
+                ['city', 'City (optional)', false], ['region', 'State or region (optional)', false],
+                ['country', 'Country (optional)', false], ['linkedIn', 'LinkedIn URL (optional)', false],
+              ] as const).map(([key, label, required]) => (
+                <label key={key} className="block text-sm">{label}
+                  <input className="mt-1 block w-full rounded border border-input bg-background p-2"
+                    required={required} maxLength={512} value={quiz[key]} autoComplete="off"
+                    onChange={event => setQuiz(current => ({ ...current, [key]: event.target.value }))} />
+                </label>
+              ))}
+            </div>
+            <button type="button" className="mt-3 rounded bg-primary px-4 py-2 text-primary-foreground" disabled={busy}
+              onClick={() => {
+                const error = bootstrapQuizError({ ...quiz, workMode: 'any' });
+                if (error) { setMessage(error); return; }
+                setMessage('Contact answers staged locally; choose your work-mode preference next.');
+                setQuizStep(1);
+              }}>Continue to work preferences</button>
+          </>
+        ) : (
+          <>
+            <label className="mt-3 block text-sm">Which jobs should EscapeHatch recommend?
+              <select className="mt-1 block w-full rounded border border-input bg-background p-2"
+                value={quiz.workMode}
+                onChange={event => setQuiz(current => ({ ...current, workMode: event.target.value as BootstrapQuiz['workMode'] }))}>
+                <option value="">Choose a policy</option>
+                <option value="remote_only">Remote jobs only</option>
+                <option value="any">Any workplace arrangement</option>
+              </select>
+            </label>
+            <p className="mt-3 text-sm text-muted-foreground">You can still manually apply to jobs outside this preference, including interview practice. EscapeHatch will pause for unknown questions, document review, legal attestations, and the final Submit action. The quiz never applies to a job by itself.</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button type="button" className="rounded border border-border px-4 py-2" disabled={busy}
+                onClick={() => setQuizStep(0)}>Back</button>
+              <button type="button" className="rounded bg-primary px-4 py-2 text-primary-foreground" disabled={busy}
+                onClick={() => {
+                  try {
+                    const staged = applyBootstrapQuiz(data, quiz);
+                    setData(staged);
+                    markEdited();
+                    void save(false, staged);
+                  } catch (error) {
+                    setMessage(error instanceof Error ? error.message : 'Review your answers and try again.');
+                  }
+                }}>Save quiz to my private profile</button>
+            </div>
+          </>
+        )}
+        <p className="mt-2 text-xs text-muted-foreground">You can instead use the full answer editor below. Existing saved answers are never silently overwritten by this quiz.</p>
+      </section>
+    )}
+
     <aside className="preference-store-rail mt-4 border-l-4 border-primary/70 bg-primary/[0.04] py-3 pl-4 pr-3" aria-label="Shared EscapeHatch profile location" data-testid="preference-store-rail">
       <p className="text-sm font-semibold text-foreground">Shared profile on this computer</p>
       <p className="mt-1 text-sm leading-6 text-muted-foreground">

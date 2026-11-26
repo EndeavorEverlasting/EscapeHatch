@@ -67,7 +67,7 @@ test('avatar coach is reachable from the actual profile route and existing assis
   const app = readFileSync(new URL('../App.tsx', import.meta.url), 'utf8');
   const managed = readFileSync(new URL('../components/managed-browser-assist.tsx', import.meta.url), 'utf8');
   const preferences = readFileSync(new URL('../components/application-preferences.tsx', import.meta.url), 'utf8');
-  assert.match(app, /<Route path="\\/profile"/);
+  assert.ok(app.includes('<Route path="/profile"'), 'profile route must mount the reused answers editor');
   assert.match(app, /<ApplicationPreferences/);
   assert.match(managed, /<ApplicationPreferences/);
   assert.match(preferences, /<ProfileDiscoveryCoach/);

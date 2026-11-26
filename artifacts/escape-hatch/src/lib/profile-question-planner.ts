@@ -62,7 +62,7 @@ export function reviewedCareerDiscoveryValue(profile: AssistProfile | undefined,
     const value = id === 'experience.company' ? record.company :
       id === 'experience.title' ? record.title :
       id === 'experience.description' && Array.isArray(record.bullets) &&
-        record.bullets.every(part => typeof part === 'string') ? record.bullets.join('\\n') : '';
+        record.bullets.every(part => typeof part === 'string') ? record.bullets.join('\n') : '';
     return typeof value === 'string' && value.trim() ? value.trim() : null;
   }
   if (id.startsWith('education.')) {

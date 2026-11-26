@@ -292,6 +292,22 @@ class RepositoryPromotionTests(unittest.TestCase):
         for marker in ["candidate_head_sha", "required_checks", "PROVIDER_UNAVAILABLE", "compare-and-set", "idempotent"]:
             self.assertIn(marker, text)
 
+    def test_live_main_base_movement_blocks_stale_green_pr(self):
+        workflow = (ROOT / ".github" / "workflows" / "promotion.yml").read_text(encoding="utf-8")
+        promote = workflow.split("\n  promote:", 1)[1].split("\n  tag-release:", 1)[0]
+        final_gate = promote.split("Re-read provider truth immediately before mutation", 1)[1]
+        # A PR's stored .base.sha can remain unchanged after the real main
+        # ref advances. It cannot be the only freshness authority.
+        self.assertEqual(final_gate.count("git/ref/heads/main --jq '.object.sha'"), 3)
+        self.assertIn('if [ -z "$live_default_sha" ] || [ "$live_default_sha" != "$base_sha" ]; then', final_gate)
+        self.assertIn('if [ -z "$refreshed_main_sha" ] || [ "$refreshed_main_sha" != "$base_sha" ]; then', final_gate)
+        self.assertIn('if [ -z "$final_main_sha" ] || [ "$final_main_sha" != "$base_sha" ]; then', final_gate)
+        self.assertIn("STALE_BASE:", final_gate)
+        self.assertLess(final_gate.index('if [ "$merged" = "true" ]'),
+                        final_gate.index("live_default_sha="))
+        self.assertLess(final_gate.index("final_main_sha="),
+                        final_gate.index("repos/${{ github.repository }}/pulls/${pr}/merge"))
+
     def test_promotion_workflow_markers(self):
         wf = (ROOT / ".github" / "workflows" / "promotion.yml").read_text(encoding="utf-8")
         for marker in ["name: Repository Promotion", "pull_request:", "merge_group:", "push:", "workflow_dispatch:", "concurrency:", "expected_head_sha", "PROVIDER_UNAVAILABLE", "gh api", "merge-base --is-ancestor"]:

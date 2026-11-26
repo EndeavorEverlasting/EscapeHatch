@@ -872,16 +872,6 @@ function ProfilePage({
           phone: draft.phone, city: draft.city, region: draft.region,
           country: draft.country, linkedIn: draft.linkedin_url,
         }}
-        onLoad={preferences => setProfile(current => {
-          let changed = false;
-          const next = { ...current };
-          for (const key of Object.keys(current) as (keyof Profile)[]) {
-            const id = 'identity.' + (key === 'linkedin_url' ? 'linkedin' : key === 'name_prefix' ? 'title' : key);
-            const value = preferences.preferences[id]?.value;
-            if (!next[key] && value) { next[key] = value; changed = true; }
-          }
-          return changed ? next : current;
-        })}
       />
     </section>
     <section className="mt-5 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-7" data-testid="draft-recovery-settings">

@@ -46,6 +46,7 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
   const [newTitle, setNewTitle] = useState('');
   const [quiz, setQuiz] = useState<BootstrapQuiz>(emptyBootstrapQuiz);
   const [quizStep, setQuizStep] = useState<0 | 1>(0);
+  const quizInitialized = useRef(false);
   const [message, setMessage] = useState('Loading saved preferences…');
   const [store, setStore] = useState<PreferenceStoreMeta | null>(null);
   const [ready, setReady] = useState(false);
@@ -84,6 +85,19 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
         return false;
       }
       setData(parsed); onLoad?.(parsed);
+      // Existing private answers become initial quiz values exactly once.
+      // Subsequent background refreshes must not overwrite in-progress inputs.
+      if (!quizInitialized.current) {
+        quizInitialized.current = true;
+        const answer = (id: string) => parsed.preferences[id]?.value || '';
+        setQuiz({
+          firstName: answer('identity.first_name'), lastName: answer('identity.last_name'),
+          email: answer('identity.email'), phone: answer('identity.phone'),
+          city: answer('identity.city'), region: answer('identity.region'),
+          country: answer('identity.country'), linkedIn: answer('identity.linkedin'),
+          workMode: parsed.recommendation_work_mode || '',
+        });
+      }
       setMessage(meta?.exists
         ? 'Shared EscapeHatch profile found on this computer. Reused across browsers until you edit or clear it.'
         : 'No shared profile file yet. Save Preferences to create the EscapeHatch profile on this computer.');
@@ -145,7 +159,7 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
   return <section className="mb-6 rounded-2xl border border-border bg-card p-5" data-testid="application-preferences">
     <h2 className="font-display text-2xl">Reusable application answers</h2>
     <p className="mt-2 max-w-prose text-sm leading-6 text-muted-foreground">Save your own answers once. Leave unknown facts blank. Review the employer form before submitting. Agreements and certifications stay manual.</p>
-    {ready && !savedData.preferences['identity.first_name'] && !savedData.preferences['identity.email'] && (
+    {ready && ['identity.first_name', 'identity.last_name', 'identity.email'].some(id => !savedData.preferences[id]?.value) && (
       <section className="mt-4 rounded-xl border border-primary/40 bg-primary/[0.04] p-4" aria-label="First-run application quiz" data-testid="bootstrap-application-quiz">
         <h3 className="font-display text-xl">First-time application setup</h3>
         <p className="mt-1 text-sm text-muted-foreground">Step {quizStep + 1} of 2. Answer these once; EscapeHatch will reuse only your saved, explicit answers when preparing employer forms. Skip anything you do not know.</p>

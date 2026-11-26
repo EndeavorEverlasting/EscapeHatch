@@ -87,6 +87,11 @@ test('reviewed mandatory requirements drive classification; unknown is not non-m
   assert.equal(deriveOpportunityType(note('met')).type, 'career');
   assert.equal(deriveOpportunityType(note('met', false)).type, 'needs_assessment');
   assert.equal(deriveOpportunityType(note('unknown')).type, 'needs_assessment');
+  assert.equal(rubricAllowsRecommendation(note('unknown')), false);
+  assert.equal(rubricAllowsRecommendation(note('met', false)), false);
+  assert.equal(rubricAllowsRecommendation(note('met')), true);
+  assert.equal(applicationPreparationRank(note('unknown').replace('; undecided;', '; apply;')), 0);
+  assert.equal(localApplicationPreparationRank(note('unknown'), { jobDesire: 'want', applicationDecision: 'undecided', purpose: 'career' }), null);
   assert.equal(deriveOpportunityType(base).type, 'needs_assessment');
   assert.deepEqual(deriveOpportunityType(note('unmet')), { type: 'learning', reasons: ['UNMET_REQUIREMENT:database'] });
   assert.equal(rubricAllowsRecommendation(note('unmet')), false);

@@ -110,9 +110,11 @@ export function ApplicationPreferences({ onLoad, currentRole, currentPosting = '
         };
         let changed = false;
         const merged = { ...current };
-        for (const key of ['firstName', 'lastName', 'email', 'phone', 'city', 'region', 'country', 'linkedIn', 'workMode'] as const) {
-          if (!merged[key] && prior[key]) { merged[key] = prior[key]!; changed = true; }
+        for (const key of ['firstName', 'lastName', 'email', 'phone', 'city', 'region', 'country', 'linkedIn'] as const) {
+          const candidate = prior[key];
+          if (!merged[key] && candidate) { merged[key] = candidate; changed = true; }
         }
+        if (!merged.workMode && prior.workMode) { merged.workMode = prior.workMode; changed = true; }
         return changed ? merged : current;
       });
       // A person can edit while a background refresh is pending. A disk read
